@@ -1,0 +1,7 @@
+{
+    "keys": {"tavily_api_key": "", "metaso_api_key": "", "baidu_api_key": "", "aliyun_iqs_api_key": ""},
+    "search": {"recent_days": 30, "max_external_results": 5},
+    "content": {"fetch_keep_levels": ["strong", "weak"]},
+    "brief": {"role": "senior_researcher"},
+    "paths": {"output_mode": "skill"}
+}

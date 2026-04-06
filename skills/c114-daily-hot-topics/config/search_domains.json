@@ -1,0 +1,34 @@
+{
+  "official_domains": [
+    "gov.cn",
+    "miit.gov.cn",
+    "ndrc.gov.cn",
+    "cninfo.com.cn",
+    "sse.com.cn",
+    "szse.cn",
+    "chinamobileltd.com",
+    "china-mobile.com",
+    "chinaunicom.com",
+    "chinatelecom.com.cn",
+    "fiberhome.com",
+    "datang.com",
+    "ericsson.com",
+    "apple.com",
+    "openai.com",
+    "anthropic.com"
+  ],
+  "blocked_domains": [
+    "x.com",
+    "twitter.com",
+    "facebook.com",
+    "instagram.com",
+    "youtube.com",
+    "zhihu.com",
+    "douyin.com",
+    "toutiao.com",
+    "maxyic.com",
+    "supplypost.com",
+    "dingguanyong.com",
+    "cnjjwb.com"
+  ]
+}

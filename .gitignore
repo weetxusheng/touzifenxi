@@ -1,0 +1,39 @@
+.DS_Store
+**/.DS_Store
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.mypy_cache/
+/.venv/
+dist/
+.env.local
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+Untitled
+**/Untitled
+
+# Build artifacts
+build/**
+!build/README.md
+
+# Runtime outputs
+reports/**
+!reports/c114_report/
+reports/c114_report/**
+!reports/c114_report/README.md
+state/**
+!state/README.md
+data/**
+!data/raw/
+!data/raw/README.md
+!data/processed/
+!data/processed/README.md
+
+# Skill local runtime files
+skills/.skills_store_lock.json
+skills/c114-daily-hot-topics/config/runtime.local.json
+skills/c114-daily-hot-topics/output/**
+!skills/c114-daily-hot-topics/output/.gitkeep

@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "touzifenxi"
+version = "0.1.0"
+description = "Multi-agent A-share research team MVP for daily top-5 stock ideas."
+requires-python = ">=3.9"
+readme = "README.md"
+dependencies = [
+  "pandas>=2.0,<3",
+  "akshare>=1.18.39",
+  "SQLAlchemy>=2.0,<3",
+  "alembic>=1.13,<2",
+  "psycopg[binary]>=3.2,<4",
+  "playwright>=1.58,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<9",
+  "ruff>=0.12,<0.13",
+  "pre-commit>=4.0,<5",
+]
+
+[project.scripts]
+touzifenxi = "touzifenxi.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "skills/c114-daily-hot-topics/src"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+src = ["src", "tests", "skills/c114-daily-hot-topics/src"]
+include = [
+  "pyproject.toml",
+  "src/**/*.py",
+  "tests/**/*.py",
+  "skills/**/*.py",
+]
+extend-exclude = [
+  ".venv",
+  "alembic",
+  "build",
+  "data",
+  "reports",
+  "src/touzifenxi.egg-info",
+  "state",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

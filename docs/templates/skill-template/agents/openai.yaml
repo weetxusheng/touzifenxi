@@ -1,0 +1,4 @@
+interface:
+  display_name: "示例 Skill"
+  short_description: "一个可复用的项目内 skill 示例"
+  default_prompt: "使用这个 skill 完成标准化工作流。"
