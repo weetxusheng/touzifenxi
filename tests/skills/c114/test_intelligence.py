@@ -244,12 +244,12 @@ class SearchChecklistTests(unittest.TestCase):
         ]
         content = render_search_checklist_yaml("2026-03-27", build_search_checklist_items(analyses))
         self.assertIn("report_date: '2026-03-27'", content)
-        self.assertIn("instructions: 'keywords 必须由调用本 skill 的 agent 先读取 prompt_path", content)
+        self.assertIn("instructions: 'keywords 由 skill 内置模型读取 prompt_path 后自动生成", content)
         self.assertIn("topic: '卫星互联网与商业航天'", content)
         self.assertIn("original_title: '商业航天再迎重磅利好 两部委优化无线电频率占用费标准'", content)
         self.assertIn("original_published_at: '2026-03-27'", content)
         self.assertIn("keywords:", content)
-        self.assertIn("# 由 agent 根据标题生成并填写两组搜索关键词", content)
+        self.assertIn("# 由 skill 内置模型根据标题自动生成两组搜索关键词", content)
 
 
 class AnalysisOutputTests(unittest.TestCase):

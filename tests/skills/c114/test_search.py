@@ -20,10 +20,13 @@ from c114.c114_search import (
     SearchQuery,
     SearchResult,
     SearchWorkflowPayload,
+    apply_search_review_result,
+    auto_review_search_payload,
     build_search_queries,
     choose_search_provider,
     classify_domain,
     enrich_selected_results,
+    ensure_search_checklist_keywords,
     filter_recent_results,
     infer_published_at,
     load_search_checklist_yaml,
@@ -99,8 +102,31 @@ categories:
             keywords=[],
         )
 
-        with self.assertRaisesRegex(ValueError, "请先由 agent 为每条标题补满 2 组 keywords"):
+        with self.assertRaisesRegex(ValueError, "请先完成 step 2 自动关键词生成后再运行 c114-search"):
             validate_search_checklist_items([article])
+
+    def test_auto_fills_missing_keywords_when_llm_client_is_available(self) -> None:
+        class FakeLLMClient:
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.system_prompt = system_prompt
+                self.user_prompt = user_prompt
+                return {"keywords": ["中国联通 智能体互联网", "智能体互联网 最后一块拼图"]}
+
+        article = SearchArticleInput(
+            topic="AI与算力",
+            channel="Cloud&AI",
+            original_title="中国联通曹畅：智能体互联网补齐AI时代互联网的最后一块拼图",
+            original_url="https://www.c114.com.cn/test",
+            original_published_at="2026-04-07",
+            keywords=[],
+        )
+
+        completed = ensure_search_checklist_keywords([article], FakeLLMClient())
+
+        self.assertEqual(
+            completed[0].keywords,
+            ["中国联通 智能体互联网", "智能体互联网 最后一块拼图"],
+        )
 
 
 class SearchRankingTests(unittest.TestCase):
@@ -295,9 +321,9 @@ class SearchRankingTests(unittest.TestCase):
 
 
 class SearchProviderRoutingTests(unittest.TestCase):
-    def test_choose_search_provider_uses_baidu_for_chinese_query(self) -> None:
+    def test_choose_search_provider_uses_tavily_for_chinese_query_by_default(self) -> None:
         self.assertEqual(
-            choose_search_provider(SearchQuery(query_type="title", value="朱敏 张教 空天地一体化")), "baidu"
+            choose_search_provider(SearchQuery(query_type="title", value="朱敏 张教 空天地一体化")), "tavily"
         )
 
     def test_choose_search_provider_uses_tavily_for_english_query(self) -> None:
@@ -491,7 +517,92 @@ class SearchProviderRoutingTests(unittest.TestCase):
         self.assertIn("review_prompt_path:", rendered)
         self.assertIn("review_instructions:", rendered)
         self.assertIn("必须逐条填写所有 selected_results", rendered)
-        self.assertIn("ai_review.status 固定填写 reviewed", rendered)
+
+    def test_apply_search_review_result_requires_full_fields(self) -> None:
+        result = SearchResult(
+            query="原标题",
+            query_type="title",
+            result_title="外部文章",
+            url="https://example.com/a",
+            domain="example.com",
+            published_at="2026-04-07",
+            snippet="摘要",
+            score=0.9,
+            is_official=False,
+            source_tier="normal",
+            matched_terms=["中国联通"],
+            extract_text="补充正文",
+            extract_status="success",
+        )
+
+        completed = apply_search_review_result(
+            result,
+            {
+                "keep_level": "strong",
+                "reason": "标题与主体一致，且补充了新增动作。",
+                "relevance_note": "属于同一事件的外部验证。",
+                "value_type": "新增事实",
+            },
+        )
+
+        self.assertEqual(completed.review_status, "reviewed")
+        self.assertEqual(completed.keep_level, "strong")
+
+    def test_auto_review_search_payload_fills_all_selected_results(self) -> None:
+        class FakeLLMClient:
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                return {
+                    "keep_level": "weak",
+                    "reason": "与主题高度相关，可作为背景补充。",
+                    "relevance_note": "不是同一事件，但对主题判断有帮助。",
+                    "value_type": "背景补充",
+                }
+
+        payload = SearchWorkflowPayload(
+            report_date="2026-04-07",
+            provider="tavily",
+            input_path=Path("/tmp/input.yaml"),
+            generated_at="2026-04-07T10:00:00",
+            categories=[
+                SearchCategoryPayload(
+                    topic="AI与算力",
+                    items=[
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题A",
+                            original_url="https://www.c114.com.cn/a",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章A",
+                                    url="https://example.com/a",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要A",
+                                    score=0.9,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["A"],
+                                    extract_text="补充正文A",
+                                    extract_status="success",
+                                )
+                            ],
+                        )
+                    ],
+                )
+            ],
+        )
+
+        reviewed = auto_review_search_payload(payload, FakeLLMClient())
+
+        result = reviewed.categories[0].items[0].selected_results[0]
+        self.assertEqual(result.review_status, "reviewed")
+        self.assertEqual(result.keep_level, "weak")
 
     def test_render_search_results_yaml_only_keeps_ai_review_under_selected_results(self) -> None:
         result = SearchResult(
@@ -539,7 +650,7 @@ class SearchProviderRoutingTests(unittest.TestCase):
 
         self.assertEqual(rendered.count("ai_review:"), 1)
 
-    def test_auto_search_client_routes_query_to_matching_provider(self) -> None:
+    def test_auto_search_client_routes_auto_mode_queries_to_tavily(self) -> None:
         class FakeTavily:
             def __init__(self) -> None:
                 self.queries: list[str] = []
@@ -586,15 +697,15 @@ class SearchProviderRoutingTests(unittest.TestCase):
         client.search(SearchQuery(query_type="title", value="朱敏 张教 空天地一体化"), max_results=2)
         client.search(SearchQuery(query_type="keyword", value="OpenAI compute platform"), max_results=2)
 
-        self.assertEqual(baidu.queries, ["朱敏 张教 空天地一体化"])
-        self.assertEqual(tavily.queries, ["OpenAI compute platform"])
+        self.assertEqual(tavily.queries, ["朱敏 张教 空天地一体化", "OpenAI compute platform"])
         self.assertEqual(metaso.queries, [])
+        self.assertEqual(baidu.queries, [])
         self.assertEqual(google.queries, [])
 
-    def test_auto_search_client_falls_back_to_metaso_when_baidu_fails(self) -> None:
+    def test_auto_search_client_falls_back_to_metaso_when_tavily_fails(self) -> None:
         class FakeTavily:
             def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
-                return []
+                raise RuntimeError("tavily failed")
 
             def extract(self, urls: list[str], query: str) -> dict[str, str]:
                 return {}
@@ -609,17 +720,73 @@ class SearchProviderRoutingTests(unittest.TestCase):
 
         class FakeBaidu:
             def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
-                raise RuntimeError("baidu failed")
+                return []
 
+        metaso = FakeMetaso()
         client = AutoSearchClient(
             tavily_client=FakeTavily(),  # type: ignore[arg-type]
-            metaso_client=FakeMetaso(),
+            metaso_client=metaso,
             baidu_client=FakeBaidu(),  # type: ignore[arg-type]
         )
 
         provider, _ = client.search_with_provider(SearchQuery(query_type="title", value="朱敏 张教 空天地一体化"), 2)
 
         self.assertEqual(provider, "metaso")
+        self.assertEqual(metaso.queries, ["朱敏 张教 空天地一体化"])
+
+    def test_auto_search_client_falls_back_to_baidu_when_tavily_and_metaso_fail(self) -> None:
+        class FakeTavily:
+            def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
+                raise RuntimeError("tavily failed")
+
+            def extract(self, urls: list[str], query: str) -> dict[str, str]:
+                return {}
+
+        class FakeMetaso:
+            def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
+                raise RuntimeError("metaso failed")
+
+        class FakeBaidu:
+            def __init__(self) -> None:
+                self.queries: list[str] = []
+
+            def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
+                self.queries.append(query.value)
+                return []
+
+        baidu = FakeBaidu()
+        client = AutoSearchClient(
+            tavily_client=FakeTavily(),  # type: ignore[arg-type]
+            metaso_client=FakeMetaso(),  # type: ignore[arg-type]
+            baidu_client=baidu,
+        )
+
+        provider, _ = client.search_with_provider(SearchQuery(query_type="title", value="朱敏 张教 空天地一体化"), 2)
+
+        self.assertEqual(provider, "baidu")
+        self.assertEqual(baidu.queries, ["朱敏 张教 空天地一体化"])
+
+    def test_auto_search_client_honors_forced_metaso_provider(self) -> None:
+        class FakeMetaso:
+            def __init__(self) -> None:
+                self.queries: list[str] = []
+
+            def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
+                self.queries.append(query.value)
+                return []
+
+        metaso = FakeMetaso()
+        client = AutoSearchClient(  # type: ignore[arg-type]
+            tavily_client=None,
+            metaso_client=metaso,
+            baidu_client=None,
+            provider_mode="metaso",
+        )
+
+        provider, _ = client.search_with_provider(SearchQuery(query_type="title", value="中国联通曹畅 智能体互联网"), 2)
+
+        self.assertEqual(provider, "metaso")
+        self.assertEqual(metaso.queries, ["中国联通曹畅 智能体互联网"])
 
     def test_auto_search_client_can_run_with_only_baidu_configured(self) -> None:
         class FakeBaidu:

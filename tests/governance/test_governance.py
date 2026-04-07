@@ -39,7 +39,7 @@ class GovernanceDocumentTests(unittest.TestCase):
             PROJECT_ROOT / "docs" / "templates" / "prompt-template.md",
             PROJECT_ROOT / "docs" / "templates" / "module-template.md",
             PROJECT_ROOT / "docs" / "templates" / "skill-template" / "SKILL.md",
-            PROJECT_ROOT / "docs" / "templates" / "skill-template" / "agents" / "openai.yaml",
+            PROJECT_ROOT / "docs" / "templates" / "skill-template" / "agents" / "agent.yaml",
             PROJECT_ROOT / "docs" / "templates" / "skill-template" / "config" / ".gitkeep",
             PROJECT_ROOT / "docs" / "templates" / "skill-template" / "prompts" / ".gitkeep",
             PROJECT_ROOT / "docs" / "templates" / "skill-template" / "scripts" / ".gitkeep",
@@ -99,7 +99,7 @@ class GovernanceDocumentTests(unittest.TestCase):
         brief_prompt = (PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "prompts" / "brief-agent.md").read_text(
             encoding="utf-8"
         )
-        agent_config = (PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "agents" / "openai.yaml").read_text(
+        agent_config = (PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "agents" / "agent.yaml").read_text(
             encoding="utf-8"
         )
 
@@ -116,7 +116,7 @@ class GovernanceDocumentTests(unittest.TestCase):
         self.assertIn("src/c114", content)
         self.assertIn("runtime.example.json", content)
         self.assertIn("runtime.local.json", content)
-        self.assertNotIn("README.md", content)
+        self.assertIn("config/README.md", content)
 
     def test_c114_scripts_use_single_entrypoint(self) -> None:
         scripts_dir = PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "scripts"

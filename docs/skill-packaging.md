@@ -7,7 +7,7 @@
 一个可打包 skill 至少包含：
 
 - `SKILL.md`
-- `agents/openai.yaml`
+- `agents/agent.yaml`
 - `config/`
 - `prompts/`
 - `scripts/`
@@ -20,9 +20,11 @@
 - 提示词、配置、模板不得依赖 skill 目录外的绝对路径
 - `scripts/` 应只承担 skill 的编排入口
 - `src/` 应只放该 skill 的私有运行代码
+- `src/` 下的长期维护 Python 文件必须具备模块级 docstring；公开数据类、入口方法、关键业务方法应有 docstring
 - `config/runtime.local.json` 属于本地配置，不进入分发包
 - 一个 skill 默认只保留一个总览文档：`SKILL.md`
 - skill 内不放正式测试代码，测试统一收口到项目级 `tests/skills/`
+- `config/` 若包含 JSON 配置模板，则必须配套 `config/README.md` 或在 `SKILL.md` 中逐项解释 key 含义
 - 若 skill 依赖配置或外部 API，`SKILL.md` 必须明确写出：
   - 哪些 key / 配置是硬门槛
   - 它们分别卡在哪些步骤

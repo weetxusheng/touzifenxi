@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import tempfile
+import threading
+import time
 import unittest
 from datetime import date
 from pathlib import Path
 
 from c114.c114_content_analysis import (
+    auto_complete_content_analysis,
     collect_missing_analysis_fields,
+    generate_brief_markdown,
     generate_layer_issues,
     load_content_analysis_inputs,
+    normalize_brief_sections,
+    normalize_content_analysis_draft,
     render_brief_markdown,
     render_content_analysis_yaml,
     resolve_content_analysis_output_paths,
@@ -161,6 +167,241 @@ categories:
         self.assertNotIn("- 输入文件：", rendered)
         self.assertNotIn("- 提示词：", rendered)
         self.assertNotIn("- 说明：", rendered)
+
+    def test_normalize_content_analysis_draft_requires_all_fields(self) -> None:
+        draft = normalize_content_analysis_draft(
+            {
+                "summary": "一句话摘要",
+                "core_points": ["核心点1", "核心点2"],
+                "new_facts": ["新增事实1"],
+                "entities": ["中国联通"],
+                "signals": ["产业信号"],
+                "risk_or_uncertainty": ["仍需观察的点"],
+                "why_it_matters": "这件事说明行业已经进入验证阶段。",
+                "layer_notes": ["补充链接与源稿高度相关。"],
+            }
+        )
+
+        self.assertEqual(draft.summary, "一句话摘要")
+        self.assertEqual(draft.core_points[0], "核心点1")
+
+    def test_auto_complete_content_analysis_fills_analysis_via_llm(self) -> None:
+        class FakeLLMClient:
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                return {
+                    "summary": "一句话摘要",
+                    "core_points": ["核心点1", "核心点2"],
+                    "new_facts": ["新增事实1"],
+                    "entities": ["中国联通"],
+                    "signals": ["产业信号"],
+                    "risk_or_uncertainty": ["仍需观察的点"],
+                    "why_it_matters": "这件事说明行业已经进入验证阶段。",
+                    "layer_notes": ["补充链接与源稿高度相关。"],
+                }
+
+        payload = """report_date: '2026-03-31'
+input_path: '/tmp/search_results.yaml'
+generated_at: '2026-04-01T17:37:59'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '未来移动通信论坛吴建军：6G已转入产业实战阶段'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/41/a1307790.html'
+        original_content:
+          url: 'https://www.c114.com.cn/news/41/a1307790.html'
+          domain: 'www.c114.com.cn'
+          content_title: '未来移动通信论坛吴建军：6G已转入产业实战阶段'
+          content_summary: '摘要'
+          content_text: '正文内容'
+          content_source: 'aliyun'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "content.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+            analysis_input = load_content_analysis_inputs(input_path)
+            completed = auto_complete_content_analysis(analysis_input, FakeLLMClient())
+
+        item = completed.categories[0].items[0]
+        self.assertEqual(item.analysis.summary, "一句话摘要")
+        self.assertEqual(item.analysis.why_it_matters, "这件事说明行业已经进入验证阶段。")
+
+    def test_auto_complete_content_analysis_runs_items_in_parallel(self) -> None:
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.active = 0
+                self.max_active = 0
+                self.lock = threading.Lock()
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                with self.lock:
+                    self.active += 1
+                    self.max_active = max(self.max_active, self.active)
+                time.sleep(0.02)
+                with self.lock:
+                    self.active -= 1
+                return {
+                    "summary": "一句话摘要",
+                    "core_points": ["核心点1", "核心点2"],
+                    "new_facts": ["新增事实1"],
+                    "entities": ["中国联通"],
+                    "signals": ["产业信号"],
+                    "risk_or_uncertainty": ["仍需观察的点"],
+                    "why_it_matters": "这件事说明行业已经进入验证阶段。",
+                    "layer_notes": ["补充链接与源稿高度相关。"],
+                }
+
+        payload = """report_date: '2026-03-31'
+input_path: '/tmp/search_results.yaml'
+generated_at: '2026-04-01T17:37:59'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '文章1'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/1.html'
+        original_content:
+          url: 'https://www.c114.com.cn/news/1.html'
+          domain: 'www.c114.com.cn'
+          content_title: '文章1'
+          content_summary: '摘要'
+          content_text: '正文内容1'
+          content_source: 'aliyun'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+      - original_title: '文章2'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/2.html'
+        original_content:
+          url: 'https://www.c114.com.cn/news/2.html'
+          domain: 'www.c114.com.cn'
+          content_title: '文章2'
+          content_summary: '摘要'
+          content_text: '正文内容2'
+          content_source: 'aliyun'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "content.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+            analysis_input = load_content_analysis_inputs(input_path)
+            fake_client = FakeLLMClient()
+            auto_complete_content_analysis(analysis_input, fake_client)
+
+        self.assertGreater(fake_client.max_active, 1)
+
+    def test_normalize_brief_sections_requires_all_sections(self) -> None:
+        sections = normalize_brief_sections(
+            {
+                "核心判断": "行业阶段正在从概念走向验证。",
+                "增量信息": "新增了试点落地线索。",
+                "产业/公司影响": "先影响设备与解决方案环节。",
+                "需要继续跟踪的点": ["试点范围", "客户落地时间"],
+            }
+        )
+
+        self.assertEqual(sections["核心判断"], "行业阶段正在从概念走向验证。")
+        self.assertEqual(len(sections["需要继续跟踪的点"]), 2)
+
+    def test_generate_brief_markdown_runs_topics_in_parallel(self) -> None:
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.active = 0
+                self.max_active = 0
+                self.lock = threading.Lock()
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                with self.lock:
+                    self.active += 1
+                    self.max_active = max(self.max_active, self.active)
+                time.sleep(0.02)
+                with self.lock:
+                    self.active -= 1
+                return {
+                    "核心判断": "行业阶段正在从概念走向验证。",
+                    "增量信息": "新增了试点落地线索。",
+                    "产业/公司影响": "先影响设备与解决方案环节。",
+                    "需要继续跟踪的点": ["试点范围", "客户落地时间"],
+                }
+
+        payload = """report_date: '2026-03-31'
+input_path: '/tmp/content.yaml'
+generated_at: '2026-04-01T17:37:59'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '文章1'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/1.html'
+        original_content:
+          title: '文章1'
+          summary: '摘要'
+          text: '正文内容1'
+          source: 'aliyun'
+          status: 'success'
+        selected_contents:
+        analysis:
+          summary: '摘要1'
+          core_points:
+            - '核心点1'
+          new_facts:
+            - '新增事实1'
+          entities:
+            - '中国联通'
+          signals:
+            - '产业信号1'
+          risk_or_uncertainty:
+            - '不确定性1'
+          why_it_matters: '重要性1'
+          layer_notes:
+            - '备注1'
+  - topic: '量子技术'
+    items:
+      - original_title: '文章2'
+        topic: '量子技术'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/2.html'
+        original_content:
+          title: '文章2'
+          summary: '摘要'
+          text: '正文内容2'
+          source: 'aliyun'
+          status: 'success'
+        selected_contents:
+        analysis:
+          summary: '摘要2'
+          core_points:
+            - '核心点2'
+          new_facts:
+            - '新增事实2'
+          entities:
+            - '玻色量子'
+          signals:
+            - '产业信号2'
+          risk_or_uncertainty:
+            - '不确定性2'
+          why_it_matters: '重要性2'
+          layer_notes:
+            - '备注2'
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "content.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+            analysis_input = load_content_analysis_inputs(input_path)
+            fake_client = FakeLLMClient()
+            generate_brief_markdown(analysis_input, fake_client)
+
+        self.assertGreater(fake_client.max_active, 1)
 
     def test_renders_brief_markdown_summary_from_sidecar_step3_file(self) -> None:
         content_payload = """report_date: '2026-04-07'

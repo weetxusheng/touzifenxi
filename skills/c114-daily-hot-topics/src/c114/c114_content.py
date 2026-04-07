@@ -1,8 +1,4 @@
-"""Step 4 content fetching for original and supplementary URLs.
-
-This layer keeps original C114 content separate from supplementary links and
-applies deterministic filtering before any agent starts reasoning over text.
-"""
+"""C114 第 4 步正文抓取模块。"""
 
 from __future__ import annotations
 
@@ -40,6 +36,7 @@ from .settings import AppPaths, load_c114_runtime_config
 
 @dataclass(frozen=True)
 class SearchContentArticleInput:
+    """表示 step 4 输入中的单篇文章。"""
     topic: str
     channel: str
     original_title: str
@@ -50,12 +47,14 @@ class SearchContentArticleInput:
 
 @dataclass(frozen=True)
 class SearchContentCategoryInput:
+    """表示按主题分组后的 step 4 输入。"""
     topic: str
     items: list[SearchContentArticleInput]
 
 
 @dataclass(frozen=True)
 class SearchResultsInputPayload:
+    """表示从 step 3 读取后的整体输入载荷。"""
     report_date: str
     input_path: Path
     generated_at: str
@@ -64,6 +63,7 @@ class SearchResultsInputPayload:
 
 @dataclass(frozen=True)
 class FetchResult:
+    """表示一次正文抓取后的标准化结果。"""
     url: str
     domain: str
     content_title: str
@@ -76,6 +76,7 @@ class FetchResult:
 
 @dataclass(frozen=True)
 class AliyunSearchDocument:
+    """表示阿里云 IQS 返回的一条候选文档。"""
     link: str
     title: str
     published_at: str
@@ -85,6 +86,7 @@ class AliyunSearchDocument:
 
 @dataclass(frozen=True)
 class SelectedContentPayload:
+    """表示一条补充链接抓取后的落盘结构。"""
     query: str
     query_type: str
     url: str
@@ -101,6 +103,7 @@ class SelectedContentPayload:
 
 @dataclass(frozen=True)
 class ArticleContentPayload:
+    """表示单篇文章在 step 4 的完整正文结果。"""
     original_title: str
     topic: str
     channel: str
@@ -112,12 +115,14 @@ class ArticleContentPayload:
 
 @dataclass(frozen=True)
 class ContentCategoryPayload:
+    """表示按主题分组后的 step 4 输出分组。"""
     topic: str
     items: list[ArticleContentPayload]
 
 
 @dataclass(frozen=True)
 class ContentWorkflowPayload:
+    """表示 step 4 的整体输出载荷。"""
     report_date: str
     input_path: Path
     generated_at: str
@@ -126,6 +131,7 @@ class ContentWorkflowPayload:
 
 @dataclass(frozen=True)
 class FetchOutputPaths:
+    """表示 step 4 输入输出文件路径。"""
     input_path: Path
     output_path: Path
 
@@ -141,12 +147,14 @@ class AliyunIQSClient:
         timeout: float = 20.0,
         endpoint: str = "https://cloud-iqs.aliyuncs.com/search/unified",
     ) -> None:
+        """保存阿里云 IQS 调用所需的基础配置。"""
         self.api_key = api_key
         self.timeout = timeout
         self.endpoint = endpoint
 
     @staticmethod
     def from_env(project_root: Path | None = None) -> AliyunIQSClient | None:
+        """从本地运行配置中创建阿里云 IQS 客户端。"""
         root = project_root or Path(__file__).resolve().parents[2]
         api_key = load_c114_runtime_config(root).aliyun_iqs_api_key
         if not api_key:
@@ -154,6 +162,7 @@ class AliyunIQSClient:
         return AliyunIQSClient(api_key=api_key)
 
     def search(self, query_text: str) -> list[AliyunSearchDocument]:
+        """调用阿里云 IQS 搜索正文候选。"""
         payload = {
             "query": query_text,
             "engineType": "Generic",
@@ -200,20 +209,26 @@ class AliyunIQSClient:
 
 
 class VisibleTextParser(HTMLParser):
+    """从 HTML 中抽取可见正文文本的简易解析器。"""
+
     def __init__(self) -> None:
+        """初始化正文提取解析器的内部状态。"""
         super().__init__()
         self._skip_depth = 0
         self._parts: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """遇到脚本或样式标签时进入跳过状态。"""
         if tag.lower() in {"script", "style", "noscript"}:
             self._skip_depth += 1
 
     def handle_endtag(self, tag: str) -> None:
+        """脚本或样式标签结束时退出跳过状态。"""
         if tag.lower() in {"script", "style", "noscript"} and self._skip_depth:
             self._skip_depth -= 1
 
     def handle_data(self, data: str) -> None:
+        """收集非脚本区域的可见文本。"""
         if self._skip_depth:
             return
         text = compact_text(data, limit=10_000)
@@ -221,6 +236,7 @@ class VisibleTextParser(HTMLParser):
             self._parts.append(text)
 
     def get_text(self) -> str:
+        """返回清洗后的正文文本。"""
         return compact_text(" ".join(self._parts), limit=20_000)
 
 
@@ -524,8 +540,8 @@ def validate_content_fetch_inputs(source: SearchResultsInputPayload) -> None:
 
     details = "\n".join(f"- {item}" for item in pending[:5])
     raise ValueError(
-        "step 3 中仍有补充链接未完成 ai_review，请先读取 review_prompt_path 指向的提示词文件，"
-        "为每条 selected_results 填写 review_status=reviewed 与 keep_level=strong/weak/drop，"
+        "step 3 中仍有补充链接未完成 ai_review，请先重新运行 c114-search，"
+        "由 skill 内置模型为每条 selected_results 补齐 review_status=reviewed 与 keep_level=strong/weak/drop，"
         "再运行 c114-fetch-content。\n"
         f"{details}"
     )
@@ -599,6 +615,7 @@ def fetch_selected_result_content(
     cache: dict[str, FetchResult],
     aliyun_client: AliyunIQSClient | None = None,
 ) -> FetchResult:
+    """抓取单条补充链接对应的正文内容。"""
     return fetch_once(
         result.url,
         query_text=result.result_title or article.original_title,
@@ -756,6 +773,7 @@ def fetch_url_content(url: str, timeout: float = 20.0) -> FetchResult:
 
 
 def normalize_request_url(url: str) -> str:
+    """对请求 URL 做最小规范化，避免中文路径导致请求失败。"""
     parts = urlsplit(url)
     path = quote(unquote(parts.path), safe="/%:@")
     query = quote(unquote(parts.query), safe="=&/%:@?;+,-._~")
@@ -764,6 +782,7 @@ def normalize_request_url(url: str) -> str:
 
 
 def decode_html(payload: bytes, charset: str | None) -> str:
+    """按多种常见编码顺序解码 HTML。"""
     candidates = [charset, "utf-8", "gb18030", "gbk", "latin-1"]
     for candidate in candidates:
         if not candidate:
@@ -776,6 +795,7 @@ def decode_html(payload: bytes, charset: str | None) -> str:
 
 
 def extract_html_title(html: str) -> str:
+    """从 HTML 中提取页面标题。"""
     title_match = re.search(r"<title>(.*?)</title>", html, re.I | re.S)
     if not title_match:
         return ""
@@ -783,6 +803,7 @@ def extract_html_title(html: str) -> str:
 
 
 def extract_html_summary(html: str) -> str:
+    """从 HTML 的 meta 信息中提取摘要。"""
     for pattern in (
         r'<meta[^>]+name="description"[^>]+content="([^"]*)"',
         r'<meta[^>]+property="og:description"[^>]+content="([^"]*)"',
@@ -822,6 +843,7 @@ def extract_c114_article_text(html: str) -> str:
 
 
 def strip_c114_shell_sections(text: str) -> str:
+    """去掉 C114 页面外壳、版权和分享等非正文片段。"""
     stop_markers = [
         "免责声明",
         "相关链接",
@@ -844,6 +866,7 @@ def strip_c114_shell_sections(text: str) -> str:
 
 
 def extract_visible_text(html: str) -> str:
+    """使用通用可见文本解析器提取正文。"""
     cleaned = re.sub(r"<!--.*?-->", " ", html, flags=re.S)
     parser = VisibleTextParser()
     parser.feed(cleaned)
@@ -851,17 +874,20 @@ def extract_visible_text(html: str) -> str:
 
 
 def normalize_compare_text(value: str) -> str:
+    """归一化标题文本，便于做相似度比较。"""
     lowered = value.lower()
     return re.sub(r"[\W_]+", "", lowered)
 
 
 def title_similarity(left: str, right: str) -> float:
+    """计算两个标题的相似度。"""
     if not left or not right:
         return 0.0
     return SequenceMatcher(None, left, right).ratio()
 
 
 def normalize_aliyun_published_at(value: str) -> str:
+    """把阿里云返回的发布时间归一化为 YYYY-MM-DD。"""
     if not value:
         return ""
     text = value.strip()
@@ -871,6 +897,7 @@ def normalize_aliyun_published_at(value: str) -> str:
 
 
 def published_date_close(reference: str, candidate: str, max_days: int = 3) -> bool:
+    """判断两个日期是否在允许误差范围内。"""
     if not reference or not candidate:
         return False
     try:
@@ -926,6 +953,7 @@ def render_content_yaml(payload: ContentWorkflowPayload) -> str:
 
 
 def render_fetch_block(result: FetchResult, indent: str) -> list[str]:
+    """把单条抓取结果渲染成 YAML 片段。"""
     return [
         f"{indent}url: '{escape_yaml_scalar(result.url)}'",
         f"{indent}domain: '{escape_yaml_scalar(result.domain)}'",
@@ -939,10 +967,12 @@ def render_fetch_block(result: FetchResult, indent: str) -> list[str]:
 
 
 def save_content_results(output_path: Path, payload: ContentWorkflowPayload) -> None:
+    """把 step 4 结果写入 YAML 文件。"""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(render_content_yaml(payload), encoding="utf-8")
 
 
 def compact_text(value: str, limit: int) -> str:
+    """压缩空白并截断过长文本。"""
     text = re.sub(r"\s+", " ", value).strip()
     return text[:limit].strip()

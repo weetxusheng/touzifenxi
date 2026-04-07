@@ -1,9 +1,4 @@
-"""Step 0/1 raw collection for C114 channel pages.
-
-This module only deals with deterministic fetch and parsing work: collect the
-day's visible C114 articles, normalize metadata, and persist raw JSON / CSV
-outputs. It does not perform any downstream research or search decisions.
-"""
+"""C114 第 0/1 步原始取数模块。"""
 
 from __future__ import annotations
 
@@ -45,6 +40,7 @@ CSV_FIELDNAMES = [
 
 @dataclass(frozen=True)
 class ChannelSpec:
+    """描述一个 C114 栏目的抓取配置。"""
     key: str
     name: str
     url: str
@@ -53,6 +49,7 @@ class ChannelSpec:
 
 @dataclass(frozen=True)
 class ArticleCandidate:
+    """表示栏目页上提取到的文章候选链接。"""
     url: str
     anchor_text: str
     anchor_date: date | None
@@ -60,6 +57,7 @@ class ArticleCandidate:
 
 @dataclass(frozen=True)
 class ArticleMetadata:
+    """表示单篇文章的规范化元数据。"""
     url: str
     title: str
     publish_date: date | None
@@ -69,6 +67,7 @@ class ArticleMetadata:
 
 @dataclass(frozen=True)
 class ChannelDailyReport:
+    """表示单个栏目在某一天的汇总结果。"""
     channel_key: str
     channel_name: str
     channel_url: str
@@ -112,7 +111,10 @@ CHANNELS: dict[str, ChannelSpec] = {
 
 
 class AnchorParser(HTMLParser):
+    """从栏目页面中提取锚点链接与锚文本。"""
+
     def __init__(self) -> None:
+        """初始化锚点解析器的内部缓存。"""
         super().__init__()
         self.links: list[tuple[str | None, str]] = []
         self._href: str | None = None
@@ -120,6 +122,7 @@ class AnchorParser(HTMLParser):
         self._capture = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """在遇到 a 标签时开始记录链接与文本。"""
         if tag.lower() != "a":
             return
         self._href = dict(attrs).get("href")
@@ -127,10 +130,12 @@ class AnchorParser(HTMLParser):
         self._capture = True
 
     def handle_data(self, data: str) -> None:
+        """累积当前 a 标签中的可见文本。"""
         if self._capture:
             self._buf.append(data)
 
     def handle_endtag(self, tag: str) -> None:
+        """在 a 标签结束时写入一条解析结果。"""
         if tag.lower() != "a" or not self._capture:
             return
         self.links.append((self._href, normalize_whitespace("".join(self._buf))))
@@ -146,6 +151,7 @@ def normalize_whitespace(value: str) -> str:
 
 
 def strip_title_suffix(value: str) -> str:
+    """去掉标题尾部常见的站点后缀。"""
     cleaned = normalize_whitespace(value)
     return TITLE_SUFFIX_RE.sub("", cleaned).strip()
 
@@ -279,6 +285,7 @@ def derive_keywords_from_text(text: str, limit: int = 5) -> list[str]:
 
 
 def build_keyword_summary(keyword_lists: Iterable[Iterable[str]], limit: int = 10) -> list[tuple[str, int]]:
+    """统计多篇文章关键词频次，生成栏目热点词摘要。"""
     counter: Counter[str] = Counter()
     for keywords in keyword_lists:
         for keyword in keywords:
@@ -426,6 +433,7 @@ def flatten_reports_to_csv_rows(report_date: date, reports: list[ChannelDailyRep
 
 
 def load_existing_csv_rows(csv_path: Path) -> list[dict[str, str]]:
+    """读取现有 CSV 内容，便于按日期增量覆盖写入。"""
     if not csv_path.exists():
         return []
     with csv_path.open(encoding="utf-8", newline="") as handle:

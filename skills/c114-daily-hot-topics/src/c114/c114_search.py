@@ -1,8 +1,4 @@
-"""Step 3 external search workflow for the C114 skill.
-
-This module handles provider routing, result normalization, hard filters, and
-the machine-readable YAML outputs used before正文抓取.
-"""
+"""C114 第 3 步外部搜索与补充链接精筛模块。"""
 
 from __future__ import annotations
 
@@ -19,12 +15,16 @@ from urllib.parse import quote_plus, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 from .c114_intelligence import (
+    ArticleAnalysis,
+    SearchChecklistItem,
+    autofill_search_checklist_items,
     c114_reports_root,
     find_latest_search_run_directory,
     provider_stats_name,
     step_2_checklist_name,
     step_3_results_name,
 )
+from .llm import MiniMaxChatClient, StructuredLLMError, load_prompt_text, run_parallel_ordered
 from .settings import AppPaths, load_c114_runtime_config
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
@@ -40,6 +40,7 @@ DATE_PATTERNS = (
 
 @dataclass(frozen=True)
 class SearchArticleInput:
+    """表示 step 3 中单篇文章的搜索输入。"""
     topic: str
     channel: str
     original_title: str
@@ -50,12 +51,14 @@ class SearchArticleInput:
 
 @dataclass(frozen=True)
 class SearchQuery:
+    """表示一条实际要发给搜索 provider 的查询。"""
     query_type: str
     value: str
 
 
 @dataclass(frozen=True)
 class SearchResult:
+    """表示归一化后的单条搜索结果。"""
     query: str
     query_type: str
     result_title: str
@@ -78,6 +81,7 @@ class SearchResult:
 
 @dataclass(frozen=True)
 class QueryResultBucket:
+    """表示某条 query 对应的一组搜索结果桶。"""
     query: str
     query_type: str
     provider: str
@@ -86,6 +90,7 @@ class QueryResultBucket:
 
 @dataclass(frozen=True)
 class ArticleSearchPayload:
+    """表示单篇文章在 step 3 的完整搜索结果。"""
     topic: str
     channel: str
     original_title: str
@@ -98,12 +103,14 @@ class ArticleSearchPayload:
 
 @dataclass(frozen=True)
 class SearchCategoryPayload:
+    """表示按主题分组后的 step 3 输出。"""
     topic: str
     items: list[ArticleSearchPayload]
 
 
 @dataclass(frozen=True)
 class SearchWorkflowPayload:
+    """表示 step 3 的整体输出载荷。"""
     report_date: str
     provider: str
     input_path: Path
@@ -113,6 +120,7 @@ class SearchWorkflowPayload:
 
 @dataclass(frozen=True)
 class SearchOutputPaths:
+    """表示 step 3 输入与输出文件路径。"""
     input_path: Path
     output_path: Path
     provider: str
@@ -129,6 +137,7 @@ class SearchOutputPaths:
 
     @staticmethod
     def require_metaso_api_key(project_root: Path | None = None) -> str:
+        """读取 Metaso key，缺失时抛出可读错误。"""
         root = project_root or Path(__file__).resolve().parents[2]
         api_key = load_c114_runtime_config(root).metaso_api_key
         if not api_key:
@@ -137,6 +146,7 @@ class SearchOutputPaths:
 
     @staticmethod
     def require_baidu_api_key(project_root: Path | None = None) -> str:
+        """读取百度搜索 key，缺失时抛出可读错误。"""
         root = project_root or Path(__file__).resolve().parents[2]
         api_key = load_c114_runtime_config(root).baidu_api_key
         if not api_key:
@@ -148,11 +158,13 @@ class TavilyClient:
     """Minimal Tavily HTTP client used to avoid an extra SDK dependency."""
 
     def __init__(self, api_key: str, timeout: float = 20.0, base_url: str = "https://api.tavily.com") -> None:
+        """保存 Tavily 调用所需的基础配置。"""
         self.api_key = api_key
         self.timeout = timeout
         self.base_url = base_url.rstrip("/")
 
     def search(self, query: SearchQuery, max_results: int) -> list[dict[str, Any]]:
+        """调用 Tavily 搜索接口。"""
         payload = {
             "query": query.value,
             "topic": "general",
@@ -166,6 +178,7 @@ class TavilyClient:
         return response.get("results", [])
 
     def extract(self, urls: list[str], query: str) -> dict[str, str]:
+        """调用 Tavily extract 接口补正文摘要。"""
         if not urls:
             return {}
         payload = {
@@ -186,6 +199,7 @@ class TavilyClient:
         return extracted
 
     def _post_json(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """向 Tavily 某个 JSON 接口发送请求。"""
         request = Request(
             url=f"{self.base_url}{endpoint}",
             data=json.dumps(payload).encode("utf-8"),
@@ -211,11 +225,13 @@ class MetasoClient:
     """Minimal Metaso HTTP client for Chinese web search."""
 
     def __init__(self, api_key: str, timeout: float = 20.0, base_url: str = "https://metaso.cn/api/v1") -> None:
+        """保存 Metaso 调用所需的基础配置。"""
         self.api_key = api_key
         self.timeout = timeout
         self.base_url = base_url.rstrip("/")
 
     def search(self, query: SearchQuery, max_results: int) -> list[dict[str, Any]]:
+        """调用 Metaso 搜索接口。"""
         payload = {
             "q": query.value,
             "scope": "webpage",
@@ -228,6 +244,7 @@ class MetasoClient:
         return response.get("webpages", [])
 
     def _post_json(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """向 Metaso 某个 JSON 接口发送请求。"""
         request = Request(
             url=f"{self.base_url}{endpoint}",
             data=json.dumps(payload).encode("utf-8"),
@@ -259,11 +276,13 @@ class BaiduSearchClient:
         timeout: float = 20.0,
         base_url: str = "https://qianfan.baidubce.com/v2/ai_search/web_search",
     ) -> None:
+        """保存百度搜索调用所需的基础配置。"""
         self.api_key = api_key
         self.timeout = timeout
         self.base_url = base_url
 
     def search(self, query: SearchQuery, max_results: int) -> list[dict[str, Any]]:
+        """调用百度千帆网页搜索接口。"""
         payload = {
             "messages": [{"content": query.value, "role": "user"}],
             "search_source": "baidu_search_v2",
@@ -274,6 +293,7 @@ class BaiduSearchClient:
         return response.get("references", [])
 
     def _post_json(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """向百度搜索接口发送 JSON 请求。"""
         request = Request(
             url=self.base_url,
             data=json.dumps(payload).encode("utf-8"),
@@ -299,10 +319,12 @@ class GooglePlaywrightClient:
     """Experimental browser-search provider used only as a last-resort fallback."""
 
     def __init__(self, timeout: float = 20.0, headless: bool = True) -> None:
+        """保存 Google Playwright 搜索所需的浏览器参数。"""
         self.timeout = timeout
         self.headless = headless
 
     def search(self, query: SearchQuery, max_results: int) -> list[dict[str, Any]]:
+        """通过 Playwright 模拟浏览器抓取 Google 首页搜索结果。"""
         try:
             from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
             from playwright.sync_api import sync_playwright
@@ -382,6 +404,7 @@ class GooglePlaywrightClient:
         return normalized
 
     def _maybe_accept_google_consent(self, page: Any) -> None:
+        """尝试自动接受 Google 的同意弹窗。"""
         for label in ("接受全部", "全部接受", "Accept all", "I agree"):
             try:
                 locator = page.get_by_role("button", name=label)
@@ -394,7 +417,7 @@ class GooglePlaywrightClient:
 
 
 class AutoSearchClient:
-    """Route each query to the configured default provider based on query language."""
+    """Route each query to the configured default provider and explicit fallbacks."""
 
     def __init__(
         self,
@@ -404,6 +427,7 @@ class AutoSearchClient:
         google_client: GooglePlaywrightClient | None = None,
         provider_mode: str = "auto",
     ) -> None:
+        """保存自动路由搜索所需的 provider 客户端。"""
         self.tavily_client = tavily_client
         self.metaso_client = metaso_client
         self.baidu_client = baidu_client
@@ -411,10 +435,12 @@ class AutoSearchClient:
         self.provider_mode = provider_mode
 
     def search(self, query: SearchQuery, max_results: int) -> list[dict[str, Any]]:
+        """执行搜索并只返回结果列表。"""
         _, results = self.search_with_provider(query, max_results)
         return results
 
     def search_with_provider(self, query: SearchQuery, max_results: int) -> tuple[str, list[dict[str, Any]]]:
+        """按当前策略选择 provider，并返回 provider 名称与结果。"""
         provider = choose_search_provider(query, forced_provider=self.provider_mode)
         if provider == "google":
             return "google", self.google_client.search(query, max_results)
@@ -442,14 +468,27 @@ class AutoSearchClient:
                 return "tavily", self.tavily_client.search(query, max_results)
             raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
         if self.tavily_client is not None:
-            return "tavily", self.tavily_client.search(query, max_results)
-        if self.baidu_client is not None:
-            return "baidu", self.baidu_client.search(query, max_results)
+            try:
+                return "tavily", self.tavily_client.search(query, max_results)
+            except RuntimeError:
+                if self.metaso_client is not None:
+                    try:
+                        return "metaso", self.metaso_client.search(query, max_results)
+                    except RuntimeError:
+                        if self.baidu_client is not None:
+                            return "baidu", self.baidu_client.search(query, max_results)
+                        raise
+                if self.baidu_client is not None:
+                    return "baidu", self.baidu_client.search(query, max_results)
+                raise
         if self.metaso_client is not None:
             return "metaso", self.metaso_client.search(query, max_results)
+        if self.baidu_client is not None:
+            return "baidu", self.baidu_client.search(query, max_results)
         raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
 
     def extract(self, urls: list[str], query: str) -> dict[str, str]:
+        """对已选中的链接批量补充 extract 文本。"""
         if self.tavily_client is None:
             return {}
         return self.tavily_client.extract(urls, query)
@@ -543,7 +582,7 @@ def load_search_checklist_yaml(input_path: Path) -> tuple[str, list[SearchArticl
 
 
 def validate_search_checklist_items(items: list[SearchArticleInput]) -> None:
-    """Reject step 2 inputs that do not yet contain two agent-generated keywords."""
+    """Reject step 2 inputs that do not yet contain two model-generated keywords."""
 
     incomplete = [item for item in items if len(item.keywords) != 2]
     if not incomplete:
@@ -551,10 +590,65 @@ def validate_search_checklist_items(items: list[SearchArticleInput]) -> None:
     details = "；".join(f"《{item.original_title}》当前为 {len(item.keywords)} 组" for item in incomplete[:5])
     if len(incomplete) > 5:
         details = f"{details}；其余 {len(incomplete) - 5} 条未展开"
-    raise ValueError(
-        "搜索清单 YAML 中存在未补全 keywords 的条目。请先由 agent 为每条标题补满 2 组 keywords 后再运行 c114-search。"
-        f" {details}"
-    )
+    raise ValueError("搜索清单 YAML 中存在未补全 keywords 的条目。请先完成 step 2 自动关键词生成后再运行 c114-search。"
+        f" {details}")
+
+
+def ensure_search_checklist_keywords(
+    items: list[SearchArticleInput],
+    llm_client: MiniMaxChatClient | None,
+) -> list[SearchArticleInput]:
+    """Auto-complete missing step 2 keywords before step 3 starts."""
+
+    incomplete = [item for item in items if len(item.keywords) != 2]
+    if not incomplete:
+        return items
+    if llm_client is None:
+        validate_search_checklist_items(items)
+        return items
+
+    checklist_items = [
+        SearchChecklistItem(
+            report_date="",
+            channel_name=item.channel,
+            title=item.original_title,
+            topic=item.topic,
+            search_queries=list(item.keywords),
+            publish_date=item.original_published_at,
+            url=item.original_url,
+        )
+        for item in items
+    ]
+    analyses = [
+        ArticleAnalysis(
+            report_date="",
+            channel_key="",
+            channel_name=item.channel,
+            title=item.original_title,
+            publish_date=item.original_published_at,
+            source_keywords=[],
+            normalized_keywords=[],
+            entities=[],
+            signals=[],
+            topic=item.topic,
+            core_summary="",
+            followup_queries=[],
+            url=item.original_url,
+        )
+        for item in items
+    ]
+    completed = autofill_search_checklist_items(checklist_items, analyses, llm_client)
+    return [
+        SearchArticleInput(
+            topic=item.topic,
+            channel=item.channel_name,
+            original_title=item.title,
+            original_url=item.url,
+            original_published_at=item.publish_date,
+            keywords=list(item.search_queries),
+        )
+        for item in completed
+    ]
 
 
 def choose_search_provider(query: SearchQuery, forced_provider: str = "auto") -> str:
@@ -562,7 +656,7 @@ def choose_search_provider(query: SearchQuery, forced_provider: str = "auto") ->
 
     if forced_provider in {"tavily", "metaso", "baidu", "google"}:
         return forced_provider
-    return "baidu" if contains_chinese(query.value) else "tavily"
+    return "tavily"
 
 
 def contains_chinese(value: str) -> bool:
@@ -623,6 +717,7 @@ def run_search_workflow(
     extract_limit: int,
     provider_name: str = "auto",
     client: Any | None = None,
+    llm_client: MiniMaxChatClient | None = None,
     generated_at: str | None = None,
 ) -> SearchWorkflowPayload:
     """Execute step 3 end-to-end for one report date and produce normalized results."""
@@ -630,6 +725,7 @@ def run_search_workflow(
     yaml_report_date, articles = load_search_checklist_yaml(input_path)
     if yaml_report_date and yaml_report_date != report_date:
         raise ValueError(f"输入搜索清单日期为 {yaml_report_date}，与命令日期 {report_date} 不一致。")
+    articles = ensure_search_checklist_keywords(articles, llm_client)
     validate_search_checklist_items(articles)
 
     domain_config = load_domain_config()
@@ -669,13 +765,16 @@ def run_search_workflow(
     categories = [
         SearchCategoryPayload(topic=topic, items=grouped[topic]) for topic in sorted(grouped, key=sort_topic_key)
     ]
-    return SearchWorkflowPayload(
+    payload = SearchWorkflowPayload(
         report_date=report_date,
         provider=provider_name,
         input_path=input_path,
         generated_at=generated_at or datetime.now().isoformat(timespec="seconds"),
         categories=categories,
     )
+    if llm_client is not None:
+        payload = auto_review_search_payload(payload, llm_client)
+    return payload
 
 
 def search_article(
@@ -1065,6 +1164,95 @@ def enrich_selected_results(
     return selected
 
 
+def auto_review_search_payload(payload: SearchWorkflowPayload, llm_client: MiniMaxChatClient) -> SearchWorkflowPayload:
+    """Fill every selected_results.ai_review via the fixed MiniMax model."""
+
+    system_prompt = load_prompt_text(SEARCH_REVIEW_PROMPT_PATH)
+    reviewed_categories: list[SearchCategoryPayload] = []
+    for category in payload.categories:
+        reviewed_items: list[ArticleSearchPayload] = []
+        for item in category.items:
+            def review_one(result: SearchResult, item_snapshot: ArticleSearchPayload = item) -> SearchResult:
+                response = llm_client.complete_json(
+                    system_prompt=system_prompt,
+                    user_prompt=(
+                        "请审查下面这条搜索补充结果，只返回 JSON 对象。\n"
+                        "格式："
+                        "{\"keep_level\":\"strong|weak|drop\",\"reason\":\"...\",\"relevance_note\":\"...\",\"value_type\":\"...\"}\n\n"
+                        f"{json.dumps(build_search_review_prompt_payload(item_snapshot, result), ensure_ascii=False, indent=2)}"
+                    ),
+                )
+                return apply_search_review_result(result, response)
+
+            reviewed_results = run_parallel_ordered(item.selected_results, review_one)
+            reviewed_items.append(
+                ArticleSearchPayload(
+                    topic=item.topic,
+                    channel=item.channel,
+                    original_title=item.original_title,
+                    original_url=item.original_url,
+                    original_published_at=item.original_published_at,
+                    queries=item.queries,
+                    search_results=item.search_results,
+                    selected_results=reviewed_results,
+                )
+            )
+        reviewed_categories.append(SearchCategoryPayload(topic=category.topic, items=reviewed_items))
+    return SearchWorkflowPayload(
+        report_date=payload.report_date,
+        provider=payload.provider,
+        input_path=payload.input_path,
+        generated_at=payload.generated_at,
+        categories=reviewed_categories,
+    )
+
+
+def build_search_review_prompt_payload(item: ArticleSearchPayload, result: SearchResult) -> dict[str, Any]:
+    return {
+        "topic": item.topic,
+        "channel": item.channel,
+        "original_title": item.original_title,
+        "original_url": item.original_url,
+        "original_published_at": item.original_published_at,
+        "result": {
+            "query": result.query,
+            "query_type": result.query_type,
+            "result_title": result.result_title,
+            "url": result.url,
+            "domain": result.domain,
+            "published_at": result.published_at,
+            "snippet": result.snippet,
+            "score": result.score,
+            "is_official": result.is_official,
+            "source_tier": result.source_tier,
+            "matched_terms": result.matched_terms,
+            "extract_status": result.extract_status,
+            "extract_text": result.extract_text,
+        },
+    }
+
+
+def apply_search_review_result(result: SearchResult, payload: Any) -> SearchResult:
+    if not isinstance(payload, dict):
+        raise StructuredLLMError("step 3 审查结果不是 JSON 对象。")
+    keep_level = str(payload.get("keep_level", "")).strip()
+    if keep_level not in {"strong", "weak", "drop"}:
+        raise StructuredLLMError(f"step 3 返回了非法 keep_level：{keep_level}")
+    reason = str(payload.get("reason", "")).strip()
+    relevance_note = str(payload.get("relevance_note", "")).strip()
+    value_type = str(payload.get("value_type", "")).strip()
+    if not (reason and relevance_note and value_type):
+        raise StructuredLLMError("step 3 审查结果缺少 reason、relevance_note 或 value_type。")
+    return replace(
+        result,
+        review_status="reviewed",
+        keep_level=keep_level,
+        review_reason=reason,
+        relevance_note=relevance_note,
+        value_type=value_type,
+    )
+
+
 def render_search_results_yaml(payload: SearchWorkflowPayload) -> str:
     """Render the full step 3 YAML contract, including pending AI review fields."""
 
@@ -1074,8 +1262,8 @@ def render_search_results_yaml(payload: SearchWorkflowPayload) -> str:
         f"input_path: '{escape_yaml_scalar(str(payload.input_path))}'",
         f"review_prompt_path: '{escape_yaml_scalar(str(SEARCH_REVIEW_PROMPT_PATH))}'",
         "review_instructions:",
-        "  - '先读取 review_prompt_path 指向的提示词文件。'",
-        "  - '仅填写 selected_results 下各条结果的 ai_review 字段。'",
+        "  - 'skill 内置模型会读取 review_prompt_path 指向的提示词文件。'",
+        "  - '仅对 selected_results 下各条结果生成 ai_review 字段。'",
         "  - '必须逐条填写所有 selected_results；不得留空、不得跳过、不得只填一部分。'",
         "  - 'ai_review.status 固定填写 reviewed。'",
         "  - 'ai_review.keep_level 只能填写 strong、weak、drop 三档。'",

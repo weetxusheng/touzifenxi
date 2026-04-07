@@ -1,8 +1,4 @@
-"""CLI entrypoints for the C114 skill.
-
-This module is the single command surface for the C114 skill and should be
-invoked via ``skills/c114-daily-hot-topics/scripts/c114.py``.
-"""
+"""C114 skill 的统一命令行入口。"""
 
 from __future__ import annotations
 
@@ -12,18 +8,19 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from .c114_brief_review import (
-    build_brief_review_report,
+    build_brief_review_report_with_llm,
     resolve_brief_review_output_paths,
     save_brief_review_yaml,
 )
 from .c114_content import resolve_content_output_paths, run_content_fetch_workflow, save_content_results
 from .c114_content_analysis import (
     CONTENT_ANALYSIS_PROMPT_PATH,
+    auto_complete_content_analysis,
     collect_missing_analysis_fields,
+    generate_brief_markdown,
     generate_layer_issues,
     load_content_analysis_inputs,
     resolve_content_analysis_output_paths,
-    save_brief_markdown,
     save_content_analysis_yaml,
     save_layer_issues_yaml,
 )
@@ -58,11 +55,12 @@ from .config import (
     runtime_local_path,
     write_c114_local_config,
 )
+from .llm import MiniMaxChatClient
 from .settings import AppPaths, ensure_directories, resolve_paths
 
 
 def add_c114_date_arguments(parser: argparse.ArgumentParser, *, default_to_today: bool = False) -> None:
-    """Attach the shared single-day / date-range arguments used by C114 steps."""
+    """为 C114 相关命令补充单日或区间日期参数。"""
 
     default_hint = " Defaults to today." if default_to_today else ""
     parser.add_argument("--date", default=None, help=f"Target article date in YYYY-MM-DD format.{default_hint}")
@@ -71,7 +69,7 @@ def add_c114_date_arguments(parser: argparse.ArgumentParser, *, default_to_today
 
 
 def resolve_c114_date_range(args: argparse.Namespace, *, default_to_today: bool = False) -> list[date]:
-    """Normalize `--date` or `--start-date/--end-date` into a concrete date list."""
+    """把单日或区间参数统一展开成具体日期列表。"""
 
     single_date = getattr(args, "date", None)
     start_date = getattr(args, "start_date", None)
@@ -100,7 +98,7 @@ def create_c114_range_day_directories(
     *,
     run_started_at: datetime | None = None,
 ) -> dict[date, Path]:
-    """Create a range run directory with one child directory per target date."""
+    """为区间运行创建总目录，并按天生成子目录。"""
 
     range_dir = create_search_range_directory(
         paths.reports_dir,
@@ -117,7 +115,7 @@ def create_c114_range_day_directories(
 
 
 def find_required_step_input(paths: AppPaths, target_date: date, file_name: str, label: str) -> Path:
-    """Find the latest upstream step file for one date or fail with a readable error."""
+    """查找某一天最新的上游步骤文件，找不到时抛出可读错误。"""
 
     input_path = find_latest_c114_step_file(paths.reports_dir, target_date, file_name)
     if input_path is None:
@@ -125,8 +123,14 @@ def find_required_step_input(paths: AppPaths, target_date: date, file_name: str,
     return input_path
 
 
+def require_llm_client() -> MiniMaxChatClient:
+    """构造固定的 MiniMax 客户端，缺配置时抛出可读错误。"""
+
+    return MiniMaxChatClient.from_runtime_config()
+
+
 def build_parser() -> argparse.ArgumentParser:
-    """Build the C114-only command parser used by the skill scripts and root proxy."""
+    """构造 C114 skill 专用的命令行解析器。"""
 
     parser = argparse.ArgumentParser(description="Run the C114 daily hot-topics skill.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -195,9 +199,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     c114_config_init_parser.add_argument("--force", action="store_true")
 
-    c114_run_parser = subparsers.add_parser(
-        "run", help="Run deterministic C114 steps until the next agent checkpoint."
-    )
+    c114_run_parser = subparsers.add_parser("run", help="Run the full C114 pipeline from step 1 to step 7.")
     add_c114_date_arguments(c114_run_parser, default_to_today=True)
     c114_run_parser.add_argument(
         "--channels",
@@ -221,7 +223,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> None:
-    """Execute one C114 workflow command against the shared project directories."""
+    """根据命令行参数执行一次 C114 工作流命令。"""
 
     resolved_paths = paths or resolve_paths()
     ensure_directories(resolved_paths)
@@ -249,6 +251,10 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
     if args.command == "c114-analyze":
         target_dates = resolve_c114_date_range(args)
         range_day_dirs = create_c114_range_day_directories(resolved_paths, target_dates) if len(target_dates) > 1 else {}
+        try:
+            llm_client = require_llm_client()
+        except RuntimeError:
+            llm_client = None
         for target_date in target_dates:
             output_paths = resolve_analysis_output_paths(
                 paths=resolved_paths,
@@ -266,13 +272,26 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
                 ),
             )
             analyses, briefs = analyze_daily_articles(output_paths.input_path, target_date.isoformat())
-            checklist_items = write_analysis_outputs(output_paths, target_date.isoformat(), analyses)
+            try:
+                checklist_items = write_analysis_outputs(
+                    output_paths,
+                    target_date.isoformat(),
+                    analyses,
+                    llm_client=llm_client,
+                )
+            except RuntimeError as error:
+                print(f"C114 分析完成 {target_date.isoformat()}")
+                print(f"文章数: {len(analyses)}")
+                print(f"主题数: {len(briefs)}")
+                print(f"\n逐篇分析 CSV: {output_paths.analysis_output}")
+                print(f"Step 2 未执行: {error}\n")
+                continue
             print(f"C114 分析完成 {target_date.isoformat()}")
             print(f"文章数: {len(analyses)}")
             print(f"主题数: {len(briefs)}")
             print(f"\n逐篇分析 CSV: {output_paths.analysis_output}")
             if checklist_items:
-                print(f"搜索清单 YAML 模板: {output_paths.checklist_output}\n")
+                print(f"搜索清单 YAML: {output_paths.checklist_output}\n")
             else:
                 print("当日无文章，流程停留在 step 1；step 2 及后续文件不生成。\n")
         return
@@ -280,6 +299,7 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
     if args.command == "c114-search":
         target_dates = resolve_c114_date_range(args)
         runtime_config = load_c114_runtime_config()
+        llm_client = require_llm_client()
         range_day_dirs = create_c114_range_day_directories(resolved_paths, target_dates) if len(target_dates) > 1 else {}
         for target_date in target_dates:
             input_override = args.input
@@ -302,6 +322,7 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
                 per_article_limit=int(args.per_article_limit or runtime_config.search_max_external_results),
                 extract_limit=int(args.extract_limit),
                 provider_name=output_paths.provider,
+                llm_client=llm_client,
             )
             save_search_results(output_paths.output_path, payload)
             print(f"C114 搜索完成 {target_date.isoformat()}")
@@ -334,6 +355,7 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
 
     if args.command == "c114-analyze-content":
         target_dates = resolve_c114_date_range(args)
+        llm_client = require_llm_client()
         range_day_dirs = create_c114_range_day_directories(resolved_paths, target_dates) if len(target_dates) > 1 else {}
         for target_date in target_dates:
             input_override = args.input
@@ -353,6 +375,7 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
                 issues_output_override=issues_output,
             )
             payload = load_content_analysis_inputs(output_paths.input_path)
+            payload = auto_complete_content_analysis(payload, llm_client)
             save_content_analysis_yaml(output_paths.analysis_output, payload)
             run_dir = output_paths.input_path.parent
             issues = generate_layer_issues(
@@ -368,22 +391,24 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
             print(f"正文分析 YAML: {output_paths.analysis_output}")
             print(f"层问题 YAML: {output_paths.issues_output}")
             if missing_analysis:
-                print("step 5 尚未补全，step 6 不继续生成。")
-                print(f"请先读取提示词: {CONTENT_ANALYSIS_PROMPT_PATH}")
-                print("并基于 step 4 正文内容补齐以下字段后，再继续运行 c114-analyze-content：")
+                print("step 5 模型补全后仍不完整，step 6 不继续生成。")
+                print(f"当前使用的内置提示词: {CONTENT_ANALYSIS_PROMPT_PATH}")
+                print("请检查 step 4 正文质量或 LLM 输出，并在修复后重新运行 c114-analyze-content：")
                 for issue in missing_analysis[:10]:
                     fields = "、".join(issue["missing_fields"])
                     print(f"- [{issue['topic']}] {issue['original_title']}: {fields}")
                 if len(missing_analysis) > 10:
-                    print(f"- 其余 {len(missing_analysis) - 10} 篇请查看 step 5 YAML 继续补齐")
+                    print(f"- 其余 {len(missing_analysis) - 10} 篇请查看 step 5 YAML")
                 print("")
                 continue
-            save_brief_markdown(output_paths.brief_output, payload)
+            output_paths.brief_output.parent.mkdir(parents=True, exist_ok=True)
+            output_paths.brief_output.write_text(generate_brief_markdown(payload, llm_client), encoding="utf-8")
             print(f"主题简报 MD: {output_paths.brief_output}\n")
         return
 
     if args.command == "c114-review-brief":
         target_dates = resolve_c114_date_range(args)
+        llm_client = require_llm_client()
         range_day_dirs = create_c114_range_day_directories(resolved_paths, target_dates) if len(target_dates) > 1 else {}
         for target_date in target_dates:
             brief_input = args.input
@@ -406,11 +431,12 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
                 content_input_override=content_input,
                 output_override=output_override,
             )
-            report = build_brief_review_report(
+            report = build_brief_review_report_with_llm(
                 report_date=target_date.isoformat(),
                 brief_path=output_paths.brief_input_path,
                 analysis_path=output_paths.analysis_input_path,
                 content_path=output_paths.content_input_path,
+                llm_client=llm_client,
             )
             save_brief_review_yaml(output_paths.review_output_path, report)
             print(f"C114 简报审查完成 {target_date.isoformat()}")
@@ -431,7 +457,7 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
             print("缺失配置项:")
             for item in missing:
                 print(f"- {item}")
-            print("说明：step 1-2 可先不配 API key；若要继续跑 step 3-7，搜索侧只需先配置至少一个搜索 provider key（Tavily / Metaso / Baidu 三选一），再补齐其余 search/content/brief 基础配置。")
+            print("说明：step 1 可先不配 API key；若要继续跑 step 2-7，需要先配置 llm.api_key，再至少配置一个搜索 provider key（Tavily / Metaso / Baidu 三选一），并补齐其余 search/content/brief 基础配置。")
         else:
             print("配置已完整。")
         return
@@ -453,11 +479,13 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
         output_path = initialize_c114_local_config(None, overwrite=bool(args.force))
         print(f"C114 配置模板已初始化: {output_path}")
         if collect_missing_c114_config():
-            print("请编辑 runtime.local.json，补齐 keys/search/content/brief 配置后再运行。")
+            print("请编辑 runtime.local.json，补齐 keys/search/content/brief/llm 配置后再运行。")
         return
 
     if args.command == "run":
         target_dates = resolve_c114_date_range(args, default_to_today=True)
+        llm_client = require_llm_client()
+        runtime_config = load_c114_runtime_config()
         if len(target_dates) > 1:
             day_dirs = create_c114_range_day_directories(resolved_paths, target_dates)
         else:
@@ -489,7 +517,7 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
                 checklist_output_override=str(checklist_output),
             )
             analyses, briefs = analyze_daily_articles(analysis_paths.input_path, target_date.isoformat())
-            checklist_items = write_analysis_outputs(analysis_paths, target_date.isoformat(), analyses)
+            checklist_items = write_analysis_outputs(analysis_paths, target_date.isoformat(), analyses, llm_client=llm_client)
             print(f"C114 全流程 step 1-2 完成 {target_date.isoformat()}")
             print(f"文章数: {len(analyses)}")
             print(f"主题数: {len(briefs)}")
@@ -498,17 +526,94 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
                 print("当日无文章，流程停留在 step 1；step 2 及后续文件不生成。\n")
                 continue
             print(f"Step 2 YAML: {analysis_paths.checklist_output}")
-            print(
-                "run 命令已停在 step 2。请先按 step 2 契约补全每条标题的 2 组 keywords，"
-                "再继续 c114-search；完成 step 3 后，再按 review_prompt_path 补全 "
-                "ai_review.review_status 与 ai_review.keep_level，然后再继续 step 4-7。\n"
+            search_output = (day_dir / step_3_results_name(target_date)).resolve()
+            search_paths = resolve_search_output_paths(
+                paths=resolved_paths,
+                report_date=target_date,
+                input_override=str(analysis_paths.checklist_output),
+                output_override=str(search_output),
+                provider=args.provider,
             )
+            search_payload = run_search_workflow(
+                input_path=search_paths.input_path,
+                report_date=target_date.isoformat(),
+                per_query_limit=int(args.per_query_limit),
+                per_article_limit=int(args.per_article_limit or runtime_config.search_max_external_results),
+                extract_limit=int(args.extract_limit),
+                provider_name=search_paths.provider,
+                llm_client=llm_client,
+            )
+            save_search_results(search_paths.output_path, search_payload)
+            content_output = (day_dir / step_4_content_name(target_date)).resolve()
+            content_paths = resolve_content_output_paths(
+                paths=resolved_paths,
+                report_date=target_date,
+                input_override=str(search_paths.output_path),
+                output_override=str(content_output),
+            )
+            content_payload = run_content_fetch_workflow(
+                input_path=content_paths.input_path,
+                report_date=target_date.isoformat(),
+            )
+            save_content_results(content_paths.output_path, content_payload)
+            analysis_output = (day_dir / step_5_content_analysis_name(target_date)).resolve()
+            issues_output = (day_dir / layer_issues_name(target_date)).resolve()
+            content_analysis_paths = resolve_content_analysis_output_paths(
+                paths=resolved_paths,
+                report_date=target_date,
+                input_override=str(content_paths.output_path),
+                output_override=str(analysis_output),
+                issues_output_override=str(issues_output),
+            )
+            analysis_payload = auto_complete_content_analysis(
+                load_content_analysis_inputs(content_analysis_paths.input_path),
+                llm_client,
+            )
+            save_content_analysis_yaml(content_analysis_paths.analysis_output, analysis_payload)
+            issues = generate_layer_issues(
+                report_date=target_date.isoformat(),
+                raw_csv_path=resolved_paths.raw_dir / "c114_hot_topics.csv",
+                checklist_path=day_dir / step_2_checklist_name(target_date),
+                search_results_path=day_dir / step_3_results_name(target_date),
+                content_path=content_analysis_paths.input_path,
+            )
+            save_layer_issues_yaml(content_analysis_paths.issues_output, target_date.isoformat(), issues)
+            if collect_missing_analysis_fields(analysis_payload):
+                raise RuntimeError(f"{target_date.isoformat()} 的 step 5 模型补全后仍不完整，流程已中止。")
+            brief_output = content_analysis_paths.brief_output
+            brief_output.parent.mkdir(parents=True, exist_ok=True)
+            brief_output.write_text(generate_brief_markdown(analysis_payload, llm_client), encoding="utf-8")
+            print(f"Step 3 YAML: {search_paths.output_path}")
+            print(f"Step 4 YAML: {content_paths.output_path}")
+            print(f"Step 5 YAML: {content_analysis_paths.analysis_output}")
+            print(f"Step 6 MD: {brief_output}")
+            if runtime_config.review_enable_step7:
+                review_paths = resolve_brief_review_output_paths(
+                    paths=resolved_paths,
+                    report_date=target_date,
+                    brief_input_override=str(brief_output),
+                    analysis_input_override=str(content_analysis_paths.analysis_output),
+                    content_input_override=str(content_paths.output_path),
+                    output_override=str((day_dir / step_7_brief_review_name(target_date)).resolve()),
+                )
+                review_report = build_brief_review_report_with_llm(
+                    report_date=target_date.isoformat(),
+                    brief_path=review_paths.brief_input_path,
+                    analysis_path=review_paths.analysis_input_path,
+                    content_path=review_paths.content_input_path,
+                    llm_client=llm_client,
+                )
+                save_brief_review_yaml(review_paths.review_output_path, review_report)
+                print(f"Step 7 YAML: {review_paths.review_output_path}\n")
+            else:
+                print("Step 7 已在配置中关闭，流程停留在 step 6。\n")
         return
 
     raise ValueError(f"未知命令: {args.command}")
 
 
 def main(argv: list[str] | None = None) -> None:
+    """作为脚本入口解析参数并执行对应命令。"""
     parser = build_parser()
     args = parser.parse_args(argv)
     run_with_args(args)

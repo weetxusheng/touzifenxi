@@ -6,7 +6,7 @@ from pathlib import Path
 
 REQUIRED_SKILL_FILES = (
     "SKILL.md",
-    "agents/openai.yaml",
+    "agents/agent.yaml",
 )
 REQUIRED_SKILL_DIRS = (
     "agents",

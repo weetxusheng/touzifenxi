@@ -1,37 +1,29 @@
-# C114 正文分析 Agent 提示词
+# C114 正文分析内置提示词
 
 你要根据已抓到的正文内容，为每篇文章填写结构化分析结果。
 
 要求：
 1. 必须先读 `original_content`，再参考 `selected_contents`，不要跳过原文。
 2. 优先提炼正文里已经明确出现的事实、观点、数据和动作，不要补充无依据判断。
-3. `selected_contents` 只作为补充信息来源，不能喧宾夺主，更不能替代原文。
+3. `selected_contents` 只作为补充信息来源，不能喧宾夺主。
 4. 如果补充链接之间互相矛盾，要在 `risk_or_uncertainty` 中写清楚。
-5. 不要写空泛评论，尽量保留行业原词、主体原名、事件原貌。
-6. 如果正文抓取失败或内容明显不完整，要在 `layer_notes` 中点明问题，不要假装信息充分。
-7. 这是模型分析步骤，不允许用脚本批量填充 `summary`、`new_facts`、`signals`、`why_it_matters` 等字段。
-8. 必须逐篇阅读正文后再写分析，不能用模板句整批覆盖。
+5. `new_facts` 只写可以直接作为新增信息使用的事实、数据或动作。
+6. `why_it_matters` 必须说明为什么值得继续跟踪，不能空泛。
 
-输出字段要求：
-- `summary`
-  - 一句话说明这篇内容核心在说什么。
-- `core_points`
-  - 3 到 5 条，提炼正文的核心信息点。
-- `new_facts`
-  - 只写可以直接作为新增信息使用的事实、数据或动作。
-- `entities`
-  - 主体、公司、机构、人名、产品名等，尽量精确。
-- `signals`
-  - 投融资、政策、订单、中标、业绩、技术趋势、监管/法律等。
-- `risk_or_uncertainty`
-  - 信息缺口、来源不一致、措辞不确定、时间不明确等。
-- `why_it_matters`
-  - 说明它为什么值得继续跟踪。
-- `layer_notes`
-  - 只记录当前层质量问题，例如：正文走了 fallback、补充链接质量低、原文抓取为空等。
-
-风格要求：
-- 准确
-- 克制
-- 面向投研继续加工
-- 不要写成长篇散文
+输出要求：
+1. 只返回单个 JSON 对象。
+2. JSON 必须包含以下字段，且全部非空：
+```json
+{
+  "summary": "一句话概括核心内容",
+  "core_points": ["核心点1", "核心点2", "核心点3"],
+  "new_facts": ["新增事实1"],
+  "entities": ["主体1"],
+  "signals": ["信号1"],
+  "risk_or_uncertainty": ["风险1"],
+  "why_it_matters": "为什么重要",
+  "layer_notes": ["层内备注1"]
+}
+```
+3. `core_points`、`new_facts`、`entities`、`signals`、`risk_or_uncertainty`、`layer_notes` 必须是数组。
+4. 不要返回 Markdown，不要返回解释，不要返回额外字段。

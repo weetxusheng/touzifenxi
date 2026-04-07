@@ -41,6 +41,9 @@ class C114ConfigTests(unittest.TestCase):
             missing = collect_missing_c114_config(skill_root)
 
         self.assertIn("keys.search_provider_api_key", missing)
+        self.assertIn("llm.api_key", missing)
+        self.assertIn("llm.model", missing)
+        self.assertIn("llm.base_url", missing)
         self.assertIn("search.recent_days", missing)
         self.assertIn("brief.role", missing)
 
@@ -56,6 +59,12 @@ class C114ConfigTests(unittest.TestCase):
                         "keys": {
                             "baidu_api_key": "b",
                             "aliyun_iqs_api_key": "a",
+                        },
+                        "llm": {
+                            "provider": "minimax",
+                            "model": "MiniMax M2.7",
+                            "api_key": "llm-key",
+                            "base_url": "https://api.minimaxi.com/v1",
                         },
                         "search": {"recent_days": 30, "max_external_results": 5},
                         "content": {"fetch_keep_levels": ["strong", "weak"]},
@@ -115,6 +124,14 @@ class C114ConfigTests(unittest.TestCase):
                             "baidu_api_key": "b",
                             "aliyun_iqs_api_key": "a",
                         },
+                        "llm": {
+                            "provider": "minimax",
+                            "model": "MiniMax M2.7",
+                            "api_key": "llm-key",
+                            "base_url": "https://api.minimaxi.com/v1",
+                            "timeout_seconds": 45,
+                            "max_retries": 3,
+                        },
                         "search": {"recent_days": 30, "max_external_results": 5},
                         "content": {"fetch_keep_levels": ["strong", "weak"]},
                         "brief": {"role": "senior_researcher"},
@@ -127,6 +144,12 @@ class C114ConfigTests(unittest.TestCase):
             config = load_c114_runtime_config(skill_root)
 
         self.assertEqual(config.output_mode, "skill")
+        self.assertEqual(config.llm_provider, "minimax")
+        self.assertEqual(config.llm_model, "MiniMax M2.7")
+        self.assertEqual(config.llm_api_key, "llm-key")
+        self.assertEqual(config.llm_base_url, "https://api.minimaxi.com/v1")
+        self.assertEqual(config.llm_timeout_seconds, 45.0)
+        self.assertEqual(config.llm_max_retries, 3)
 
     def test_load_c114_runtime_config_normalizes_project_output_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -143,6 +166,12 @@ class C114ConfigTests(unittest.TestCase):
                             "baidu_api_key": "b",
                             "aliyun_iqs_api_key": "a",
                         },
+                        "llm": {
+                            "provider": "minimax",
+                            "model": "MiniMax M2.7",
+                            "api_key": "llm-key",
+                            "base_url": "https://api.minimaxi.com/v1",
+                        },
                         "search": {"recent_days": 30, "max_external_results": 5},
                         "content": {"fetch_keep_levels": ["strong", "weak"]},
                         "brief": {"role": "senior_researcher"},
@@ -156,3 +185,68 @@ class C114ConfigTests(unittest.TestCase):
             config = load_c114_runtime_config(skill_root)
 
         self.assertEqual(config.output_mode, "project")
+
+    def test_load_c114_runtime_config_enables_step7_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "keys": {
+                            "tavily_api_key": "t",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "llm": {
+                            "provider": "minimax",
+                            "model": "MiniMax M2.7",
+                            "api_key": "llm-key",
+                            "base_url": "https://api.minimaxi.com/v1",
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_c114_runtime_config(skill_root)
+
+        self.assertTrue(config.review_enable_step7)
+
+    def test_load_c114_runtime_config_reads_step7_toggle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "keys": {
+                            "tavily_api_key": "t",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "llm": {
+                            "provider": "minimax",
+                            "model": "MiniMax M2.7",
+                            "api_key": "llm-key",
+                            "base_url": "https://api.minimaxi.com/v1",
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                        "review": {"enable_step7": False},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_c114_runtime_config(skill_root)
+
+        self.assertFalse(config.review_enable_step7)

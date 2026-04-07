@@ -1,12 +1,9 @@
-"""Step 1 and Step 2 analysis helpers for the C114 skill.
-
-This layer turns raw C114 rows into deduplicated article analyses and the
-search-checklist template consumed by later agent-assisted steps.
-"""
+"""C114 第 1/2 步分析与检索清单生成模块。"""
 
 from __future__ import annotations
 
 import csv
+import json
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -15,6 +12,7 @@ from io import StringIO
 from pathlib import Path
 from urllib.parse import urlparse
 
+from .llm import MiniMaxChatClient, StructuredLLMError, load_prompt_text, run_parallel_ordered
 from .settings import AppPaths
 
 CSV_HEADERS = {
@@ -85,6 +83,7 @@ PROVIDER_STATS_PREFIX = "c114_provider_stats"
 
 @dataclass(frozen=True)
 class RawArticleRecord:
+    """表示从原始 CSV 中读取的一条文章记录。"""
     report_date: str
     channel_key: str
     channel_name: str
@@ -98,6 +97,7 @@ class RawArticleRecord:
 
 @dataclass(frozen=True)
 class ArticleAnalysis:
+    """表示单篇文章在 step 1 的结构化分析结果。"""
     report_date: str
     channel_key: str
     channel_name: str
@@ -115,6 +115,7 @@ class ArticleAnalysis:
 
 @dataclass(frozen=True)
 class TopicBrief:
+    """表示按主题聚合后的简要概览。"""
     topic: str
     article_count: int
     channels: list[str]
@@ -128,6 +129,7 @@ class TopicBrief:
 
 @dataclass(frozen=True)
 class SearchChecklistItem:
+    """表示 step 2 中一篇文章对应的一条检索清单项。"""
     report_date: str
     channel_name: str
     title: str
@@ -139,22 +141,26 @@ class SearchChecklistItem:
 
 @dataclass(frozen=True)
 class SearchChecklistSection:
+    """表示 step 2 中按主题分组后的检索清单。"""
     topic: str
     items: list[SearchChecklistItem]
 
 
 @dataclass(frozen=True)
 class AnalysisOutputPaths:
+    """表示 step 1/2 输出文件的路径集合。"""
     input_path: Path
     analysis_output: Path
     checklist_output: Path
 
 
 def build_search_run_dir_name(run_started_at: datetime) -> str:
+    """生成单次运行目录名。"""
     return f"{RUN_DIR_PREFIX}{run_started_at.strftime(RUN_DIR_TIME_FORMAT)}"
 
 
 def build_search_range_dir_name(start_date: date, end_date: date, run_started_at: datetime) -> str:
+    """生成区间运行目录名。"""
     return (
         f"{RANGE_DIR_PREFIX}{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}_"
         f"{run_started_at.strftime(RUN_DIR_TIME_FORMAT)}"
@@ -162,46 +168,57 @@ def build_search_range_dir_name(start_date: date, end_date: date, run_started_at
 
 
 def c114_reports_root(reports_dir: Path) -> Path:
+    """返回 C114 运行产物的总目录。"""
     return reports_dir / "c114_report"
 
 
 def build_step_file_name(step_prefix: str, report_date: date, suffix: str) -> str:
+    """按统一规则拼接某一步的文件名。"""
     return f"{step_prefix}_{report_date.strftime('%Y%m%d')}.{suffix}"
 
 
 def step_1_analysis_name(report_date: date) -> str:
+    """返回 step 1 分析 CSV 文件名。"""
     return build_step_file_name(STEP_1_ANALYSIS_PREFIX, report_date, "csv")
 
 
 def step_2_checklist_name(report_date: date) -> str:
+    """返回 step 2 检索清单 YAML 文件名。"""
     return build_step_file_name(STEP_2_CHECKLIST_PREFIX, report_date, "yaml")
 
 
 def step_3_results_name(report_date: date) -> str:
+    """返回 step 3 搜索结果 YAML 文件名。"""
     return build_step_file_name(STEP_3_RESULTS_PREFIX, report_date, "yaml")
 
 
 def step_4_content_name(report_date: date) -> str:
+    """返回 step 4 正文抓取 YAML 文件名。"""
     return build_step_file_name(STEP_4_CONTENT_PREFIX, report_date, "yaml")
 
 
 def step_5_content_analysis_name(report_date: date) -> str:
+    """返回 step 5 正文分析 YAML 文件名。"""
     return build_step_file_name(STEP_5_CONTENT_ANALYSIS_PREFIX, report_date, "yaml")
 
 
 def step_6_brief_name(report_date: date) -> str:
+    """返回 step 6 简报 Markdown 文件名。"""
     return build_step_file_name(STEP_6_BRIEF_PREFIX, report_date, "md")
 
 
 def step_7_brief_review_name(report_date: date) -> str:
+    """返回 step 7 审查 YAML 文件名。"""
     return build_step_file_name(STEP_7_BRIEF_REVIEW_PREFIX, report_date, "yaml")
 
 
 def layer_issues_name(report_date: date) -> str:
+    """返回分层问题汇总文件名。"""
     return build_step_file_name(LAYER_ISSUES_PREFIX, report_date, "yaml")
 
 
 def provider_stats_name(report_date: date) -> str:
+    """返回搜索 provider 用量统计文件名。"""
     return build_step_file_name(PROVIDER_STATS_PREFIX, report_date, "md")
 
 
@@ -323,12 +340,14 @@ def load_daily_articles_from_csv(csv_text: str, report_date: str) -> list[RawArt
 
 
 def is_c114_article_url(url: str) -> bool:
+    """判断链接是否属于 C114 主站文章页。"""
     parsed = urlparse(url)
     host = parsed.netloc.lower()
     return host == "www.c114.com.cn" or host.endswith(".c114.com.cn")
 
 
 def split_pipe_list(value: str) -> list[str]:
+    """把竖线分隔文本拆成列表。"""
     return [part.strip() for part in value.split("|") if part.strip()]
 
 
@@ -354,6 +373,7 @@ def normalize_keywords(keywords: list[str], title: str, summary: str) -> list[st
 
 
 def infer_topic(normalized_keywords: list[str], channel_name: str, title: str, summary: str) -> str:
+    """根据关键词、标题和摘要推断文章所属主题。"""
     text = " ".join([channel_name, title, summary, *normalized_keywords])
     for topic, patterns in TOPIC_RULES:
         if any(pattern in text for pattern in patterns):
@@ -362,6 +382,7 @@ def infer_topic(normalized_keywords: list[str], channel_name: str, title: str, s
 
 
 def extract_entities(normalized_keywords: list[str], title: str, summary: str) -> list[str]:
+    """从关键词、标题和摘要中提取主体实体。"""
     entities: list[str] = []
     for token in normalized_keywords:
         if token in ENTITY_STOPWORDS:
@@ -380,6 +401,7 @@ def extract_entities(normalized_keywords: list[str], title: str, summary: str) -
 
 
 def classify_signals(title: str, summary: str) -> list[str]:
+    """根据标题和摘要识别行业信号类型。"""
     text = f"{title} {summary}"
     signals: list[str] = []
     for label, patterns in SIGNAL_RULES:
@@ -389,6 +411,7 @@ def classify_signals(title: str, summary: str) -> list[str]:
 
 
 def build_core_summary(topic: str, signals: list[str], entities: list[str], title: str) -> str:
+    """生成单篇文章的核心摘要。"""
     entity_text = "、".join(entities[:2]) if entities else "相关主体"
     signal_text = "、".join(signals[:2])
     return f"{topic}方向出现{signal_text}信号，重点涉及{entity_text}；代表事件为《{title}》。"
@@ -478,6 +501,7 @@ def build_topic_briefs(analyses: list[ArticleAnalysis]) -> list[TopicBrief]:
 
 
 def save_article_analysis_csv(output_path: Path, analyses: list[ArticleAnalysis]) -> None:
+    """把 step 1 分析结果写成 CSV 文件。"""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
@@ -533,6 +557,53 @@ def load_search_agent_prompt(prompt_path: Path = PROMPT_PATH) -> str:
     return prompt_path.read_text(encoding="utf-8")
 
 
+def autofill_search_checklist_items(
+    items: list[SearchChecklistItem],
+    analyses: list[ArticleAnalysis],
+    llm_client: MiniMaxChatClient,
+    prompt_path: Path = PROMPT_PATH,
+) -> list[SearchChecklistItem]:
+    """Use the fixed MiniMax model to generate exactly two keywords per article."""
+
+    analysis_index = {analysis.title: analysis for analysis in analyses}
+    system_prompt = load_prompt_text(prompt_path)
+    def complete_one(item: SearchChecklistItem) -> SearchChecklistItem:
+        analysis = analysis_index.get(item.title)
+        payload = {
+            "report_date": item.report_date,
+            "channel": item.channel_name,
+            "topic": item.topic,
+            "original_title": item.title,
+            "original_published_at": item.publish_date,
+            "original_url": item.url,
+            "core_summary": analysis.core_summary if analysis else "",
+            "signals": list(analysis.signals) if analysis else [],
+            "entities": list(analysis.entities) if analysis else [],
+            "existing_followup_queries": list(analysis.followup_queries) if analysis else [],
+        }
+        response = llm_client.complete_json(
+            system_prompt=system_prompt,
+            user_prompt=(
+                "请基于下面这篇文章信息生成 2 组搜索关键词。\n"
+                "只返回 JSON 对象，格式为 {\"keywords\": [\"词组1\", \"词组2\"]}。\n"
+                "两组关键词必须贴近原标题、便于中文搜索召回、且不能完全重复原标题。\n\n"
+                f"{json.dumps(payload, ensure_ascii=False, indent=2)}"
+            ),
+        )
+        keywords = _normalize_keyword_response(response, title=item.title)
+        return SearchChecklistItem(
+            report_date=item.report_date,
+            channel_name=item.channel_name,
+            title=item.title,
+            topic=item.topic,
+            search_queries=keywords,
+            publish_date=item.publish_date,
+            url=item.url,
+        )
+
+    return run_parallel_ordered(items, complete_one)
+
+
 def build_search_checklist_items(analyses: list[ArticleAnalysis]) -> list[SearchChecklistItem]:
     """Convert per-article analyses into the step 2 checklist template."""
 
@@ -553,6 +624,7 @@ def build_search_checklist_items(analyses: list[ArticleAnalysis]) -> list[Search
 
 
 def build_title_aligned_queries(analysis: ArticleAnalysis) -> list[str]:
+    """根据标题语义生成两条贴近原标题的检索词。"""
     segments = extract_title_segments(analysis.title)
     queries: list[str] = []
 
@@ -576,6 +648,7 @@ def build_title_aligned_queries(analysis: ArticleAnalysis) -> list[str]:
 
 
 def extract_title_segments(title: str) -> list[str]:
+    """把标题拆成便于组合检索词的短语片段。"""
     segments: list[str] = []
     for raw_part in TITLE_SPLIT_RE.split(title):
         segment = compact_phrase(raw_part).strip("'\" ")
@@ -587,6 +660,7 @@ def extract_title_segments(title: str) -> list[str]:
 
 
 def derive_primary_query(title: str, segments: list[str]) -> str:
+    """生成第一条主检索词。"""
     if len(segments) >= 2:
         return compact_phrase(f"{segments[0]} {segments[1]}")
     if segments:
@@ -595,6 +669,7 @@ def derive_primary_query(title: str, segments: list[str]) -> str:
 
 
 def derive_secondary_query(analysis: ArticleAnalysis, segments: list[str], primary: str) -> str:
+    """生成第二条补充检索词。"""
     if len(segments) >= 3:
         leading = normalize_title_detail(segments[1])
         trailing = normalize_title_detail(segments[2])
@@ -613,6 +688,7 @@ def derive_secondary_query(analysis: ArticleAnalysis, segments: list[str], prima
 
 
 def derive_fallback_query(title: str, primary: str) -> str:
+    """在主副检索词不足时生成兜底检索词。"""
     subject = compact_phrase(title[: ACTION_HINT_RE.search(title).start()]) if ACTION_HINT_RE.search(title) else ""
     action = extract_action_hint(title)
     if subject and action:
@@ -626,6 +702,7 @@ def derive_fallback_query(title: str, primary: str) -> str:
 
 
 def extract_action_hint(title: str) -> str:
+    """从标题中抽取动作提示词。"""
     match = ACTION_HINT_RE.search(title)
     if not match:
         return ""
@@ -635,25 +712,46 @@ def extract_action_hint(title: str) -> str:
 
 
 def normalize_title_detail(segment: str) -> str:
+    """清洗标题片段中的连接词与冗余前缀。"""
     cleaned = compact_phrase(segment)
     cleaned = LEADING_CONNECTOR_RE.sub("", cleaned).strip()
     return compact_phrase(cleaned)
 
 
 def build_search_checklist_sections(items: list[SearchChecklistItem]) -> list[SearchChecklistSection]:
+    """按主题对检索清单项分组。"""
     grouped: dict[str, list[SearchChecklistItem]] = {}
     for item in items:
         grouped.setdefault(item.topic, []).append(item)
     return [SearchChecklistSection(topic=topic, items=grouped[topic]) for topic in sorted(grouped)]
 
 
+def _normalize_keyword_response(payload: object, *, title: str) -> list[str]:
+    """校验并规范化模型返回的两组关键词。"""
+    if not isinstance(payload, dict):
+        raise StructuredLLMError(f"《{title}》的关键词返回不是 JSON 对象。")
+    raw_keywords = payload.get("keywords")
+    if not isinstance(raw_keywords, list):
+        raise StructuredLLMError(f"《{title}》的关键词返回缺少 keywords 列表。")
+    normalized = [compact_phrase(str(keyword)) for keyword in raw_keywords if compact_phrase(str(keyword))]
+    deduped: list[str] = []
+    for keyword in normalized:
+        if keyword not in deduped:
+            deduped.append(keyword)
+    if len(deduped) != 2:
+        raise StructuredLLMError(f"《{title}》的关键词数量必须为 2，当前为 {len(deduped)}。")
+    return deduped
+
+
 def compact_phrase(value: str) -> str:
+    """压缩短语中的空白和符号，生成适合写入 YAML 的值。"""
     text = re.sub(r"\s+", " ", value).strip()
     text = re.sub(r"[|；;]+", " ", text)
     return text[:40].strip()
 
 
 def compact_search_phrase(seed: str, topic: str) -> str:
+    """把检索种子和主题压缩成最终可搜索短语。"""
     cleaned_seed = compact_phrase(seed)
     cleaned_topic = compact_phrase(topic)
     if not cleaned_seed:
@@ -670,7 +768,7 @@ def render_search_checklist_yaml(report_date: str, items: list[SearchChecklistIt
     lines = [
         f"report_date: '{report_date}'",
         f"prompt_path: '{PROMPT_PATH}'",
-        "instructions: 'keywords 必须由调用本 skill 的 agent 先读取 prompt_path 指向的提示词文件，再根据 original_title 自行生成；每条仅填写 2 组，且必须贴近原标题，不允许另起一套提示词。'",
+        "instructions: 'keywords 由 skill 内置模型读取 prompt_path 后自动生成；每条固定 2 组，且必须贴近原标题。'",
         "categories:",
     ]
     for section in sections:
@@ -688,8 +786,7 @@ def render_search_checklist_yaml(report_date: str, items: list[SearchChecklistIt
                     f"        url: '{escape_yaml_scalar(item.url)}'",
                     f"        original_published_at: '{escape_yaml_scalar(item.publish_date)}'",
                     "        keywords:",
-                    "          # 由 agent 根据标题生成并填写两组搜索关键词",
-                    "          # 当前模板不提供规则生成结果",
+                    "          # 由 skill 内置模型根据标题自动生成两组搜索关键词",
                 ]
             )
             for query in item.search_queries:
@@ -698,6 +795,7 @@ def render_search_checklist_yaml(report_date: str, items: list[SearchChecklistIt
 
 
 def escape_yaml_scalar(value: str) -> str:
+    """转义 YAML 单引号标量中的单引号。"""
     return value.replace("'", "''")
 
 
@@ -740,6 +838,7 @@ def write_analysis_outputs(
     output_paths: AnalysisOutputPaths,
     report_date: str,
     analyses: list[ArticleAnalysis],
+    llm_client: MiniMaxChatClient | None = None,
 ) -> list[SearchChecklistItem]:
     """Persist the analysis CSV and, when available, the step 2 checklist YAML."""
 
@@ -749,7 +848,9 @@ def write_analysis_outputs(
             output_paths.checklist_output.unlink()
         return []
 
-    checklist_items = build_search_checklist_items(analyses)
+    if llm_client is None:
+        raise RuntimeError("未配置 llm.api_key，无法自动生成 step 2 搜索关键词。")
+    checklist_items = autofill_search_checklist_items(build_search_checklist_items(analyses), analyses, llm_client)
     output_paths.checklist_output.parent.mkdir(parents=True, exist_ok=True)
     output_paths.checklist_output.write_text(
         render_search_checklist_yaml(report_date, checklist_items),
