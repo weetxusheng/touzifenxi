@@ -398,9 +398,9 @@ class AutoSearchClient:
 
     def __init__(
         self,
-        tavily_client: TavilyClient,
-        metaso_client: MetasoClient,
-        baidu_client: BaiduSearchClient,
+        tavily_client: TavilyClient | None,
+        metaso_client: MetasoClient | None,
+        baidu_client: BaiduSearchClient | None,
         google_client: GooglePlaywrightClient | None = None,
         provider_mode: str = "auto",
     ) -> None:
@@ -411,30 +411,66 @@ class AutoSearchClient:
         self.provider_mode = provider_mode
 
     def search(self, query: SearchQuery, max_results: int) -> list[dict[str, Any]]:
-        provider = choose_search_provider(query, forced_provider=self.provider_mode)
-        if provider == "google":
-            return self.google_client.search(query, max_results)
-        if provider == "baidu":
-            return self.baidu_client.search(query, max_results)
-        if provider == "metaso":
-            return self.metaso_client.search(query, max_results)
-        return self.tavily_client.search(query, max_results)
+        _, results = self.search_with_provider(query, max_results)
+        return results
 
     def search_with_provider(self, query: SearchQuery, max_results: int) -> tuple[str, list[dict[str, Any]]]:
         provider = choose_search_provider(query, forced_provider=self.provider_mode)
         if provider == "google":
             return "google", self.google_client.search(query, max_results)
         if provider == "baidu":
-            try:
-                return "baidu", self.baidu_client.search(query, max_results)
-            except RuntimeError:
+            if self.baidu_client is not None:
+                try:
+                    return "baidu", self.baidu_client.search(query, max_results)
+                except RuntimeError:
+                    if self.metaso_client is not None:
+                        return "metaso", self.metaso_client.search(query, max_results)
+                    if self.tavily_client is not None:
+                        return "tavily", self.tavily_client.search(query, max_results)
+                    raise
+            if self.metaso_client is not None:
                 return "metaso", self.metaso_client.search(query, max_results)
+            if self.tavily_client is not None:
+                return "tavily", self.tavily_client.search(query, max_results)
+            raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
         if provider == "metaso":
+            if self.metaso_client is not None:
+                return "metaso", self.metaso_client.search(query, max_results)
+            if self.baidu_client is not None:
+                return "baidu", self.baidu_client.search(query, max_results)
+            if self.tavily_client is not None:
+                return "tavily", self.tavily_client.search(query, max_results)
+            raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
+        if self.tavily_client is not None:
+            return "tavily", self.tavily_client.search(query, max_results)
+        if self.baidu_client is not None:
+            return "baidu", self.baidu_client.search(query, max_results)
+        if self.metaso_client is not None:
             return "metaso", self.metaso_client.search(query, max_results)
-        return "tavily", self.tavily_client.search(query, max_results)
+        raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
 
     def extract(self, urls: list[str], query: str) -> dict[str, str]:
+        if self.tavily_client is None:
+            return {}
         return self.tavily_client.extract(urls, query)
+
+
+def build_auto_search_client(runtime_config: Any, provider_mode: str = "auto") -> AutoSearchClient:
+    """Build an auto-search client from whichever provider keys are actually configured."""
+
+    tavily_client = TavilyClient(runtime_config.tavily_api_key, timeout=20.0) if runtime_config.tavily_api_key else None
+    metaso_client = MetasoClient(runtime_config.metaso_api_key, timeout=20.0) if runtime_config.metaso_api_key else None
+    baidu_client = (
+        BaiduSearchClient(runtime_config.baidu_api_key, timeout=20.0) if runtime_config.baidu_api_key else None
+    )
+    if tavily_client is None and metaso_client is None and baidu_client is None:
+        raise RuntimeError("未配置任何搜索 provider key，无法执行 step 3 搜索。")
+    return AutoSearchClient(
+        tavily_client=tavily_client,
+        metaso_client=metaso_client,
+        baidu_client=baidu_client,
+        provider_mode=provider_mode,
+    )
 
 
 def resolve_search_output_paths(
@@ -598,10 +634,8 @@ def run_search_workflow(
 
     domain_config = load_domain_config()
     runtime_config = load_c114_runtime_config(Path(__file__).resolve().parents[2])
-    search_client = client or AutoSearchClient(
-        tavily_client=TavilyClient(SearchOutputPaths.require_api_key(), timeout=20.0),
-        metaso_client=MetasoClient(SearchOutputPaths.require_metaso_api_key(), timeout=20.0),
-        baidu_client=BaiduSearchClient(SearchOutputPaths.require_baidu_api_key(), timeout=20.0),
+    search_client = client or build_auto_search_client(
+        runtime_config=runtime_config,
         provider_mode=provider_name,
     )
     grouped: dict[str, list[ArticleSearchPayload]] = {}
@@ -1000,12 +1034,14 @@ def enrich_selected_results(
     search_results: list[SearchResult],
     article: SearchArticleInput,
     extract_limit: int,
-    client: TavilyClient,
+    client: Any,
 ) -> list[SearchResult]:
     """Optionally attach Tavily extract text for the final selected URLs."""
 
     selected = [replace(item) for item in search_results]
     if not selected:
+        return selected
+    if not hasattr(client, "extract"):
         return selected
     to_extract = select_results_for_extract(selected, extract_limit)
     extracted_map: dict[str, str] = {}
@@ -1040,6 +1076,8 @@ def render_search_results_yaml(payload: SearchWorkflowPayload) -> str:
         "review_instructions:",
         "  - '先读取 review_prompt_path 指向的提示词文件。'",
         "  - '仅填写 selected_results 下各条结果的 ai_review 字段。'",
+        "  - '必须逐条填写所有 selected_results；不得留空、不得跳过、不得只填一部分。'",
+        "  - 'ai_review.status 固定填写 reviewed。'",
         "  - 'ai_review.keep_level 只能填写 strong、weak、drop 三档。'",
         "  - '不得改写原标题、原链接、搜索结果元数据。'",
         f"generated_at: '{escape_yaml_scalar(payload.generated_at)}'",
@@ -1071,11 +1109,11 @@ def render_search_results_yaml(payload: SearchWorkflowPayload) -> str:
             lines.append("        search_results:")
             lines.extend(render_result_list(item.search_results, indent="          "))
             lines.append("        selected_results:")
-            lines.extend(render_result_list(item.selected_results, indent="          "))
+            lines.extend(render_result_list(item.selected_results, indent="          ", include_ai_review=True))
     return "\n".join(lines)
 
 
-def render_result_list(results: list[SearchResult], indent: str) -> list[str]:
+def render_result_list(results: list[SearchResult], indent: str, *, include_ai_review: bool = False) -> list[str]:
     lines: list[str] = []
     for result in results:
         lines.extend(
@@ -1097,16 +1135,17 @@ def render_result_list(results: list[SearchResult], indent: str) -> list[str]:
         )
         for term in result.matched_terms:
             lines.append(f"{indent}    - '{escape_yaml_scalar(term)}'")
-        lines.extend(
-            [
-                f"{indent}  ai_review:",
-                f"{indent}    status: '{escape_yaml_scalar(result.review_status)}'",
-                f"{indent}    keep_level: '{escape_yaml_scalar(result.keep_level)}'",
-                f"{indent}    reason: '{escape_yaml_scalar(result.review_reason)}'",
-                f"{indent}    relevance_note: '{escape_yaml_scalar(result.relevance_note)}'",
-                f"{indent}    value_type: '{escape_yaml_scalar(result.value_type)}'",
-            ]
-        )
+        if include_ai_review:
+            lines.extend(
+                [
+                    f"{indent}  ai_review:",
+                    f"{indent}    status: '{escape_yaml_scalar(result.review_status)}'",
+                    f"{indent}    keep_level: '{escape_yaml_scalar(result.keep_level)}'",
+                    f"{indent}    reason: '{escape_yaml_scalar(result.review_reason)}'",
+                    f"{indent}    relevance_note: '{escape_yaml_scalar(result.relevance_note)}'",
+                    f"{indent}    value_type: '{escape_yaml_scalar(result.value_type)}'",
+                ]
+            )
     return lines
 
 

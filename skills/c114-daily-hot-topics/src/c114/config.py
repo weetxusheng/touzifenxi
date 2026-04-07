@@ -51,6 +51,18 @@ def runtime_local_path(base_path: Path | None = None) -> Path:
     return skill_root(base_path) / "config" / "runtime.local.json"
 
 
+def initialize_c114_local_config(base_path: Path | None = None, *, overwrite: bool = False) -> Path:
+    """Create `runtime.local.json` from the checked-in example template."""
+
+    local_path = runtime_local_path(base_path)
+    if local_path.exists() and not overwrite:
+        return local_path
+    example_path = runtime_example_path(base_path)
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+    local_path.write_text(example_path.read_text(encoding="utf-8"), encoding="utf-8")
+    return local_path
+
+
 def read_c114_local_config(base_path: Path | None = None) -> dict[str, Any]:
     """Read the skill-local runtime config, returning an empty payload when absent."""
 
@@ -75,9 +87,6 @@ def collect_missing_c114_config(base_path: Path | None = None) -> list[str]:
 
     config = read_c114_local_config(base_path)
     required_paths = (
-        "keys.tavily_api_key",
-        "keys.metaso_api_key",
-        "keys.baidu_api_key",
         "keys.aliyun_iqs_api_key",
         "search.recent_days",
         "search.max_external_results",
@@ -85,6 +94,13 @@ def collect_missing_c114_config(base_path: Path | None = None) -> list[str]:
         "brief.role",
     )
     missing: list[str] = []
+    search_provider_keys = (
+        "keys.tavily_api_key",
+        "keys.metaso_api_key",
+        "keys.baidu_api_key",
+    )
+    if all(_is_missing_value(_read_nested_value(config, dotted_path)) for dotted_path in search_provider_keys):
+        missing.append("keys.search_provider_api_key")
     for dotted_path in required_paths:
         value = _read_nested_value(config, dotted_path)
         if _is_missing_value(value):

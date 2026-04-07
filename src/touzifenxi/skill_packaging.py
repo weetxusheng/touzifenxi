@@ -19,6 +19,7 @@ REQUIRED_SKILL_DIRS = (
 EXCLUDED_SUFFIXES = (".pyc",)
 EXCLUDED_PARTS = {"__pycache__", ".DS_Store"}
 EXCLUDED_FILENAMES = {"runtime.local.json"}
+OUTPUT_KEEP_FILENAMES = {".gitkeep", "README.md"}
 
 
 @dataclass(frozen=True)
@@ -87,16 +88,29 @@ def package_skill_directory(skill_dir: Path, output_path: Path) -> SkillPackageR
         for path in sorted(skill_dir.rglob("*")):
             if path.is_dir():
                 continue
-            if any(part in EXCLUDED_PARTS for part in path.parts):
-                continue
-            if path.suffix in EXCLUDED_SUFFIXES:
-                continue
-            if path.name in EXCLUDED_FILENAMES:
+            if not should_archive_skill_path(skill_dir, path):
                 continue
             relative_path = path.relative_to(skill_dir.parent)
             archive.write(path, arcname=str(relative_path))
             archived_files.append(str(relative_path))
     return SkillPackageResult(skill_dir=skill_dir, output_path=output_path, archived_files=archived_files)
+
+
+def should_archive_skill_path(skill_dir: Path, path: Path) -> bool:
+    """Return whether a skill file should be included in the packaged archive."""
+
+    if any(part in EXCLUDED_PARTS for part in path.parts):
+        return False
+    if path.suffix in EXCLUDED_SUFFIXES:
+        return False
+    if path.name in EXCLUDED_FILENAMES:
+        return False
+
+    relative_path = path.relative_to(skill_dir)
+    if relative_path.parts and relative_path.parts[0] == "output":
+        return path.name in OUTPUT_KEEP_FILENAMES
+
+    return True
 
 
 def contains_chinese_body(content: str) -> bool:

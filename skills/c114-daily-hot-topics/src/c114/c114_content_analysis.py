@@ -13,6 +13,7 @@ from .c114_intelligence import (
     find_latest_search_run_directory,
     layer_issues_name,
     load_daily_articles_from_csv,
+    step_3_results_name,
     step_4_content_name,
     step_5_content_analysis_name,
     step_6_brief_name,
@@ -23,6 +24,14 @@ from .settings import AppPaths, load_c114_runtime_config
 SKILL_ROOT = Path(__file__).resolve().parents[2]
 CONTENT_ANALYSIS_PROMPT_PATH = SKILL_ROOT / "prompts" / "content-analysis-agent.md"
 BRIEF_PROMPT_PATH = SKILL_ROOT / "prompts" / "brief-agent.md"
+REQUIRED_ANALYSIS_LIST_FIELDS = (
+    "core_points",
+    "new_facts",
+    "entities",
+    "signals",
+    "risk_or_uncertainty",
+    "layer_notes",
+)
 
 
 @dataclass(frozen=True)
@@ -166,12 +175,16 @@ def load_content_analysis_inputs(input_path: Path) -> ContentAnalysisInput:
                 document=ContentDocument(
                     url=str(current_selected.get("url", "")),
                     domain=str(current_selected.get("domain", "")),
-                    title=str(current_selected.get("content_title", "")),
-                    summary=str(current_selected.get("content_summary", "")),
-                    text=str(current_selected.get("content_text", "")),
-                    source=str(current_selected.get("content_source", "")),
-                    status=str(current_selected.get("fetch_status", "")),
-                    error=str(current_selected.get("fetch_error", "")),
+                    title=str(current_selected.get("content_title", "") or current_selected.get("title", "")),
+                    summary=str(
+                        current_selected.get("content_summary", "") or current_selected.get("summary", "")
+                    ),
+                    text=str(current_selected.get("content_text", "") or current_selected.get("text", "")),
+                    source=str(
+                        current_selected.get("content_source", "") or current_selected.get("source", "")
+                    ),
+                    status=str(current_selected.get("fetch_status", "") or current_selected.get("status", "")),
+                    error=str(current_selected.get("fetch_error", "") or current_selected.get("error", "")),
                 ),
             )
         )
@@ -191,12 +204,30 @@ def load_content_analysis_inputs(input_path: Path) -> ContentAnalysisInput:
                 original_content=ContentDocument(
                     url=str(current_item.get("original_content.url", "")),
                     domain=str(current_item.get("original_content.domain", "")),
-                    title=str(current_item.get("original_content.content_title", "")),
-                    summary=str(current_item.get("original_content.content_summary", "")),
-                    text=str(current_item.get("original_content.content_text", "")),
-                    source=str(current_item.get("original_content.content_source", "")),
-                    status=str(current_item.get("original_content.fetch_status", "")),
-                    error=str(current_item.get("original_content.fetch_error", "")),
+                    title=str(
+                        current_item.get("original_content.content_title", "")
+                        or current_item.get("original_content.title", "")
+                    ),
+                    summary=str(
+                        current_item.get("original_content.content_summary", "")
+                        or current_item.get("original_content.summary", "")
+                    ),
+                    text=str(
+                        current_item.get("original_content.content_text", "")
+                        or current_item.get("original_content.text", "")
+                    ),
+                    source=str(
+                        current_item.get("original_content.content_source", "")
+                        or current_item.get("original_content.source", "")
+                    ),
+                    status=str(
+                        current_item.get("original_content.fetch_status", "")
+                        or current_item.get("original_content.status", "")
+                    ),
+                    error=str(
+                        current_item.get("original_content.fetch_error", "")
+                        or current_item.get("original_content.error", "")
+                    ),
                 ),
                 selected_contents=list(current_item.get("selected_contents", [])),
                 analysis=ContentAnalysisDraft(
@@ -352,7 +383,6 @@ def render_content_analysis_yaml(payload: ContentAnalysisInput) -> str:
             lines.extend(
                 [
                     f"          why_it_matters: '{escape_yaml(item.analysis.why_it_matters)}'",
-                    "          layer_notes:",
                 ]
             )
             lines.extend(render_analysis_list("layer_notes", item.analysis.layer_notes, indent="          "))
@@ -371,9 +401,43 @@ def save_content_analysis_yaml(output_path: Path, payload: ContentAnalysisInput)
     output_path.write_text(render_content_analysis_yaml(payload), encoding="utf-8")
 
 
+def collect_missing_analysis_fields(payload: ContentAnalysisInput) -> list[dict[str, Any]]:
+    """Report which step 5 analysis fields still need agent completion before step 6."""
+
+    missing_items: list[dict[str, Any]] = []
+    for category in payload.categories:
+        for item in category.items:
+            missing_fields: list[str] = []
+            if not item.analysis.summary.strip():
+                missing_fields.append("summary")
+            for field_name in REQUIRED_ANALYSIS_LIST_FIELDS:
+                values = getattr(item.analysis, field_name)
+                if not any(str(value).strip() for value in values):
+                    missing_fields.append(field_name)
+            if not item.analysis.why_it_matters.strip():
+                missing_fields.append("why_it_matters")
+            if missing_fields:
+                missing_items.append(
+                    {
+                        "topic": item.topic,
+                        "original_title": item.original_title,
+                        "missing_fields": missing_fields,
+                    }
+                )
+    return missing_items
+
+
 def render_brief_markdown(payload: ContentAnalysisInput) -> str:
     """Render the step 6 brief from the current content-analysis payload."""
-    search_payload = load_search_results_yaml(payload.input_path) if payload.input_path.exists() else None
+    search_payload = None
+    if payload.input_path.exists():
+        search_results_path = payload.input_path
+        step4_prefix = "c114_step_4_content_"
+        if search_results_path.name.startswith(step4_prefix):
+            report_day = date.fromisoformat(payload.report_date)
+            search_results_path = search_results_path.with_name(step_3_results_name(report_day))
+        if search_results_path.exists():
+            search_payload = load_search_results_yaml(search_results_path)
     runtime_config = load_c114_runtime_config(Path(__file__).resolve().parents[2])
     summary = build_brief_runtime_summary(payload, search_payload)
     role_label = "资深研究员 agent" if runtime_config.brief_role == "senior_researcher" else runtime_config.brief_role

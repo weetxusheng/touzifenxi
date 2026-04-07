@@ -18,6 +18,8 @@ from .c114_brief_review import (
 )
 from .c114_content import resolve_content_output_paths, run_content_fetch_workflow, save_content_results
 from .c114_content_analysis import (
+    CONTENT_ANALYSIS_PROMPT_PATH,
+    collect_missing_analysis_fields,
     generate_layer_issues,
     load_content_analysis_inputs,
     resolve_content_analysis_output_paths,
@@ -34,9 +36,11 @@ from .c114_hot_topics import (
 from .c114_intelligence import (
     analyze_daily_articles,
     create_search_range_directory,
+    create_search_run_directory,
     find_latest_c114_step_file,
     layer_issues_name,
     resolve_analysis_output_paths,
+    step_1_analysis_name,
     step_2_checklist_name,
     step_3_results_name,
     step_4_content_name,
@@ -48,6 +52,7 @@ from .c114_intelligence import (
 from .c114_search import provider_stats_name, resolve_search_output_paths, run_search_workflow, save_search_results
 from .config import (
     collect_missing_c114_config,
+    initialize_c114_local_config,
     load_c114_runtime_config,
     read_c114_local_config,
     runtime_local_path,
@@ -184,6 +189,34 @@ def build_parser() -> argparse.ArgumentParser:
 
     c114_config_apply_parser = subparsers.add_parser("c114-config-apply", help="Merge config into runtime.local.json.")
     c114_config_apply_parser.add_argument("--payload-json", required=True)
+
+    c114_config_init_parser = subparsers.add_parser(
+        "c114-config-init", help="Create runtime.local.json from the example template."
+    )
+    c114_config_init_parser.add_argument("--force", action="store_true")
+
+    c114_run_parser = subparsers.add_parser(
+        "run", help="Run deterministic C114 steps until the next agent checkpoint."
+    )
+    add_c114_date_arguments(c114_run_parser, default_to_today=True)
+    c114_run_parser.add_argument(
+        "--channels",
+        nargs="+",
+        default=["home", "quantum", "satellite", "la", "ai"],
+        choices=["home", "quantum", "satellite", "la", "ai"],
+        help="Channels to fetch.",
+    )
+    c114_run_parser.add_argument("--candidate-limit", type=int, default=30, help="Maximum candidates per channel.")
+    c114_run_parser.add_argument("--timeout", type=float, default=20.0, help="Per-request timeout in seconds.")
+    c114_run_parser.add_argument(
+        "--provider",
+        default="auto",
+        choices=["auto", "tavily", "metaso", "baidu", "google"],
+        help="Search provider.",
+    )
+    c114_run_parser.add_argument("--per-query-limit", type=int, default=5)
+    c114_run_parser.add_argument("--per-article-limit", type=int, default=None)
+    c114_run_parser.add_argument("--extract-limit", type=int, default=5)
     return parser
 
 
@@ -321,7 +354,6 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
             )
             payload = load_content_analysis_inputs(output_paths.input_path)
             save_content_analysis_yaml(output_paths.analysis_output, payload)
-            save_brief_markdown(output_paths.brief_output, payload)
             run_dir = output_paths.input_path.parent
             issues = generate_layer_issues(
                 report_date=target_date.isoformat(),
@@ -331,10 +363,23 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
                 content_path=output_paths.input_path,
             )
             save_layer_issues_yaml(output_paths.issues_output, target_date.isoformat(), issues)
+            missing_analysis = collect_missing_analysis_fields(payload)
             print(f"C114 正文分析模板生成完成 {target_date.isoformat()}")
             print(f"正文分析 YAML: {output_paths.analysis_output}")
-            print(f"主题简报 MD: {output_paths.brief_output}")
-            print(f"层问题 YAML: {output_paths.issues_output}\n")
+            print(f"层问题 YAML: {output_paths.issues_output}")
+            if missing_analysis:
+                print("step 5 尚未补全，step 6 不继续生成。")
+                print(f"请先读取提示词: {CONTENT_ANALYSIS_PROMPT_PATH}")
+                print("并基于 step 4 正文内容补齐以下字段后，再继续运行 c114-analyze-content：")
+                for issue in missing_analysis[:10]:
+                    fields = "、".join(issue["missing_fields"])
+                    print(f"- [{issue['topic']}] {issue['original_title']}: {fields}")
+                if len(missing_analysis) > 10:
+                    print(f"- 其余 {len(missing_analysis) - 10} 篇请查看 step 5 YAML 继续补齐")
+                print("")
+                continue
+            save_brief_markdown(output_paths.brief_output, payload)
+            print(f"主题简报 MD: {output_paths.brief_output}\n")
         return
 
     if args.command == "c114-review-brief":
@@ -386,6 +431,7 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
             print("缺失配置项:")
             for item in missing:
                 print(f"- {item}")
+            print("说明：step 1-2 可先不配 API key；若要继续跑 step 3-7，搜索侧只需先配置至少一个搜索 provider key（Tavily / Metaso / Baidu 三选一），再补齐其余 search/content/brief 基础配置。")
         else:
             print("配置已完整。")
         return
@@ -401,6 +447,62 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
                 print(f"- {item}")
         else:
             print("配置已完整。")
+        return
+
+    if args.command == "c114-config-init":
+        output_path = initialize_c114_local_config(None, overwrite=bool(args.force))
+        print(f"C114 配置模板已初始化: {output_path}")
+        if collect_missing_c114_config():
+            print("请编辑 runtime.local.json，补齐 keys/search/content/brief 配置后再运行。")
+        return
+
+    if args.command == "run":
+        target_dates = resolve_c114_date_range(args, default_to_today=True)
+        if len(target_dates) > 1:
+            day_dirs = create_c114_range_day_directories(resolved_paths, target_dates)
+        else:
+            run_dir = create_search_run_directory(resolved_paths.reports_dir)
+            day_dirs = {target_dates[0]: run_dir}
+
+        for target_date in target_dates:
+            day_dir = day_dirs[target_date]
+            report = collect_daily_report(
+                report_date=target_date,
+                channel_keys=args.channels,
+                timeout=float(args.timeout),
+                candidate_limit=int(args.candidate_limit),
+            )
+            raw_output = resolve_hot_topics_output_path(
+                project_root=resolved_paths.project_root,
+                raw_dir=resolved_paths.raw_dir,
+                report_date=target_date,
+                output_override=None,
+            )
+            save_daily_report(raw_output, target_date, report)
+
+            analysis_output = (day_dir / step_1_analysis_name(target_date)).resolve()
+            checklist_output = (day_dir / step_2_checklist_name(target_date)).resolve()
+            analysis_paths = resolve_analysis_output_paths(
+                paths=resolved_paths,
+                report_date=target_date,
+                analysis_output_override=str(analysis_output),
+                checklist_output_override=str(checklist_output),
+            )
+            analyses, briefs = analyze_daily_articles(analysis_paths.input_path, target_date.isoformat())
+            checklist_items = write_analysis_outputs(analysis_paths, target_date.isoformat(), analyses)
+            print(f"C114 全流程 step 1-2 完成 {target_date.isoformat()}")
+            print(f"文章数: {len(analyses)}")
+            print(f"主题数: {len(briefs)}")
+            print(f"Step 1 CSV: {analysis_paths.analysis_output}")
+            if not checklist_items:
+                print("当日无文章，流程停留在 step 1；step 2 及后续文件不生成。\n")
+                continue
+            print(f"Step 2 YAML: {analysis_paths.checklist_output}")
+            print(
+                "run 命令已停在 step 2。请先按 step 2 契约补全每条标题的 2 组 keywords，"
+                "再继续 c114-search；完成 step 3 后，再按 review_prompt_path 补全 "
+                "ai_review.review_status 与 ai_review.keep_level，然后再继续 step 4-7。\n"
+            )
         return
 
     raise ValueError(f"未知命令: {args.command}")

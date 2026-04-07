@@ -117,6 +117,52 @@ categories:
 
 
 class ContentFetchWorkflowTests(unittest.TestCase):
+    def test_run_content_fetch_workflow_rejects_pending_ai_review(self) -> None:
+        payload = """report_date: '2026-03-31'
+provider: 'auto'
+input_path: '/tmp/checklist.yaml'
+review_prompt_path: '/tmp/review.md'
+review_instructions:
+  - '先读取 review_prompt_path 指向的提示词文件。'
+generated_at: '2026-04-01T13:26:15'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '未来移动通信论坛吴建军：6G已转入产业实战阶段'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/41/a1307790.html'
+        original_published_at: '2026-03-31'
+        queries:
+        search_results:
+        selected_results:
+          - query: '原标题'
+            query_type: 'title'
+            result_title: '补充结果'
+            url: 'https://example.com/6g'
+            domain: 'example.com'
+            published_at: '2026-03-31'
+            snippet: ''
+            score: 0.9000
+            is_official: false
+            source_tier: 'normal'
+            extract_status: 'not_requested'
+            extract_text: ''
+            matched_terms:
+              - '6G'
+            ai_review:
+              status: 'pending'
+              keep_level: ''
+              reason: ''
+              relevance_note: ''
+              value_type: ''
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "search.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "未完成 ai_review"):
+                run_content_fetch_workflow(input_path=input_path, report_date="2026-03-31")
+
     def test_fetch_article_contents_only_keeps_strong_and_weak_selected_results(self) -> None:
         article = SearchContentArticleInput(
             topic="AI与算力",
@@ -571,6 +617,12 @@ categories:
             extract_status: 'not_requested'
             extract_text: ''
             matched_terms:
+            ai_review:
+              status: 'reviewed'
+              keep_level: 'strong'
+              reason: '测试黑名单过滤'
+              relevance_note: '主体一致'
+              value_type: '背景补充'
 """
         calls: list[str] = []
 

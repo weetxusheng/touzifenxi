@@ -6,6 +6,7 @@ from datetime import date
 from pathlib import Path
 
 from c114.c114_content_analysis import (
+    collect_missing_analysis_fields,
     generate_layer_issues,
     load_content_analysis_inputs,
     render_brief_markdown,
@@ -103,6 +104,7 @@ categories:
         self.assertIn("new_facts:", rendered)
         self.assertIn("signals:", rendered)
         self.assertIn("selected_contents:", rendered)
+        self.assertEqual(rendered.count("layer_notes:"), 1)
 
     def test_renders_brief_markdown_grouped_by_topic(self) -> None:
         payload = """report_date: '2026-03-31'
@@ -159,6 +161,196 @@ categories:
         self.assertNotIn("- 输入文件：", rendered)
         self.assertNotIn("- 提示词：", rendered)
         self.assertNotIn("- 说明：", rendered)
+
+    def test_renders_brief_markdown_summary_from_sidecar_step3_file(self) -> None:
+        content_payload = """report_date: '2026-04-07'
+input_path: '/tmp/c114_step_4_content_20260407.yaml'
+generated_at: '2026-04-07T10:51:31'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '从连接到Token！运营商“基本盘”的变与不变'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/16/a1308082.html'
+        original_content:
+          url: 'https://www.c114.com.cn/news/16/a1308082.html'
+          domain: 'www.c114.com.cn'
+          content_title: '从连接到Token！运营商“基本盘”的变与不变'
+          content_summary: '摘要'
+          content_text: '正文内容'
+          content_source: 'aliyun'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+          - query: '原标题'
+            query_type: 'title'
+            url: 'https://example.com/token'
+            domain: 'example.com'
+            result_title: '外部转载'
+            published_at: '2026-04-07'
+            content_title: '外部转载'
+            content_summary: '补充摘要'
+            content_text: '补充正文'
+            content_source: 'aliyun'
+            fetch_status: 'success'
+            fetch_error: ''
+"""
+        search_payload = """report_date: '2026-04-07'
+provider: 'tavily'
+input_path: '/tmp/c114_step_2_search_checklist_20260407.yaml'
+generated_at: '2026-04-07T10:49:58'
+review_prompt_path: '/tmp/search-review-agent.md'
+review_instructions: '说明'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '从连接到Token！运营商“基本盘”的变与不变'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/16/a1308082.html'
+        original_published_at: '2026-04-07'
+        queries:
+        search_results:
+        selected_results:
+          - query: '原标题'
+            query_type: 'title'
+            result_title: '外部转载'
+            url: 'https://example.com/token'
+            domain: 'example.com'
+            published_at: '2026-04-07'
+            snippet: ''
+            score: 1.0000
+            is_official: false
+            source_tier: 'normal'
+            extract_status: 'not_requested'
+            extract_text: ''
+            matched_terms:
+            ai_review:
+              status: 'reviewed'
+              keep_level: 'strong'
+              reason: '同一事件'
+              relevance_note: '主体一致'
+              value_type: '同事件转载'
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            content_path = Path(tmp_dir) / "c114_step_4_content_20260407.yaml"
+            search_path = Path(tmp_dir) / "c114_step_3_search_results_20260407.yaml"
+            content_path.write_text(content_payload, encoding="utf-8")
+            search_path.write_text(search_payload, encoding="utf-8")
+
+            analysis_input = load_content_analysis_inputs(content_path)
+            rendered = render_brief_markdown(analysis_input)
+
+        self.assertIn("- 补充链接数：1", rendered)
+        self.assertIn("- strong（强保留）：1", rendered)
+        self.assertIn("- weak（弱保留）：0", rendered)
+
+    def test_collect_missing_analysis_fields_reports_all_required_fields(self) -> None:
+        payload = """report_date: '2026-03-31'
+input_path: '/tmp/content.yaml'
+generated_at: '2026-04-01T17:37:59'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '未来移动通信论坛吴建军：6G已转入产业实战阶段'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/41/a1307790.html'
+        original_content:
+          url: 'https://www.c114.com.cn/news/41/a1307790.html'
+          domain: 'www.c114.com.cn'
+          content_title: '未来移动通信论坛吴建军：6G已转入产业实战阶段'
+          content_summary: '摘要'
+          content_text: '正文内容'
+          content_source: 'aliyun'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+        analysis:
+          summary: ''
+          core_points:
+          new_facts:
+          entities:
+          signals:
+          risk_or_uncertainty:
+          why_it_matters: ''
+          layer_notes:
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "content.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+
+            analysis_input = load_content_analysis_inputs(input_path)
+            missing = collect_missing_analysis_fields(analysis_input)
+
+        self.assertEqual(len(missing), 1)
+        self.assertEqual(
+            missing[0]["missing_fields"],
+            [
+                "summary",
+                "core_points",
+                "new_facts",
+                "entities",
+                "signals",
+                "risk_or_uncertainty",
+                "layer_notes",
+                "why_it_matters",
+            ],
+        )
+
+    def test_load_content_analysis_inputs_supports_step5_field_names(self) -> None:
+        payload = """report_date: '2026-03-31'
+input_path: '/tmp/content.yaml'
+prompt_path: '/tmp/content-analysis-agent.md'
+instructions: '说明'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '未来移动通信论坛吴建军：6G已转入产业实战阶段'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/41/a1307790.html'
+        original_content:
+          title: '未来移动通信论坛吴建军：6G已转入产业实战阶段'
+          summary: '摘要'
+          text: '正文内容'
+          source: 'aliyun'
+          status: 'success'
+        selected_contents:
+          - query: '吴建军 6G转入产业实战阶段'
+            query_type: 'keyword'
+            url: 'https://example.com/6g'
+            title: '论坛观点：6G进入实战'
+            summary: '补充摘要'
+            text: '补充正文'
+            source: 'aliyun'
+            status: 'success'
+        analysis:
+          summary: '这篇内容核心在于6G进入产业实战阶段。'
+          core_points:
+            - '6G判断从技术验证转向产业实战。'
+          new_facts:
+            - '论坛明确给出产业实战阶段判断。'
+          entities:
+            - '吴建军'
+          signals:
+            - '6G产业化'
+          risk_or_uncertainty:
+            - '节奏仍待后续验证。'
+          why_it_matters: '说明6G主题的产业化表述在增强。'
+          layer_notes:
+            - '补充链接相关性较高。'
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "step5.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+
+            analysis_input = load_content_analysis_inputs(input_path)
+            missing = collect_missing_analysis_fields(analysis_input)
+
+        self.assertEqual(analysis_input.categories[0].items[0].original_content.title, "未来移动通信论坛吴建军：6G已转入产业实战阶段")
+        self.assertEqual(analysis_input.categories[0].items[0].selected_contents[0].document.title, "论坛观点：6G进入实战")
+        self.assertEqual(missing, [])
 
 
 class LayerIssueTests(unittest.TestCase):

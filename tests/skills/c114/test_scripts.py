@@ -30,6 +30,8 @@ class ScriptEntrypointTests(unittest.TestCase):
         self.assertIn("c114-search", commands)
         self.assertIn("c114-review-brief", commands)
         self.assertIn("c114-config-status", commands)
+        self.assertIn("c114-config-init", commands)
+        self.assertIn("run", commands)
 
     def test_skill_script_runs_as_real_entrypoint(self) -> None:
         completed = subprocess.run(

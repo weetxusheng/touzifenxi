@@ -292,3 +292,21 @@ class SkillPackagingTests(unittest.TestCase):
                 names = archive.namelist()
         self.assertTrue(any(name.endswith("SKILL.md") for name in names))
         self.assertFalse(any("__pycache__" in name for name in names))
+
+    def test_package_skill_directory_excludes_runtime_outputs(self) -> None:
+        skill_dir = PROJECT_ROOT / "skills" / "c114-daily-hot-topics"
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / "skill.zip"
+            package_skill_directory(skill_dir, output_path)
+            with zipfile.ZipFile(output_path) as archive:
+                names = archive.namelist()
+
+        self.assertIn("c114-daily-hot-topics/output/.gitkeep", names)
+        self.assertFalse(
+            any(
+                name.startswith("c114-daily-hot-topics/output/reports/")
+                or name.startswith("c114-daily-hot-topics/output/data/")
+                or name.startswith("c114-daily-hot-topics/output/state/")
+                for name in names
+            )
+        )

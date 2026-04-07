@@ -130,6 +130,9 @@ class FetchOutputPaths:
     output_path: Path
 
 
+VALID_KEEP_LEVELS = {"strong", "weak", "drop"}
+
+
 class AliyunIQSClient:
     """Minimal Aliyun IQS client used as the preferred正文提取 provider."""
     def __init__(
@@ -455,6 +458,7 @@ def run_content_fetch_workflow(
     source = load_search_results_yaml(input_path)
     if source.report_date and source.report_date != report_date:
         raise ValueError(f"输入搜索结果日期为 {source.report_date}，与命令日期 {report_date} 不一致。")
+    validate_content_fetch_inputs(source)
 
     content_fetcher = fetcher or fetch_url_content
     content_search_client = aliyun_client if aliyun_client is not None else AliyunIQSClient.from_env()
@@ -497,6 +501,33 @@ def run_content_fetch_workflow(
         input_path=input_path,
         generated_at=generated_at or datetime.now().isoformat(timespec="seconds"),
         categories=categories,
+    )
+
+
+def validate_content_fetch_inputs(source: SearchResultsInputPayload) -> None:
+    """Fail fast when step 3 still contains pending AI review decisions."""
+
+    pending: list[str] = []
+    for category in source.categories:
+        for article in category.items:
+            invalid = [
+                result
+                for result in article.selected_results
+                if result.review_status != "reviewed" or result.keep_level not in VALID_KEEP_LEVELS
+            ]
+            if not invalid:
+                continue
+            preview = "；".join((result.result_title or result.url) for result in invalid[:2])
+            pending.append(f"{article.original_title} -> {preview}")
+    if not pending:
+        return
+
+    details = "\n".join(f"- {item}" for item in pending[:5])
+    raise ValueError(
+        "step 3 中仍有补充链接未完成 ai_review，请先读取 review_prompt_path 指向的提示词文件，"
+        "为每条 selected_results 填写 review_status=reviewed 与 keep_level=strong/weak/drop，"
+        "再运行 c114-fetch-content。\n"
+        f"{details}"
     )
 
 

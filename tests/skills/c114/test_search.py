@@ -406,10 +406,10 @@ class SearchProviderRoutingTests(unittest.TestCase):
         self.assertEqual(normalized[0].source_tier, "normal")
         self.assertEqual(normalized[0].snippet, "中国联通曹畅表示，智能体互联网补齐AI时代互联网的最后一块拼图。")
 
-    def test_rendered_yaml_includes_ai_review_template(self) -> None:
+    def test_rendered_yaml_includes_ai_review_template_only_when_requested(self) -> None:
         from c114.c114_search import render_result_list
 
-        rendered = render_result_list(
+        rendered_without_review = render_result_list(
             [
                 SearchResult(
                     query="测试查询",
@@ -429,12 +429,35 @@ class SearchProviderRoutingTests(unittest.TestCase):
             ],
             indent="          ",
         )
+        rendered_with_review = render_result_list(
+            [
+                SearchResult(
+                    query="测试查询",
+                    query_type="keyword",
+                    result_title="测试结果",
+                    url="https://example.com/a",
+                    domain="example.com",
+                    published_at="2026-04-02",
+                    snippet="摘要",
+                    score=0.8,
+                    is_official=False,
+                    source_tier="normal",
+                    matched_terms=["测试"],
+                    extract_text="",
+                    extract_status="not_requested",
+                )
+            ],
+            indent="          ",
+            include_ai_review=True,
+        )
 
-        text = "\n".join(rendered)
-        self.assertIn("ai_review:", text)
-        self.assertIn("status: 'pending'", text)
-        self.assertIn("keep_level: ''", text)
-        self.assertIn("value_type: ''", text)
+        text_without_review = "\n".join(rendered_without_review)
+        text_with_review = "\n".join(rendered_with_review)
+        self.assertNotIn("ai_review:", text_without_review)
+        self.assertIn("ai_review:", text_with_review)
+        self.assertIn("status: 'pending'", text_with_review)
+        self.assertIn("keep_level: ''", text_with_review)
+        self.assertIn("value_type: ''", text_with_review)
 
     def test_render_search_results_yaml_includes_review_prompt_metadata(self) -> None:
         payload = SearchWorkflowPayload(
@@ -467,6 +490,54 @@ class SearchProviderRoutingTests(unittest.TestCase):
 
         self.assertIn("review_prompt_path:", rendered)
         self.assertIn("review_instructions:", rendered)
+        self.assertIn("必须逐条填写所有 selected_results", rendered)
+        self.assertIn("ai_review.status 固定填写 reviewed", rendered)
+
+    def test_render_search_results_yaml_only_keeps_ai_review_under_selected_results(self) -> None:
+        result = SearchResult(
+            query="测试标题",
+            query_type="title",
+            result_title="测试结果",
+            url="https://example.com/a",
+            domain="example.com",
+            published_at="2026-04-02",
+            snippet="摘要",
+            score=0.8,
+            is_official=False,
+            source_tier="normal",
+            matched_terms=["测试"],
+            extract_text="",
+            extract_status="not_requested",
+        )
+        payload = SearchWorkflowPayload(
+            report_date="2026-04-02",
+            provider="tavily",
+            input_path=Path("/tmp/input.yaml"),
+            generated_at="2026-04-02 12:00:00",
+            categories=[
+                SearchCategoryPayload(
+                    topic="测试主题",
+                    items=[
+                        ArticleSearchPayload(
+                            topic="测试主题",
+                            channel="首页",
+                            original_title="测试标题",
+                            original_url="https://www.c114.com.cn/test",
+                            original_published_at="2026-04-02",
+                            queries=[
+                                QueryResultBucket(query="测试标题", query_type="title", provider="tavily", results=[result])
+                            ],
+                            search_results=[result],
+                            selected_results=[result],
+                        )
+                    ],
+                )
+            ],
+        )
+
+        rendered = render_search_results_yaml(payload)
+
+        self.assertEqual(rendered.count("ai_review:"), 1)
 
     def test_auto_search_client_routes_query_to_matching_provider(self) -> None:
         class FakeTavily:
@@ -549,6 +620,27 @@ class SearchProviderRoutingTests(unittest.TestCase):
         provider, _ = client.search_with_provider(SearchQuery(query_type="title", value="朱敏 张教 空天地一体化"), 2)
 
         self.assertEqual(provider, "metaso")
+
+    def test_auto_search_client_can_run_with_only_baidu_configured(self) -> None:
+        class FakeBaidu:
+            def __init__(self) -> None:
+                self.queries: list[str] = []
+
+            def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
+                self.queries.append(query.value)
+                return []
+
+        baidu = FakeBaidu()
+        client = AutoSearchClient(  # type: ignore[arg-type]
+            tavily_client=None,
+            metaso_client=None,
+            baidu_client=baidu,
+        )
+
+        provider, _ = client.search_with_provider(SearchQuery(query_type="title", value="中国联通曹畅 智能体互联网"), 2)
+
+        self.assertEqual(provider, "baidu")
+        self.assertEqual(baidu.queries, ["中国联通曹畅 智能体互联网"])
 
     def test_auto_search_client_routes_query_to_google_when_forced(self) -> None:
         class FakeTavily:
@@ -860,6 +952,40 @@ categories:
         enriched = enrich_selected_results(results, article, extract_limit=1, client=FakeClient())  # type: ignore[arg-type]
 
         self.assertEqual(enriched[0].extract_status, "failed")
+
+    def test_enrich_selected_results_skips_extract_when_client_has_no_extract(self) -> None:
+        article = SearchArticleInput(
+            topic="AI与算力",
+            channel="Cloud&AI",
+            original_title="孙正义借巨资押注OpenAI 争夺下一代算力入口",
+            original_url="https://www.c114.com.cn/ai/5339/a1307668.html",
+            original_published_at="2026-03-30",
+            keywords=["孙正义 OpenAI", "OpenAI 算力入口"],
+        )
+        results = [
+            SearchResult(
+                query="原标题",
+                query_type="title",
+                result_title="结果",
+                url="https://example.com/0",
+                domain="example.com",
+                published_at="2026-03-30",
+                snippet="摘要",
+                score=1.0,
+                is_official=False,
+                source_tier="normal",
+                matched_terms=["OpenAI"],
+                extract_text="",
+                extract_status="not_requested",
+            )
+        ]
+
+        class SearchOnlyClient:
+            pass
+
+        enriched = enrich_selected_results(results, article, extract_limit=1, client=SearchOnlyClient())  # type: ignore[arg-type]
+
+        self.assertEqual(enriched[0].extract_status, "not_requested")
 
 
 class TavilyConfigTests(unittest.TestCase):

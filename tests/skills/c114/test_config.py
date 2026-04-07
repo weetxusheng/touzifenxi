@@ -7,14 +7,31 @@ from pathlib import Path
 
 from c114.config import (
     collect_missing_c114_config,
+    initialize_c114_local_config,
     load_c114_runtime_config,
     read_c114_local_config,
+    runtime_example_path,
     runtime_local_path,
     write_c114_local_config,
 )
 
 
 class C114ConfigTests(unittest.TestCase):
+    def test_initialize_c114_local_config_copies_example_template(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.example.json").write_text('{"keys":{"tavily_api_key":""}}\n', encoding="utf-8")
+
+            local_path = initialize_c114_local_config(skill_root)
+            local_text = local_path.read_text(encoding="utf-8")
+            example_text = runtime_example_path(skill_root).read_text(encoding="utf-8")
+
+        self.assertEqual(local_path, runtime_local_path(skill_root))
+        self.assertEqual(local_text, example_text)
+
     def test_collect_missing_c114_config_reports_missing_required_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             skill_root = Path(tmp_dir)
@@ -23,9 +40,35 @@ class C114ConfigTests(unittest.TestCase):
 
             missing = collect_missing_c114_config(skill_root)
 
-        self.assertIn("keys.tavily_api_key", missing)
+        self.assertIn("keys.search_provider_api_key", missing)
         self.assertIn("search.recent_days", missing)
         self.assertIn("brief.role", missing)
+
+    def test_collect_missing_c114_config_accepts_any_single_search_provider_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "keys": {
+                            "baidu_api_key": "b",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            missing = collect_missing_c114_config(skill_root)
+
+        self.assertNotIn("keys.search_provider_api_key", missing)
 
     def test_write_c114_local_config_merges_existing_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
