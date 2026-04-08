@@ -5,9 +5,13 @@ import threading
 import time
 import unittest
 from datetime import date
+from io import BytesIO
 from pathlib import Path
+from unittest.mock import patch
+from urllib.error import HTTPError
 
 from c114.c114_content import (
+    AliyunIQSClient,
     AliyunSearchDocument,
     FetchResult,
     SearchContentArticleInput,
@@ -530,6 +534,120 @@ categories:
         self.assertEqual(result.content_source, "html_fallback")
         self.assertEqual(result.content_text, "fallback text")
         self.assertEqual(calls, ["https://www.c114.com.cn/news/41/a1307790.html"])
+
+    def test_aliyun_client_retries_then_recovers(self) -> None:
+        attempts = 0
+
+        class FakeHeaders:
+            def get_content_charset(self) -> str | None:
+                return "utf-8"
+
+        class FakeResponse:
+            def __init__(self, payload: dict[str, object]) -> None:
+                self._payload = payload
+                self.headers = FakeHeaders()
+
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+            def read(self) -> bytes:
+                import json
+
+                return json.dumps(self._payload, ensure_ascii=False).encode("utf-8")
+
+        def fake_urlopen(_request, timeout=20.0):  # type: ignore[no-untyped-def]
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise HTTPError(
+                    url="https://cloud-iqs.aliyuncs.com/search/unified",
+                    code=429,
+                    msg="Too Many Requests",
+                    hdrs=None,
+                    fp=BytesIO(b'{"message":"throttled"}'),
+                )
+            return FakeResponse(
+                {
+                    "pageItems": [
+                        {
+                            "link": "https://www.c114.com.cn/news/41/a1307790.html",
+                            "title": "未来移动通信论坛吴建军：6G已转入产业实战阶段",
+                            "publishedTime": "2026-03-31",
+                            "mainText": "阿里云正文",
+                            "richMainBody": "",
+                        }
+                    ]
+                }
+            )
+
+        client = AliyunIQSClient(
+            api_key="test-key",
+            timeout=1.0,
+            max_concurrency=1,
+            max_retries=1,
+            retry_backoff_seconds=0.0,
+        )
+
+        with patch("c114.c114_content.urlopen", side_effect=fake_urlopen):
+            documents = client.search("未来移动通信论坛吴建军：6G已转入产业实战阶段")
+
+        self.assertEqual(attempts, 2)
+        self.assertEqual(len(documents), 1)
+        self.assertEqual(documents[0].link, "https://www.c114.com.cn/news/41/a1307790.html")
+
+    def test_aliyun_client_limits_concurrent_requests(self) -> None:
+        active = 0
+        peak = 0
+        lock = threading.Lock()
+
+        class FakeHeaders:
+            def get_content_charset(self) -> str | None:
+                return "utf-8"
+
+        class FakeResponse:
+            headers = FakeHeaders()
+
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+            def read(self) -> bytes:
+                return b'{"pageItems":[]}'
+
+        def fake_urlopen(_request, timeout=20.0):  # type: ignore[no-untyped-def]
+            nonlocal active, peak
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(0.03)
+            with lock:
+                active -= 1
+            return FakeResponse()
+
+        client = AliyunIQSClient(
+            api_key="test-key",
+            timeout=1.0,
+            max_concurrency=1,
+            max_retries=0,
+            retry_backoff_seconds=0.0,
+        )
+
+        with patch("c114.c114_content.urlopen", side_effect=fake_urlopen):
+            threads = [
+                threading.Thread(target=client.search, args=(f"query-{index}",))
+                for index in range(2)
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+        self.assertEqual(peak, 1)
 
     def test_run_content_fetch_workflow_processes_articles_concurrently(self) -> None:
         payload = """report_date: '2026-03-31'

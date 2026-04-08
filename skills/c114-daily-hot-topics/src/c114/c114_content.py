@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import re
 import socket
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -146,11 +148,17 @@ class AliyunIQSClient:
         api_key: str,
         timeout: float = 20.0,
         endpoint: str = "https://cloud-iqs.aliyuncs.com/search/unified",
+        max_concurrency: int = 2,
+        max_retries: int = 2,
+        retry_backoff_seconds: float = 0.5,
     ) -> None:
         """保存阿里云 IQS 调用所需的基础配置。"""
         self.api_key = api_key
         self.timeout = timeout
         self.endpoint = endpoint
+        self.max_retries = max(0, max_retries)
+        self.retry_backoff_seconds = max(0.0, retry_backoff_seconds)
+        self._search_gate = threading.BoundedSemaphore(value=max(1, max_concurrency))
 
     @staticmethod
     def from_env(project_root: Path | None = None) -> AliyunIQSClient | None:
@@ -183,16 +191,29 @@ class AliyunIQSClient:
             },
             method="POST",
         )
-        try:
-            with urlopen(request, timeout=self.timeout) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except HTTPError as error:  # pragma: no cover - network-dependent
-            detail = error.read().decode("utf-8", errors="ignore")
-            raise RuntimeError(f"阿里云 IQS 请求失败: {error.code} {detail}") from error
-        except URLError as error:  # pragma: no cover - network-dependent
-            raise RuntimeError(f"阿里云 IQS 请求失败: {error.reason}") from error
-        except socket.timeout as error:  # pragma: no cover - network-dependent
-            raise RuntimeError("阿里云 IQS 请求超时。") from error
+        last_error: RuntimeError | None = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                with self._search_gate:
+                    with urlopen(request, timeout=self.timeout) as response:
+                        body = json.loads(response.read().decode("utf-8"))
+                break
+            except HTTPError as error:  # pragma: no cover - network-dependent
+                detail = error.read().decode("utf-8", errors="ignore")
+                last_error = RuntimeError(f"阿里云 IQS 请求失败: {error.code} {detail}")
+                if error.code not in {408, 429, 500, 502, 503, 504} or attempt >= self.max_retries:
+                    raise last_error from error
+            except URLError as error:  # pragma: no cover - network-dependent
+                last_error = RuntimeError(f"阿里云 IQS 请求失败: {error.reason}")
+                if attempt >= self.max_retries:
+                    raise last_error from error
+            except socket.timeout as error:  # pragma: no cover - network-dependent
+                last_error = RuntimeError("阿里云 IQS 请求超时。")
+                if attempt >= self.max_retries:
+                    raise last_error from error
+            time.sleep(self.retry_backoff_seconds * (attempt + 1))
+        else:  # pragma: no cover - defensive
+            raise last_error or RuntimeError("阿里云 IQS 请求失败。")
 
         documents: list[AliyunSearchDocument] = []
         for item in body.get("pageItems") or []:

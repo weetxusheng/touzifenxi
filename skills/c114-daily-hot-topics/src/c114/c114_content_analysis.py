@@ -529,6 +529,8 @@ def normalize_content_analysis_draft(payload: Any) -> ContentAnalysisDraft:
     normalized_lists: dict[str, list[str]] = {}
     for field_name in REQUIRED_ANALYSIS_LIST_FIELDS:
         values = payload.get(field_name)
+        if isinstance(values, str):
+            values = [values]
         if not isinstance(values, list):
             raise StructuredLLMError(f"step 5 字段 {field_name} 必须为列表。")
         normalized = [str(value).strip() for value in values if str(value).strip()]
