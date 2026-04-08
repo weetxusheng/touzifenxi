@@ -164,10 +164,16 @@ class AliyunIQSClient:
     def from_env(project_root: Path | None = None) -> AliyunIQSClient | None:
         """从本地运行配置中创建阿里云 IQS 客户端。"""
         root = project_root or Path(__file__).resolve().parents[2]
-        api_key = load_c114_runtime_config(root).aliyun_iqs_api_key
+        runtime_config = load_c114_runtime_config(root)
+        api_key = runtime_config.aliyun_iqs_api_key
         if not api_key:
             return None
-        return AliyunIQSClient(api_key=api_key)
+        return AliyunIQSClient(
+            api_key=api_key,
+            timeout=runtime_config.aliyun_timeout_seconds,
+            max_retries=runtime_config.aliyun_max_retries,
+            retry_backoff_seconds=runtime_config.aliyun_retry_backoff_seconds,
+        )
 
     def search(self, query_text: str) -> list[AliyunSearchDocument]:
         """调用阿里云 IQS 搜索正文候选。"""
@@ -497,9 +503,9 @@ def run_content_fetch_workflow(
         raise ValueError(f"输入搜索结果日期为 {source.report_date}，与命令日期 {report_date} 不一致。")
     validate_content_fetch_inputs(source)
 
-    content_fetcher = fetcher or fetch_url_content
-    content_search_client = aliyun_client if aliyun_client is not None else AliyunIQSClient.from_env()
     runtime_config = load_c114_runtime_config(Path(__file__).resolve().parents[2])
+    content_fetcher = fetcher or (lambda url: fetch_url_content(url, timeout=runtime_config.request_timeout_seconds))
+    content_search_client = aliyun_client if aliyun_client is not None else AliyunIQSClient.from_env()
     cache: dict[str, FetchResult] = {}
     flattened_articles: list[tuple[int, int, SearchContentArticleInput]] = []
     for category_index, category in enumerate(source.categories):

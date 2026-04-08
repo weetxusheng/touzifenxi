@@ -10,6 +10,29 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class LLMProviderRuntimeConfig:
+    """单个大模型 provider 的运行配置。"""
+
+    provider: str
+    model: str
+    api_key: str
+    base_url: str
+    timeout_seconds: float
+    max_retries: int
+    retry_backoff_seconds: float
+
+
+@dataclass(frozen=True)
+class LLMFailoverRuntimeConfig:
+    """主备模型切换的运行配置。"""
+
+    enabled: bool
+    consecutive_failures: int
+    reset_scope: str
+    error_scope: str
+
+
+@dataclass(frozen=True)
 class C114RuntimeConfig:
     """C114 全流程使用的强类型运行配置。"""
 
@@ -17,12 +40,13 @@ class C114RuntimeConfig:
     metaso_api_key: str
     baidu_api_key: str
     aliyun_iqs_api_key: str
-    llm_provider: str
-    llm_model: str
-    llm_api_key: str
-    llm_base_url: str
-    llm_timeout_seconds: float
-    llm_max_retries: int
+    llm_primary: LLMProviderRuntimeConfig
+    llm_fallback: LLMProviderRuntimeConfig | None
+    llm_failover: LLMFailoverRuntimeConfig
+    request_timeout_seconds: float
+    aliyun_timeout_seconds: float
+    aliyun_max_retries: int
+    aliyun_retry_backoff_seconds: float
     search_recent_days: int
     search_max_external_results: int
     content_fetch_keep_levels: tuple[str, ...]
@@ -92,9 +116,9 @@ def collect_missing_c114_config(base_path: Path | None = None) -> list[str]:
     config = read_c114_local_config(base_path)
     required_paths = (
         "keys.aliyun_iqs_api_key",
-        "llm.api_key",
-        "llm.model",
-        "llm.base_url",
+        "llm.primary.api_key",
+        "llm.primary.model",
+        "llm.primary.base_url",
         "search.recent_days",
         "search.max_external_results",
         "content.fetch_keep_levels",
@@ -108,6 +132,16 @@ def collect_missing_c114_config(base_path: Path | None = None) -> list[str]:
     )
     if all(_is_missing_value(_read_nested_value(config, dotted_path)) for dotted_path in search_provider_keys):
         missing.append("keys.search_provider_api_key")
+    if bool(_read_nested_value(config, "llm.failover.enabled", default=False)):
+        fallback_required = (
+            "llm.fallback.api_key",
+            "llm.fallback.model",
+            "llm.fallback.base_url",
+        )
+        for dotted_path in fallback_required:
+            value = _read_nested_value(config, dotted_path)
+            if _is_missing_value(value):
+                missing.append(dotted_path)
     for dotted_path in required_paths:
         value = _read_nested_value(config, dotted_path)
         if _is_missing_value(value):
@@ -125,6 +159,7 @@ def load_c114_runtime_config(base_path: Path | None = None) -> C114RuntimeConfig
     normalized_keep_levels = tuple(str(level).strip() for level in keep_levels if str(level).strip())
     if not normalized_keep_levels:
         normalized_keep_levels = ("strong", "weak")
+    llm_config = _build_llm_runtime_config(config)
     return C114RuntimeConfig(
         tavily_api_key=str(_read_nested_value(config, "keys.tavily_api_key", default=os.getenv("TAVILY_API_KEY", ""))).strip(),
         metaso_api_key=str(_read_nested_value(config, "keys.metaso_api_key", default=os.getenv("METASO_API_KEY", ""))).strip(),
@@ -132,13 +167,15 @@ def load_c114_runtime_config(base_path: Path | None = None) -> C114RuntimeConfig
         aliyun_iqs_api_key=str(
             _read_nested_value(config, "keys.aliyun_iqs_api_key", default=os.getenv("ALIYUN_IQS_API_KEY", ""))
         ).strip(),
-        llm_provider=str(_read_nested_value(config, "llm.provider", default="minimax")).strip() or "minimax",
-        llm_model=str(_read_nested_value(config, "llm.model", default="MiniMax M2.7")).strip() or "MiniMax M2.7",
-        llm_api_key=str(_read_nested_value(config, "llm.api_key", default=os.getenv("MINIMAX_API_KEY", ""))).strip(),
-        llm_base_url=str(_read_nested_value(config, "llm.base_url", default="https://api.minimaxi.com/v1")).strip()
-        or "https://api.minimaxi.com/v1",
-        llm_timeout_seconds=float(_read_nested_value(config, "llm.timeout_seconds", default=60.0)),
-        llm_max_retries=int(_read_nested_value(config, "llm.max_retries", default=2)),
+        llm_primary=llm_config["primary"],
+        llm_fallback=llm_config["fallback"],
+        llm_failover=llm_config["failover"],
+        request_timeout_seconds=float(_read_nested_value(config, "network.request_timeout_seconds", default=45.0)),
+        aliyun_timeout_seconds=float(_read_nested_value(config, "network.aliyun_timeout_seconds", default=45.0)),
+        aliyun_max_retries=int(_read_nested_value(config, "network.aliyun_max_retries", default=2)),
+        aliyun_retry_backoff_seconds=float(
+            _read_nested_value(config, "network.aliyun_retry_backoff_seconds", default=0.5)
+        ),
         search_recent_days=int(_read_nested_value(config, "search.recent_days", default=30)),
         search_max_external_results=int(_read_nested_value(config, "search.max_external_results", default=5)),
         content_fetch_keep_levels=normalized_keep_levels,
@@ -146,6 +183,77 @@ def load_c114_runtime_config(base_path: Path | None = None) -> C114RuntimeConfig
         or "senior_researcher",
         review_enable_step7=bool(_read_nested_value(config, "review.enable_step7", default=True)),
         output_mode=_normalize_output_mode(_read_nested_value(config, "paths.output_mode", default="skill")),
+    )
+
+
+def _build_llm_runtime_config(config: dict[str, Any]) -> dict[str, Any]:
+    """统一读取主模型、备用模型和切换配置，并兼容旧单组 llm 配置。"""
+
+    llm_root = _read_nested_value(config, "llm", default={})
+    if not isinstance(llm_root, dict):
+        llm_root = {}
+
+    has_primary = isinstance(llm_root.get("primary"), dict)
+    if has_primary:
+        primary = _read_provider_runtime_config(
+            llm_root["primary"],
+            env_var="KIMI_API_KEY",
+            default_provider="kimi",
+            default_model="kimi-k2.5",
+            default_base_url="https://api.moonshot.cn/v1",
+        )
+        fallback_payload = llm_root.get("fallback")
+        fallback = None
+        if isinstance(fallback_payload, dict):
+            fallback = _read_provider_runtime_config(
+                fallback_payload,
+                env_var="MINIMAX_API_KEY",
+                default_provider="minimax",
+                default_model="MiniMax M2.7",
+                default_base_url="https://api.minimaxi.com/v1",
+            )
+    else:
+        primary = _read_provider_runtime_config(
+            llm_root,
+            env_var="MINIMAX_API_KEY",
+            default_provider="minimax",
+            default_model="MiniMax M2.7",
+            default_base_url="https://api.minimaxi.com/v1",
+        )
+        fallback = None
+
+    failover_root = llm_root.get("failover") if isinstance(llm_root.get("failover"), dict) else {}
+    failover = LLMFailoverRuntimeConfig(
+        enabled=bool(failover_root.get("enabled", False)) and fallback is not None,
+        consecutive_failures=max(1, int(failover_root.get("consecutive_failures", 3))),
+        reset_scope=str(failover_root.get("reset_scope", "step")).strip() or "step",
+        error_scope=str(failover_root.get("error_scope", "infra_only")).strip() or "infra_only",
+    )
+    return {
+        "primary": primary,
+        "fallback": fallback,
+        "failover": failover,
+    }
+
+
+def _read_provider_runtime_config(
+    payload: dict[str, Any],
+    *,
+    env_var: str,
+    default_provider: str,
+    default_model: str,
+    default_base_url: str,
+) -> LLMProviderRuntimeConfig:
+    """读取单个 provider 配置，并补齐默认值。"""
+
+    return LLMProviderRuntimeConfig(
+        provider=str(payload.get("provider", default_provider)).strip() or default_provider,
+        model=str(payload.get("model", default_model)).strip() or default_model,
+        api_key=str(payload.get("api_key", os.getenv(env_var, ""))).strip(),
+        base_url=str(payload.get("base_url", default_base_url)).strip() or default_base_url,
+        timeout_seconds=float(payload.get("timeout_seconds", 180.0)),
+        max_retries=int(payload.get("max_retries", 2)),
+        retry_backoff_seconds=float(payload.get("retry_backoff_seconds", 2.0)),
     )
 
 

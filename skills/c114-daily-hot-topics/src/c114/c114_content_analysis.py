@@ -20,7 +20,7 @@ from .c114_intelligence import (
     step_6_brief_name,
 )
 from .c114_search import load_search_checklist_yaml, parse_yaml_value
-from .llm import MiniMaxChatClient, StructuredLLMError, load_prompt_text, run_parallel_ordered
+from .llm import MiniMaxChatClient, StructuredLLMError, begin_llm_step, load_prompt_text, run_parallel_ordered
 from .settings import AppPaths, load_c114_runtime_config
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
@@ -455,6 +455,7 @@ def auto_complete_content_analysis(
 ) -> ContentAnalysisInput:
     """Fill step 5 analysis fields by directly calling the fixed MiniMax model."""
 
+    begin_llm_step(llm_client, "step_5")
     system_prompt = load_prompt_text(prompt_path)
     completed_categories: list[ContentAnalysisSection] = []
     for category in payload.categories:
@@ -633,6 +634,7 @@ def auto_complete_brief_sections(
 ) -> list[BriefSectionDraft]:
     """Generate structured step 6 section drafts in parallel before rendering."""
 
+    begin_llm_step(llm_client, "step_6")
     system_prompt = load_prompt_text(prompt_path)
 
     def complete_category(category: ContentAnalysisSection) -> BriefSectionDraft:

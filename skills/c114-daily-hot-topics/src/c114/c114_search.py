@@ -24,7 +24,7 @@ from .c114_intelligence import (
     step_2_checklist_name,
     step_3_results_name,
 )
-from .llm import MiniMaxChatClient, StructuredLLMError, load_prompt_text, run_parallel_ordered
+from .llm import MiniMaxChatClient, StructuredLLMError, begin_llm_step, load_prompt_text, run_parallel_ordered
 from .settings import AppPaths, load_c114_runtime_config
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
@@ -497,10 +497,11 @@ class AutoSearchClient:
 def build_auto_search_client(runtime_config: Any, provider_mode: str = "auto") -> AutoSearchClient:
     """Build an auto-search client from whichever provider keys are actually configured."""
 
-    tavily_client = TavilyClient(runtime_config.tavily_api_key, timeout=20.0) if runtime_config.tavily_api_key else None
-    metaso_client = MetasoClient(runtime_config.metaso_api_key, timeout=20.0) if runtime_config.metaso_api_key else None
+    timeout = runtime_config.request_timeout_seconds
+    tavily_client = TavilyClient(runtime_config.tavily_api_key, timeout=timeout) if runtime_config.tavily_api_key else None
+    metaso_client = MetasoClient(runtime_config.metaso_api_key, timeout=timeout) if runtime_config.metaso_api_key else None
     baidu_client = (
-        BaiduSearchClient(runtime_config.baidu_api_key, timeout=20.0) if runtime_config.baidu_api_key else None
+        BaiduSearchClient(runtime_config.baidu_api_key, timeout=timeout) if runtime_config.baidu_api_key else None
     )
     if tavily_client is None and metaso_client is None and baidu_client is None:
         raise RuntimeError("未配置任何搜索 provider key，无法执行 step 3 搜索。")
@@ -1167,6 +1168,7 @@ def enrich_selected_results(
 def auto_review_search_payload(payload: SearchWorkflowPayload, llm_client: MiniMaxChatClient) -> SearchWorkflowPayload:
     """Fill every selected_results.ai_review via the fixed MiniMax model."""
 
+    begin_llm_step(llm_client, "step_3")
     system_prompt = load_prompt_text(SEARCH_REVIEW_PROMPT_PATH)
     reviewed_categories: list[SearchCategoryPayload] = []
     for category in payload.categories:

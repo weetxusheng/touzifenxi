@@ -18,7 +18,7 @@ from .c114_intelligence import (
     step_6_brief_name,
     step_7_brief_review_name,
 )
-from .llm import MiniMaxChatClient, StructuredLLMError, load_prompt_text, run_parallel_ordered
+from .llm import MiniMaxChatClient, StructuredLLMError, begin_llm_step, load_prompt_text, run_parallel_ordered
 from .settings import AppPaths
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
@@ -235,6 +235,7 @@ def build_brief_review_report_with_llm(
     llm_client: MiniMaxChatClient,
 ) -> BriefReviewReport:
     """Run the final step 7 audit via the fixed MiniMax model."""
+    begin_llm_step(llm_client, "step_7")
     analysis_input = load_content_analysis_inputs(analysis_path)
     structural_report = build_brief_review_report(
         report_date=report_date,

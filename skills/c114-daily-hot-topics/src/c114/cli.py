@@ -55,7 +55,7 @@ from .config import (
     runtime_local_path,
     write_c114_local_config,
 )
-from .llm import MiniMaxChatClient
+from .llm import StructuredChatClient
 from .settings import AppPaths, ensure_directories, resolve_paths
 
 
@@ -123,10 +123,10 @@ def find_required_step_input(paths: AppPaths, target_date: date, file_name: str,
     return input_path
 
 
-def require_llm_client() -> MiniMaxChatClient:
-    """构造固定的 MiniMax 客户端，缺配置时抛出可读错误。"""
+def require_llm_client() -> StructuredChatClient:
+    """构造统一的主备大模型客户端，缺配置时抛出可读错误。"""
 
-    return MiniMaxChatClient.from_runtime_config()
+    return StructuredChatClient.from_runtime_config()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -145,7 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Channels to fetch.",
     )
     c114_parser.add_argument("--candidate-limit", type=int, default=30, help="Maximum candidates per channel.")
-    c114_parser.add_argument("--timeout", type=float, default=20.0, help="Per-request timeout in seconds.")
+    c114_parser.add_argument("--timeout", type=float, default=45.0, help="Per-request timeout in seconds.")
     c114_parser.add_argument("--output", default=None, help="Optional JSON output path.")
 
     c114_analyze_parser = subparsers.add_parser("c114-analyze", help="Analyze C114 daily articles.")
@@ -209,7 +209,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Channels to fetch.",
     )
     c114_run_parser.add_argument("--candidate-limit", type=int, default=30, help="Maximum candidates per channel.")
-    c114_run_parser.add_argument("--timeout", type=float, default=20.0, help="Per-request timeout in seconds.")
+    c114_run_parser.add_argument("--timeout", type=float, default=45.0, help="Per-request timeout in seconds.")
     c114_run_parser.add_argument(
         "--provider",
         default="auto",
@@ -457,7 +457,7 @@ def run_with_args(args: argparse.Namespace, paths: AppPaths | None = None) -> No
             print("缺失配置项:")
             for item in missing:
                 print(f"- {item}")
-            print("说明：step 1 可先不配 API key；若要继续跑 step 2-7，需要先配置 llm.api_key，再至少配置一个搜索 provider key（Tavily / Metaso / Baidu 三选一），并补齐其余 search/content/brief 基础配置。")
+            print("说明：step 1 可先不配 API key；若要继续跑 step 2-7，需要先配置 llm.primary.api_key，再至少配置一个搜索 provider key（Tavily / Metaso / Baidu 三选一），并补齐其余 search/content/brief 基础配置。若启用 llm.failover，还要补齐 llm.fallback.api_key。")
         else:
             print("配置已完整。")
         return

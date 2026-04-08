@@ -38,20 +38,52 @@
 
 ### `llm`
 
-- `provider`
-  - 当前固定写 `minimax`
-- `model`
-  - 当前默认 `MiniMax M2.7`
-  - `Step 2 / 3 / 5 / 6 / 7` 都会用到
-- `api_key`
-  - 固定模型调用 key
+- `primary`
+  - 默认首选模型配置
+  - 当前默认是：
+    - `provider = kimi`
+    - `model = kimi-k2.5`
+    - `base_url = https://api.moonshot.cn/v1`
+- `fallback`
+  - 备用模型配置
+  - 当前默认是：
+    - `provider = minimax`
+    - `model = MiniMax M2.7`
+    - `base_url = https://api.minimaxi.com/v1`
+- `primary.api_key`
+  - 主模型调用 key
   - 缺失时 `Step 2 / 3 / 5 / 6 / 7` 都不能执行
-- `base_url`
-  - MiniMax 兼容接口地址
-- `timeout_seconds`
+- `fallback.api_key`
+  - 备用模型调用 key
+  - 只有在开启 failover 时才视为硬门槛
+- `primary.timeout_seconds / fallback.timeout_seconds`
   - 单次模型请求超时秒数
-- `max_retries`
-  - 模型结构化输出失败或超时时的最大重试次数
+  - 默认已放宽到 `180` 秒，适合 `Step 5 / 6 / 7` 这类较慢分析步骤
+- `primary.max_retries / fallback.max_retries`
+  - 当前 provider 内部请求失败后的最大重试次数
+- `primary.retry_backoff_seconds / fallback.retry_backoff_seconds`
+  - 当前 provider 请求失败后的退避秒数
+  - 遇到 `529`、`429`、`5xx`、超时等可重试错误时，会按这个值逐次递增等待后再重试
+- `failover`
+  - 主备切换规则
+  - `enabled = true` 时，当前默认规则是：
+    - `Kimi` 连续 `3` 次基础设施错误后，当前步骤剩余请求切到 `MiniMax`
+    - 进入下一步时，再重新优先尝试 `Kimi`
+  - `JSON` 结构错误不会直接触发切换，仍会在当前 provider 内按结构修复逻辑重试
+
+### `network`
+
+- `request_timeout_seconds`
+  - 通用联网请求超时秒数
+  - 影响 `Step 1` 的页面抓取、`Step 3` 的搜索 provider 请求、`Step 4` 的 HTML fallback 抓取
+  - 默认 `45` 秒
+- `aliyun_timeout_seconds`
+  - 阿里云 IQS 单次请求超时秒数
+  - 默认 `45` 秒
+- `aliyun_max_retries`
+  - 阿里云 IQS 超时或限流时的最大重试次数
+- `aliyun_retry_backoff_seconds`
+  - 阿里云 IQS 每次重试前的退避秒数
 
 ### `search`
 

@@ -1,12 +1,36 @@
 {
     "keys": {"tavily_api_key": "", "metaso_api_key": "", "baidu_api_key": "", "aliyun_iqs_api_key": ""},
     "llm": {
-        "provider": "minimax",
-        "model": "MiniMax M2.7",
-        "api_key": "",
-        "base_url": "https://api.minimaxi.com/v1",
-        "timeout_seconds": 60,
-        "max_retries": 2
+        "primary": {
+            "provider": "kimi",
+            "model": "kimi-k2.5",
+            "api_key": "",
+            "base_url": "https://api.moonshot.cn/v1",
+            "timeout_seconds": 180,
+            "max_retries": 2,
+            "retry_backoff_seconds": 2.0
+        },
+        "fallback": {
+            "provider": "minimax",
+            "model": "MiniMax M2.7",
+            "api_key": "",
+            "base_url": "https://api.minimaxi.com/v1",
+            "timeout_seconds": 180,
+            "max_retries": 2,
+            "retry_backoff_seconds": 2.0
+        },
+        "failover": {
+            "enabled": true,
+            "consecutive_failures": 3,
+            "reset_scope": "step",
+            "error_scope": "infra_only"
+        }
+    },
+    "network": {
+        "request_timeout_seconds": 45,
+        "aliyun_timeout_seconds": 45,
+        "aliyun_max_retries": 2,
+        "aliyun_retry_backoff_seconds": 0.5
     },
     "search": {"recent_days": 30, "max_external_results": 5},
     "content": {"fetch_keep_levels": ["strong", "weak"]},

@@ -1,6 +1,6 @@
 ---
 name: c114-daily-hot-topics
-description: 当用户需要抓取、搜索、分析并审查 C114 当日热点时使用。该 skill 现在由 Python 内置固定模型自动完成 Step 2、Step 3、Step 5、Step 6、Step 7。
+description: 当用户需要抓取、搜索、分析并审查 C114 当日热点时使用。该 skill 现在由 Python 内置主备模型自动完成 Step 2、Step 3、Step 5、Step 6、Step 7。
 ---
 
 # C114 当日热点 Skill
@@ -22,7 +22,7 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
   - `ai`
 - 默认输出写入 skill 自带的 `output/`
 - 只有当 `config/runtime.local.json` 显式设置 `paths.output_mode = project` 时，才写入当前工作区共享目录
-- `Step 2 / Step 3 / Step 5 / Step 6 / Step 7` 默认由 Python 内置 MiniMax 模型自动完成
+- `Step 2 / Step 3 / Step 5 / Step 6 / Step 7` 默认由 Python 内置主备模型自动完成
 - 默认推荐只使用一条命令直接跑完整链路：
   - `python scripts/c114.py run --date YYYY-MM-DD`
 - 除非命中显式阻断条件，否则不应在 `Step 2` 到 `Step 7` 之间中途停下、请求确认、展示中间产物或要求人工补写
@@ -44,14 +44,18 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
   - 若已配置 `keys.tavily_api_key`，则 `keys.metaso_api_key` 与 `keys.baidu_api_key` 可以留空，不构成阻断
   - 正文提取 key：
     - `keys.aliyun_iqs_api_key`
-  - 固定模型配置：
-    - `llm.api_key`
-    - `llm.model`
-    - `llm.base_url`
+  - 主模型配置：
+    - `llm.primary.api_key`
+    - `llm.primary.model`
+    - `llm.primary.base_url`
+  - 若启用主备切换：
+    - `llm.fallback.api_key`
+    - `llm.fallback.model`
+    - `llm.fallback.base_url`
   - 可选审查开关：
     - `review.enable_step7`
 5. 直接运行完整链路：
-  - `python scripts/c114.py run --date 2026-04-07`
+  - `python scripts/c114.py run --date YYYY-MM-DD`
 
 ## 安装后首次配置
 
@@ -62,17 +66,24 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 - `c114-config-init` 负责从 `runtime.example.json` 生成本地 `runtime.local.json`
 - `c114-config-status` 负责检查缺项，不会替你补配置
 - 只要 `Tavily / Metaso / Baidu` 三者里至少一个已配置，`step 3` 就允许继续；不要把其余留空项误判为阻断
-- 当前 skill 采用固定模型执行，默认模型配置位于：
+- 当前 skill 采用主备模型执行，默认配置位于：
   - `config/runtime.local.json`
 - 配置项逐项解释见：
   - `config/README.md`
 - `llm` 段最小字段：
-  - `llm.provider`
-  - `llm.model`
-  - `llm.api_key`
-  - `llm.base_url`
-  - `llm.timeout_seconds`
-  - `llm.max_retries`
+  - `llm.primary.provider`
+  - `llm.primary.model`
+  - `llm.primary.api_key`
+  - `llm.primary.base_url`
+  - `llm.primary.timeout_seconds`
+  - `llm.primary.max_retries`
+  - 若启用主备切换，还需：
+    - `llm.fallback.provider`
+    - `llm.fallback.model`
+    - `llm.fallback.api_key`
+    - `llm.fallback.base_url`
+    - `llm.failover.enabled`
+    - `llm.failover.consecutive_failures`
 - `review` 段当前支持：
   - `review.enable_step7`
   - 默认值为 `true`
@@ -105,19 +116,19 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 | 步骤 | 不配置也能跑 | 必须先配置 |
 | --- | --- | --- |
 | `Step 1：抓取` | 可以 | 无 |
-| `Step 2：搜索清单 YAML` | 不可以 | `llm.api_key`、`llm.model`、`llm.base_url` |
-| `Step 3：搜索结果 YAML` | 不可以 | 至少一个搜索 provider key：`keys.tavily_api_key` / `keys.metaso_api_key` / `keys.baidu_api_key`，以及 `search.recent_days`、`search.max_external_results`、`llm.api_key` |
+| `Step 2：搜索清单 YAML` | 不可以 | `llm.primary.api_key`、`llm.primary.model`、`llm.primary.base_url` |
+| `Step 3：搜索结果 YAML` | 不可以 | 至少一个搜索 provider key：`keys.tavily_api_key` / `keys.metaso_api_key` / `keys.baidu_api_key`，以及 `search.recent_days`、`search.max_external_results`、`llm.primary.api_key` |
 | `Step 4：正文抓取 YAML` | 不建议 | `keys.aliyun_iqs_api_key`、`content.fetch_keep_levels` |
-| `Step 5：正文分析 YAML` | 不可以直接跳过前置 | 已完成 `step 4`，并配置 `llm.api_key` |
-| `Step 6：行业研究员简报 Markdown` | 不可以直接跳过前置 | 已完成 `step 5`、`brief.role`、`llm.api_key` |
-| `Step 7：简报审查 YAML` | 可以通过配置关闭 | 已完成 `step 6`、`llm.api_key`；若 `review.enable_step7 = false`，则默认不执行 |
+| `Step 5：正文分析 YAML` | 不可以直接跳过前置 | 已完成 `step 4`，并配置 `llm.primary.api_key` |
+| `Step 6：行业研究员简报 Markdown` | 不可以直接跳过前置 | 已完成 `step 5`、`brief.role`、`llm.primary.api_key` |
+| `Step 7：简报审查 YAML` | 可以通过配置关闭 | 已完成 `step 6`、`llm.primary.api_key`；若 `review.enable_step7 = false`，则默认不执行 |
 
 - `Step 1` 可以单独运行
 - 想跑 `Step 3` 时，三种搜索 key 里至少配置一个即可
 - 如果已经配置 `keys.tavily_api_key`，则不应因为 `keys.metaso_api_key` 或 `keys.baidu_api_key` 为空而中止流程
 - 想跑完整流程时，应补齐：
   - `keys.aliyun_iqs_api_key`
-  - `llm.api_key`
+  - `llm.primary.api_key`
   - `search.recent_days`
   - `search.max_external_results`
   - `content.fetch_keep_levels`
@@ -144,7 +155,7 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 | 层级 | Python（代码）职责 |
 | --- | --- |
 | `Step 1` | 抓取 C114 原始文章、去重、写入原始 CSV / JSON |
-| `Step 2` | 读取 `prompts/search-keyword-agent.md`，调用固定 MiniMax，自动生成两组 `keywords` |
+| `Step 2` | 读取 `prompts/search-keyword-agent.md`，调用内置主备模型，自动生成两组 `keywords` |
 | `Step 3` | 调搜索 provider、做日期过滤/黑名单/去重/结果归一化，并读取 `prompts/search-review-agent.md` 自动补全 `selected_results[*].ai_review` |
 | `Step 4` | 只抓 `keep_level = strong / weak` 的补充链接正文 |
 | `Step 5` | 读取 `prompts/content-analysis-agent.md`，自动补齐 `summary`、`core_points`、`new_facts`、`entities`、`signals`、`risk_or_uncertainty`、`why_it_matters`、`layer_notes` |
@@ -198,12 +209,17 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 
 - 当前固定执行模型来自：
   - `config/runtime.local.json`
-  - `llm.provider`
-  - `llm.model`
-  - `llm.api_key`
-  - `llm.base_url`
-- 当前默认模型名：
-  - `MiniMax M2.7`
+  - `llm.primary.*`
+  - `llm.fallback.*`
+  - `llm.failover.*`
+- 当前默认主模型：
+  - `Kimi / kimi-k2.5`
+- 当前默认备用模型：
+  - `MiniMax / MiniMax M2.7`
+- 切换规则：
+  - `Kimi` 连续 `3` 次基础设施错误后，当前步骤剩余请求切到 `MiniMax`
+  - 进入下一步时，重新优先尝试 `Kimi`
+- `JSON` 结构错误不会直接触发主备切换
 - skill 不对模型名做本地白名单校验；若远端接口不接受该模型名，由接口错误直接返回
 - 各步骤都要求模型只返回目标结构，不返回额外解释
 - Python 会校验结构：
@@ -225,16 +241,21 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 - 若模型返回结构不合法：
   - Python 会自动重试一次修复提示
   - 再失败则停在当前步骤
+- 若模型返回多个连续 JSON 对象、前后夹杂解释文字、Markdown 代码块或 `<think>` 片段：
+  - skill 会先在统一 LLM 解析层做有限兼容
+  - 多个顶层 JSON 对象会按“后者覆盖、列表去重合并”规则合并
+  - 若顶层类型冲突或合并后仍不满足步骤结构要求，流程仍会停在当前步骤
+- 外部 agent 不应因为看到 `Extra data` 或 JSON 噪音，就去手工改 YAML 或改写中间产物
 
 ## 运行规则
 
 - 默认主路径：
-  - `python scripts/c114.py run --date 2026-04-07`
+  - `python scripts/c114.py run --date YYYY-MM-DD`
 - 这是最高优先级推荐入口；除排障外，不应改成逐步拆开手工执行
 - `run` 现在会默认从 `Step 1` 直接跑到 `Step 7`
 - 若 `review.enable_step7 = false`，则 `run` 默认从 `Step 1` 跑到 `Step 6`
 - 只有以下情况才会阻断：
-  - `llm.api_key` 缺失
+  - `llm.primary.api_key` 缺失
   - 搜索 provider key 全缺失
   - 模型输出结构多次修复失败
   - `Step 4` 正文抓取硬失败

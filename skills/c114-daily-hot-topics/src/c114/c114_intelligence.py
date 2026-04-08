@@ -12,7 +12,7 @@ from io import StringIO
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .llm import MiniMaxChatClient, StructuredLLMError, load_prompt_text, run_parallel_ordered
+from .llm import MiniMaxChatClient, StructuredLLMError, begin_llm_step, load_prompt_text, run_parallel_ordered
 from .settings import AppPaths
 
 CSV_HEADERS = {
@@ -565,6 +565,7 @@ def autofill_search_checklist_items(
 ) -> list[SearchChecklistItem]:
     """Use the fixed MiniMax model to generate exactly two keywords per article."""
 
+    begin_llm_step(llm_client, "step_2")
     analysis_index = {analysis.title: analysis for analysis in analyses}
     system_prompt = load_prompt_text(prompt_path)
     def complete_one(item: SearchChecklistItem) -> SearchChecklistItem:
