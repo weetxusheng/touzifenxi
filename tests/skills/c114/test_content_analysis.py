@@ -202,6 +202,28 @@ categories:
         self.assertEqual(draft.core_points, ["核心点1"])
         self.assertEqual(draft.layer_notes, ["补充链接与源稿高度相关。"])
 
+    def test_normalize_content_analysis_draft_accepts_object_list_payload(self) -> None:
+        draft = normalize_content_analysis_draft(
+            [
+                {
+                    "summary": "旧摘要",
+                    "core_points": ["核心点1"],
+                },
+                {
+                    "summary": "新摘要",
+                    "new_facts": ["新增事实1"],
+                    "entities": ["中国联通"],
+                    "signals": ["产业信号"],
+                    "risk_or_uncertainty": ["仍需观察的点"],
+                    "why_it_matters": "这件事说明行业已经进入验证阶段。",
+                    "layer_notes": ["补充链接与源稿高度相关。"],
+                },
+            ]
+        )
+
+        self.assertEqual(draft.summary, "新摘要")
+        self.assertEqual(draft.core_points, ["核心点1"])
+
     def test_auto_complete_content_analysis_fills_analysis_via_llm(self) -> None:
         class FakeLLMClient:
             def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:

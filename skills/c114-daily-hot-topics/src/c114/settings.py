@@ -87,11 +87,32 @@ def ensure_directories(paths: AppPaths) -> None:
         path.mkdir(parents=True, exist_ok=True)
 
 
+def resolve_override_path(project_root: Path, override: str) -> Path:
+    """解析命令行覆盖路径。
+
+    规则：
+    1. 绝对路径原样使用。
+    2. `reports/`、`data/`、`state/` 开头的相对路径按 skill 输出根目录解析。
+    3. 其它相对路径按当前工作目录解析，兼容从仓库根目录传入
+       `skills/.../output/...` 这类路径。
+    """
+
+    candidate = Path(override).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+
+    managed_roots = {"reports", "data", "state"}
+    if candidate.parts and candidate.parts[0] in managed_roots:
+        return (project_root / candidate).resolve()
+    return (Path.cwd().resolve() / candidate).resolve()
+
+
 __all__ = [
     "AppPaths",
     "C114RuntimeConfig",
     "ensure_directories",
     "load_c114_runtime_config",
     "load_local_env",
+    "resolve_override_path",
     "resolve_paths",
 ]

@@ -16,6 +16,7 @@ from c114.llm import (
     StructuredChatClient,
     StructuredLLMError,
     _parse_json_payload,
+    coerce_json_object_payload,
     run_parallel_ordered,
 )
 
@@ -67,6 +68,18 @@ class LLMParsingTests(unittest.TestCase):
     def test_parse_json_payload_rejects_mixed_object_and_array_fragments(self) -> None:
         with self.assertRaises(StructuredLLMError):
             _parse_json_payload('{"summary":"一"}\n["二"]')
+
+    def test_coerce_json_object_payload_merges_object_list(self) -> None:
+        payload = coerce_json_object_payload(
+            [
+                {"summary": "旧值"},
+                {"summary": "新值", "core_points": ["甲"]},
+            ],
+            "step 5 分析结果",
+        )
+
+        self.assertEqual(payload["summary"], "新值")
+        self.assertEqual(payload["core_points"], ["甲"])
 
 
 class LLMConfigTests(unittest.TestCase):
@@ -180,7 +193,7 @@ class LLMRetryTests(unittest.TestCase):
             failover_consecutive_failures=3,
         )
 
-        with patch("c114.llm.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
             payload = client.complete_json(system_prompt="系统", user_prompt="用户")
 
         self.assertEqual(attempts, 2)
@@ -239,7 +252,7 @@ class LLMRetryTests(unittest.TestCase):
         )
         client.begin_step("step_2")
 
-        with patch("c114.llm.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
             with self.assertRaises(StructuredLLMError):
                 client.complete_json(system_prompt="系统", user_prompt="一次")
             with self.assertRaises(StructuredLLMError):
@@ -299,7 +312,7 @@ class LLMRetryTests(unittest.TestCase):
             failover_consecutive_failures=3,
         )
 
-        with patch("c114.llm.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
             client.begin_step("step_2")
             with self.assertRaises(StructuredLLMError):
                 client.complete_json(system_prompt="系统", user_prompt="一次")
@@ -345,8 +358,238 @@ class LLMRetryTests(unittest.TestCase):
             failover_consecutive_failures=3,
         )
 
-        with patch("c114.llm.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
             payload = client.complete_json(system_prompt="系统", user_prompt="用户")
 
         self.assertEqual(payload["ping"], "pong")
         self.assertNotIn("temperature", captured_payload)
+
+    def test_kimi_code_uses_anthropic_messages_endpoint(self) -> None:
+        captured_url = ""
+        captured_headers: dict[str, str] = {}
+        captured_payload: dict[str, object] = {}
+
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+            def read(self) -> bytes:
+                return json.dumps(
+                    {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": '{"ping":"pong"}',
+                            }
+                        ]
+                    }
+                ).encode("utf-8")
+
+        def fake_urlopen(request, timeout=30.0):  # type: ignore[no-untyped-def]
+            nonlocal captured_url, captured_headers, captured_payload
+            captured_url = request.full_url
+            captured_headers = dict(request.header_items())
+            captured_payload = json.loads(request.data.decode("utf-8"))
+            return FakeResponse()
+
+        client = StructuredChatClient(
+            primary=LLMProviderConfig(
+                provider="kimi-code",
+                model="kimi-for-coding",
+                api_key="kimi-code-key",
+                base_url="https://api.kimi.com/coding",
+                timeout_seconds=30.0,
+                max_retries=0,
+                retry_backoff_seconds=0.0,
+            ),
+            fallback=None,
+            failover_enabled=False,
+            failover_consecutive_failures=3,
+        )
+
+        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+            payload = client.complete_json(system_prompt="系统", user_prompt="用户")
+
+        self.assertEqual(payload["ping"], "pong")
+        self.assertEqual(captured_url, "https://api.kimi.com/coding/v1/messages")
+        self.assertEqual(captured_headers["X-api-key"], "kimi-code-key")
+        self.assertIn("Anthropic-version", captured_headers)
+        self.assertEqual(captured_payload["model"], "kimi-for-coding")
+        self.assertEqual(captured_payload["system"], "系统")
+        self.assertEqual(captured_payload["messages"][0]["content"], "用户")
+        self.assertNotIn("response_format", captured_payload)
+
+    def test_client_failsover_across_three_provider_chain(self) -> None:
+        attempts: list[str] = []
+
+        class FakeResponse:
+            def __init__(self, content: str) -> None:
+                self._content = content
+
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+            def read(self) -> bytes:
+                if "content" in self._content:
+                    return self._content.encode("utf-8")
+                return json.dumps({"choices": [{"message": {"content": self._content}}]}).encode("utf-8")
+
+        def fake_urlopen(request, timeout=30.0):  # type: ignore[no-untyped-def]
+            full_url = request.full_url
+            if "api.kimi.com/coding" in full_url:
+                provider = "kimi-code"
+            elif "moonshot" in full_url:
+                provider = "kimi"
+            else:
+                provider = "minimax"
+            attempts.append(provider)
+            if provider in {"kimi-code", "kimi"}:
+                raise HTTPError(
+                    url=full_url,
+                    code=529,
+                    msg="overloaded",
+                    hdrs=None,
+                    fp=BytesIO(b'{"error":"busy"}'),
+                )
+            return FakeResponse('{"choices":[{"message":{"content":"{\\"keywords\\":[\\"a\\",\\"b\\"]}"}}]}')
+
+        client = StructuredChatClient(
+            primary=LLMProviderConfig(
+                provider="kimi-code",
+                model="kimi-for-coding",
+                api_key="code-key",
+                base_url="https://api.kimi.com/coding",
+                timeout_seconds=30.0,
+                max_retries=0,
+                retry_backoff_seconds=0.0,
+            ),
+            fallbacks=[
+                LLMProviderConfig(
+                    provider="kimi",
+                    model="kimi-k2.5",
+                    api_key="kimi-key",
+                    base_url="https://api.moonshot.cn/v1",
+                    timeout_seconds=30.0,
+                    max_retries=0,
+                    retry_backoff_seconds=0.0,
+                ),
+                LLMProviderConfig(
+                    provider="minimax",
+                    model="MiniMax M2.7",
+                    api_key="minimax-key",
+                    base_url="https://api.minimaxi.com/v1",
+                    timeout_seconds=30.0,
+                    max_retries=0,
+                    retry_backoff_seconds=0.0,
+                ),
+            ],
+            failover_enabled=True,
+            failover_consecutive_failures=3,
+        )
+        client.begin_step("step_2")
+
+        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+            with self.assertRaises(StructuredLLMError):
+                client.complete_json(system_prompt="系统", user_prompt="一")
+            with self.assertRaises(StructuredLLMError):
+                client.complete_json(system_prompt="系统", user_prompt="二")
+            with self.assertRaises(StructuredLLMError):
+                client.complete_json(system_prompt="系统", user_prompt="三")
+            with self.assertRaises(StructuredLLMError):
+                client.complete_json(system_prompt="系统", user_prompt="四")
+            payload = client.complete_json(system_prompt="系统", user_prompt="五")
+            payload = client.complete_json(system_prompt="系统", user_prompt="六")
+
+        self.assertEqual(
+            attempts,
+            ["kimi-code", "kimi-code", "kimi-code", "kimi", "kimi", "kimi", "minimax", "minimax"],
+        )
+        self.assertEqual(payload["keywords"], ["a", "b"])
+
+    def test_retry_after_header_takes_priority_over_local_backoff(self) -> None:
+        sleep_calls: list[float] = []
+
+        def fake_urlopen(_request, timeout=30.0):  # type: ignore[no-untyped-def]
+            raise HTTPError(
+                url="https://api.moonshot.cn/v1/chat/completions",
+                code=429,
+                msg="rate_limited",
+                hdrs={"Retry-After": "7"},
+                fp=BytesIO(b'{"error":"rate limited"}'),
+            )
+
+        client = StructuredChatClient(
+            primary=LLMProviderConfig(
+                provider="kimi",
+                model="kimi-k2.5",
+                api_key="kimi",
+                base_url="https://api.moonshot.cn/v1",
+                timeout_seconds=30.0,
+                max_retries=1,
+                retry_backoff_seconds=0.0,
+            ),
+            fallback=None,
+            failover_enabled=False,
+            failover_consecutive_failures=3,
+            retry_honor_retry_after=True,
+            retry_jitter_seconds=0.0,
+        )
+
+        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+            with patch("c114.llm_runtime.client.time.sleep", side_effect=lambda value: sleep_calls.append(value)):
+                with self.assertRaises(StructuredLLMError):
+                    client.complete_json(system_prompt="系统", user_prompt="用户")
+
+        self.assertEqual(sleep_calls, [7.0])
+
+    def test_streaming_steps_use_stream_payload_and_parse_sse(self) -> None:
+        captured_payload: dict[str, object] = {}
+
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+            def read(self) -> bytes:
+                return (
+                    'data: {"choices":[{"delta":{"content":"{\\"summary\\":\\"一\\""}}]}\n'
+                    'data: {"choices":[{"delta":{"content":"}"}}]}\n'
+                    "data: [DONE]\n"
+                ).encode("utf-8")
+
+        def fake_urlopen(request, timeout=30.0):  # type: ignore[no-untyped-def]
+            nonlocal captured_payload
+            captured_payload = json.loads(request.data.decode("utf-8"))
+            return FakeResponse()
+
+        client = StructuredChatClient(
+            primary=LLMProviderConfig(
+                provider="kimi",
+                model="kimi-k2.5",
+                api_key="kimi",
+                base_url="https://api.moonshot.cn/v1",
+                timeout_seconds=30.0,
+                max_retries=0,
+                retry_backoff_seconds=0.0,
+            ),
+            fallback=None,
+            failover_enabled=False,
+            failover_consecutive_failures=3,
+            stream_enabled=True,
+            stream_steps=("step_5",),
+        )
+        client.begin_step("step_5")
+
+        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+            payload = client.complete_json(system_prompt="系统", user_prompt="用户")
+
+        self.assertTrue(captured_payload["stream"])
+        self.assertEqual(payload["summary"], "一")

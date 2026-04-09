@@ -44,14 +44,17 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
   - 若已配置 `keys.tavily_api_key`，则 `keys.metaso_api_key` 与 `keys.baidu_api_key` 可以留空，不构成阻断
   - 正文提取 key：
     - `keys.aliyun_iqs_api_key`
-  - 主模型配置：
-    - `llm.primary.api_key`
-    - `llm.primary.model`
-    - `llm.primary.base_url`
-  - 若启用主备切换：
-    - `llm.fallback.api_key`
-    - `llm.fallback.model`
-    - `llm.fallback.base_url`
+  - 首选模型配置：
+    - `llm.providers[0].api_key`
+    - `llm.providers[0].model`
+    - `llm.providers[0].base_url`
+  - 若启用 provider 链切换：
+    - `llm.providers[1].api_key`
+    - `llm.providers[1].model`
+    - `llm.providers[1].base_url`
+    - `llm.providers[2].api_key`
+    - `llm.providers[2].model`
+    - `llm.providers[2].base_url`
   - 可选审查开关：
     - `review.enable_step7`
 5. 直接运行完整链路：
@@ -66,22 +69,22 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 - `c114-config-init` 负责从 `runtime.example.json` 生成本地 `runtime.local.json`
 - `c114-config-status` 负责检查缺项，不会替你补配置
 - 只要 `Tavily / Metaso / Baidu` 三者里至少一个已配置，`step 3` 就允许继续；不要把其余留空项误判为阻断
-- 当前 skill 采用主备模型执行，默认配置位于：
+- 当前 skill 采用 provider 链执行，默认配置位于：
   - `config/runtime.local.json`
 - 配置项逐项解释见：
   - `config/README.md`
 - `llm` 段最小字段：
-  - `llm.primary.provider`
-  - `llm.primary.model`
-  - `llm.primary.api_key`
-  - `llm.primary.base_url`
-  - `llm.primary.timeout_seconds`
-  - `llm.primary.max_retries`
-  - 若启用主备切换，还需：
-    - `llm.fallback.provider`
-    - `llm.fallback.model`
-    - `llm.fallback.api_key`
-    - `llm.fallback.base_url`
+  - `llm.providers[0].provider`
+  - `llm.providers[0].model`
+  - `llm.providers[0].api_key`
+  - `llm.providers[0].base_url`
+  - `llm.providers[0].timeout_seconds`
+  - `llm.providers[0].max_retries`
+  - 若启用 provider 链切换，还需：
+    - `llm.providers[1].provider`
+    - `llm.providers[1].model`
+    - `llm.providers[1].api_key`
+    - `llm.providers[1].base_url`
     - `llm.failover.enabled`
     - `llm.failover.consecutive_failures`
 - `review` 段当前支持：
@@ -116,19 +119,19 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 | 步骤 | 不配置也能跑 | 必须先配置 |
 | --- | --- | --- |
 | `Step 1：抓取` | 可以 | 无 |
-| `Step 2：搜索清单 YAML` | 不可以 | `llm.primary.api_key`、`llm.primary.model`、`llm.primary.base_url` |
-| `Step 3：搜索结果 YAML` | 不可以 | 至少一个搜索 provider key：`keys.tavily_api_key` / `keys.metaso_api_key` / `keys.baidu_api_key`，以及 `search.recent_days`、`search.max_external_results`、`llm.primary.api_key` |
+| `Step 2：搜索清单 YAML` | 不可以 | `llm.providers[0].api_key`、`llm.providers[0].model`、`llm.providers[0].base_url` |
+| `Step 3：搜索结果 YAML` | 不可以 | 至少一个搜索 provider key：`keys.tavily_api_key` / `keys.metaso_api_key` / `keys.baidu_api_key`，以及 `search.recent_days`、`search.max_external_results`、`llm.providers[0].api_key` |
 | `Step 4：正文抓取 YAML` | 不建议 | `keys.aliyun_iqs_api_key`、`content.fetch_keep_levels` |
-| `Step 5：正文分析 YAML` | 不可以直接跳过前置 | 已完成 `step 4`，并配置 `llm.primary.api_key` |
-| `Step 6：行业研究员简报 Markdown` | 不可以直接跳过前置 | 已完成 `step 5`、`brief.role`、`llm.primary.api_key` |
-| `Step 7：简报审查 YAML` | 可以通过配置关闭 | 已完成 `step 6`、`llm.primary.api_key`；若 `review.enable_step7 = false`，则默认不执行 |
+| `Step 5：正文分析 YAML` | 不可以直接跳过前置 | 已完成 `step 4`，并配置 `llm.providers[0].api_key` |
+| `Step 6：行业研究员简报 Markdown` | 不可以直接跳过前置 | 已完成 `step 5`、`brief.role`、`llm.providers[0].api_key` |
+| `Step 7：简报审查 YAML` | 可以通过配置关闭 | 已完成 `step 6`、`llm.providers[0].api_key`；若 `review.enable_step7 = false`，则默认不执行 |
 
 - `Step 1` 可以单独运行
 - 想跑 `Step 3` 时，三种搜索 key 里至少配置一个即可
 - 如果已经配置 `keys.tavily_api_key`，则不应因为 `keys.metaso_api_key` 或 `keys.baidu_api_key` 为空而中止流程
 - 想跑完整流程时，应补齐：
   - `keys.aliyun_iqs_api_key`
-  - `llm.primary.api_key`
+  - `llm.providers[0].api_key`
   - `search.recent_days`
   - `search.max_external_results`
   - `content.fetch_keep_levels`
@@ -209,16 +212,29 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 
 - 当前固定执行模型来自：
   - `config/runtime.local.json`
-  - `llm.primary.*`
-  - `llm.fallback.*`
+  - `llm.providers[*]`
   - `llm.failover.*`
-- 当前默认主模型：
+- 当前统一运行时还会读取：
+  - `llm.retry.*`
+  - `llm.concurrency.*`
+  - `llm.streaming.*`
+- 当前默认 provider 链：
+  - `kimi-code / kimi-for-coding`
   - `Kimi / kimi-k2.5`
-- 当前默认备用模型：
   - `MiniMax / MiniMax M2.7`
+- 当前默认稳定性策略：
+  - 同一步内仅在基础设施错误下切换 provider
+  - 连续 `3` 次基础设施错误才切到下一个 provider
+  - 若服务端返回 `Retry-After`，优先按服务端建议等待
+  - provider 级默认并发：
+    - `kimi-code = 2`
+    - `kimi = 2`
+    - `minimax = 3`
+  - `step_5 / step_6 / step_7` 默认启用流式接收
 - 切换规则：
+  - `kimi-code` 连续 `3` 次基础设施错误后，当前步骤剩余请求切到 `Kimi`
   - `Kimi` 连续 `3` 次基础设施错误后，当前步骤剩余请求切到 `MiniMax`
-  - 进入下一步时，重新优先尝试 `Kimi`
+  - 进入下一步时，重新优先尝试 `kimi-code`
 - `JSON` 结构错误不会直接触发主备切换
 - skill 不对模型名做本地白名单校验；若远端接口不接受该模型名，由接口错误直接返回
 - 各步骤都要求模型只返回目标结构，不返回额外解释
@@ -255,7 +271,7 @@ description: 当用户需要抓取、搜索、分析并审查 C114 当日热点�
 - `run` 现在会默认从 `Step 1` 直接跑到 `Step 7`
 - 若 `review.enable_step7 = false`，则 `run` 默认从 `Step 1` 跑到 `Step 6`
 - 只有以下情况才会阻断：
-  - `llm.primary.api_key` 缺失
+  - `llm.providers[0].api_key` 缺失
   - 搜索 provider key 全缺失
   - 模型输出结构多次修复失败
   - `Step 4` 正文抓取硬失败

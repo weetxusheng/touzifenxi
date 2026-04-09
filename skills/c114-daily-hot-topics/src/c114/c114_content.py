@@ -33,7 +33,7 @@ from .c114_search import (
     parse_yaml_value,
     unquote_yaml_scalar,
 )
-from .settings import AppPaths, load_c114_runtime_config
+from .settings import AppPaths, load_c114_runtime_config, resolve_override_path
 
 
 @dataclass(frozen=True)
@@ -282,7 +282,7 @@ def resolve_content_output_paths(
     """Resolve the canonical step 3 input and step 4 output paths."""
     run_dir: Path | None = None
     if input_override:
-        input_path = (paths.project_root / input_override).resolve()
+        input_path = resolve_override_path(paths.project_root, input_override)
     else:
         run_dir = find_latest_search_run_directory(paths.reports_dir, report_date)
         if run_dir:
@@ -291,7 +291,7 @@ def resolve_content_output_paths(
             input_path = (c114_reports_root(paths.reports_dir) / step_3_results_name(report_date)).resolve()
 
     if output_override:
-        output_path = (paths.project_root / output_override).resolve()
+        output_path = resolve_override_path(paths.project_root, output_override)
     else:
         if input_override or run_dir:
             output_path = (input_path.parent / step_4_content_name(report_date)).resolve()

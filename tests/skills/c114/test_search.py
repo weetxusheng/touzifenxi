@@ -169,6 +169,47 @@ class SearchRankingTests(unittest.TestCase):
         self.assertEqual(len(deduped), 1)
         self.assertEqual(deduped[0].snippet, "a")
 
+
+class SearchPathTests(unittest.TestCase):
+    def test_resolve_search_output_paths_supports_repo_relative_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+            skill_output = repo_root / "skills" / "c114-daily-hot-topics" / "output"
+            app_paths = AppPaths(
+                project_root=skill_output,
+                data_dir=skill_output / "data",
+                raw_dir=skill_output / "data" / "raw",
+                processed_dir=skill_output / "data" / "processed",
+                reports_dir=skill_output / "reports",
+                state_dir=skill_output / "state",
+                db_path=skill_output / "state" / "touzifenxi.db",
+                database_url=None,
+                sample_universe_path=skill_output / "data" / "universe_sample.json",
+                watchlist_path=skill_output / "data" / "watchlist_v2.json",
+                theme_config_path=skill_output / "data" / "themes_v1.json",
+            )
+
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(repo_root)
+                resolved = resolve_search_output_paths(
+                    app_paths,
+                    date(2026, 3, 30),
+                    input_override="skills/c114-daily-hot-topics/output/reports/c114_report/run/c114_step_2.yaml",
+                    output_override="skills/c114-daily-hot-topics/output/reports/c114_report/run/c114_step_3.yaml",
+                )
+            finally:
+                os.chdir(original_cwd)
+
+            self.assertEqual(
+                resolved.input_path,
+                (repo_root / "skills" / "c114-daily-hot-topics" / "output" / "reports" / "c114_report" / "run" / "c114_step_2.yaml").resolve(),
+            )
+            self.assertEqual(
+                resolved.output_path,
+                (repo_root / "skills" / "c114-daily-hot-topics" / "output" / "reports" / "c114_report" / "run" / "c114_step_3.yaml").resolve(),
+            )
+
     def test_rank_search_results_prefers_official_then_title_match_and_recency(self) -> None:
         title_query = SearchQuery(query_type="title", value="中国信科陈山枝 NTN赋能卫星互联网")
         keyword_query = SearchQuery(query_type="keyword", value="卫星互联网 规模经济促进普惠")

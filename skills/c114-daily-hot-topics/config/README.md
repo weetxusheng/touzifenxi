@@ -38,38 +38,62 @@
 
 ### `llm`
 
-- `primary`
-  - 默认首选模型配置
-  - 当前默认是：
-    - `provider = kimi`
-    - `model = kimi-k2.5`
-    - `base_url = https://api.moonshot.cn/v1`
-- `fallback`
-  - 备用模型配置
-  - 当前默认是：
-    - `provider = minimax`
-    - `model = MiniMax M2.7`
-    - `base_url = https://api.minimaxi.com/v1`
-- `primary.api_key`
-  - 主模型调用 key
+- `providers`
+  - 内置模型 provider 链，按顺序依次尝试
+  - 当前默认链路是：
+    - `providers[0] = kimi-code`
+    - `providers[1] = kimi`
+    - `providers[2] = minimax`
+  - 每个 provider 都支持：
+    - `provider`
+    - `model`
+    - `api_key`
+    - `base_url`
+    - `timeout_seconds`
+    - `max_retries`
+    - `retry_backoff_seconds`
+- `providers[0].api_key`
+  - 首选模型调用 key
   - 缺失时 `Step 2 / 3 / 5 / 6 / 7` 都不能执行
-- `fallback.api_key`
-  - 备用模型调用 key
+- `providers[1...].api_key`
+  - 后续 provider 调用 key
   - 只有在开启 failover 时才视为硬门槛
-- `primary.timeout_seconds / fallback.timeout_seconds`
+- `providers[*].timeout_seconds`
   - 单次模型请求超时秒数
   - 默认已放宽到 `180` 秒，适合 `Step 5 / 6 / 7` 这类较慢分析步骤
-- `primary.max_retries / fallback.max_retries`
+- `providers[*].max_retries`
   - 当前 provider 内部请求失败后的最大重试次数
-- `primary.retry_backoff_seconds / fallback.retry_backoff_seconds`
+- `providers[*].retry_backoff_seconds`
   - 当前 provider 请求失败后的退避秒数
   - 遇到 `529`、`429`、`5xx`、超时等可重试错误时，会按这个值逐次递增等待后再重试
 - `failover`
-  - 主备切换规则
+  - provider 链切换规则
   - `enabled = true` 时，当前默认规则是：
+    - `kimi-code` 连续 `3` 次基础设施错误后，当前步骤剩余请求切到 `Kimi`
     - `Kimi` 连续 `3` 次基础设施错误后，当前步骤剩余请求切到 `MiniMax`
-    - 进入下一步时，再重新优先尝试 `Kimi`
+    - 进入下一步时，再重新优先尝试 `kimi-code`
   - `JSON` 结构错误不会直接触发切换，仍会在当前 provider 内按结构修复逻辑重试
+- `retry`
+  - 统一的重试补充策略
+  - `honor_retry_after = true` 时，若服务端返回 `Retry-After`，优先按服务端建议等待
+  - `jitter_seconds` 用于在退避时间上增加随机抖动，避免并发重试雪崩
+- `concurrency`
+  - provider 级并发限制
+  - `default` 为未单独指定 provider 时的默认并发
+  - `providers` 可分别设置：
+    - `kimi-code`
+    - `kimi`
+    - `minimax`
+  - 当前建议保守值：
+    - `kimi-code = 2`
+    - `kimi = 2`
+    - `minimax = 3`
+- `streaming`
+  - 是否对长响应步骤启用流式接收
+  - 当前默认：
+    - `enabled = true`
+    - `steps = ["step_5", "step_6", "step_7"]`
+  - `step_2 / step_3` 仍默认走普通模式
 
 ### `network`
 

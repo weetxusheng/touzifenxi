@@ -25,7 +25,7 @@ from .c114_intelligence import (
     step_3_results_name,
 )
 from .llm import MiniMaxChatClient, StructuredLLMError, begin_llm_step, load_prompt_text, run_parallel_ordered
-from .settings import AppPaths, load_c114_runtime_config
+from .settings import AppPaths, load_c114_runtime_config, resolve_override_path
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
 SEARCH_CONFIG_PATH = SKILL_ROOT / "config" / "search_domains.json"
@@ -524,7 +524,7 @@ def resolve_search_output_paths(
 
     run_dir: Path | None = None
     if input_override:
-        input_path = (paths.project_root / input_override).resolve()
+        input_path = resolve_override_path(paths.project_root, input_override)
     else:
         run_dir = find_latest_search_run_directory(paths.reports_dir, report_date)
         if run_dir:
@@ -533,7 +533,7 @@ def resolve_search_output_paths(
             input_path = (c114_reports_root(paths.reports_dir) / step_2_checklist_name(report_date)).resolve()
 
     if output_override:
-        output_path = (paths.project_root / output_override).resolve()
+        output_path = resolve_override_path(paths.project_root, output_override)
     else:
         if input_override or run_dir:
             output_path = (input_path.parent / step_3_results_name(report_date)).resolve()

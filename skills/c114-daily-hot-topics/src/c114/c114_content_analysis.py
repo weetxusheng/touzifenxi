@@ -20,8 +20,16 @@ from .c114_intelligence import (
     step_6_brief_name,
 )
 from .c114_search import load_search_checklist_yaml, parse_yaml_value
-from .llm import MiniMaxChatClient, StructuredLLMError, begin_llm_step, load_prompt_text, run_parallel_ordered
-from .settings import AppPaths, load_c114_runtime_config
+from .llm import (
+    MiniMaxChatClient,
+    StructuredLLMError,
+    begin_llm_step,
+    coerce_json_object_payload,
+    load_prompt_text,
+    normalize_string_list,
+    run_parallel_ordered,
+)
+from .settings import AppPaths, load_c114_runtime_config, resolve_override_path
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
 CONTENT_ANALYSIS_PROMPT_PATH = SKILL_ROOT / "prompts" / "content-analysis-agent.md"
@@ -131,7 +139,7 @@ def resolve_content_analysis_output_paths(
     """Resolve the canonical step 4 input and step 5/6/issue output paths."""
     run_dir: Path | None = None
     if input_override:
-        input_path = (paths.project_root / input_override).resolve()
+        input_path = resolve_override_path(paths.project_root, input_override)
     else:
         run_dir = find_latest_search_run_directory(paths.reports_dir, report_date)
         if run_dir:
@@ -140,13 +148,13 @@ def resolve_content_analysis_output_paths(
             input_path = (c114_reports_root(paths.reports_dir) / step_4_content_name(report_date)).resolve()
 
     if output_override:
-        analysis_output = (paths.project_root / output_override).resolve()
+        analysis_output = resolve_override_path(paths.project_root, output_override)
     else:
         base_dir = input_path.parent if (input_override or run_dir) else c114_reports_root(paths.reports_dir)
         analysis_output = (base_dir / step_5_content_analysis_name(report_date)).resolve()
 
     if issues_output_override:
-        issues_output = (paths.project_root / issues_output_override).resolve()
+        issues_output = resolve_override_path(paths.project_root, issues_output_override)
     else:
         base_dir = input_path.parent if (input_override or run_dir) else c114_reports_root(paths.reports_dir)
         issues_output = (base_dir / layer_issues_name(report_date)).resolve()
@@ -521,20 +529,14 @@ def build_content_analysis_prompt_payload(item: ContentAnalysisItem) -> dict[str
 
 def normalize_content_analysis_draft(payload: Any) -> ContentAnalysisDraft:
     """校验并规范化模型返回的 step 5 分析结果。"""
-    if not isinstance(payload, dict):
-        raise StructuredLLMError("step 5 分析结果不是 JSON 对象。")
+    payload = coerce_json_object_payload(payload, "step 5 分析结果")
     summary = str(payload.get("summary", "")).strip()
     why_it_matters = str(payload.get("why_it_matters", "")).strip()
     if not summary or not why_it_matters:
         raise StructuredLLMError("step 5 缺少 summary 或 why_it_matters。")
     normalized_lists: dict[str, list[str]] = {}
     for field_name in REQUIRED_ANALYSIS_LIST_FIELDS:
-        values = payload.get(field_name)
-        if isinstance(values, str):
-            values = [values]
-        if not isinstance(values, list):
-            raise StructuredLLMError(f"step 5 字段 {field_name} 必须为列表。")
-        normalized = [str(value).strip() for value in values if str(value).strip()]
+        normalized = normalize_string_list(payload.get(field_name))
         if not normalized:
             raise StructuredLLMError(f"step 5 字段 {field_name} 不能为空。")
         normalized_lists[field_name] = normalized
@@ -764,10 +766,7 @@ def normalize_brief_sections(payload: Any) -> dict[str, Any]:
         if not value:
             raise StructuredLLMError(f"step 6 缺少 {field_name}。")
         normalized[field_name] = value
-    followups = payload.get("需要继续跟踪的点")
-    if not isinstance(followups, list):
-        raise StructuredLLMError("step 6 的需要继续跟踪的点必须为列表。")
-    normalized_followups = [str(value).strip() for value in followups if str(value).strip()]
+    normalized_followups = normalize_string_list(payload.get("需要继续跟踪的点"))
     if not normalized_followups:
         raise StructuredLLMError("step 6 的需要继续跟踪的点不能为空。")
     normalized["需要继续跟踪的点"] = normalized_followups

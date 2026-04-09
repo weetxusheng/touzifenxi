@@ -18,8 +18,15 @@ from .c114_intelligence import (
     step_6_brief_name,
     step_7_brief_review_name,
 )
-from .llm import MiniMaxChatClient, StructuredLLMError, begin_llm_step, load_prompt_text, run_parallel_ordered
-from .settings import AppPaths
+from .llm import (
+    MiniMaxChatClient,
+    StructuredLLMError,
+    begin_llm_step,
+    load_prompt_text,
+    normalize_string_list,
+    run_parallel_ordered,
+)
+from .settings import AppPaths, resolve_override_path
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
 BRIEF_REVIEW_PROMPT_PATH = SKILL_ROOT / "prompts" / "brief-review-agent.md"
@@ -27,6 +34,8 @@ PLACEHOLDER_MARKERS = (
     "_本段应由程序内置模型自动生成",
     "本段应由程序内置模型自动生成",
     "_待研究员",
+    "_待资深研究员 agent 补全",
+    "待资深研究员 agent 补全",
 )
 SECTION_NAMES = ("核心判断", "增量信息", "产业/公司影响", "需要继续跟踪的点")
 MARKDOWN_LINK_PATTERN = re.compile(r"\[(?P<label>[^\]]+)\]\((?P<url>https?://[^)]+)\)")
@@ -114,7 +123,7 @@ def resolve_brief_review_output_paths(
     """Resolve the canonical paths needed by the step 7 review layer."""
     run_dir: Path | None = None
     if brief_input_override:
-        brief_input_path = (paths.project_root / brief_input_override).resolve()
+        brief_input_path = resolve_override_path(paths.project_root, brief_input_override)
     else:
         run_dir = find_latest_search_run_directory(paths.reports_dir, report_date)
         if run_dir:
@@ -124,17 +133,17 @@ def resolve_brief_review_output_paths(
 
     base_dir = brief_input_path.parent if (brief_input_override or run_dir) else c114_reports_root(paths.reports_dir)
     analysis_input_path = (
-        (paths.project_root / analysis_input_override).resolve()
+        resolve_override_path(paths.project_root, analysis_input_override)
         if analysis_input_override
         else (base_dir / step_5_content_analysis_name(report_date)).resolve()
     )
     content_input_path = (
-        (paths.project_root / content_input_override).resolve()
+        resolve_override_path(paths.project_root, content_input_override)
         if content_input_override
         else (base_dir / step_4_content_name(report_date)).resolve()
     )
     review_output_path = (
-        (paths.project_root / output_override).resolve()
+        resolve_override_path(paths.project_root, output_override)
         if output_override
         else (base_dir / step_7_brief_review_name(report_date)).resolve()
     )
@@ -381,10 +390,7 @@ def normalize_brief_review_report(
                 suggestion=str(item.get("suggestion", "")).strip(),
             )
         )
-    strengths_payload = payload.get("strengths")
-    if not isinstance(strengths_payload, list):
-        raise StructuredLLMError("step 7 strengths 必须为列表。")
-    strengths = [str(item).strip() for item in strengths_payload if str(item).strip()]
+    strengths = normalize_string_list(payload.get("strengths"))
     return BriefReviewReport(
         report_date=report_date,
         brief_path=brief_path,
@@ -427,10 +433,7 @@ def normalize_topic_review_payload(payload: object, *, default_topic: str) -> di
                 suggestion=str(item.get("suggestion", "")).strip(),
             )
         )
-    strengths_payload = payload.get("strengths")
-    if not isinstance(strengths_payload, list):
-        raise StructuredLLMError("step 7 主题审查 strengths 必须为列表。")
-    strengths = [str(item).strip() for item in strengths_payload if str(item).strip()]
+    strengths = normalize_string_list(payload.get("strengths"))
     return {"summary": summary, "findings": normalized_findings, "strengths": strengths}
 
 

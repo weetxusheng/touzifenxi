@@ -154,6 +154,21 @@ class C114ConfigTests(unittest.TestCase):
                                 "reset_scope": "step",
                                 "error_scope": "infra_only",
                             },
+                            "retry": {
+                                "honor_retry_after": True,
+                                "jitter_seconds": 0.75,
+                            },
+                            "streaming": {
+                                "enabled": True,
+                                "steps": ["step_5", "step_7"],
+                            },
+                            "concurrency": {
+                                "default": 4,
+                                "providers": {
+                                    "kimi": 2,
+                                    "minimax": 5,
+                                },
+                            },
                         },
                         "network": {
                             "request_timeout_seconds": 50,
@@ -180,11 +195,17 @@ class C114ConfigTests(unittest.TestCase):
         self.assertEqual(config.llm_primary.timeout_seconds, 45.0)
         self.assertEqual(config.llm_primary.max_retries, 3)
         self.assertEqual(config.llm_primary.retry_backoff_seconds, 1.25)
+        self.assertEqual(config.llm_primary.max_concurrency, 2)
         self.assertEqual(config.llm_fallback.provider, "minimax")
         self.assertEqual(config.llm_fallback.model, "MiniMax M2.7")
         self.assertEqual(config.llm_fallback.api_key, "minimax-key")
         self.assertEqual(config.llm_fallback.base_url, "https://api.minimaxi.com/v1")
+        self.assertEqual(config.llm_fallback.max_concurrency, 5)
         self.assertEqual(config.llm_failover.consecutive_failures, 3)
+        self.assertTrue(config.llm_retry.honor_retry_after)
+        self.assertEqual(config.llm_retry.jitter_seconds, 0.75)
+        self.assertTrue(config.llm_streaming.enabled)
+        self.assertEqual(config.llm_streaming.steps, ("step_5", "step_7"))
         self.assertEqual(config.request_timeout_seconds, 50.0)
         self.assertEqual(config.aliyun_timeout_seconds, 70.0)
         self.assertEqual(config.aliyun_max_retries, 4)
@@ -384,3 +405,101 @@ class C114ConfigTests(unittest.TestCase):
         self.assertEqual(config.llm_primary.provider, "minimax")
         self.assertEqual(config.llm_primary.api_key, "legacy-key")
         self.assertIsNone(config.llm_fallback)
+
+    def test_load_c114_runtime_config_reads_provider_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "keys": {
+                            "tavily_api_key": "t",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "llm": {
+                            "providers": [
+                                {
+                                    "provider": "kimi-code",
+                                    "model": "kimi-for-coding",
+                                    "api_key": "code-key",
+                                    "base_url": "https://api.kimi.com/coding",
+                                },
+                                {
+                                    "provider": "kimi",
+                                    "model": "kimi-k2.5",
+                                    "api_key": "kimi-key",
+                                    "base_url": "https://api.moonshot.cn/v1",
+                                },
+                                {
+                                    "provider": "minimax",
+                                    "model": "MiniMax M2.7",
+                                    "api_key": "mini-key",
+                                    "base_url": "https://api.minimaxi.com/v1",
+                                },
+                            ],
+                            "failover": {
+                                "enabled": True,
+                                "consecutive_failures": 3,
+                            },
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_c114_runtime_config(skill_root)
+
+        self.assertEqual([provider.provider for provider in config.llm_providers], ["kimi-code", "kimi", "minimax"])
+        self.assertEqual(config.llm_primary.provider, "kimi-code")
+        self.assertEqual(config.llm_fallback.provider, "minimax")
+        self.assertEqual([provider.max_concurrency for provider in config.llm_providers], [2, 2, 3])
+
+    def test_collect_missing_c114_config_requires_all_chain_keys_when_failover_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "keys": {
+                            "tavily_api_key": "t",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "llm": {
+                            "providers": [
+                                {
+                                    "provider": "kimi-code",
+                                    "model": "kimi-for-coding",
+                                    "api_key": "code-key",
+                                    "base_url": "https://api.kimi.com/coding",
+                                },
+                                {
+                                    "provider": "kimi",
+                                    "model": "kimi-k2.5",
+                                    "api_key": "",
+                                    "base_url": "https://api.moonshot.cn/v1",
+                                },
+                            ],
+                            "failover": {"enabled": True},
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            missing = collect_missing_c114_config(skill_root)
+
+        self.assertIn("llm.providers[1].api_key", missing)

@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .llm import MiniMaxChatClient, StructuredLLMError, begin_llm_step, load_prompt_text, run_parallel_ordered
-from .settings import AppPaths
+from .settings import AppPaths, resolve_override_path
 
 CSV_HEADERS = {
     "统计日期": "report_date",
@@ -811,7 +811,7 @@ def resolve_analysis_output_paths(
     """Resolve canonical input and output paths for the C114 analysis workflow."""
 
     input_path = (
-        (paths.project_root / input_override).resolve()
+        resolve_override_path(paths.project_root, input_override)
         if input_override
         else (paths.raw_dir / "c114_hot_topics.csv").resolve()
     )
@@ -819,12 +819,12 @@ def resolve_analysis_output_paths(
     if not analysis_output_override and not checklist_output_override:
         run_dir = create_search_run_directory(paths.reports_dir, run_started_at=run_started_at)
     analysis_output = (
-        (paths.project_root / analysis_output_override).resolve()
+        resolve_override_path(paths.project_root, analysis_output_override)
         if analysis_output_override
         else ((run_dir or paths.processed_dir) / step_1_analysis_name(report_date)).resolve()
     )
     checklist_output = (
-        (paths.project_root / checklist_output_override).resolve()
+        resolve_override_path(paths.project_root, checklist_output_override)
         if checklist_output_override
         else ((run_dir or paths.reports_dir) / step_2_checklist_name(report_date)).resolve()
     )

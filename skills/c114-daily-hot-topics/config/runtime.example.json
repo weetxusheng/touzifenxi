@@ -1,29 +1,56 @@
 {
     "keys": {"tavily_api_key": "", "metaso_api_key": "", "baidu_api_key": "", "aliyun_iqs_api_key": ""},
     "llm": {
-        "primary": {
-            "provider": "kimi",
-            "model": "kimi-k2.5",
-            "api_key": "",
-            "base_url": "https://api.moonshot.cn/v1",
-            "timeout_seconds": 180,
-            "max_retries": 2,
-            "retry_backoff_seconds": 2.0
-        },
-        "fallback": {
-            "provider": "minimax",
-            "model": "MiniMax M2.7",
-            "api_key": "",
-            "base_url": "https://api.minimaxi.com/v1",
-            "timeout_seconds": 180,
-            "max_retries": 2,
-            "retry_backoff_seconds": 2.0
-        },
+        "providers": [
+            {
+                "provider": "kimi-code",
+                "model": "kimi-for-coding",
+                "api_key": "",
+                "base_url": "https://api.kimi.com/coding",
+                "timeout_seconds": 180,
+                "max_retries": 2,
+                "retry_backoff_seconds": 2.0
+            },
+            {
+                "provider": "kimi",
+                "model": "kimi-k2.5",
+                "api_key": "",
+                "base_url": "https://api.moonshot.cn/v1",
+                "timeout_seconds": 180,
+                "max_retries": 2,
+                "retry_backoff_seconds": 2.0
+            },
+            {
+                "provider": "minimax",
+                "model": "MiniMax M2.7",
+                "api_key": "",
+                "base_url": "https://api.minimaxi.com/v1",
+                "timeout_seconds": 180,
+                "max_retries": 2,
+                "retry_backoff_seconds": 2.0
+            }
+        ],
         "failover": {
             "enabled": true,
             "consecutive_failures": 3,
             "reset_scope": "step",
             "error_scope": "infra_only"
+        },
+        "retry": {
+            "honor_retry_after": true,
+            "jitter_seconds": 0.5
+        },
+        "concurrency": {
+            "default": 2,
+            "providers": {
+                "kimi-code": 2,
+                "kimi": 2,
+                "minimax": 3
+            }
+        },
+        "streaming": {
+            "enabled": true,
+            "steps": ["step_5", "step_6", "step_7"]
         }
     },
     "network": {
