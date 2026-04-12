@@ -1,0 +1,168 @@
+report_date: '2026-04-12'
+input_path: '/Users/xusheng/Documents/project/touzifenxi/skills/infoq-daily-hot-topics/output/reports/infoq_report/infoq_search_202604121817/infoq_step_2_search_checklist_20260412.yaml'
+categories:
+  - topic: 'Maven打包问题排查'
+    items:
+      - original_title: 'Java打包时，本地仓库有jar 包，Maven打包却还去远程拉取'
+        original_url: 'https://www.infoq.cn/article/02a0f16f3dcb939bb9c05a084'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: 'UUID v7技术标准'
+    items:
+      - original_title: 'UUID v7 一文详解'
+        original_url: 'https://www.infoq.cn/article/b650b6e3a2086006a2890365b'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: 'Easysearch搜索引擎异常排查'
+    items:
+      - original_title: 'Easysearch BKD Merge 异常排查实录：最终定位到旧版 GraalVM JIT 运行时'
+        original_url: 'https://www.infoq.cn/article/5d4248e090f87fa419fc54778'
+        review_groups:
+          strong:
+            - title: 'WIKI 知识库v1.0.0 正式发布- OSCHINA - 开源× AI · 开发者生态社区'
+              url: 'https://www.oschina.net/news/419124'
+              reason: 'OSCHINA新闻聚合页面完整收录了该原文，snippet显示与原标题完全一致，属于同一文章的官方转载'
+              value_type: '同事件转载'
+            - title: '开源API 开发平台4.4.0 发布- OSCHINA - 开源× AI · 开发者生态社区'
+              url: 'https://www.oschina.net/news/418146'
+              reason: 'OSCHINA另一新闻页面同样完整收录该原文，snippet内容与前一条一致，均为同一篇文章的转载'
+              value_type: '同事件转载'
+            - title: '开源× AI · 开发者生态社区 - OSCHINA'
+              url: 'https://www.oschina.net/news/352226/ruoyi-vue-3-9-0-released'
+              reason: '虽URL指向ruoyi-vue发布页面，但snippet显示完整包含Easysearch原文内容，实为OSCHINA聚合列表中的同一文章引用'
+              value_type: '同事件转载'
+            - title: '智元发布GO-2 基座模型- OSCHINA - 开源× AI · 开发者生态社区'
+              url: 'https://www.oschina.net/news/418953'
+              reason: '智元GO-2模型新闻页面中嵌入了该Easysearch文章引用，snippet显示完整原文标题和内容摘要'
+              value_type: '同事件转载'
+            - title: '开源项目推荐| 一个让开发者“少走弯路”的全栈知识库，已开源！'
+              url: 'https://www.oschina.net/news/418495'
+              reason: '全栈知识库推荐页面同样以snippet形式完整引用了该Easysearch原文，标题和内容完全匹配'
+              value_type: '同事件转载'
+          weak:
+          drop:
+          pending:
+  - topic: 'AI Agent工具'
+    items:
+      - original_title: 'openclaw的挑战者来了? 我的hermes使用体验'
+        original_url: 'https://www.infoq.cn/article/952ea16d263b812293157280a'
+        review_groups:
+          strong:
+            - title: 'Hermes Agent vs Openclaw 全面对比分析|AI_新浪财经_新浪网'
+              url: 'https://finance.sina.com.cn/wm/2026-04-12/doc-inhuetnn3645721.shtml?froms=ggmp'
+              reason: '同为Hermes Agent与OpenClaw对比分析，包含社区热度对比数据（354k Stars等具体指标），与原主题高度契合，可补充用户使用体验的客观数据参考'
+              value_type: '新增事实'
+          weak:
+            - title: 'Hermes Agent vs OpenClaw：52k Star 背后，谁才是2026 最强AI ...'
+              url: 'https://news.qq.com/rain/a/20260411A03F6A00'
+              reason: '标题聚焦52k Stars数据和''2026最强AI框架''排名，原文讨论Hermes使用体验但未涉及具体Stars数据，链接提供框架生态背景信息'
+              value_type: '背景补充'
+            - title: 'Hermes Agent vs OpenClaw：一个会自我进化的AI助手 - 博客园'
+              url: 'https://www.cnblogs.com/ghj1976/p/19832817'
+              reason: '发布时间为2026-04-08，早于原标题两天前，博客园文章为行业观察性质，与用户个人体验分享角度不同'
+              value_type: '背景补充'
+          drop:
+          pending:
+  - topic: '软件工程方法论'
+    items:
+      - original_title: '软件重构：进化视角'
+        original_url: 'https://www.infoq.cn/article/c685a75e2ea1270ed49479537'
+        review_groups:
+          strong:
+            - title: '基于 Cursor Agent 的流水线 AI CR 实践｜得物技术-腾讯云开发者社区-腾讯云'
+              url: 'https://cloud.tencent.com/developer/article/2650981'
+              reason: '该文介绍基于 Cursor Agent 的 AI 代码审查（CR）与自动重构实践，与原文软件重构主题直接相关，提供了 AI 驱动重构的流水线工程实例'
+              value_type: '新增事实'
+          weak:
+          drop:
+            - title: 'Skill vs App：一场入口范式的争夺 - 智源社区'
+              url: 'https://hub.baai.ac.cn/view/53799'
+              reason: '文章讨论 AI Skill 与 App 的形态竞争及入口范式转移，聚焦智能体交互生态，与软件代码重构的技术方法论无实质关联'
+              value_type: '跑偏结果'
+          pending:
+      - original_title: '质量和效率的平衡：如何构建快速支撑新业务的软件架构'
+        original_url: 'https://www.infoq.cn/article/18a2704dcaaa153e2239c0497'
+        review_groups:
+          strong:
+          weak:
+            - title: 'AI 驱动企业 IT 运维迈向预测性与智能化阶段 - Apr 10, 2026'
+              url: 'https://china.newsroom.ibm.com/2026-04-10-AI-IT'
+              reason: '文章聚焦 AI 驱动的 IT 运维智能化转型，虽涉及企业软件系统效率优化，但侧重运维阶段的基础设施支撑而非架构设计阶段'
+              value_type: '背景补充'
+          drop:
+            - title: '重构线性视觉Transformer，精度与效率双平衡 | CVPR''25|注意力_新浪财经_新浪网'
+              url: 'https://finance.sina.com.cn/wm/2026-04-11/doc-inhuazcc9574484.shtml?froms=ggmp'
+              reason: '文章介绍计算机视觉领域的 Transformer 模型架构优化（CARE Transformer），属于深度学习算法研究，与软件工程中的业务架构设计无关'
+              value_type: '跑偏结果'
+          pending:
+  - topic: 'AIGC动画制作'
+    items:
+      - original_title: '把漫画脚本做成动画短片的工程化笔记：顺手接入_DМXΑРΙ'
+        original_url: 'https://www.infoq.cn/article/e5a77c47f9392776ecf29bcfa'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: 'AI编程辅助工具'
+    items:
+      - original_title: '小白瞬间“专业程序员上身”，这套AI工作流把编程短板全补上了 | 实测Superpowers'
+        original_url: 'https://www.infoq.cn/article/38ad27ea4a9333f45817ef5fe'
+        review_groups:
+          strong:
+            - title: '游戏业大佬实践：AI如何改变游戏编程？程序员招聘标准彻底变天_腾讯新闻'
+              url: 'https://news.qq.com/rain/a/20260410A0001700'
+              reason: '同属AI编程工具主题，提供游戏行业视角的AI编程实践案例，补充了Superpowers之外的CodeBuddy等工具信息'
+              value_type: '新增事实'
+          weak:
+          drop:
+          pending:
+      - original_title: '血压飙升！我用 Trae 和 Codebuddy 现场 PK 写官网，结果演成了一出“狗血剧”'
+        original_url: 'https://www.infoq.cn/article/00ac4d987cd2b4b91845634a3'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: 'AI工程化方法论'
+    items:
+      - original_title: 'Harness or Model?'
+        original_url: 'https://www.infoq.cn/article/c7bdc6820b350de7422892e0c'
+        review_groups:
+          strong:
+            - title: 'The harness is becoming the business model - Herbert Cuba Garcia'
+              url: 'https://www.cubagarcia.com/posts/2026-04-07-harness-business-model/'
+              reason: '文章深入讨论了AI系统中harness（运行环境/基础设施）与model的关系，明确提出harness正成为核心商业模式的观点，与原标题''Harness or Model?''探讨的核心议题高度一致'
+              value_type: '背景补充'
+          weak:
+          drop:
+          pending:
+  - topic: '浏览器插件开发'
+    items:
+      - original_title: '浏览器插件上架微软 Microsoft Edge 插件商店流程记录'
+        original_url: 'https://www.infoq.cn/article/161b88d48b26c5c710997f9d2'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: 'HarmonyOS开发'
+    items:
+      - original_title: 'HarmonyOS 6 自定义人脸识别模型10：基于MindSpore Lite框架的自定义人脸识别功能实现'
+        original_url: 'https://www.infoq.cn/article/dffd5cd7f85c417fe4569143c'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+summary:
+  strong: 9
+  weak: 3
+  drop: 2
+  pending: 0

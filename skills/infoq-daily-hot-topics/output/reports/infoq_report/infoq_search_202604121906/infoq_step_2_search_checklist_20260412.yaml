@@ -1,0 +1,114 @@
+report_date: '2026-04-12'
+prompt_path: '/Users/xusheng/Documents/project/touzifenxi/skills/c114-daily-hot-topics/prompts/search-keyword-agent.md'
+instructions: 'keywords 由 skill 内置模型读取 prompt_path 后自动生成；每条固定 2 组，且必须贴近原标题。'
+categories:
+  - topic: '问题排查与故障诊断'
+    items:
+      - original_title: 'Java打包时，本地仓库有jar 包，Maven打包却还去远程拉取'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/02a0f16f3dcb939bb9c05a084'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'Maven 本地仓库 jar'
+          - 'Maven 依赖拉取 远程仓库'
+      - original_title: 'Easysearch BKD Merge 异常排查实录：最终定位到旧版 GraalVM JIT 运行时'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/5d4248e090f87fa419fc54778'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'Easysearch BKD Merge'
+          - 'GraalVM JIT 异常'
+  - topic: '技术概念详解'
+    items:
+      - original_title: 'UUID v7 一文详解'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/b650b6e3a2086006a2890365b'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'UUID v7 详解'
+          - 'UUID版本差异'
+  - topic: 'AI编程工具与工作流'
+    items:
+      - original_title: 'openclaw的挑战者来了? 我的hermes使用体验'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/952ea16d263b812293157280a'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'OpenClaw挑战者'
+          - 'Hermes AI编程工具'
+      - original_title: '小白瞬间“专业程序员上身”，这套AI工作流把编程短板全补上了 | 实测Superpowers'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/38ad27ea4a9333f45817ef5fe'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'Superpowers实测'
+          - 'AI工作流编程'
+      - original_title: 'Harness or Model?'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/c7bdc6820b350de7422892e0c'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'Harness Engineering'
+          - 'Model Prompt对比'
+      - original_title: '血压飙升！我用 Trae 和 Codebuddy 现场 PK 写官网，结果演成了一出“狗血剧”'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/00ac4d987cd2b4b91845634a3'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'Trae Codebuddy对比'
+          - 'AI编程工具PK'
+  - topic: '软件工程方法论与架构设计'
+    items:
+      - original_title: '软件重构：进化视角'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/c685a75e2ea1270ed49479537'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - '软件重构 CR'
+          - '代码审查 重构方法论'
+      - original_title: '质量和效率的平衡：如何构建快速支撑新业务的软件架构'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/18a2704dcaaa153e2239c0497'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - '软件架构 质量效率平衡'
+          - '业务支撑架构 快速开发'
+  - topic: 'AIGC应用实践'
+    items:
+      - original_title: '把漫画脚本做成动画短片的工程化笔记：顺手接入_DМXΑРΙ'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/e5a77c47f9392776ecf29bcfa'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - '漫画转动画 AIGC'
+          - 'DMXAPI 动画制作'
+  - topic: '工具/插件开发与上架'
+    items:
+      - original_title: '浏览器插件上架微软 Microsoft Edge 插件商店流程记录'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/161b88d48b26c5c710997f9d2'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'Edge插件上架流程'
+          - '浏览器插件商店发布'
+  - topic: '鸿蒙/移动端开发'
+    items:
+      - original_title: 'HarmonyOS 6 自定义人脸识别模型10：基于MindSpore Lite框架的自定义人脸识别功能实现'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/dffd5cd7f85c417fe4569143c'
+        original_published_at: '2026-04-12'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成两组搜索关键词
+          - 'HarmonyOS 6 人脸识别'
+          - 'MindSpore Lite 框架实现'

@@ -21,11 +21,18 @@ VALID_CHECKPOINT_STATUSES = (
 )
 
 
-def checkpoint_path_for_step(*, output_path: Path, step_name: str, report_date: str) -> Path:
+def checkpoint_path_for_step(
+    *,
+    output_path: Path,
+    step_name: str,
+    report_date: str,
+    prefix: str = "c114",
+) -> Path:
     """为某一步生成单步累计 checkpoint JSON 路径。"""
 
     normalized_date = report_date.replace("-", "")
-    return (output_path.parent / "checkpoints" / f"c114_{step_name}_checkpoint_{normalized_date}.json").resolve()
+    normalized_prefix = str(prefix).strip() or "c114"
+    return (output_path.parent / "checkpoints" / f"{normalized_prefix}_{step_name}_checkpoint_{normalized_date}.json").resolve()
 
 
 def _utc_now_iso() -> str:

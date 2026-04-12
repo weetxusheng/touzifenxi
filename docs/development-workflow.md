@@ -15,6 +15,15 @@
 
 如果一段逻辑未来可能被多个 skill 复用，默认上收 `src/touzifenxi/`。
 
+多站点日报相关能力默认这样划分：
+
+- 站点采集、详情抓取、站点字段解析
+  - 放 `src/touzifenxi/content_sources/`
+- 共享简报流水线、统一物料生成、邮件渲染等
+  - 放 `src/touzifenxi/briefing/` 或等价共享模块
+- 单站点运行入口、站点说明文档、少量私有配置
+  - 放 `skills/<skill-name>/`
+
 ## 2. 测试先行
 
 默认顺序：

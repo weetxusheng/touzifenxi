@@ -16,6 +16,9 @@ from typing import Iterable
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
+from touzifenxi.briefing.materialize import build_step1_csv_rows
+from touzifenxi.content_sources.c114 import C114SourceAdapter
+
 ARTICLE_URL_RE = re.compile(r"https://www\.c114\.com\.cn/(?:[\w-]+/\d+|news/\d+)/a\d+\.html$")
 ASCII_WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9&.+-]{1,30}")
 CHINESE_WORD_RE = re.compile(r"[\u4e00-\u9fff]{2,12}")
@@ -392,44 +395,9 @@ def save_daily_report_csv(csv_path: Path, report_date: date, reports: list[Chann
 def flatten_reports_to_csv_rows(report_date: date, reports: list[ChannelDailyReport]) -> list[dict[str, str]]:
     """Flatten channel reports into stable CSV rows shared by downstream steps."""
 
-    rows: list[dict[str, str]] = []
-    report_date_text = report_date.isoformat()
-    for report in reports:
-        hot_topics_text = "|".join(f"{keyword}:{count}" for keyword, count in report.hot_topics)
-        if not report.articles:
-            rows.append(
-                {
-                    "统计日期": report_date_text,
-                    "栏目键": report.channel_key,
-                    "栏目名称": report.channel_name,
-                    "栏目链接": report.channel_url,
-                    "栏目文章数": str(report.article_count),
-                    "栏目热点词": hot_topics_text,
-                    "文章标题": "",
-                    "发布时间": "",
-                    "关键词": "",
-                    "摘要": "",
-                    "文章链接": "",
-                }
-            )
-            continue
-        for article in report.articles:
-            rows.append(
-                {
-                    "统计日期": report_date_text,
-                    "栏目键": report.channel_key,
-                    "栏目名称": report.channel_name,
-                    "栏目链接": report.channel_url,
-                    "栏目文章数": str(report.article_count),
-                    "栏目热点词": hot_topics_text,
-                    "文章标题": article.title,
-                    "发布时间": article.publish_date.isoformat() if article.publish_date else "",
-                    "关键词": "|".join(article.keywords),
-                    "摘要": article.summary,
-                    "文章链接": article.url,
-                }
-            )
-    return rows
+    adapter = C114SourceAdapter()
+    articles = adapter.standard_articles_from_reports(report_date, reports)
+    return build_step1_csv_rows(report_date.isoformat(), articles)
 
 
 def load_existing_csv_rows(csv_path: Path) -> list[dict[str, str]]:

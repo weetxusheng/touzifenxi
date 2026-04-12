@@ -16,6 +16,8 @@ from c114.c114_content_analysis import (
     generate_brief_markdown,
     generate_layer_issues,
     html_fallback_edge_limit,
+    infer_brief_title,
+    infer_related_step3_path,
     load_content_analysis_inputs,
     normalize_brief_sections,
     normalize_content_analysis_draft,
@@ -23,6 +25,7 @@ from c114.c114_content_analysis import (
     render_content_analysis_yaml,
     resolve_content_analysis_output_paths,
 )
+from c114.checkpoint import StepCheckpointStore, checkpoint_path_for_step
 from c114.llm import StructuredLLMError
 from touzifenxi.settings import AppPaths
 
@@ -64,6 +67,26 @@ class ContentAnalysisPathTests(unittest.TestCase):
         self.assertEqual(
             resolved.issues_output,
             Path("/repo/reports/c114_report/c114_search_202604011325/c114_layer_issues_20260331.yaml"),
+        )
+
+    def test_infers_related_step3_path_for_other_site_prefixes(self) -> None:
+        path = Path("/repo/reports/infoq_report/infoq_search_202604121212/infoq_step_4_content_20260412.yaml")
+
+        resolved = infer_related_step3_path(path)
+
+        self.assertEqual(
+            resolved,
+            Path("/repo/reports/infoq_report/infoq_search_202604121212/infoq_step_3_search_results_20260412.yaml"),
+        )
+
+    def test_infers_brief_title_from_input_prefix(self) -> None:
+        self.assertEqual(
+            infer_brief_title(Path("/repo/infoq_step_4_content_20260412.yaml")),
+            "InfoQ 主题简报",
+        )
+        self.assertEqual(
+            infer_brief_title(Path("/repo/c114_step_4_content_20260412.yaml")),
+            "C114 主题简报",
         )
 
 
@@ -1024,6 +1047,220 @@ categories:
 
         self.assertEqual(len(fake_client.postprocess_errors), 1)
         self.assertIn("step 6", fake_client.postprocess_errors[0])
+
+    def test_auto_complete_brief_sections_retries_only_failed_topics_until_complete(self) -> None:
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls_by_topic: dict[str, int] = {}
+                self.current_provider_name = "kimi-code"
+
+            def begin_step(self, step_name: str) -> None:
+                self.step_name = step_name
+
+            def max_attempts_for_retry_class(self, retry_class: str, *, default: int = 1) -> int:
+                return 2 if retry_class in {"infra", "postprocess"} else default
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                topic = "AI与算力" if '"topic": "AI与算力"' in user_prompt else "量子技术"
+                self.calls_by_topic[topic] = self.calls_by_topic.get(topic, 0) + 1
+                if topic == "AI与算力" and self.calls_by_topic[topic] == 1:
+                    raise RuntimeError("minimax 请求失败: 529 overloaded")
+                return {
+                    "核心判断": f"{topic}核心判断",
+                    "增量信息": [f"{topic}增量1"],
+                    "产业/公司影响": f"{topic}产业影响",
+                    "需要继续跟踪的点": [f"{topic}跟踪点1"],
+                }
+
+        payload = """report_date: '2026-03-31'
+input_path: '/tmp/content.yaml'
+generated_at: '2026-04-01T17:37:59'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '文章1'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/1.html'
+        original_content:
+          title: '文章1'
+          summary: '摘要'
+          text: '正文内容1'
+          source: 'aliyun'
+          status: 'success'
+        selected_contents:
+        analysis:
+          summary: '摘要1'
+          core_points:
+            - '核心点1'
+          new_facts:
+          entities:
+          signals:
+          risk_or_uncertainty:
+          why_it_matters: ''
+          layer_notes:
+  - topic: '量子技术'
+    items:
+      - original_title: '文章2'
+        topic: '量子技术'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/2.html'
+        original_content:
+          title: '文章2'
+          summary: '摘要'
+          text: '正文内容2'
+          source: 'aliyun'
+          status: 'success'
+        selected_contents:
+        analysis:
+          summary: '摘要2'
+          core_points:
+            - '核心点2'
+          new_facts:
+          entities:
+          signals:
+          risk_or_uncertainty:
+          why_it_matters: ''
+          layer_notes:
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "content.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+            output_path = Path(tmp_dir) / "c114_step_6_brief_20260331.md"
+            checkpoint_path = checkpoint_path_for_step(
+                output_path=output_path,
+                step_name="step_6",
+                report_date="2026-03-31",
+            )
+            checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path,
+                step_name="step_6",
+                report_date="2026-03-31",
+                input_path=input_path,
+                output_path=output_path,
+            )
+            analysis_input = load_content_analysis_inputs(input_path)
+            fake_client = FakeLLMClient()
+
+            drafts = auto_complete_brief_sections(
+                analysis_input,
+                fake_client,
+                checkpoint_store=checkpoint_store,
+            )
+
+        self.assertEqual([draft.topic for draft in drafts], ["AI与算力", "量子技术"])
+        self.assertEqual(fake_client.calls_by_topic["AI与算力"], 2)
+        self.assertEqual(fake_client.calls_by_topic["量子技术"], 1)
+        self.assertEqual(checkpoint_store.get_entry("topic::AI与算力")["status"], "success")
+        self.assertEqual(checkpoint_store.get_entry("topic::AI与算力")["attempt_count"], 2)
+        self.assertEqual(checkpoint_store.get_entry("topic::量子技术")["status"], "success")
+
+    def test_auto_complete_brief_sections_raises_after_exhausting_failed_topics(self) -> None:
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls_by_topic: dict[str, int] = {}
+                self.current_provider_name = "minimax"
+
+            def begin_step(self, step_name: str) -> None:
+                self.step_name = step_name
+
+            def max_attempts_for_retry_class(self, retry_class: str, *, default: int = 1) -> int:
+                return 2 if retry_class in {"infra", "postprocess"} else default
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                topic = "AI与算力" if '"topic": "AI与算力"' in user_prompt else "量子技术"
+                self.calls_by_topic[topic] = self.calls_by_topic.get(topic, 0) + 1
+                if topic == "AI与算力":
+                    raise RuntimeError("minimax 请求失败: 529 overloaded")
+                return {
+                    "核心判断": f"{topic}核心判断",
+                    "增量信息": [f"{topic}增量1"],
+                    "产业/公司影响": f"{topic}产业影响",
+                    "需要继续跟踪的点": [f"{topic}跟踪点1"],
+                }
+
+        payload = """report_date: '2026-03-31'
+input_path: '/tmp/content.yaml'
+generated_at: '2026-04-01T17:37:59'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '文章1'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/1.html'
+        original_content:
+          title: '文章1'
+          summary: '摘要'
+          text: '正文内容1'
+          source: 'aliyun'
+          status: 'success'
+        selected_contents:
+        analysis:
+          summary: '摘要1'
+          core_points:
+            - '核心点1'
+          new_facts:
+          entities:
+          signals:
+          risk_or_uncertainty:
+          why_it_matters: ''
+          layer_notes:
+  - topic: '量子技术'
+    items:
+      - original_title: '文章2'
+        topic: '量子技术'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/2.html'
+        original_content:
+          title: '文章2'
+          summary: '摘要'
+          text: '正文内容2'
+          source: 'aliyun'
+          status: 'success'
+        selected_contents:
+        analysis:
+          summary: '摘要2'
+          core_points:
+            - '核心点2'
+          new_facts:
+          entities:
+          signals:
+          risk_or_uncertainty:
+          why_it_matters: ''
+          layer_notes:
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "content.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+            output_path = Path(tmp_dir) / "c114_step_6_brief_20260331.md"
+            checkpoint_path = checkpoint_path_for_step(
+                output_path=output_path,
+                step_name="step_6",
+                report_date="2026-03-31",
+            )
+            checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path,
+                step_name="step_6",
+                report_date="2026-03-31",
+                input_path=input_path,
+                output_path=output_path,
+            )
+            analysis_input = load_content_analysis_inputs(input_path)
+            fake_client = FakeLLMClient()
+
+            with self.assertRaises(StructuredLLMError) as context:
+                auto_complete_brief_sections(
+                    analysis_input,
+                    fake_client,
+                    checkpoint_store=checkpoint_store,
+                )
+
+        self.assertIn("AI与算力", str(context.exception))
+        self.assertEqual(fake_client.calls_by_topic["AI与算力"], 2)
+        self.assertEqual(fake_client.calls_by_topic["量子技术"], 1)
+        self.assertEqual(checkpoint_store.get_entry("topic::量子技术")["status"], "success")
+        self.assertEqual(checkpoint_store.get_entry("topic::AI与算力")["status"], "error")
 
     def test_renders_brief_markdown_summary_from_sidecar_step3_file(self) -> None:
         content_payload = """report_date: '2026-04-07'

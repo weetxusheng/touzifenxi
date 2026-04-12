@@ -28,6 +28,23 @@ class CheckpointPathTests(unittest.TestCase):
                 (run_dir / "checkpoints" / "c114_step_2_checkpoint_20260410.json").resolve(),
             )
 
+    def test_supports_custom_prefix_for_other_sites(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            run_dir = Path(tmp_dir) / "infoq_search_202604121200"
+            output_path = run_dir / "infoq_step_2_search_checklist_20260412.yaml"
+
+            checkpoint_path = checkpoint_path_for_step(
+                output_path=output_path,
+                step_name="step_2",
+                report_date="2026-04-12",
+                prefix="infoq",
+            )
+
+            self.assertEqual(
+                checkpoint_path,
+                (run_dir / "checkpoints" / "infoq_step_2_checkpoint_20260412.json").resolve(),
+            )
+
 
 class StepCheckpointStoreTests(unittest.TestCase):
     def test_records_entries_and_reloads_them(self) -> None:

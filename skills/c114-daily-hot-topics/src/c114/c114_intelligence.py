@@ -1343,6 +1343,7 @@ def write_analysis_outputs(
     llm_client: MiniMaxChatClient | None = None,
     *,
     auto_fill_keywords: bool = True,
+    checkpoint_prefix: str = "c114",
 ) -> list[SearchChecklistItem]:
     """Persist the analysis CSV and, when available, the step 2 checklist YAML."""
 
@@ -1358,6 +1359,7 @@ def write_analysis_outputs(
             output_path=output_paths.checklist_output,
             step_name="step_2",
             report_date=report_date,
+            prefix=checkpoint_prefix,
         ),
         step_name="step_2",
         report_date=report_date,

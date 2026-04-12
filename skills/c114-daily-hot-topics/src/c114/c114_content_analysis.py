@@ -14,7 +14,6 @@ from .c114_intelligence import (
     find_latest_search_run_directory,
     layer_issues_name,
     load_daily_articles_from_csv,
-    step_3_results_name,
     step_4_content_name,
     step_5_content_analysis_name,
     step_6_brief_name,
@@ -886,15 +885,11 @@ def render_brief_markdown(payload: ContentAnalysisInput) -> str:
     """Render the step 6 brief from the current content-analysis payload."""
     search_payload = None
     if payload.input_path.exists():
-        search_results_path = payload.input_path
-        step4_prefix = "c114_step_4_content_"
-        if search_results_path.name.startswith(step4_prefix):
-            report_day = date.fromisoformat(payload.report_date)
-            search_results_path = search_results_path.with_name(step_3_results_name(report_day))
+        search_results_path = infer_related_step3_path(payload.input_path)
         if search_results_path.exists():
             search_payload = load_search_results_yaml(search_results_path)
     summary = build_brief_runtime_summary(payload, search_payload)
-    lines = [f"# C114 主题简报（{payload.report_date}）", "", "## 运行摘要", ""]
+    lines = [f"# {infer_brief_title(payload.input_path)}（{payload.report_date}）", "", "## 运行摘要", ""]
     lines.extend(
         [
             f"- 原始文章数：{summary['original_articles']}",
@@ -974,13 +969,25 @@ def auto_complete_brief_sections(
 
     begin_llm_step(llm_client, "step_6")
     system_prompt = load_prompt_text(prompt_path)
+    drafts_by_topic: dict[str, BriefSectionDraft] = {}
 
-    def complete_category(category: ContentAnalysisSection) -> BriefSectionDraft:
+    configured_attempts = getattr(llm_client, "max_attempts_for_retry_class", None)
+    max_rounds = 1
+    if callable(configured_attempts):
+        max_rounds = max(
+            1,
+            int(configured_attempts("infra", default=max_rounds)),
+            int(configured_attempts("postprocess", default=max_rounds)),
+        )
+
+    def complete_category(category: ContentAnalysisSection) -> tuple[str, BriefSectionDraft | None, Exception | None]:
         entry_id = build_step6_topic_entry_id(category.topic)
         if checkpoint_store is not None:
             cached = checkpoint_store.get_result(entry_id)
             if isinstance(cached, dict):
-                return brief_section_draft_from_dict(cached)
+                draft = brief_section_draft_from_dict(cached)
+                drafts_by_topic[category.topic] = draft
+                return category.topic, draft, None
         try:
             section_text = complete_json_with_postprocess_retry(
                 llm_client=llm_client,
@@ -1003,7 +1010,7 @@ def auto_complete_brief_sections(
                     request_context={"topic": category.topic},
                     error={"message": str(error)},
                 )
-            raise
+            return category.topic, None, error
         draft = BriefSectionDraft(
             topic=category.topic,
             core_judgment=section_text["核心判断"],
@@ -1019,9 +1026,38 @@ def auto_complete_brief_sections(
                 request_context={"topic": category.topic},
                 result=brief_section_draft_to_dict(draft),
             )
-        return draft
+        drafts_by_topic[category.topic] = draft
+        return category.topic, draft, None
 
-    return run_parallel_ordered(payload.categories, complete_category)
+    pending_categories = [
+        category
+        for category in payload.categories
+        if category.topic not in drafts_by_topic
+    ]
+    last_errors_by_topic: dict[str, Exception] = {}
+
+    for _ in range(max_rounds):
+        if not pending_categories:
+            break
+        round_results = run_parallel_ordered(pending_categories, complete_category)
+        next_pending: list[ContentAnalysisSection] = []
+        for category, (_, draft, error) in zip(pending_categories, round_results):
+            if draft is not None:
+                drafts_by_topic[category.topic] = draft
+                continue
+            if error is not None:
+                last_errors_by_topic[category.topic] = error
+            next_pending.append(category)
+        pending_categories = next_pending
+
+    if pending_categories:
+        details = "；".join(
+            f"{category.topic}: {last_errors_by_topic.get(category.topic, StructuredLLMError('未知错误'))}"
+            for category in pending_categories
+        )
+        raise StructuredLLMError(f"step 6 仍有 {len(pending_categories)} 个主题未完成：{details}")
+
+    return [drafts_by_topic[category.topic] for category in payload.categories if category.topic in drafts_by_topic]
 
 
 def build_step6_topic_entry_id(topic: str) -> str:
@@ -1050,15 +1086,11 @@ def render_generated_brief_markdown(
 
     search_payload = None
     if payload.input_path.exists():
-        search_results_path = payload.input_path
-        step4_prefix = "c114_step_4_content_"
-        if search_results_path.name.startswith(step4_prefix):
-            report_day = date.fromisoformat(payload.report_date)
-            search_results_path = search_results_path.with_name(step_3_results_name(report_day))
+        search_results_path = infer_related_step3_path(payload.input_path)
         if search_results_path.exists():
             search_payload = load_search_results_yaml(search_results_path)
     summary = build_brief_runtime_summary(payload, search_payload)
-    lines = [f"# C114 主题简报（{payload.report_date}）", "", "## 运行摘要", ""]
+    lines = [f"# {infer_brief_title(payload.input_path)}（{payload.report_date}）", "", "## 运行摘要", ""]
     lines.extend(
         [
             f"- 原始文章数：{summary['original_articles']}",
@@ -1110,6 +1142,24 @@ def render_generated_brief_markdown(
         if supplement_count == 0:
             lines.append("- 无")
     return "\n".join(lines)
+
+
+def infer_related_step3_path(step4_or_step5_input_path: Path) -> Path:
+    """从 step 4 输入路径推断同目录下的 step 3 搜索结果路径。"""
+
+    name = step4_or_step5_input_path.name
+    if "_step_4_content_" in name:
+        return step4_or_step5_input_path.with_name(name.replace("_step_4_content_", "_step_3_search_results_"))
+    return step4_or_step5_input_path
+
+
+def infer_brief_title(input_path: Path) -> str:
+    """根据输入文件名前缀推断站点简报标题。"""
+
+    name = input_path.name.lower()
+    if name.startswith("infoq_"):
+        return "InfoQ 主题简报"
+    return "C114 主题简报"
 
 
 def format_brief_link_line(title: str, published_at: str, url: str) -> str:
