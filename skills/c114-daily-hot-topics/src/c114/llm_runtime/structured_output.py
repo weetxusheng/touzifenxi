@@ -8,6 +8,8 @@ from typing import Any
 
 THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", re.S | re.I)
 CODE_FENCE_RE = re.compile(r"```(?:json)?\s*|\s*```", re.I)
+OBJECT_WRAPPER_KEYS = ("analysis", "result", "output", "data", "response", "payload")
+OBJECT_META_KEYS = ("usage", "meta", "metadata", "id", "request_id", "model", "provider")
 
 
 class StructuredLLMError(RuntimeError):
@@ -51,13 +53,45 @@ def parse_json_payload(content: str) -> Any:
 def coerce_json_object_payload(payload: Any, context: str) -> dict[str, Any]:
     """把模型返回规整成 JSON 对象。"""
 
-    if isinstance(payload, dict):
+    if isinstance(payload, str):
+        payload = parse_json_payload(payload)
+    normalized = unwrap_json_object_payload(payload)
+    if isinstance(normalized, dict):
+        return normalized
+    raise StructuredLLMError(f"{context}不是 JSON 对象。")
+
+
+def unwrap_json_object_payload(payload: Any, depth: int = 0) -> Any:
+    """尝试解包外层 result/data/analysis 包装，得到真正的 JSON 对象。"""
+
+    if depth > 4:
         return payload
     if isinstance(payload, list) and payload and all(isinstance(item, dict) for item in payload):
         merged = merge_json_fragments(payload)
-        if isinstance(merged, dict):
-            return merged
-    raise StructuredLLMError(f"{context}不是 JSON 对象。")
+        return unwrap_json_object_payload(merged, depth + 1)
+    if not isinstance(payload, dict):
+        return payload
+
+    candidate_keys = [
+        key
+        for key, value in payload.items()
+        if key not in OBJECT_META_KEYS and value not in (None, "", [], {})
+    ]
+    if len(candidate_keys) == 1:
+        only_key = candidate_keys[0]
+        wrapped_value = payload.get(only_key)
+        should_unwrap_dict = isinstance(wrapped_value, dict) and (
+            only_key in OBJECT_WRAPPER_KEYS or len(payload) == 1
+        )
+        should_unwrap_list = (
+            isinstance(wrapped_value, list)
+            and only_key in OBJECT_WRAPPER_KEYS
+            and wrapped_value
+            and all(isinstance(item, dict) for item in wrapped_value)
+        )
+        if should_unwrap_dict or should_unwrap_list:
+            return unwrap_json_object_payload(wrapped_value, depth + 1)
+    return payload
 
 
 def normalize_string_list(value: Any) -> list[str]:
@@ -101,6 +135,10 @@ def extract_json_fragments(content: str) -> list[Any]:
     while index < len(content):
         current = content[index]
         if current not in "{[":
+            index += 1
+            continue
+        previous = previous_significant_char(content, index)
+        if previous in {"{", "[", ":", ","}:
             index += 1
             continue
         try:
@@ -179,3 +217,15 @@ def stable_json_key(value: Any) -> str:
     """把任意 JSON 值转成稳定的去重键。"""
 
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def previous_significant_char(content: str, index: int) -> str | None:
+    """返回当前位置前一个非空白字符，用于判断是否为顶层 JSON 起点。"""
+
+    cursor = index - 1
+    while cursor >= 0:
+        current = content[cursor]
+        if not current.isspace():
+            return current
+        cursor -= 1
+    return None

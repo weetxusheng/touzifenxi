@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -18,10 +18,13 @@ from .c114_intelligence import (
     step_6_brief_name,
     step_7_brief_review_name,
 )
+from .checkpoint import StepCheckpointStore
 from .llm import (
     MiniMaxChatClient,
     StructuredLLMError,
     begin_llm_step,
+    coerce_json_object_payload,
+    complete_json_with_postprocess_retry,
     load_prompt_text,
     normalize_string_list,
     run_parallel_ordered,
@@ -56,6 +59,10 @@ VALID_REVIEW_ISSUE_TYPES = {
     "impact_overreach",
     "followup_too_generic",
 }
+REVIEW_TEMPLATE_MARKERS = (
+    "_本段应由控制 agent 基于审查 prompt 正式填写",
+    "本段应由控制 agent 基于审查 prompt 正式填写",
+)
 
 
 @dataclass(frozen=True)
@@ -242,6 +249,7 @@ def build_brief_review_report_with_llm(
     analysis_path: Path,
     content_path: Path,
     llm_client: MiniMaxChatClient,
+    checkpoint_store: StepCheckpointStore | None = None,
 ) -> BriefReviewReport:
     """Run the final step 7 audit via the fixed MiniMax model."""
     begin_llm_step(llm_client, "step_7")
@@ -259,16 +267,43 @@ def build_brief_review_report_with_llm(
     shared_topics = [topic for topic in analysis_by_topic if topic in section_by_topic]
 
     def review_topic(topic: str) -> tuple[str, str, list[BriefReviewFinding], list[str]]:
-        response = llm_client.complete_json(
-            system_prompt=system_prompt,
-            user_prompt=(
-                "请只审查这一个主题的简报。只返回 JSON 对象，字段必须包含："
-                "summary、findings、strengths。"
-                "findings 中每条必须包含 topic、severity、issue_type、problem、evidence、suggestion。\n\n"
-                f"{json.dumps(build_topic_review_prompt_payload(section_by_topic[topic], analysis_by_topic[topic]), ensure_ascii=False, indent=2)}"
-            ),
-        )
-        normalized = normalize_topic_review_payload(response, default_topic=topic)
+        entry_id = build_step7_topic_entry_id(topic)
+        if checkpoint_store is not None:
+            cached = checkpoint_store.get_result(entry_id)
+            if isinstance(cached, dict):
+                normalized = topic_review_payload_from_dict(cached)
+                return topic, normalized["summary"], normalized["findings"], normalized["strengths"]
+        try:
+            normalized = complete_json_with_postprocess_retry(
+                llm_client=llm_client,
+                system_prompt=system_prompt,
+                user_prompt=(
+                    "请只审查这一个主题的简报。只返回 JSON 对象，字段必须包含："
+                    "summary、findings、strengths。"
+                    "findings 中每条必须包含 topic、severity、issue_type、problem、evidence、suggestion。\n\n"
+                    f"{json.dumps(build_topic_review_prompt_payload(section_by_topic[topic], analysis_by_topic[topic]), ensure_ascii=False, indent=2)}"
+                ),
+                normalize_response=lambda response: normalize_topic_review_payload(response, default_topic=topic),
+                response_label=f"step 7 主题 {topic} 审查结果",
+            )
+        except Exception as error:
+            if checkpoint_store is not None:
+                checkpoint_store.record_entry(
+                    entry_id=entry_id,
+                    status="postprocess_error" if isinstance(error, StructuredLLMError) else "error",
+                    provider=getattr(llm_client, "current_provider_name", "") or "",
+                    request_context={"topic": topic},
+                    error={"message": str(error)},
+                )
+            raise
+        if checkpoint_store is not None:
+            checkpoint_store.record_entry(
+                entry_id=entry_id,
+                status="success",
+                provider=getattr(llm_client, "current_provider_name", "") or "",
+                request_context={"topic": topic},
+                result=topic_review_payload_to_dict(normalized),
+            )
         return topic, normalized["summary"], normalized["findings"], normalized["strengths"]
 
     topic_reviews = run_parallel_ordered(shared_topics, review_topic)
@@ -305,6 +340,55 @@ def build_brief_review_report_with_llm(
         findings=findings,
         strengths=unique_strengths or ["结构完整，已形成按主题聚合的研究员简报。"],
     )
+
+
+def build_step7_topic_entry_id(topic: str) -> str:
+    return f"topic::{topic}"
+
+
+def topic_review_payload_to_dict(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "summary": str(payload.get("summary", "")),
+        "findings": [asdict(item) for item in payload.get("findings") or []],
+        "strengths": [str(item) for item in payload.get("strengths") or []],
+    }
+
+
+def topic_review_payload_from_dict(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "summary": str(payload.get("summary", "")),
+        "findings": [
+            BriefReviewFinding(
+                topic=str(item.get("topic", "")),
+                severity=str(item.get("severity", "")),
+                issue_type=str(item.get("issue_type", "")),
+                problem=str(item.get("problem", "")),
+                evidence=str(item.get("evidence", "")),
+                suggestion=str(item.get("suggestion", "")),
+            )
+            for item in payload.get("findings") or []
+            if isinstance(item, dict)
+        ],
+        "strengths": [str(item) for item in payload.get("strengths") or []],
+    }
+
+
+def render_brief_review_template_yaml(report_date: str, brief_path: Path, analysis_path: Path) -> str:
+    """渲染 step 7 的控制 agent 模板 YAML。"""
+
+    lines = [
+        f"report_date: '{escape_yaml(report_date)}'",
+        f"brief_path: '{escape_yaml(str(brief_path))}'",
+        f"analysis_path: '{escape_yaml(str(analysis_path))}'",
+        f"review_prompt_path: '{escape_yaml(str(BRIEF_REVIEW_PROMPT_PATH))}'",
+        "overall_decision: ''",
+        "summary: '_本段应由控制 agent 基于审查 prompt 正式填写。_'",
+        "findings:",
+        "  []",
+        "strengths:",
+        "  - '_本段应由控制 agent 基于审查 prompt 正式填写。_'",
+    ]
+    return "\n".join(lines)
 
 
 def build_brief_review_prompt_payload(brief_markdown: str, analysis_input: Any) -> dict[str, object]:
@@ -405,8 +489,7 @@ def normalize_brief_review_report(
 
 def normalize_topic_review_payload(payload: object, *, default_topic: str) -> dict[str, object]:
     """把单主题审查结果校验并转换为内部可用结构。"""
-    if not isinstance(payload, dict):
-        raise StructuredLLMError("step 7 主题审查返回不是 JSON 对象。")
+    payload = coerce_json_object_payload(payload, "step 7 主题审查返回")
     summary = str(payload.get("summary", "")).strip()
     if not summary:
         raise StructuredLLMError("step 7 主题审查缺少 summary。")
@@ -495,6 +578,51 @@ def parse_brief_markdown(markdown_text: str) -> list[BriefTopicSection]:
     return topics
 
 
+def validate_brief_markdown_for_agent(brief_path: Path, analysis_path: Path) -> None:
+    """校验 step 6 简报是否已由控制 agent 正式完成。"""
+
+    markdown_text = brief_path.read_text(encoding="utf-8")
+    sections = parse_brief_markdown(markdown_text)
+    if not sections:
+        raise ValueError("step 6 简报尚未生成任何主题内容。")
+    analysis_input = load_content_analysis_inputs(analysis_path)
+    expected_topics = [category.topic for category in analysis_input.categories]
+    found_topics = [section.topic for section in sections]
+    if sorted(expected_topics) != sorted(found_topics):
+        raise ValueError("step 6 简报主题与 step 5 不一致，请按主题完整补齐。")
+    for section in sections:
+        missing_sections = [name for name in SECTION_NAMES if not section.sections.get(name, "").strip()]
+        if missing_sections:
+            raise ValueError(f"step 6 主题《{section.topic}》缺少分节：{', '.join(missing_sections)}")
+        placeholder_sections = [
+            name
+            for name, content in section.sections.items()
+            if any(marker in content for marker in PLACEHOLDER_MARKERS)
+        ]
+        if placeholder_sections:
+            raise ValueError(f"step 6 主题《{section.topic}》仍含模板占位：{', '.join(placeholder_sections)}")
+
+
+def validate_brief_review_yaml_for_agent(review_path: Path) -> None:
+    """校验 step 7 审查 YAML 是否已由控制 agent 正式完成。"""
+
+    text = review_path.read_text(encoding="utf-8")
+    if any(marker in text for marker in REVIEW_TEMPLATE_MARKERS):
+        raise ValueError("step 7 审查 YAML 仍是模板，尚未由控制 agent 正式填写。")
+    overall_decision = ""
+    summary = ""
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("overall_decision:"):
+            overall_decision = line.split(":", 1)[1].strip().strip("'")
+        elif line.startswith("summary:"):
+            summary = line.split(":", 1)[1].strip().strip("'")
+    if overall_decision not in {"pass", "revise"}:
+        raise ValueError("step 7 审查 YAML 缺少合法 overall_decision。")
+    if not summary:
+        raise ValueError("step 7 审查 YAML 缺少 summary。")
+
+
 def review_topic_placeholders(section: BriefTopicSection) -> list[BriefReviewFinding]:
     """Flag placeholder language that should never survive into a finished brief."""
     placeholder_sections = [
@@ -557,13 +685,13 @@ def review_topic_content(section: BriefTopicSection, category: object) -> list[B
     """Review market-facing content quality against the available supporting evidence."""
     items = getattr(category, "items", [])
     has_analysis_summary = any(getattr(item.analysis, "summary", "").strip() for item in items)
-    has_why_it_matters = any(getattr(item.analysis, "why_it_matters", "").strip() for item in items)
+    core_point_count = sum(len(getattr(item.analysis, "core_points", [])) for item in items)
     new_fact_count = sum(len(getattr(item.analysis, "new_facts", [])) for item in items)
     signal_count = sum(len(getattr(item.analysis, "signals", [])) for item in items)
     findings: list[BriefReviewFinding] = []
 
     core_judgment = section.sections.get("核心判断", "").strip()
-    if core_judgment and not has_analysis_summary and not has_why_it_matters:
+    if core_judgment and not has_analysis_summary and core_point_count == 0:
         findings.append(
             BriefReviewFinding(
                 topic=section.topic,
@@ -572,9 +700,9 @@ def review_topic_content(section: BriefTopicSection, category: object) -> list[B
                 problem="核心判断已经写成正式研究判断，但 step_5 里没有对应的分析结论作为证据支撑。",
                 evidence=(
                     f"step_6 核心判断写道：{truncate_text(core_judgment)}；"
-                    "但 step_5 的 analysis.summary 与 analysis.why_it_matters 仍为空。"
+                    "但 step_5 的 analysis.summary 与 analysis.core_points 仍为空。"
                 ),
-                suggestion="先在 step_5 补出 summary/why_it_matters，再把核心判断收敛到这些证据可以支持的范围。",
+                suggestion="先在 step_5 补出 summary/core_points，再把核心判断收敛到这些证据可以支持的范围。",
             )
         )
     elif core_judgment and contains_any(core_judgment, MARKET_LANGUAGE_MARKERS) and signal_count == 0:
@@ -611,7 +739,7 @@ def review_topic_content(section: BriefTopicSection, category: object) -> list[B
 
     impact_section = section.sections.get("产业/公司影响", "").strip()
     if impact_section and contains_any(impact_section, OVERREACH_MARKERS + MARKET_LANGUAGE_MARKERS):
-        if not has_why_it_matters and signal_count == 0:
+        if not has_analysis_summary and core_point_count == 0 and signal_count == 0:
             findings.append(
                 BriefReviewFinding(
                     topic=section.topic,
@@ -620,7 +748,7 @@ def review_topic_content(section: BriefTopicSection, category: object) -> list[B
                     problem="产业/公司影响已经写到竞争格局、估值或盈利层面，但 step_5 还没有给出足够的影响链条证据。",
                     evidence=(
                         f"step_6 产业/公司影响写道：{truncate_text(impact_section)}；"
-                        "但 step_5 的 analysis.why_it_matters 与 analysis.signals 为空。"
+                        "但 step_5 的 analysis.summary、analysis.core_points 与 analysis.signals 为空。"
                     ),
                     suggestion="将影响判断收窄到正文和补充材料能直接支持的层面，避免把方向性信号直接写成市场结论。",
                 )

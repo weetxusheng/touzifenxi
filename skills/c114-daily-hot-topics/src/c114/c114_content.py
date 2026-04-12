@@ -33,6 +33,7 @@ from .c114_search import (
     parse_yaml_value,
     unquote_yaml_scalar,
 )
+from .checkpoint import StepCheckpointStore
 from .settings import AppPaths, load_c114_runtime_config, resolve_override_path
 
 
@@ -496,6 +497,7 @@ def run_content_fetch_workflow(
     fetcher: Callable[[str], FetchResult] | None = None,
     aliyun_client: AliyunIQSClient | None = None,
     generated_at: str | None = None,
+    checkpoint_store: StepCheckpointStore | None = None,
 ) -> ContentWorkflowPayload:
     """Execute step 4 for one report date and return the full content payload."""
     source = load_search_results_yaml(input_path)
@@ -526,6 +528,7 @@ def run_content_fetch_workflow(
                     cache=cache,
                     aliyun_client=content_search_client,
                     allowed_keep_levels=runtime_config.content_fetch_keep_levels,
+                    checkpoint_store=checkpoint_store,
                 ),
             )
             for category_index, item_index, article in flattened_articles
@@ -581,6 +584,7 @@ def fetch_article_contents(
     cache: dict[str, FetchResult] | None = None,
     aliyun_client: AliyunIQSClient | None = None,
     allowed_keep_levels: tuple[str, ...] = ("strong", "weak"),
+    checkpoint_store: StepCheckpointStore | None = None,
 ) -> ArticleContentPayload:
     """Fetch the original article plus all eligible supplementary links for one item."""
     fetch_cache = cache if cache is not None else {}
@@ -592,6 +596,7 @@ def fetch_article_contents(
         fetcher=fetcher,
         cache=fetch_cache,
         aliyun_client=aliyun_client,
+        checkpoint_store=checkpoint_store,
     )
     selected_contents: list[SelectedContentPayload] = []
     for result in article.selected_results:
@@ -606,6 +611,7 @@ def fetch_article_contents(
             fetcher=fetcher,
             cache=fetch_cache,
             aliyun_client=aliyun_client,
+            checkpoint_store=checkpoint_store,
         )
         selected_contents.append(
             SelectedContentPayload(
@@ -641,6 +647,7 @@ def fetch_selected_result_content(
     fetcher: Callable[[str], FetchResult],
     cache: dict[str, FetchResult],
     aliyun_client: AliyunIQSClient | None = None,
+    checkpoint_store: StepCheckpointStore | None = None,
 ) -> FetchResult:
     """抓取单条补充链接对应的正文内容。"""
     return fetch_once(
@@ -651,6 +658,7 @@ def fetch_selected_result_content(
         fetcher=fetcher,
         cache=cache,
         aliyun_client=aliyun_client,
+        checkpoint_store=checkpoint_store,
     )
 
 
@@ -668,9 +676,17 @@ def fetch_once(
     fetcher: Callable[[str], FetchResult],
     cache: dict[str, FetchResult],
     aliyun_client: AliyunIQSClient | None = None,
+    checkpoint_store: StepCheckpointStore | None = None,
 ) -> FetchResult:
     """Fetch one URL with cache reuse and Aliyun-first / HTML-fallback routing."""
     normalized = normalize_url(url)
+    if checkpoint_store is not None:
+        cached_checkpoint = checkpoint_store.get_result(build_step4_checkpoint_entry_id(url))
+        if isinstance(cached_checkpoint, dict):
+            checkpoint_result = fetch_result_from_dict(cached_checkpoint)
+            if checkpoint_store.is_success(build_step4_checkpoint_entry_id(url)):
+                cache.setdefault(normalized, checkpoint_result)
+                return checkpoint_result
     if normalized not in cache:
         documents: list[AliyunSearchDocument] = []
         if aliyun_client:
@@ -686,7 +702,58 @@ def fetch_once(
             documents=documents,
             fallback_fetcher=fetcher,
         )
+        if checkpoint_store is not None:
+            fetch_result = cache[normalized]
+            checkpoint_store.record_entry(
+                entry_id=build_step4_checkpoint_entry_id(url),
+                status="success" if fetch_result.fetch_status == "success" else "error",
+                source=fetch_result.content_source,
+                request_context={
+                    "url": url,
+                    "query_text": query_text,
+                    "target_title": target_title,
+                    "report_date": report_date,
+                },
+                result=fetch_result_to_dict(fetch_result),
+                error=(
+                    {"message": fetch_result.fetch_error}
+                    if fetch_result.fetch_error
+                    else {}
+                ),
+            )
     return cache[normalized]
+
+
+def build_step4_checkpoint_entry_id(url: str) -> str:
+    """生成 step 4 按 URL 记录正文抓取状态的 checkpoint 键。"""
+
+    return f"url::{normalize_url(url)}"
+
+
+def fetch_result_to_dict(result: FetchResult) -> dict[str, str]:
+    return {
+        "url": result.url,
+        "domain": result.domain,
+        "content_title": result.content_title,
+        "content_summary": result.content_summary,
+        "content_text": result.content_text,
+        "fetch_status": result.fetch_status,
+        "fetch_error": result.fetch_error,
+        "content_source": result.content_source,
+    }
+
+
+def fetch_result_from_dict(payload: dict[str, str]) -> FetchResult:
+    return FetchResult(
+        url=str(payload.get("url", "")),
+        domain=str(payload.get("domain", "")),
+        content_title=str(payload.get("content_title", "")),
+        content_summary=str(payload.get("content_summary", "")),
+        content_text=str(payload.get("content_text", "")),
+        fetch_status=str(payload.get("fetch_status", "")),
+        fetch_error=str(payload.get("fetch_error", "")),
+        content_source=str(payload.get("content_source", "html_fallback")),
+    )
 
 
 def build_aliyun_fetch_result(

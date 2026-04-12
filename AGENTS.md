@@ -27,6 +27,8 @@
 - 通用、可复用逻辑放 `src/touzifenxi/`
 - CLI 只做参数入口和编排，不堆业务细节
 - 新增公共函数尽量写类型标注
+- 新增或修改需求前，先把主场景、边界场景、失败场景和 fallback 用例想清楚
+- 需求完成后，必须对照上述用例至少执行一遍回归验证
 - 注释只解释“为什么”，不解释显然动作
 - 原始数据、中间数据、报告、构建产物分目录存放
 
@@ -54,10 +56,12 @@
 
 1. 这段逻辑应该放 `src/` 还是 `skills/`
 2. 提示词、配置、模板是否会被放错目录
-3. 输出应该进入 `data/raw/`、`data/processed/`、`reports/` 还是 `build/`
-4. 这次改动是否需要补测试
-5. 新增 skill 是否基于 `docs/templates/skill-template/` 创建
-6. 是否需要运行 `validate-skill` 和 `package-skill`
+3. 主流程场景、边界场景、失败场景和 fallback 用例是否已经先列清
+4. 输出应该进入 `data/raw/`、`data/processed/`、`reports/` 还是 `build/`
+5. 这次改动是否需要补测试
+6. 完成后要按哪些用例逐条回归验证
+7. 新增 skill 是否基于 `docs/templates/skill-template/` 创建
+8. 是否需要运行 `validate-skill` 和 `package-skill`
 
 ## 6. 详细规范
 

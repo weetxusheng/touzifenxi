@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -20,28 +20,31 @@ from .c114_intelligence import (
     step_6_brief_name,
 )
 from .c114_search import load_search_checklist_yaml, parse_yaml_value
+from .checkpoint import StepCheckpointStore
 from .llm import (
     MiniMaxChatClient,
     StructuredLLMError,
     begin_llm_step,
     coerce_json_object_payload,
+    complete_json_with_postprocess_retry,
     load_prompt_text,
     normalize_string_list,
     run_parallel_ordered,
 )
-from .settings import AppPaths, load_c114_runtime_config, resolve_override_path
+from .settings import AppPaths, resolve_override_path
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
 CONTENT_ANALYSIS_PROMPT_PATH = SKILL_ROOT / "prompts" / "content-analysis-agent.md"
 BRIEF_PROMPT_PATH = SKILL_ROOT / "prompts" / "brief-agent.md"
-REQUIRED_ANALYSIS_LIST_FIELDS = (
-    "core_points",
+REQUIRED_ANALYSIS_LIST_FIELDS = ("core_points",)
+OPTIONAL_ANALYSIS_LIST_FIELDS = (
     "new_facts",
     "entities",
     "signals",
     "risk_or_uncertainty",
     "layer_notes",
 )
+STEP5_TOPIC_BATCH_ITEM_LIMIT = 4
 
 
 @dataclass(frozen=True)
@@ -89,6 +92,7 @@ class ContentAnalysisItem:
     topic: str
     channel: str
     original_url: str
+    original_published_at: str
     original_content: ContentDocument
     selected_contents: list[SelectedDocument]
     analysis: ContentAnalysisDraft
@@ -228,6 +232,7 @@ def load_content_analysis_inputs(input_path: Path) -> ContentAnalysisInput:
                 topic=str(current_item.get("topic", "")),
                 channel=str(current_item.get("channel", "")),
                 original_url=str(current_item.get("original_url", "")),
+                original_published_at=str(current_item.get("original_published_at", "")),
                 original_content=ContentDocument(
                     url=str(current_item.get("original_content.url", "")),
                     domain=str(current_item.get("original_content.domain", "")),
@@ -307,6 +312,8 @@ def load_content_analysis_inputs(input_path: Path) -> ContentAnalysisInput:
             current_item["channel"] = parse_yaml_value(line)
         elif line.startswith("        original_url: "):
             current_item["original_url"] = parse_yaml_value(line)
+        elif line.startswith("        original_published_at: "):
+            current_item["original_published_at"] = parse_yaml_value(line)
         elif line.startswith("        original_content:"):
             finalize_selected()
             current_block = "original_content"
@@ -368,6 +375,7 @@ def render_content_analysis_yaml(payload: ContentAnalysisInput) -> str:
                     f"        topic: '{escape_yaml(item.topic)}'",
                     f"        channel: '{escape_yaml(item.channel)}'",
                     f"        original_url: '{escape_yaml(item.original_url)}'",
+                    f"        original_published_at: '{escape_yaml(item.original_published_at)}'",
                     "        original_content:",
                     f"          title: '{escape_yaml(item.original_content.title)}'",
                     f"          summary: '{escape_yaml(item.original_content.summary)}'",
@@ -443,8 +451,6 @@ def collect_missing_analysis_fields(payload: ContentAnalysisInput) -> list[dict[
                 values = getattr(item.analysis, field_name)
                 if not any(str(value).strip() for value in values):
                     missing_fields.append(field_name)
-            if not item.analysis.why_it_matters.strip():
-                missing_fields.append("why_it_matters")
             if missing_fields:
                 missing_items.append(
                     {
@@ -460,35 +466,159 @@ def auto_complete_content_analysis(
     payload: ContentAnalysisInput,
     llm_client: MiniMaxChatClient,
     prompt_path: Path = CONTENT_ANALYSIS_PROMPT_PATH,
+    *,
+    mode: str = "per_topic",
+    batch_retry_attempts: int = 3,
+    checkpoint_store: StepCheckpointStore | None = None,
 ) -> ContentAnalysisInput:
-    """Fill step 5 analysis fields by directly calling the fixed MiniMax model."""
+    """按配置调用大模型补全 step 5 分析结果。"""
 
     begin_llm_step(llm_client, "step_5")
     system_prompt = load_prompt_text(prompt_path)
+    if mode == "per_item":
+        return _auto_complete_content_analysis_per_item(payload, llm_client, system_prompt, checkpoint_store=checkpoint_store)
+    return _auto_complete_content_analysis_per_topic(
+        payload,
+        llm_client,
+        system_prompt,
+        max_attempts=max(1, batch_retry_attempts),
+        checkpoint_store=checkpoint_store,
+    )
+
+
+def _auto_complete_content_analysis_per_item(
+    payload: ContentAnalysisInput,
+    llm_client: MiniMaxChatClient,
+    system_prompt: str,
+    *,
+    checkpoint_store: StepCheckpointStore | None = None,
+) -> ContentAnalysisInput:
+    """按单篇文章调用模型补全 step 5。"""
+
     completed_categories: list[ContentAnalysisSection] = []
     for category in payload.categories:
         def complete_item(item: ContentAnalysisItem) -> ContentAnalysisItem:
+            entry_id = build_step5_item_entry_id(item)
+            if checkpoint_store is not None:
+                cached = checkpoint_store.get_result(entry_id)
+                if isinstance(cached, dict):
+                    return content_analysis_item_from_dict(cached)
             response = llm_client.complete_json(
                 system_prompt=system_prompt,
                 user_prompt=(
                     "请基于下面的原文正文和补充正文，完成 step 5 正文分析。"
-                    "只返回 JSON 对象，包含：summary、core_points、new_facts、entities、signals、"
+                    "只返回 JSON 对象，至少包含：summary、core_points。"
+                    "如果你有足够把握，也可以额外返回：new_facts、entities、signals、"
                     "risk_or_uncertainty、why_it_matters、layer_notes。\n\n"
                     f"{json.dumps(build_content_analysis_prompt_payload(item), ensure_ascii=False, indent=2)}"
                 ),
             )
-            return ContentAnalysisItem(
+            try:
+                analysis = normalize_content_analysis_draft(response)
+            except Exception as error:  # noqa: BLE001
+                record_postprocess_error = getattr(llm_client, "record_postprocess_error", None)
+                if callable(record_postprocess_error):
+                    record_postprocess_error(error=error, response_payload=response)
+                if checkpoint_store is not None:
+                    checkpoint_store.record_entry(
+                        entry_id=entry_id,
+                        status="postprocess_error" if isinstance(error, StructuredLLMError) else "error",
+                        provider=getattr(llm_client, "current_provider_name", "") or "",
+                        request_context={"topic": item.topic, "original_title": item.original_title},
+                        error={"message": str(error)},
+                    )
+                raise
+            completed_item = ContentAnalysisItem(
                 original_title=item.original_title,
                 topic=item.topic,
                 channel=item.channel,
                 original_url=item.original_url,
+                original_published_at=item.original_published_at,
                 original_content=item.original_content,
                 selected_contents=item.selected_contents,
-                analysis=normalize_content_analysis_draft(response),
+                analysis=analysis,
             )
+            if checkpoint_store is not None:
+                checkpoint_store.record_entry(
+                    entry_id=entry_id,
+                    status="success",
+                    provider=getattr(llm_client, "current_provider_name", "") or "",
+                    request_context={"topic": item.topic, "original_title": item.original_title},
+                    result=content_analysis_item_to_dict(completed_item),
+                )
+            return completed_item
 
         completed_items = run_parallel_ordered(category.items, complete_item)
         completed_categories.append(ContentAnalysisSection(topic=category.topic, items=completed_items))
+    return ContentAnalysisInput(
+        report_date=payload.report_date,
+        input_path=payload.input_path,
+        generated_at=payload.generated_at,
+        categories=completed_categories,
+    )
+
+
+def _auto_complete_content_analysis_per_topic(
+    payload: ContentAnalysisInput,
+    llm_client: MiniMaxChatClient,
+    system_prompt: str,
+    *,
+    max_attempts: int,
+    checkpoint_store: StepCheckpointStore | None = None,
+) -> ContentAnalysisInput:
+    """按主题批量调用模型补全 step 5。"""
+
+    completed_categories: list[ContentAnalysisSection] = []
+    for category in payload.categories:
+        completed_items: list[ContentAnalysisItem] = []
+        for batch_index, item_batch in enumerate(split_content_analysis_items_for_topic(category.items), start=1):
+            batch_category = ContentAnalysisSection(topic=category.topic, items=item_batch)
+            entry_id = build_step5_batch_entry_id(category.topic, batch_index)
+            if checkpoint_store is not None:
+                cached = checkpoint_store.get_result(entry_id)
+                if isinstance(cached, dict):
+                    completed_items.extend(content_analysis_items_from_batch_dict(cached))
+                    continue
+            topic_payload = build_content_analysis_topic_prompt_payload(batch_category)
+            current_batch = batch_category
+            try:
+                batch_result = complete_json_with_postprocess_retry(
+                    llm_client=llm_client,
+                    system_prompt=system_prompt,
+                    user_prompt=(
+                        "请基于下面同一主题下的多篇原文正文和补充正文，完成 step 5 正文分析。"
+                        "只返回一个 JSON 对象，格式为："
+                        '{"topic":"...","items":[{"original_title":"...","summary":"...","core_points":["..."]}]}。'
+                        "items 中必须覆盖输入里的全部 original_title，且不要遗漏。"
+                        "如果你有足够把握，也可以在每个 item 里额外返回：new_facts、entities、signals、"
+                        "risk_or_uncertainty、why_it_matters、layer_notes。\n\n"
+                        f"{json.dumps(topic_payload, ensure_ascii=False, indent=2)}"
+                    ),
+                    normalize_response=lambda response, batch=current_batch: normalize_content_analysis_topic_response(response, batch),
+                    response_label=f"step 5 主题 {category.topic} 分析结果",
+                    default_max_attempts=max_attempts,
+                )
+            except Exception as error:
+                if checkpoint_store is not None:
+                    checkpoint_store.record_entry(
+                        entry_id=entry_id,
+                        status="postprocess_error" if isinstance(error, StructuredLLMError) else "error",
+                        provider=getattr(llm_client, "current_provider_name", "") or "",
+                        request_context={"topic": category.topic, "batch_index": batch_index},
+                        error={"message": str(error)},
+                    )
+                raise
+            if checkpoint_store is not None:
+                checkpoint_store.record_entry(
+                    entry_id=entry_id,
+                    status="success",
+                    provider=getattr(llm_client, "current_provider_name", "") or "",
+                    request_context={"topic": category.topic, "batch_index": batch_index},
+                    result=content_analysis_batch_to_dict(category.topic, batch_result),
+                )
+            completed_items.extend(batch_result)
+        completed_categories.append(ContentAnalysisSection(topic=category.topic, items=completed_items))
+
     return ContentAnalysisInput(
         report_date=payload.report_date,
         input_path=payload.input_path,
@@ -506,8 +636,10 @@ def build_content_analysis_prompt_payload(item: ContentAnalysisItem) -> dict[str
         "original_url": item.original_url,
         "original_content": {
             "title": item.original_content.title,
-            "summary": item.original_content.summary,
-            "text": item.original_content.text,
+            "text": prepare_step5_prompt_text(
+                item.original_content.text,
+                source=item.original_content.source,
+            ),
             "source": item.original_content.source,
         },
         "selected_contents": [
@@ -518,8 +650,10 @@ def build_content_analysis_prompt_payload(item: ContentAnalysisItem) -> dict[str
                 "result_title": selected.result_title,
                 "published_at": selected.published_at,
                 "title": selected.document.title,
-                "summary": selected.document.summary,
-                "text": selected.document.text,
+                "text": prepare_step5_prompt_text(
+                    selected.document.text,
+                    source=selected.document.source,
+                ),
                 "source": selected.document.source,
             }
             for selected in item.selected_contents
@@ -527,19 +661,174 @@ def build_content_analysis_prompt_payload(item: ContentAnalysisItem) -> dict[str
     }
 
 
+def build_step5_item_entry_id(item: ContentAnalysisItem) -> str:
+    return f"item::{item.topic}::{item.original_title}"
+
+
+def build_step5_batch_entry_id(topic: str, batch_index: int) -> str:
+    return f"batch::{topic}::{batch_index}"
+
+
+def content_analysis_item_to_dict(item: ContentAnalysisItem) -> dict[str, Any]:
+    return asdict(item)
+
+
+def content_analysis_item_from_dict(payload: dict[str, Any]) -> ContentAnalysisItem:
+    original_content = payload.get("original_content") or {}
+    selected_contents = payload.get("selected_contents") or []
+    analysis = payload.get("analysis") or {}
+    return ContentAnalysisItem(
+        original_title=str(payload.get("original_title", "")),
+        topic=str(payload.get("topic", "")),
+        channel=str(payload.get("channel", "")),
+        original_url=str(payload.get("original_url", "")),
+        original_published_at=str(payload.get("original_published_at", "")),
+        original_content=ContentDocument(
+            url=str(original_content.get("url", "")),
+            domain=str(original_content.get("domain", "")),
+            title=str(original_content.get("title", "")),
+            summary=str(original_content.get("summary", "")),
+            text=str(original_content.get("text", "")),
+            source=str(original_content.get("source", "")),
+            status=str(original_content.get("status", "")),
+            error=str(original_content.get("error", "")),
+        ),
+        selected_contents=[
+            SelectedDocument(
+                query=str(item_payload.get("query", "")),
+                query_type=str(item_payload.get("query_type", "")),
+                url=str(item_payload.get("url", "")),
+                domain=str(item_payload.get("domain", "")),
+                result_title=str(item_payload.get("result_title", "")),
+                published_at=str(item_payload.get("published_at", "")),
+                document=ContentDocument(
+                    url=str((item_payload.get("document") or {}).get("url", item_payload.get("url", ""))),
+                    domain=str((item_payload.get("document") or {}).get("domain", item_payload.get("domain", ""))),
+                    title=str((item_payload.get("document") or {}).get("title", "")),
+                    summary=str((item_payload.get("document") or {}).get("summary", "")),
+                    text=str((item_payload.get("document") or {}).get("text", "")),
+                    source=str((item_payload.get("document") or {}).get("source", "")),
+                    status=str((item_payload.get("document") or {}).get("status", "")),
+                    error=str((item_payload.get("document") or {}).get("error", "")),
+                ),
+            )
+            for item_payload in selected_contents
+            if isinstance(item_payload, dict)
+        ],
+        analysis=ContentAnalysisDraft(
+            summary=str(analysis.get("summary", "")),
+            core_points=[str(item) for item in analysis.get("core_points") or []],
+            new_facts=[str(item) for item in analysis.get("new_facts") or []],
+            entities=[str(item) for item in analysis.get("entities") or []],
+            signals=[str(item) for item in analysis.get("signals") or []],
+            risk_or_uncertainty=[str(item) for item in analysis.get("risk_or_uncertainty") or []],
+            why_it_matters=str(analysis.get("why_it_matters", "")),
+            layer_notes=[str(item) for item in analysis.get("layer_notes") or []],
+        ),
+    )
+
+
+def content_analysis_batch_to_dict(topic: str, items: list[ContentAnalysisItem]) -> dict[str, Any]:
+    return {
+        "topic": topic,
+        "items": [content_analysis_item_to_dict(item) for item in items],
+    }
+
+
+def content_analysis_items_from_batch_dict(payload: dict[str, Any]) -> list[ContentAnalysisItem]:
+    return [
+        content_analysis_item_from_dict(item)
+        for item in payload.get("items") or []
+        if isinstance(item, dict)
+    ]
+
+
+def build_content_analysis_topic_prompt_payload(category: ContentAnalysisSection) -> dict[str, Any]:
+    """构造发给模型的 step 5 单主题批量分析输入。"""
+
+    topic_items: list[dict[str, Any]] = []
+    for item in category.items:
+        item_payload = build_content_analysis_prompt_payload(item)
+        topic_items.append(
+            {
+                "original_title": item.original_title,
+                "original_url": item.original_url,
+                "channel": item.channel,
+                "original_content": item_payload["original_content"],
+                "selected_contents": item_payload["selected_contents"],
+            }
+        )
+    return {
+        "topic": category.topic,
+        "items": topic_items,
+    }
+
+
+def split_content_analysis_items_for_topic(
+    items: list[ContentAnalysisItem],
+    *,
+    item_limit: int = STEP5_TOPIC_BATCH_ITEM_LIMIT,
+) -> list[list[ContentAnalysisItem]]:
+    """将大 topic 按固定篇数拆成小批，避免单次请求过大。"""
+
+    normalized_limit = max(1, int(item_limit))
+    if len(items) <= normalized_limit:
+        return [list(items)]
+    return [
+        items[index : index + normalized_limit]
+        for index in range(0, len(items), normalized_limit)
+    ]
+
+
+def prepare_step5_prompt_text(text: str, *, source: str) -> str:
+    """按正文来源压缩 step 5 发送给模型的正文内容。"""
+
+    normalized = str(text).strip()
+    if not normalized:
+        return ""
+    if source == "html_fallback":
+        return truncate_html_fallback_prompt_text(normalized)
+    return normalized
+
+
+def truncate_html_fallback_prompt_text(text: str) -> str:
+    """对 HTML fallback 正文只保留前后关键片段，减少噪音与长度。"""
+
+    normalized = text.strip()
+    if not normalized:
+        return ""
+    edge_limit = html_fallback_edge_limit(normalized)
+    if len(normalized) <= edge_limit * 2:
+        return normalized
+    head = normalized[:edge_limit].strip()
+    tail = normalized[-edge_limit:].strip()
+    return f"{head}\n...\n{tail}".strip()
+
+
+def html_fallback_edge_limit(text: str) -> int:
+    """根据正文语言倾向决定 HTML fallback 前后保留长度。"""
+
+    if not text:
+        return 100
+    ascii_count = sum(1 for char in text if char.isascii() and not char.isspace())
+    non_ascii_count = sum(1 for char in text if not char.isascii() and not char.isspace())
+    return 200 if ascii_count > non_ascii_count else 100
+
+
 def normalize_content_analysis_draft(payload: Any) -> ContentAnalysisDraft:
     """校验并规范化模型返回的 step 5 分析结果。"""
     payload = coerce_json_object_payload(payload, "step 5 分析结果")
     summary = str(payload.get("summary", "")).strip()
-    why_it_matters = str(payload.get("why_it_matters", "")).strip()
-    if not summary or not why_it_matters:
-        raise StructuredLLMError("step 5 缺少 summary 或 why_it_matters。")
+    if not summary:
+        raise StructuredLLMError("step 5 缺少 summary。")
     normalized_lists: dict[str, list[str]] = {}
     for field_name in REQUIRED_ANALYSIS_LIST_FIELDS:
         normalized = normalize_string_list(payload.get(field_name))
         if not normalized:
             raise StructuredLLMError(f"step 5 字段 {field_name} 不能为空。")
         normalized_lists[field_name] = normalized
+    for field_name in OPTIONAL_ANALYSIS_LIST_FIELDS:
+        normalized_lists[field_name] = normalize_string_list(payload.get(field_name))
     return ContentAnalysisDraft(
         summary=summary,
         core_points=normalized_lists["core_points"],
@@ -547,9 +836,50 @@ def normalize_content_analysis_draft(payload: Any) -> ContentAnalysisDraft:
         entities=normalized_lists["entities"],
         signals=normalized_lists["signals"],
         risk_or_uncertainty=normalized_lists["risk_or_uncertainty"],
-        why_it_matters=why_it_matters,
+        why_it_matters=str(payload.get("why_it_matters", "")).strip(),
         layer_notes=normalized_lists["layer_notes"],
     )
+
+
+def normalize_content_analysis_topic_response(
+    payload: Any,
+    category: ContentAnalysisSection,
+) -> list[ContentAnalysisItem]:
+    """把单主题批量返回结果映射回原始文章顺序。"""
+
+    payload = coerce_json_object_payload(payload, "step 5 主题分析结果")
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list) or not raw_items:
+        raise StructuredLLMError("step 5 主题分析结果缺少非空 items 数组。")
+
+    response_items_by_title: dict[str, ContentAnalysisDraft] = {}
+    for raw_item in raw_items:
+        raw_object = coerce_json_object_payload(raw_item, "step 5 主题分析 item")
+        original_title = str(raw_object.get("original_title", "")).strip()
+        if not original_title:
+            raise StructuredLLMError("step 5 主题分析 item 缺少 original_title。")
+        if original_title in response_items_by_title:
+            raise StructuredLLMError(f"step 5 主题分析结果中 original_title 重复：{original_title}")
+        response_items_by_title[original_title] = normalize_content_analysis_draft(raw_object)
+
+    completed_items: list[ContentAnalysisItem] = []
+    for item in category.items:
+        analysis = response_items_by_title.get(item.original_title)
+        if analysis is None:
+            raise StructuredLLMError(f"step 5 主题分析结果缺少 original_title：{item.original_title}")
+        completed_items.append(
+            ContentAnalysisItem(
+                original_title=item.original_title,
+                topic=item.topic,
+                channel=item.channel,
+                original_url=item.original_url,
+                original_published_at=item.original_published_at,
+                original_content=item.original_content,
+                selected_contents=item.selected_contents,
+                analysis=analysis,
+            )
+        )
+    return completed_items
 
 
 def render_brief_markdown(payload: ContentAnalysisInput) -> str:
@@ -563,10 +893,8 @@ def render_brief_markdown(payload: ContentAnalysisInput) -> str:
             search_results_path = search_results_path.with_name(step_3_results_name(report_day))
         if search_results_path.exists():
             search_payload = load_search_results_yaml(search_results_path)
-    runtime_config = load_c114_runtime_config(Path(__file__).resolve().parents[2])
     summary = build_brief_runtime_summary(payload, search_payload)
-    role_label = "资深研究员 agent" if runtime_config.brief_role == "senior_researcher" else runtime_config.brief_role
-    lines = [f"# C114 主题简报（{payload.report_date}）", "", f"> 角色：{role_label}", "", "## 运行摘要", ""]
+    lines = [f"# C114 主题简报（{payload.report_date}）", "", "## 运行摘要", ""]
     lines.extend(
         [
             f"- 原始文章数：{summary['original_articles']}",
@@ -606,13 +934,13 @@ def render_brief_markdown(payload: ContentAnalysisInput) -> str:
             ]
         )
         for item in category.items:
-            lines.append(f"- {item.original_title} | {item.original_url}")
+            lines.append(format_brief_link_line(item.original_title, item.original_published_at, item.original_url))
         lines.extend(["", "### 补充地址", ""])
         if category.items and any(item.selected_contents for item in category.items):
             for item in category.items:
                 for selected in item.selected_contents:
                     title = selected.document.title or selected.result_title or selected.url
-                    lines.append(f"- {title} | {selected.url}")
+                    lines.append(format_brief_link_line(title, selected.published_at, selected.url))
         else:
             lines.append("- 无")
     return "\n".join(lines)
@@ -622,10 +950,16 @@ def generate_brief_markdown(
     payload: ContentAnalysisInput,
     llm_client: MiniMaxChatClient,
     prompt_path: Path = BRIEF_PROMPT_PATH,
+    checkpoint_store: StepCheckpointStore | None = None,
 ) -> str:
     """Generate the final step 6 brief via the fixed MiniMax model."""
 
-    section_drafts = auto_complete_brief_sections(payload, llm_client, prompt_path=prompt_path)
+    section_drafts = auto_complete_brief_sections(
+        payload,
+        llm_client,
+        prompt_path=prompt_path,
+        checkpoint_store=checkpoint_store,
+    )
     return render_generated_brief_markdown(payload, section_drafts)
 
 
@@ -633,6 +967,8 @@ def auto_complete_brief_sections(
     payload: ContentAnalysisInput,
     llm_client: MiniMaxChatClient,
     prompt_path: Path = BRIEF_PROMPT_PATH,
+    *,
+    checkpoint_store: StepCheckpointStore | None = None,
 ) -> list[BriefSectionDraft]:
     """Generate structured step 6 section drafts in parallel before rendering."""
 
@@ -640,25 +976,70 @@ def auto_complete_brief_sections(
     system_prompt = load_prompt_text(prompt_path)
 
     def complete_category(category: ContentAnalysisSection) -> BriefSectionDraft:
-        response = llm_client.complete_json(
-            system_prompt=system_prompt,
-            user_prompt=(
-                "请基于下面这个主题下的 step 5 分析结果，生成行业研究员简报的四个章节。"
-                "只返回 JSON 对象，包含：核心判断、增量信息、产业/公司影响、需要继续跟踪的点。"
-                "其中前三个字段是字符串，最后一个字段是字符串列表。\n\n"
-                f"{json.dumps(build_brief_prompt_payload(category), ensure_ascii=False, indent=2)}"
-            ),
-        )
-        section_text = normalize_brief_sections(response)
-        return BriefSectionDraft(
+        entry_id = build_step6_topic_entry_id(category.topic)
+        if checkpoint_store is not None:
+            cached = checkpoint_store.get_result(entry_id)
+            if isinstance(cached, dict):
+                return brief_section_draft_from_dict(cached)
+        try:
+            section_text = complete_json_with_postprocess_retry(
+                llm_client=llm_client,
+                system_prompt=system_prompt,
+                user_prompt=(
+                    "请基于下面这个主题下的 step 5 分析结果，生成行业研究员简报的四个章节。"
+                    "只返回 JSON 对象，包含：核心判断、增量信息、产业/公司影响、需要继续跟踪的点。"
+                    "其中前三个字段是字符串，最后一个字段是字符串列表。\n\n"
+                    f"{json.dumps(build_brief_prompt_payload(category), ensure_ascii=False, indent=2)}"
+                ),
+                normalize_response=normalize_brief_sections,
+                response_label=f"step 6 主题 {category.topic} 简报结果",
+            )
+        except Exception as error:
+            if checkpoint_store is not None:
+                checkpoint_store.record_entry(
+                    entry_id=entry_id,
+                    status="postprocess_error" if isinstance(error, StructuredLLMError) else "error",
+                    provider=getattr(llm_client, "current_provider_name", "") or "",
+                    request_context={"topic": category.topic},
+                    error={"message": str(error)},
+                )
+            raise
+        draft = BriefSectionDraft(
             topic=category.topic,
             core_judgment=section_text["核心判断"],
             incremental_info=section_text["增量信息"],
             industry_impact=section_text["产业/公司影响"],
             followups=section_text["需要继续跟踪的点"],
         )
+        if checkpoint_store is not None:
+            checkpoint_store.record_entry(
+                entry_id=entry_id,
+                status="success",
+                provider=getattr(llm_client, "current_provider_name", "") or "",
+                request_context={"topic": category.topic},
+                result=brief_section_draft_to_dict(draft),
+            )
+        return draft
 
     return run_parallel_ordered(payload.categories, complete_category)
+
+
+def build_step6_topic_entry_id(topic: str) -> str:
+    return f"topic::{topic}"
+
+
+def brief_section_draft_to_dict(draft: BriefSectionDraft) -> dict[str, Any]:
+    return asdict(draft)
+
+
+def brief_section_draft_from_dict(payload: dict[str, Any]) -> BriefSectionDraft:
+    return BriefSectionDraft(
+        topic=str(payload.get("topic", "")),
+        core_judgment=str(payload.get("core_judgment", "")),
+        incremental_info=str(payload.get("incremental_info", "")),
+        industry_impact=str(payload.get("industry_impact", "")),
+        followups=[str(item) for item in payload.get("followups") or []],
+    )
 
 
 def render_generated_brief_markdown(
@@ -676,10 +1057,8 @@ def render_generated_brief_markdown(
             search_results_path = search_results_path.with_name(step_3_results_name(report_day))
         if search_results_path.exists():
             search_payload = load_search_results_yaml(search_results_path)
-    runtime_config = load_c114_runtime_config(Path(__file__).resolve().parents[2])
     summary = build_brief_runtime_summary(payload, search_payload)
-    role_label = "资深研究员 agent" if runtime_config.brief_role == "senior_researcher" else runtime_config.brief_role
-    lines = [f"# C114 主题简报（{payload.report_date}）", "", f"> 角色：{role_label}", "", "## 运行摘要", ""]
+    lines = [f"# C114 主题简报（{payload.report_date}）", "", "## 运行摘要", ""]
     lines.extend(
         [
             f"- 原始文章数：{summary['original_articles']}",
@@ -720,17 +1099,24 @@ def render_generated_brief_markdown(
             lines.append(f"- {followup}")
         lines.extend(["", "### 源地址", ""])
         for item in category.items:
-            lines.append(f"- {item.original_title} | {item.original_url}")
+            lines.append(format_brief_link_line(item.original_title, item.original_published_at, item.original_url))
         lines.extend(["", "### 补充地址", ""])
         supplement_count = 0
         for item in category.items:
             for selected in item.selected_contents:
                 title = selected.document.title or selected.result_title or selected.url
-                lines.append(f"- {title} | {selected.url}")
+                lines.append(format_brief_link_line(title, selected.published_at, selected.url))
                 supplement_count += 1
         if supplement_count == 0:
             lines.append("- 无")
     return "\n".join(lines)
+
+
+def format_brief_link_line(title: str, published_at: str, url: str) -> str:
+    """把 step 6 链接行统一格式化为标题、日期、链接。"""
+
+    normalized_date = (published_at or "").strip() or "日期未知"
+    return f"- {title} | {normalized_date} | {url}"
 
 
 def build_brief_prompt_payload(category: ContentAnalysisSection) -> dict[str, Any]:
@@ -740,15 +1126,8 @@ def build_brief_prompt_payload(category: ContentAnalysisSection) -> dict[str, An
         "items": [
             {
                 "original_title": item.original_title,
-                "channel": item.channel,
                 "summary": item.analysis.summary,
-                "core_points": item.analysis.core_points,
-                "new_facts": item.analysis.new_facts,
-                "entities": item.analysis.entities,
-                "signals": item.analysis.signals,
-                "risk_or_uncertainty": item.analysis.risk_or_uncertainty,
-                "why_it_matters": item.analysis.why_it_matters,
-                "layer_notes": item.analysis.layer_notes,
+                "core_points": item.analysis.core_points[:3],
             }
             for item in category.items
         ],
@@ -757,8 +1136,7 @@ def build_brief_prompt_payload(category: ContentAnalysisSection) -> dict[str, An
 
 def normalize_brief_sections(payload: Any) -> dict[str, Any]:
     """校验并规范化模型返回的 step 6 主题章节。"""
-    if not isinstance(payload, dict):
-        raise StructuredLLMError("step 6 返回不是 JSON 对象。")
+    payload = coerce_json_object_payload(payload, "step 6 返回")
     required_text_fields = ("核心判断", "增量信息", "产业/公司影响")
     normalized: dict[str, Any] = {}
     for field_name in required_text_fields:

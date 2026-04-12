@@ -1,5 +1,8 @@
 {
     "keys": {"tavily_api_key": "", "metaso_api_key": "", "baidu_api_key": "", "aliyun_iqs_api_key": ""},
+    "execution": {
+        "mode": "builtin"
+    },
     "llm": {
         "providers": [
             {
@@ -22,7 +25,7 @@
             },
             {
                 "provider": "minimax",
-                "model": "MiniMax M2.7",
+                "model": "MiniMax-M2.7",
                 "api_key": "",
                 "base_url": "https://api.minimaxi.com/v1",
                 "timeout_seconds": 180,
@@ -36,10 +39,16 @@
             "reset_scope": "step",
             "error_scope": "infra_only"
         },
-        "retry": {
-            "honor_retry_after": true,
-            "jitter_seconds": 0.5
-        },
+    "retry": {
+      "honor_retry_after": true,
+      "jitter_seconds": 0.5,
+      "classifier": {
+        "infra_max_attempts": 3,
+        "parse_max_attempts": 3,
+        "postprocess_max_attempts": 3,
+        "fatal_max_attempts": 2
+      }
+    },
         "concurrency": {
             "default": 2,
             "providers": {
@@ -51,6 +60,21 @@
         "streaming": {
             "enabled": true,
             "steps": ["step_5", "step_6", "step_7"]
+        },
+        "step_rate_limits": {
+            "step_5": {
+                "min_interval_seconds": 40
+            }
+        },
+        "step_task_routing": {
+            "step_3": {
+                "enabled": true,
+                "providers": ["kimi-code", "minimax", "kimi"]
+            },
+            "step_5": {
+                "enabled": true,
+                "providers": ["kimi-code", "minimax", "kimi"]
+            }
         }
     },
     "network": {
@@ -60,8 +84,12 @@
         "aliyun_retry_backoff_seconds": 0.5
     },
     "search": {"recent_days": 30, "max_external_results": 5},
-    "content": {"fetch_keep_levels": ["strong", "weak"]},
+    "content": {
+        "fetch_keep_levels": ["strong", "weak"],
+        "analysis_mode": "per_topic",
+        "analysis_batch_retry_attempts": 3
+    },
     "brief": {"role": "senior_researcher"},
-    "review": {"enable_step7": true},
+    "review": {"enable_step7": false},
     "paths": {"output_mode": "skill"}
 }

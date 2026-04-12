@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime
+from pathlib import Path
 
 from .settings import ensure_directories, resolve_paths
 from .skill_packaging import (
@@ -41,6 +42,33 @@ def build_parser() -> argparse.ArgumentParser:
     package_skill_parser.add_argument("--skill", required=True, help="Skill directory name under skills/.")
     package_skill_parser.add_argument(
         "--output", default=None, help="Optional zip output path. Defaults to build/<skill-name>-skill.zip."
+    )
+    send_email_parser = subparsers.add_parser("send-email", help="通过项目级 SMTP 渠道发送邮件。")
+    send_email_parser.add_argument("--to", nargs="+", required=True, help="一个或多个收件人邮箱地址。")
+    send_email_parser.add_argument("--subject", required=True, help="邮件主题。")
+    send_email_parser.add_argument("--body", default="", help="邮件正文。")
+    send_email_parser.add_argument("--body-file", default=None, help="从文件读取邮件正文。")
+    send_email_parser.add_argument("--html-file", default=None, help="从文件读取 HTML 正文。")
+    send_email_parser.add_argument(
+        "--attach",
+        nargs="*",
+        default=[],
+        help="一个或多个附件路径，支持相对项目根目录传入。",
+    )
+    c114_runner_parser = subparsers.add_parser(
+        "run-c114-daily-brief",
+        help="以项目内统一 runner 运行 C114 当日简报，并在成功后发送正文版邮件。",
+    )
+    c114_runner_parser.add_argument(
+        "--date",
+        default=None,
+        help="可选日期，格式 YYYY-MM-DD；不传时使用 Asia/Shanghai 当天日期。",
+    )
+    c114_runner_parser.add_argument(
+        "--to",
+        nargs="+",
+        default=["chenxusheng@cjhxfund.com"],
+        help="邮件收件人列表。",
     )
     coverage_parser = subparsers.add_parser(
         "coverage", help="Show current candidate coverage for industries and daily factors."
@@ -327,6 +355,58 @@ def main() -> None:
         print(f"Skill 打包完成: {result.output_path}")
         print(f"文件数: {len(result.archived_files)}")
         return
+
+    if args.command == "send-email":
+        from .channels.email import send_email
+
+        def resolve_mail_path(raw_path: str) -> Path:
+            path = Path(raw_path)
+            return path if path.is_absolute() else (paths.project_root / path)
+
+        if args.body_file:
+            body_path = resolve_mail_path(args.body_file).resolve()
+            body_text = body_path.read_text(encoding="utf-8")
+        else:
+            body_text = args.body
+        if args.html_file:
+            html_path = resolve_mail_path(args.html_file).resolve()
+            body_html = html_path.read_text(encoding="utf-8")
+        else:
+            body_html = None
+        attachments = [resolve_mail_path(attachment).resolve() for attachment in args.attach]
+        send_email(
+            recipient_emails=args.to,
+            subject=args.subject,
+            body_text=body_text,
+            body_html=body_html,
+            attachments=attachments,
+        )
+        print(f"邮件发送完成: {', '.join(args.to)}")
+        return
+
+    if args.command == "run-c114-daily-brief":
+        from datetime import date as date_cls
+
+        from .c114_automation import run_c114_daily_brief, shanghai_today
+
+        report_date = date_cls.fromisoformat(args.date) if args.date else shanghai_today()
+        result = run_c114_daily_brief(
+            project_root=paths.project_root,
+            report_date=report_date,
+            recipients=args.to,
+        )
+        if result.succeeded:
+            print(f"运行目录: {result.run_dir}")
+            print(f"Step 6 文件: {result.step6_path}")
+            print(f"邮件发送完成: {', '.join(args.to)}")
+            return
+        print(f"失败步骤: {result.failure_step}")
+        print(f"失败原因: {result.failure_reason}")
+        if result.run_dir:
+            print(f"运行目录: {result.run_dir}")
+        if result.log_path:
+            print(f"日志路径: {result.log_path}")
+        raise SystemExit(1)
 
     from .dashboard import serve_dashboard
     from .fundamentals import sync_candidate_financial_profiles

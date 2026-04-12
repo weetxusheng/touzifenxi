@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import socket
 import tempfile
@@ -19,6 +20,7 @@ from c114.c114_search import (
     SearchOutputPaths,
     SearchQuery,
     SearchResult,
+    SearchTraceLogger,
     SearchWorkflowPayload,
     apply_search_review_result,
     auto_review_search_payload,
@@ -37,10 +39,13 @@ from c114.c114_search import (
     resolve_search_output_paths,
     run_search_workflow,
     save_search_results,
+    search_query_bucket,
     select_results_for_extract,
     unique_search_results,
     validate_search_checklist_items,
 )
+from c114.checkpoint import StepCheckpointStore, checkpoint_path_for_step
+from c114.llm import StructuredLLMError
 from touzifenxi.settings import AppPaths
 
 
@@ -249,6 +254,265 @@ class SearchPathTests(unittest.TestCase):
         ranked = rank_search_results(results, report_date=date(2026, 3, 30), original_title=title_query.value)
 
         self.assertEqual(ranked[0].domain, "www.datang.com.cn")
+
+    def test_run_search_workflow_reuses_step3_checkpoint_without_research_or_rereview(self) -> None:
+        checklist_yaml = """report_date: '2026-04-10'
+prompt_path: '/tmp/prompt.md'
+categories:
+  - topic: 'Cloud&AI'
+    items:
+      - original_title: 'Anthropic 计划自研 AI 芯片'
+        channel: 'Cloud&AI'
+        url: 'https://www.c114.com.cn/ai/5339/a1308310.html'
+        original_published_at: '2026-04-10'
+        keywords:
+          - 'Anthropic 芯片'
+          - 'AI 芯片 自研'
+"""
+
+        class FakeSearchClient:
+            def __init__(self) -> None:
+                self.search_calls = 0
+
+            def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
+                self.search_calls += 1
+                return [
+                    {
+                        "title": "Anthropic 计划自研 AI 芯片",
+                        "url": "https://example.com/anthropic-chip",
+                        "content": "Anthropic 计划自研 AI 芯片",
+                        "published_date": "2026-04-10",
+                    }
+                ]
+
+            def extract(self, urls: list[str], query: str) -> dict[str, str]:
+                return {}
+
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls += 1
+                return {
+                    "items": [
+                        {
+                            "original_title": "Anthropic 计划自研 AI 芯片",
+                            "results": [
+                                {
+                                    "url": "https://example.com/anthropic-chip",
+                                    "keep_level": "strong",
+                                    "reason": "与原文强相关。",
+                                    "relevance_note": "属于直接补充。",
+                                    "value_type": "news",
+                                }
+                            ],
+                        }
+                    ]
+                }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            run_dir = Path(tmp_dir) / "c114_search_202604102139"
+            input_path = run_dir / "c114_step_2_search_checklist_20260410.yaml"
+            output_path = run_dir / "c114_step_3_search_results_20260410.yaml"
+            input_path.parent.mkdir(parents=True, exist_ok=True)
+            input_path.write_text(checklist_yaml, encoding="utf-8")
+
+            search_client = FakeSearchClient()
+            llm_client = FakeLLMClient()
+            checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path_for_step(
+                    output_path=output_path,
+                    step_name="step_3",
+                    report_date="2026-04-10",
+                ),
+                step_name="step_3",
+                report_date="2026-04-10",
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            first_payload = run_search_workflow(
+                input_path=input_path,
+                report_date="2026-04-10",
+                per_query_limit=3,
+                per_article_limit=5,
+                extract_limit=1,
+                provider_name="tavily",
+                client=search_client,
+                llm_client=llm_client,
+                checkpoint_store=checkpoint_store,
+            )
+            self.assertEqual(search_client.search_calls, 3)
+            self.assertEqual(llm_client.calls, 1)
+            self.assertEqual(first_payload.categories[0].items[0].selected_results[0].keep_level, "strong")
+
+            second_checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path_for_step(
+                    output_path=output_path,
+                    step_name="step_3",
+                    report_date="2026-04-10",
+                ),
+                step_name="step_3",
+                report_date="2026-04-10",
+                input_path=input_path,
+                output_path=output_path,
+            )
+            second_payload = run_search_workflow(
+                input_path=input_path,
+                report_date="2026-04-10",
+                per_query_limit=3,
+                per_article_limit=5,
+                extract_limit=1,
+                provider_name="tavily",
+                client=search_client,
+                llm_client=llm_client,
+                checkpoint_store=second_checkpoint_store,
+            )
+
+            self.assertEqual(search_client.search_calls, 3)
+            self.assertEqual(llm_client.calls, 1)
+            self.assertEqual(second_payload.categories[0].items[0].selected_results[0].keep_level, "strong")
+
+    def test_run_search_workflow_checkpoint_preserves_articles_without_selected_results(self) -> None:
+        checklist_yaml = """report_date: '2026-04-10'
+prompt_path: '/tmp/prompt.md'
+categories:
+  - topic: '新闻'
+    items:
+      - original_title: '文章A'
+        channel: '新闻'
+        url: 'https://www.c114.com.cn/news/a.html'
+        original_published_at: '2026-04-10'
+        keywords:
+          - '文章A 关键词1'
+          - '文章A 关键词2'
+      - original_title: '文章B'
+        channel: '新闻'
+        url: 'https://www.c114.com.cn/news/b.html'
+        original_published_at: '2026-04-10'
+        keywords:
+          - '文章B 关键词1'
+          - '文章B 关键词2'
+"""
+
+        class FakeSearchClient:
+            def __init__(self) -> None:
+                self.search_calls = 0
+
+            def search(self, query: SearchQuery, max_results: int) -> list[dict[str, object]]:
+                self.search_calls += 1
+                if "文章A" in query.value:
+                    return [
+                        {
+                            "title": "文章A 补充",
+                            "url": "https://example.com/article-a",
+                            "content": "文章A 相关补充",
+                            "published_date": "2026-04-10",
+                        }
+                    ]
+                return []
+
+            def extract(self, urls: list[str], query: str) -> dict[str, str]:
+                return {}
+
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls += 1
+                return {
+                    "items": [
+                        {
+                            "original_title": "文章A",
+                            "results": [
+                                {
+                                    "url": "https://example.com/article-a",
+                                    "keep_level": "strong",
+                                    "reason": "与原文强相关。",
+                                    "relevance_note": "属于直接补充。",
+                                    "value_type": "新增事实",
+                                }
+                            ],
+                        }
+                    ]
+                }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            run_dir = Path(tmp_dir) / "c114_search_202604102139"
+            input_path = run_dir / "c114_step_2_search_checklist_20260410.yaml"
+            output_path = run_dir / "c114_step_3_search_results_20260410.yaml"
+            input_path.parent.mkdir(parents=True, exist_ok=True)
+            input_path.write_text(checklist_yaml, encoding="utf-8")
+
+            search_client = FakeSearchClient()
+            llm_client = FakeLLMClient()
+            checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path_for_step(
+                    output_path=output_path,
+                    step_name="step_3",
+                    report_date="2026-04-10",
+                ),
+                step_name="step_3",
+                report_date="2026-04-10",
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            first_payload = run_search_workflow(
+                input_path=input_path,
+                report_date="2026-04-10",
+                per_query_limit=3,
+                per_article_limit=5,
+                extract_limit=1,
+                provider_name="tavily",
+                client=search_client,
+                llm_client=llm_client,
+                checkpoint_store=checkpoint_store,
+            )
+            self.assertEqual(search_client.search_calls, 6)
+            self.assertEqual(llm_client.calls, 1)
+            self.assertEqual(len(first_payload.categories[0].items), 2)
+
+            checkpoint_data = json.loads(checkpoint_store.checkpoint_path.read_text(encoding="utf-8"))
+            article_entry_ids = [
+                entry["entry_id"]
+                for entry in checkpoint_data["entries"]
+                if entry["entry_id"].startswith("article::")
+            ]
+            self.assertEqual(len(article_entry_ids), 2)
+
+            second_checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path_for_step(
+                    output_path=output_path,
+                    step_name="step_3",
+                    report_date="2026-04-10",
+                ),
+                step_name="step_3",
+                report_date="2026-04-10",
+                input_path=input_path,
+                output_path=output_path,
+            )
+            second_payload = run_search_workflow(
+                input_path=input_path,
+                report_date="2026-04-10",
+                per_query_limit=3,
+                per_article_limit=5,
+                extract_limit=1,
+                provider_name="tavily",
+                client=search_client,
+                llm_client=llm_client,
+                checkpoint_store=second_checkpoint_store,
+            )
+
+            self.assertEqual(search_client.search_calls, 6)
+            self.assertEqual(llm_client.calls, 1)
+            self.assertEqual(len(second_payload.categories[0].items), 2)
+            self.assertEqual(
+                [item.original_title for item in second_payload.categories[0].items],
+                ["文章A", "文章B"],
+            )
 
     def test_select_results_for_extract_keeps_top_n(self) -> None:
         results = [
@@ -591,13 +855,41 @@ class SearchProviderRoutingTests(unittest.TestCase):
 
     def test_auto_review_search_payload_fills_all_selected_results(self) -> None:
         class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+
             def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls.append(user_prompt)
                 return {
-                    "keep_level": "weak",
-                    "reason": "与主题高度相关，可作为背景补充。",
-                    "relevance_note": "不是同一事件，但对主题判断有帮助。",
-                    "value_type": "背景补充",
+                    "items": [
+                        {
+                            "original_title": "标题A",
+                            "results": [
+                                {
+                                    "url": "https://example.com/a",
+                                    "keep_level": "weak",
+                                    "reason": "与主题高度相关，可作为背景补充。",
+                                    "relevance_note": "不是同一事件，但对主题判断有帮助。",
+                                    "value_type": "背景补充",
+                                }
+                            ],
+                        },
+                        {
+                            "original_title": "标题B",
+                            "results": [
+                                {
+                                    "url": "https://example.com/b",
+                                    "keep_level": "strong",
+                                    "reason": "与原标题是同一事件，且补充了新事实。",
+                                    "relevance_note": "可作为正文补充来源。",
+                                    "value_type": "新增事实",
+                                }
+                            ],
+                        },
+                    ]
                 }
+
+        llm_client = FakeLLMClient()
 
         payload = SearchWorkflowPayload(
             report_date="2026-04-07",
@@ -634,16 +926,510 @@ class SearchProviderRoutingTests(unittest.TestCase):
                                 )
                             ],
                         )
+                        ,
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题B",
+                            original_url="https://www.c114.com.cn/b",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章B",
+                                    url="https://example.com/b",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要B",
+                                    score=0.8,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["B"],
+                                    extract_text="补充正文B",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
                     ],
                 )
             ],
         )
 
-        reviewed = auto_review_search_payload(payload, FakeLLMClient())
+        reviewed = auto_review_search_payload(payload, llm_client)
 
-        result = reviewed.categories[0].items[0].selected_results[0]
-        self.assertEqual(result.review_status, "reviewed")
-        self.assertEqual(result.keep_level, "weak")
+        result_a = reviewed.categories[0].items[0].selected_results[0]
+        result_b = reviewed.categories[0].items[1].selected_results[0]
+        self.assertEqual(result_a.review_status, "reviewed")
+        self.assertEqual(result_a.keep_level, "weak")
+        self.assertEqual(result_b.review_status, "reviewed")
+        self.assertEqual(result_b.keep_level, "strong")
+        self.assertEqual(len(llm_client.calls), 1)
+        self.assertNotIn("extract_text", llm_client.calls[0])
+        self.assertNotIn('"score"', llm_client.calls[0])
+
+    def test_auto_review_search_payload_retries_missing_results_individually(self) -> None:
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls.append(user_prompt)
+                if len(self.calls) == 1:
+                    return {
+                        "items": [
+                            {
+                                "original_title": "标题A",
+                                "results": [
+                                    {
+                                        "url": "https://example.com/a",
+                                        "keep_level": "weak",
+                                        "reason": "与主题高度相关，可作为背景补充。",
+                                        "relevance_note": "不是同一事件，但对主题判断有帮助。",
+                                        "value_type": "背景补充",
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                return {
+                    "keep_level": "strong",
+                    "reason": "与原标题是同一事件，且补充了新事实。",
+                    "relevance_note": "可作为正文补充来源。",
+                    "value_type": "新增事实",
+                }
+
+        llm_client = FakeLLMClient()
+        payload = SearchWorkflowPayload(
+            report_date="2026-04-07",
+            provider="tavily",
+            input_path=Path("/tmp/input.yaml"),
+            generated_at="2026-04-07T10:00:00",
+            categories=[
+                SearchCategoryPayload(
+                    topic="AI与算力",
+                    items=[
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题A",
+                            original_url="https://www.c114.com.cn/a",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章A",
+                                    url="https://example.com/a",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要A",
+                                    score=0.9,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["A"],
+                                    extract_text="补充正文A",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题B",
+                            original_url="https://www.c114.com.cn/b",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章B",
+                                    url="https://example.com/b",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要B",
+                                    score=0.8,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["B"],
+                                    extract_text="补充正文B",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        )
+
+        reviewed = auto_review_search_payload(payload, llm_client)
+
+        result_a = reviewed.categories[0].items[0].selected_results[0]
+        result_b = reviewed.categories[0].items[1].selected_results[0]
+        self.assertEqual(result_a.keep_level, "weak")
+        self.assertEqual(result_b.keep_level, "strong")
+        self.assertEqual(result_b.review_status, "reviewed")
+        self.assertEqual(len(llm_client.calls), 2)
+
+    def test_auto_review_checkpoints_batch_success_before_missing_single_retry_finishes(self) -> None:
+        class FailingLLMClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls.append(user_prompt)
+                if len(self.calls) == 1:
+                    return {
+                        "items": [
+                            {
+                                "original_title": "标题A",
+                                "results": [
+                                    {
+                                        "url": "https://example.com/a",
+                                        "keep_level": "weak",
+                                        "reason": "与主题高度相关，可作为背景补充。",
+                                        "relevance_note": "不是同一事件，但对主题判断有帮助。",
+                                        "value_type": "背景补充",
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                return {"keep_level": ""}
+
+        class RecoveryLLMClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls.append(user_prompt)
+                return {
+                    "items": [
+                        {
+                            "original_title": "标题B",
+                            "results": [
+                                {
+                                    "url": "https://example.com/b",
+                                    "keep_level": "strong",
+                                    "reason": "与原标题是同一事件，且补充了新事实。",
+                                    "relevance_note": "可作为正文补充来源。",
+                                    "value_type": "新增事实",
+                                }
+                            ],
+                        }
+                    ]
+                }
+
+        payload = SearchWorkflowPayload(
+            report_date="2026-04-07",
+            provider="tavily",
+            input_path=Path("/tmp/input.yaml"),
+            generated_at="2026-04-07T10:00:00",
+            categories=[
+                SearchCategoryPayload(
+                    topic="AI与算力",
+                    items=[
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题A",
+                            original_url="https://www.c114.com.cn/a",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章A",
+                                    url="https://example.com/a",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要A",
+                                    score=0.9,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["A"],
+                                    extract_text="补充正文A",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题B",
+                            original_url="https://www.c114.com.cn/b",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章B",
+                                    url="https://example.com/b",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要B",
+                                    score=0.8,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["B"],
+                                    extract_text="补充正文B",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        )
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / "c114_step_3_search_results_20260407.yaml"
+            checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path_for_step(
+                    output_path=output_path,
+                    step_name="step_3",
+                    report_date="2026-04-07",
+                ),
+                step_name="step_3",
+                report_date="2026-04-07",
+                input_path=Path(tmp_dir) / "c114_step_2_search_checklist_20260407.yaml",
+                output_path=output_path,
+            )
+
+            with self.assertRaisesRegex(StructuredLLMError, "非法 keep_level"):
+                auto_review_search_payload(payload, FailingLLMClient(), checkpoint_store=checkpoint_store)
+
+            cached_a = checkpoint_store.get_result("review_article::AI与算力::标题A")
+            cached_b = checkpoint_store.get_result("review_article::AI与算力::标题B")
+            self.assertIsInstance(cached_a, dict)
+            self.assertIsNone(cached_b)
+            self.assertEqual(
+                checkpoint_store.get_entry("review_single::AI与算力::标题B::https://example.com/b")["status"],
+                "postprocess_error",
+            )
+
+            recovery_client = RecoveryLLMClient()
+            reviewed = auto_review_search_payload(payload, recovery_client, checkpoint_store=checkpoint_store)
+
+            self.assertEqual(len(recovery_client.calls), 1)
+            self.assertNotIn("标题A", recovery_client.calls[0])
+            self.assertIn("标题B", recovery_client.calls[0])
+            result_a = reviewed.categories[0].items[0].selected_results[0]
+            result_b = reviewed.categories[0].items[1].selected_results[0]
+            self.assertEqual(result_a.keep_level, "weak")
+            self.assertEqual(result_b.keep_level, "strong")
+
+    def test_auto_review_search_payload_splits_large_topic_batches(self) -> None:
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls.append(user_prompt)
+                payload = json.loads(user_prompt.split("\n\n", 1)[1])
+                return {
+                    "items": [
+                        {
+                            "original_title": item["original_title"],
+                            "results": [
+                                {
+                                    "url": result["url"],
+                                    "keep_level": "weak",
+                                    "reason": "与主题相关，可作为背景补充。",
+                                    "relevance_note": "同主题补充信息。",
+                                    "value_type": "背景补充",
+                                }
+                                for result in item["results"]
+                            ],
+                        }
+                        for item in payload["items"]
+                    ]
+                }
+
+        llm_client = FakeLLMClient()
+        items: list[ArticleSearchPayload] = []
+        for index in range(5):
+            items.append(
+                ArticleSearchPayload(
+                    topic="视频",
+                    channel="首页",
+                    original_title=f"标题{index}",
+                    original_url=f"https://www.c114.com.cn/video/{index}.html",
+                    original_published_at="2026-04-10",
+                    queries=[],
+                    search_results=[],
+                    selected_results=[
+                        SearchResult(
+                            query="原标题",
+                            query_type="title",
+                            result_title=f"外部文章{index}",
+                            url=f"https://example.com/{index}",
+                            domain="example.com",
+                            published_at="2026-04-10",
+                            snippet=f"摘要{index}",
+                            score=0.8,
+                            is_official=False,
+                            source_tier="normal",
+                            matched_terms=[f"词{index}"],
+                            extract_text="",
+                            extract_status="not_requested",
+                        )
+                    ],
+                )
+            )
+
+        payload = SearchWorkflowPayload(
+            report_date="2026-04-10",
+            provider="tavily",
+            input_path=Path("/tmp/input.yaml"),
+            generated_at="2026-04-10T10:00:00",
+            categories=[SearchCategoryPayload(topic="视频", items=items)],
+        )
+
+        reviewed = auto_review_search_payload(payload, llm_client)
+
+        self.assertEqual(len(llm_client.calls), 2)
+        self.assertEqual(len(reviewed.categories[0].items), 5)
+        self.assertTrue(
+            all(result.review_status == "reviewed" for item in reviewed.categories[0].items for result in item.selected_results)
+        )
+
+    def test_auto_review_search_payload_accepts_wrapped_single_fallback_result(self) -> None:
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+                self.postprocess_errors: list[str] = []
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls.append(user_prompt)
+                if len(self.calls) == 1:
+                    return {
+                        "items": [
+                            {
+                                "original_title": "标题A",
+                                "results": [
+                                    {
+                                        "url": "https://example.com/a",
+                                        "keep_level": "weak",
+                                        "reason": "背景补充。",
+                                        "relevance_note": "同主题补充。",
+                                        "value_type": "背景补充",
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                if len(self.calls) == 2:
+                    return {
+                        "items": [
+                            {
+                                "original_title": "标题B",
+                                "results": [
+                                    {
+                                        "url": "https://example.com/b",
+                                        "keep_level": "strong",
+                                        "reason": "同一事件。",
+                                        "relevance_note": "可作为正文补充。",
+                                        "value_type": "新增事实",
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                return {
+                    "keep_level": "strong",
+                    "reason": "与原标题是同一事件，且补充了新事实。",
+                    "relevance_note": "可作为正文补充来源。",
+                    "value_type": "新增事实",
+                }
+
+            def record_postprocess_error(self, *, error: Exception, response_payload: object | None = None) -> None:
+                self.postprocess_errors.append(str(error))
+
+        llm_client = FakeLLMClient()
+        payload = SearchWorkflowPayload(
+            report_date="2026-04-07",
+            provider="tavily",
+            input_path=Path("/tmp/input.yaml"),
+            generated_at="2026-04-07T10:00:00",
+            categories=[
+                SearchCategoryPayload(
+                    topic="AI与算力",
+                    items=[
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题A",
+                            original_url="https://www.c114.com.cn/a",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章A",
+                                    url="https://example.com/a",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要A",
+                                    score=0.9,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["A"],
+                                    extract_text="补充正文A",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题B",
+                            original_url="https://www.c114.com.cn/b",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章B",
+                                    url="https://example.com/b",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要B",
+                                    score=0.8,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["B"],
+                                    extract_text="补充正文B",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        )
+
+        reviewed = auto_review_search_payload(payload, llm_client)
+
+        result_b = reviewed.categories[0].items[1].selected_results[0]
+        self.assertEqual(result_b.keep_level, "strong")
+        self.assertEqual(result_b.review_status, "reviewed")
+        self.assertEqual(len(llm_client.calls), 2)
+        self.assertEqual(len(llm_client.postprocess_errors), 0)
 
     def test_render_search_results_yaml_only_keeps_ai_review_under_selected_results(self) -> None:
         result = SearchResult(
@@ -917,6 +1703,125 @@ class SearchOutputPathTests(unittest.TestCase):
 
 
 class SearchWorkflowTests(unittest.TestCase):
+    def test_search_query_bucket_writes_search_trace_log_for_success(self) -> None:
+        domain_config = {"official_domains": [], "blocked_domains": []}
+
+        class FakeClient:
+            def search_with_provider(
+                self, query: SearchQuery, max_results: int
+            ) -> tuple[str, list[dict[str, object]]]:
+                return (
+                    "tavily",
+                    [
+                        {
+                            "title": f"{query.value} 相关报道",
+                            "url": "https://news.example.com/a",
+                            "content": "相关摘要",
+                            "score": 0.9,
+                            "published_date": "2026-03-30",
+                        }
+                    ],
+                )
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            trace_path = Path(tmp_dir) / "c114_search_trace_step_3_20260330.jsonl"
+            logger = SearchTraceLogger(trace_path)
+            self.assertTrue(trace_path.exists())
+
+            bucket = search_query_bucket(
+                FakeClient(),
+                SearchQuery(query_type="title", value="测试标题"),
+                3,
+                "测试原标题",
+                domain_config,
+                date(2026, 3, 30),
+                30,
+                trace_logger=logger,
+            )
+
+            records = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+
+        self.assertEqual(bucket.provider, "tavily")
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["status"], "started")
+        self.assertEqual(records[0]["phase"], "request_started")
+        self.assertFalse(records[0]["response_text_present"])
+        self.assertEqual(records[0]["response_kind"], "not_received_yet")
+        self.assertTrue(records[0]["request_id"])
+        self.assertEqual(records[0]["query"], "测试标题")
+        self.assertEqual(records[1]["status"], "success")
+        self.assertEqual(records[1]["phase"], "response_received")
+        self.assertFalse(records[1]["response_text_present"])
+        self.assertEqual(records[1]["response_kind"], "provider_results")
+        self.assertEqual(records[1]["request_id"], records[0]["request_id"])
+        self.assertEqual(records[1]["provider"], "tavily")
+        self.assertEqual(records[1]["query"], "测试标题")
+        self.assertEqual(records[1]["result_count"], 1)
+
+    def test_search_query_bucket_writes_search_trace_log_for_error(self) -> None:
+        domain_config = {"official_domains": [], "blocked_domains": []}
+
+        class FakeClient:
+            def search_with_provider(
+                self, query: SearchQuery, max_results: int
+            ) -> tuple[str, list[dict[str, object]]]:
+                raise RuntimeError("search provider timeout")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            trace_path = Path(tmp_dir) / "c114_search_trace_step_3_20260330.jsonl"
+            logger = SearchTraceLogger(trace_path)
+
+            with self.assertRaisesRegex(RuntimeError, "search provider timeout"):
+                search_query_bucket(
+                    FakeClient(),
+                    SearchQuery(query_type="keyword", value="测试关键词"),
+                    3,
+                    "测试原标题",
+                    domain_config,
+                    date(2026, 3, 30),
+                    30,
+                    trace_logger=logger,
+                )
+
+            records = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["status"], "started")
+        self.assertEqual(records[0]["phase"], "request_started")
+        self.assertFalse(records[0]["response_text_present"])
+        self.assertEqual(records[0]["response_kind"], "not_received_yet")
+        self.assertTrue(records[0]["request_id"])
+        self.assertEqual(records[0]["query"], "测试关键词")
+        self.assertEqual(records[1]["status"], "error")
+        self.assertEqual(records[1]["phase"], "request_failed")
+        self.assertFalse(records[1]["response_text_present"])
+        self.assertEqual(records[1]["response_kind"], "no_response_body")
+        self.assertEqual(records[1]["request_id"], records[0]["request_id"])
+        self.assertEqual(records[1]["query"], "测试关键词")
+        self.assertIn("search provider timeout", records[1]["error"]["message"])
+
+    def test_search_trace_logger_flushes_pending_request_as_aborted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            trace_path = Path(tmp_dir) / "c114_search_trace_step_3_20260330.jsonl"
+            logger = SearchTraceLogger(trace_path)
+            query = SearchQuery(query_type="keyword", value="测试关键词")
+
+            logger.write_started(query=query, provider="tavily")
+            logger.flush_pending_records_on_exit()
+
+            records = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["status"], "started")
+        self.assertEqual(records[0]["phase"], "request_started")
+        self.assertEqual(records[0]["response_kind"], "not_received_yet")
+        self.assertEqual(records[1]["status"], "aborted")
+        self.assertEqual(records[1]["phase"], "request_aborted")
+        self.assertFalse(records[1]["response_text_present"])
+        self.assertEqual(records[1]["response_kind"], "not_received_before_abort")
+        self.assertEqual(records[1]["request_id"], records[0]["request_id"])
+        self.assertIn("仍未完成", records[1]["error"]["message"])
+
     def test_run_search_workflow_executes_article_queries_concurrently(self) -> None:
         payload = """report_date: '2026-03-30'
 prompt_path: '/tmp/prompt.md'

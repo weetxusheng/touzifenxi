@@ -41,6 +41,7 @@ __all__ = [
     "StructuredLLMError",
     "_parse_json_payload",
     "begin_llm_step",
+    "complete_json_with_postprocess_retry",
     "coerce_json_object_payload",
     "load_prompt_text",
     "normalize_string_list",
@@ -60,3 +61,31 @@ def load_prompt_text(prompt_path: Path) -> str:
     """以 UTF-8 方式读取 prompt 文件内容。"""
 
     return prompt_path.read_text(encoding="utf-8")
+
+
+def complete_json_with_postprocess_retry(
+    *,
+    llm_client: Any,
+    system_prompt: str,
+    user_prompt: str,
+    normalize_response: Any,
+    response_label: str,
+    default_max_attempts: int = 1,
+) -> Any:
+    """统一执行 complete_json，并对 postprocess_error 做重试。"""
+
+    max_attempts = max(1, int(default_max_attempts))
+    configured_attempts = getattr(llm_client, "max_attempts_for_retry_class", None)
+    if callable(configured_attempts):
+        max_attempts = max(max_attempts, int(configured_attempts("postprocess", default=max_attempts)))
+    last_error: StructuredLLMError | None = None
+    for _ in range(max_attempts):
+        response = llm_client.complete_json(system_prompt=system_prompt, user_prompt=user_prompt)
+        try:
+            return normalize_response(response)
+        except StructuredLLMError as error:
+            last_error = error
+            record_postprocess_error = getattr(llm_client, "record_postprocess_error", None)
+            if callable(record_postprocess_error):
+                record_postprocess_error(error=error, response_payload=response)
+    raise last_error or StructuredLLMError(f"{response_label} 后处理失败。")

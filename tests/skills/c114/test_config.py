@@ -84,6 +84,34 @@ class C114ConfigTests(unittest.TestCase):
 
         self.assertNotIn("keys.search_provider_api_key", missing)
 
+    def test_collect_missing_c114_config_skips_llm_requirements_in_controller_agent_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "execution": {"mode": "controller-agent"},
+                        "keys": {
+                            "tavily_api_key": "t",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            missing = collect_missing_c114_config(skill_root)
+
+        self.assertNotIn("llm.primary.api_key", missing)
+        self.assertNotIn("llm.providers[0].api_key", missing)
+
     def test_write_c114_local_config_merges_existing_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             skill_root = Path(tmp_dir)
@@ -162,6 +190,21 @@ class C114ConfigTests(unittest.TestCase):
                                 "enabled": True,
                                 "steps": ["step_5", "step_7"],
                             },
+                            "step_rate_limits": {
+                                "step_5": {
+                                    "min_interval_seconds": 40,
+                                }
+                            },
+                            "step_task_routing": {
+                                "step_3": {
+                                    "enabled": True,
+                                    "providers": ["kimi-code", "minimax", "kimi"],
+                                },
+                                "step_5": {
+                                    "enabled": True,
+                                    "providers": ["kimi-code", "minimax", "kimi"],
+                                }
+                            },
                             "concurrency": {
                                 "default": 4,
                                 "providers": {
@@ -206,6 +249,15 @@ class C114ConfigTests(unittest.TestCase):
         self.assertEqual(config.llm_retry.jitter_seconds, 0.75)
         self.assertTrue(config.llm_streaming.enabled)
         self.assertEqual(config.llm_streaming.steps, ("step_5", "step_7"))
+        self.assertEqual(config.llm_step_rate_limits.min_interval_seconds_by_step["step_5"], 40.0)
+        self.assertEqual(
+            config.llm_step_task_routing.providers_by_step["step_3"],
+            ("minimax", "kimi"),
+        )
+        self.assertEqual(
+            config.llm_step_task_routing.providers_by_step["step_5"],
+            ("minimax", "kimi"),
+        )
         self.assertEqual(config.request_timeout_seconds, 50.0)
         self.assertEqual(config.aliyun_timeout_seconds, 70.0)
         self.assertEqual(config.aliyun_max_retries, 4)
@@ -251,7 +303,7 @@ class C114ConfigTests(unittest.TestCase):
 
         self.assertEqual(config.output_mode, "project")
 
-    def test_load_c114_runtime_config_enables_step7_by_default(self) -> None:
+    def test_load_c114_runtime_config_disables_step7_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             skill_root = Path(tmp_dir)
             (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
@@ -286,7 +338,45 @@ class C114ConfigTests(unittest.TestCase):
 
             config = load_c114_runtime_config(skill_root)
 
-        self.assertTrue(config.review_enable_step7)
+        self.assertFalse(config.review_enable_step7)
+
+    def test_load_c114_runtime_config_defaults_content_analysis_to_per_topic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "keys": {
+                            "tavily_api_key": "t",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "llm": {
+                            "primary": {
+                                "provider": "kimi",
+                                "model": "kimi-k2.5",
+                                "api_key": "llm-key",
+                                "base_url": "https://api.moonshot.cn/v1",
+                            },
+                            "failover": {
+                                "enabled": False,
+                            },
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_c114_runtime_config(skill_root)
+
+        self.assertEqual(config.content_analysis.mode, "per_topic")
+        self.assertEqual(config.content_analysis.batch_retry_attempts, 3)
 
     def test_load_c114_runtime_config_reads_step7_toggle(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
