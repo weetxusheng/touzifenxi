@@ -1,4 +1,9 @@
-"""Step 7 quality review for the final brief."""
+"""Websearch Step 7 简报质量审查。
+
+本模块负责把 step 6 Markdown 与 step 5 结构化分析对齐审查，并在开启
+LLM 审查时按 topic 调用模型补充质量判断。它不负责生成简报正文，也不
+负责修正文档；输出的 YAML 只作为后续人工或 agent 修订的依据。
+"""
 
 from __future__ import annotations
 
@@ -107,7 +112,11 @@ class BriefReviewFinding:
 
 @dataclass(frozen=True)
 class BriefReviewReport:
-    """表示 step 7 最终输出的整份审查报告。"""
+    """表示 step 7 最终输出的整份审查报告。
+
+    `overall_decision` 只表达是否建议进入下游，不直接修改 step 6；实际修订
+    仍由后续流程读取 `findings` 后执行。
+    """
 
     report_date: str
     brief_path: Path
@@ -119,6 +128,16 @@ class BriefReviewReport:
     strengths: list[str]
 
 
+@dataclass(frozen=True)
+class TopicEvidenceStats:
+    """汇总 step 5 证据密度，供 step 7 本地内容规则判断。"""
+
+    has_analysis_summary: bool
+    core_point_count: int
+    new_fact_count: int
+    signal_count: int
+
+
 def resolve_brief_review_output_paths(
     paths: AppPaths,
     report_date: date,
@@ -127,7 +146,7 @@ def resolve_brief_review_output_paths(
     content_input_override: str | None = None,
     output_override: str | None = None,
 ) -> BriefReviewOutputPaths:
-    """Resolve the canonical paths needed by the step 7 review layer."""
+    """解析 step 7 审查所需路径，确保默认读写仍落在同一轮运行目录。"""
     run_dir: Path | None = None
     if brief_input_override:
         brief_input_path = resolve_override_path(paths.project_root, brief_input_override)
@@ -168,68 +187,25 @@ def build_brief_review_report(
     analysis_path: Path,
     content_path: Path,
 ) -> BriefReviewReport:
-    """Review a generated brief against the supporting step 5 evidence."""
+    """执行本地确定性审查，不调用 LLM。
+
+    输入是 step 6 Markdown 与 step 5 YAML；输出只包含结构、链接分组和
+    证据支撑类问题。`content_path` 保留在签名里是为了 CLI 与 step 7
+    产物契约稳定，当前本地规则暂不直接读取 step 4。
+    """
     del content_path
     analysis_input = load_content_analysis_inputs(analysis_path)
     brief_sections = parse_brief_markdown(brief_path.read_text(encoding="utf-8"))
-    findings: list[BriefReviewFinding] = []
-    strengths: list[str] = []
-
     analysis_topics = {category.topic: category for category in analysis_input.categories}
     brief_topics = {section.topic: section for section in brief_sections}
 
-    for missing_topic in sorted(set(analysis_topics) - set(brief_topics)):
-        findings.append(
-            BriefReviewFinding(
-                topic=missing_topic,
-                severity="high",
-                issue_type="topic_drift",
-                problem="研究员简报缺少该主题。",
-                evidence=f"step_5 存在主题 {missing_topic}，但 step_6 未输出对应章节。",
-                suggestion="补写该主题的完整简报块，并补齐源地址与补充地址。",
-            )
-        )
+    # 先做 topic 覆盖校验；topic 缺失或漂移是阻断级问题，后续内容审查只能
+    # 针对双方都存在的 topic 继续执行。
+    findings = review_topic_coverage(analysis_topics, brief_topics)
+    strengths = review_shared_topic_sections(analysis_topics, brief_topics, findings)
 
-    for extra_topic in sorted(set(brief_topics) - set(analysis_topics)):
-        findings.append(
-            BriefReviewFinding(
-                topic=extra_topic,
-                severity="high",
-                issue_type="topic_drift",
-                problem="简报中出现了未在正文分析中定义的主题。",
-                evidence=f"step_6 包含主题 {extra_topic}，但 step_5 中不存在该主题。",
-                suggestion="检查主题是否误合并或误命名，确保与 step_5 保持一致。",
-            )
-        )
-
-    for topic, section in brief_topics.items():
-        category = analysis_topics.get(topic)
-        if category is None:
-            continue
-        findings.extend(review_topic_placeholders(section))
-        findings.extend(review_topic_links(section, category))
-        findings.extend(review_topic_content(section, category))
-
-        if not any(
-            marker in section.sections.get(name, "") for name in SECTION_NAMES for marker in PLACEHOLDER_MARKERS
-        ):
-            strengths.append(f"{topic}：未发现模板占位语句。")
-        expected_original_urls = {item.original_url for item in category.items}
-        if expected_original_urls and all(link.url in expected_original_urls for link in section.source_links):
-            strengths.append(f"{topic}：源地址分组与原始 C114 链接一致。")
-
-    high_count = sum(1 for finding in findings if finding.severity == "high")
-    medium_count = sum(1 for finding in findings if finding.severity == "medium")
-    overall_decision = "revise" if high_count > 0 or medium_count > 1 else "pass"
-    if findings:
-        summary = (
-            f"本轮审查发现 {len(findings)} 个问题，其中 high（严重）{high_count} 个、"
-            f"medium（中等）{medium_count} 个。当前简报建议先修订再继续下游使用。"
-        )
-    else:
-        summary = "本轮未发现需要阻断使用的明显问题，当前简报可直接进入下一步。"
-    if not strengths:
-        strengths.append("结构完整，已形成按主题聚合的研究员简报。")
+    overall_decision, summary = summarize_review_findings(findings)
+    strengths = strengths or ["结构完整，已形成按主题聚合的研究员简报。"]
 
     return BriefReviewReport(
         report_date=report_date,
@@ -243,6 +219,84 @@ def build_brief_review_report(
     )
 
 
+def review_topic_coverage(
+    analysis_topics: dict[str, Any],
+    brief_topics: dict[str, BriefTopicSection],
+) -> list[BriefReviewFinding]:
+    """校验 step 5 与 step 6 的 topic 集合是否一致。"""
+
+    findings: list[BriefReviewFinding] = []
+    for missing_topic in sorted(set(analysis_topics) - set(brief_topics)):
+        findings.append(
+            BriefReviewFinding(
+                topic=missing_topic,
+                severity="high",
+                issue_type="topic_drift",
+                problem="研究员简报缺少该主题。",
+                evidence=f"step_5 存在主题 {missing_topic}，但 step_6 未输出对应章节。",
+                suggestion="补写该主题的完整简报块，并补齐源地址与补充地址。",
+            )
+        )
+    for extra_topic in sorted(set(brief_topics) - set(analysis_topics)):
+        findings.append(
+            BriefReviewFinding(
+                topic=extra_topic,
+                severity="high",
+                issue_type="topic_drift",
+                problem="简报中出现了未在正文分析中定义的主题。",
+                evidence=f"step_6 包含主题 {extra_topic}，但 step_5 中不存在该主题。",
+                suggestion="检查主题是否误合并或误命名，确保与 step_5 保持一致。",
+            )
+        )
+    return findings
+
+
+def review_shared_topic_sections(
+    analysis_topics: dict[str, Any],
+    brief_topics: dict[str, BriefTopicSection],
+    findings: list[BriefReviewFinding],
+) -> list[str]:
+    """对双方都存在的 topic 做本地规则审查，并返回可复用优点描述。"""
+
+    strengths: list[str] = []
+    for topic, section in brief_topics.items():
+        category = analysis_topics.get(topic)
+        if category is None:
+            continue
+        findings.extend(review_topic_placeholders(section))
+        findings.extend(review_topic_links(section, category))
+        findings.extend(review_topic_content(section, category))
+        strengths.extend(build_topic_strengths(section, category))
+    return strengths
+
+
+def build_topic_strengths(section: BriefTopicSection, category: Any) -> list[str]:
+    """生成本地规则可以确定的优点，避免只输出问题而丢失正向信号。"""
+
+    strengths: list[str] = []
+    if not any(marker in section.sections.get(name, "") for name in SECTION_NAMES for marker in PLACEHOLDER_MARKERS):
+        strengths.append(f"{section.topic}：未发现模板占位语句。")
+    expected_original_urls = {item.original_url for item in category.items}
+    if expected_original_urls and all(link.url in expected_original_urls for link in section.source_links):
+        strengths.append(f"{section.topic}：源地址分组与原始 C114 链接一致。")
+    return strengths
+
+
+def summarize_review_findings(findings: list[BriefReviewFinding]) -> tuple[str, str]:
+    """按阻断等级汇总审查结论，保持本地审查与 LLM 审查口径一致。"""
+
+    high_count = sum(1 for finding in findings if finding.severity == "high")
+    medium_count = sum(1 for finding in findings if finding.severity == "medium")
+    overall_decision = "revise" if high_count > 0 or medium_count > 1 else "pass"
+    if not findings:
+        return overall_decision, "本轮未发现需要阻断使用的明显问题，当前简报可直接进入下一步。"
+    return (
+        overall_decision,
+        f"本轮审查发现 {len(findings)} 个问题，其中 high（严重）{high_count} 个、"
+        f"medium（中等）{medium_count} 个。当前简报建议先修订再继续下游使用。",
+    )
+
+
 def build_brief_review_report_with_llm(
     report_date: str,
     brief_path: Path,
@@ -251,7 +305,11 @@ def build_brief_review_report_with_llm(
     llm_client: MiniMaxChatClient,
     checkpoint_store: StepCheckpointStore | None = None,
 ) -> BriefReviewReport:
-    """Run the final step 7 audit via the fixed MiniMax model."""
+    """按 topic 调用 LLM 执行 step 7 审查，并合并本地结构审查结果。
+
+    成功 topic 会写入 checkpoint；失败 topic 会记录错误并抛出，避免把部分
+    完成的 LLM 审查误渲染成完整审查报告。
+    """
     begin_llm_step(llm_client, "step_7")
     analysis_input = load_content_analysis_inputs(analysis_path)
     structural_report = build_brief_review_report(
@@ -266,47 +324,96 @@ def build_brief_review_report_with_llm(
     analysis_by_topic = {category.topic: category for category in analysis_input.categories}
     shared_topics = [topic for topic in analysis_by_topic if topic in section_by_topic]
 
-    def review_topic(topic: str) -> tuple[str, str, list[BriefReviewFinding], list[str]]:
-        entry_id = build_step7_topic_entry_id(topic)
-        if checkpoint_store is not None:
-            cached = checkpoint_store.get_result(entry_id)
-            if isinstance(cached, dict):
-                normalized = topic_review_payload_from_dict(cached)
-                return topic, normalized["summary"], normalized["findings"], normalized["strengths"]
-        try:
-            normalized = complete_json_with_postprocess_retry(
-                llm_client=llm_client,
-                system_prompt=system_prompt,
-                user_prompt=(
-                    "请只审查这一个主题的简报。只返回 JSON 对象，字段必须包含："
-                    "summary、findings、strengths。"
-                    "findings 中每条必须包含 topic、severity、issue_type、problem、evidence、suggestion。\n\n"
-                    f"{json.dumps(build_topic_review_prompt_payload(section_by_topic[topic], analysis_by_topic[topic]), ensure_ascii=False, indent=2)}"
-                ),
-                normalize_response=lambda response: normalize_topic_review_payload(response, default_topic=topic),
-                response_label=f"step 7 主题 {topic} 审查结果",
-            )
-        except Exception as error:
-            if checkpoint_store is not None:
-                checkpoint_store.record_entry(
-                    entry_id=entry_id,
-                    status="postprocess_error" if isinstance(error, StructuredLLMError) else "error",
-                    provider=getattr(llm_client, "current_provider_name", "") or "",
-                    request_context={"topic": topic},
-                    error={"message": str(error)},
-                )
-            raise
+    # 单主题粒度能最大化复用 checkpoint：某个 topic 失败时，不影响其它 topic
+    # 已经完成的 LLM 审查结果。
+    topic_reviews = run_parallel_ordered(
+        shared_topics,
+        lambda topic: review_single_topic_with_llm(
+            topic=topic,
+            section=section_by_topic[topic],
+            category=analysis_by_topic[topic],
+            llm_client=llm_client,
+            system_prompt=system_prompt,
+            checkpoint_store=checkpoint_store,
+        ),
+    )
+    overall_decision, summary, findings, strengths = merge_structural_and_llm_reviews(
+        structural_report,
+        topic_reviews,
+    )
+    return BriefReviewReport(
+        report_date=report_date,
+        brief_path=brief_path,
+        analysis_path=analysis_path,
+        review_prompt_path=BRIEF_REVIEW_PROMPT_PATH,
+        overall_decision=overall_decision,
+        summary=summary,
+        findings=findings,
+        strengths=strengths,
+    )
+
+
+def review_single_topic_with_llm(
+    *,
+    topic: str,
+    section: BriefTopicSection,
+    category: Any,
+    llm_client: MiniMaxChatClient,
+    system_prompt: str,
+    checkpoint_store: StepCheckpointStore | None,
+) -> tuple[str, str, list[BriefReviewFinding], list[str]]:
+    """审查单个 topic，并用 checkpoint 防止成功结果被重复请求。"""
+
+    entry_id = build_step7_topic_entry_id(topic)
+    if checkpoint_store is not None:
+        cached = checkpoint_store.get_result(entry_id)
+        if isinstance(cached, dict):
+            normalized = topic_review_payload_from_dict(cached)
+            return topic, normalized["summary"], normalized["findings"], normalized["strengths"]
+    try:
+        # 这里只给单 topic 上下文，避免模型把其它主题的问题串到当前主题里；
+        # 后续合并时再统一计算 overall_decision。
+        normalized = complete_json_with_postprocess_retry(
+            llm_client=llm_client,
+            system_prompt=system_prompt,
+            user_prompt=(
+                "请只审查这一个主题的简报。只返回 JSON 对象，字段必须包含："
+                "summary、findings、strengths。"
+                "findings 中每条必须包含 topic、severity、issue_type、problem、evidence、suggestion。\n\n"
+                f"{json.dumps(build_topic_review_prompt_payload(section, category), ensure_ascii=False, indent=2)}"
+            ),
+            normalize_response=lambda response: normalize_topic_review_payload(response, default_topic=topic),
+            response_label=f"step 7 主题 {topic} 审查结果",
+        )
+    except Exception as error:
+        # 失败也要落 checkpoint，重跑时可以明确知道哪个 topic 卡住，而不是只
+        # 看到整步没有最终 YAML。
         if checkpoint_store is not None:
             checkpoint_store.record_entry(
                 entry_id=entry_id,
-                status="success",
+                status="postprocess_error" if isinstance(error, StructuredLLMError) else "error",
                 provider=getattr(llm_client, "current_provider_name", "") or "",
                 request_context={"topic": topic},
-                result=topic_review_payload_to_dict(normalized),
+                error={"message": str(error)},
             )
-        return topic, normalized["summary"], normalized["findings"], normalized["strengths"]
+        raise
+    if checkpoint_store is not None:
+        checkpoint_store.record_entry(
+            entry_id=entry_id,
+            status="success",
+            provider=getattr(llm_client, "current_provider_name", "") or "",
+            request_context={"topic": topic},
+            result=topic_review_payload_to_dict(normalized),
+        )
+    return topic, normalized["summary"], normalized["findings"], normalized["strengths"]
 
-    topic_reviews = run_parallel_ordered(shared_topics, review_topic)
+
+def merge_structural_and_llm_reviews(
+    structural_report: BriefReviewReport,
+    topic_reviews: list[tuple[str, str, list[BriefReviewFinding], list[str]]],
+) -> tuple[str, str, list[BriefReviewFinding], list[str]]:
+    """合并本地确定性审查和 LLM 主题审查，统一计算最终决策。"""
+
     findings = list(structural_report.findings)
     strengths = list(structural_report.strengths)
     topic_summaries: list[str] = []
@@ -316,29 +423,15 @@ def build_brief_review_report_with_llm(
         findings.extend(topic_findings)
         strengths.extend(topic_strengths)
 
-    high_count = sum(1 for finding in findings if finding.severity == "high")
-    medium_count = sum(1 for finding in findings if finding.severity == "medium")
-    overall_decision = "revise" if high_count > 0 or medium_count > 1 else "pass"
-    if findings:
-        summary = (
-            f"本轮审查发现 {len(findings)} 个问题，其中 high（严重）{high_count} 个、"
-            f"medium（中等）{medium_count} 个。当前简报建议先修订再继续下游使用。"
-        )
-    else:
-        summary = "本轮未发现需要阻断使用的明显问题，当前简报可直接进入下一步。"
+    overall_decision, summary = summarize_review_findings(findings)
     if topic_summaries:
         summary = summary + " " + " ".join(topic_summaries[:3])
-
     unique_strengths = list(dict.fromkeys(item for item in strengths if item))
-    return BriefReviewReport(
-        report_date=report_date,
-        brief_path=brief_path,
-        analysis_path=analysis_path,
-        review_prompt_path=BRIEF_REVIEW_PROMPT_PATH,
-        overall_decision=overall_decision,
-        summary=summary,
-        findings=findings,
-        strengths=unique_strengths or ["结构完整，已形成按主题聚合的研究员简报。"],
+    return (
+        overall_decision,
+        summary,
+        findings,
+        unique_strengths or ["结构完整，已形成按主题聚合的研究员简报。"],
     )
 
 
@@ -521,7 +614,12 @@ def normalize_topic_review_payload(payload: object, *, default_topic: str) -> di
 
 
 def parse_brief_markdown(markdown_text: str) -> list[BriefTopicSection]:
-    """Parse the step 6 Markdown into deterministic topic sections for review."""
+    """把 step 6 Markdown 解析成可审查的 topic 结构。
+
+    输入是已生成的 Markdown 文本；输出按 topic 保留四个正文分节、源地址和
+    补充地址。解析失败不会尝试修复 Markdown，只返回能确定识别的结构，后续
+    校验函数再决定是否阻断。
+    """
     topics: list[BriefTopicSection] = []
     current_topic: str | None = None
     current_section: str | None = None
@@ -533,6 +631,8 @@ def parse_brief_markdown(markdown_text: str) -> list[BriefTopicSection]:
         nonlocal current_topic, current_section, section_buffers, source_links, supplementary_links
         if current_topic is None:
             return
+        # Markdown 是流式逐行解析；遇到下一个二级标题或文件结尾时，必须把
+        # 当前 topic 的缓冲区一次性封存，避免跨 topic 串内容。
         topics.append(
             BriefTopicSection(
                 topic=current_topic,
@@ -551,6 +651,8 @@ def parse_brief_markdown(markdown_text: str) -> list[BriefTopicSection]:
         line = raw_line.rstrip()
         if line.startswith("## "):
             title = line[3:].strip()
+            # “运行摘要”属于全局说明，不是业务 topic；如果不跳过，会造成
+            # step 5/step 6 topic 对齐误报。
             if title == "运行摘要":
                 current_section = None
                 continue
@@ -564,6 +666,8 @@ def parse_brief_markdown(markdown_text: str) -> list[BriefTopicSection]:
             section_buffers.setdefault(current_section, [])
             continue
         if current_section in {"源地址", "补充地址"} and line.startswith("- "):
+            # 链接分组是 step 7 的重点校验对象，解析时先保持原始分组，不在
+            # 这里纠正错误分组，避免掩盖上游简报问题。
             name, url = parse_markdown_link_line(line[2:])
             link = BriefLink(name=name, url=url)
             if current_section == "源地址":
@@ -682,16 +786,38 @@ def review_topic_links(section: BriefTopicSection, category: object) -> list[Bri
 
 
 def review_topic_content(section: BriefTopicSection, category: object) -> list[BriefReviewFinding]:
-    """Review market-facing content quality against the available supporting evidence."""
-    items = getattr(category, "items", [])
-    has_analysis_summary = any(getattr(item.analysis, "summary", "").strip() for item in items)
-    core_point_count = sum(len(getattr(item.analysis, "core_points", [])) for item in items)
-    new_fact_count = sum(len(getattr(item.analysis, "new_facts", [])) for item in items)
-    signal_count = sum(len(getattr(item.analysis, "signals", [])) for item in items)
-    findings: list[BriefReviewFinding] = []
+    """对简报内容做本地规则审查，避免脱离 step 5 证据写过度判断。"""
 
+    evidence = collect_topic_evidence_stats(category)
+    findings: list[BriefReviewFinding] = []
+    findings.extend(review_core_judgment_quality(section, evidence))
+    findings.extend(review_increment_quality(section, evidence))
+    findings.extend(review_impact_quality(section, evidence))
+    findings.extend(review_followup_quality(section))
+    return findings
+
+
+def collect_topic_evidence_stats(category: object) -> TopicEvidenceStats:
+    """压缩 step 5 证据密度，只保留本地规则真正需要的统计量。"""
+
+    items = getattr(category, "items", [])
+    return TopicEvidenceStats(
+        has_analysis_summary=any(getattr(item.analysis, "summary", "").strip() for item in items),
+        core_point_count=sum(len(getattr(item.analysis, "core_points", [])) for item in items),
+        new_fact_count=sum(len(getattr(item.analysis, "new_facts", [])) for item in items),
+        signal_count=sum(len(getattr(item.analysis, "signals", [])) for item in items),
+    )
+
+
+def review_core_judgment_quality(
+    section: BriefTopicSection,
+    evidence: TopicEvidenceStats,
+) -> list[BriefReviewFinding]:
+    """校验核心判断是否被 step 5 的摘要、观点或产业信号支撑。"""
+
+    findings: list[BriefReviewFinding] = []
     core_judgment = section.sections.get("核心判断", "").strip()
-    if core_judgment and not has_analysis_summary and core_point_count == 0:
+    if core_judgment and not evidence.has_analysis_summary and evidence.core_point_count == 0:
         findings.append(
             BriefReviewFinding(
                 topic=section.topic,
@@ -705,7 +831,7 @@ def review_topic_content(section: BriefTopicSection, category: object) -> list[B
                 suggestion="先在 step_5 补出 summary/core_points，再把核心判断收敛到这些证据可以支持的范围。",
             )
         )
-    elif core_judgment and contains_any(core_judgment, MARKET_LANGUAGE_MARKERS) and signal_count == 0:
+    elif core_judgment and contains_any(core_judgment, MARKET_LANGUAGE_MARKERS) and evidence.signal_count == 0:
         findings.append(
             BriefReviewFinding(
                 topic=section.topic,
@@ -719,45 +845,68 @@ def review_topic_content(section: BriefTopicSection, category: object) -> list[B
                 suggestion="把判断改回产业事实层，或在 step_5 中补充能支撑市场判断的具体信号。",
             )
         )
+    return findings
+
+
+def review_increment_quality(
+    section: BriefTopicSection,
+    evidence: TopicEvidenceStats,
+) -> list[BriefReviewFinding]:
+    """校验增量信息是否能对应到 step 5 的新事实清单。"""
 
     increment_section = section.sections.get("增量信息", "").strip()
     increment_lines = extract_bullet_lines(increment_section)
-    if increment_lines and new_fact_count == 0:
-        findings.append(
-            BriefReviewFinding(
-                topic=section.topic,
-                severity="medium",
-                issue_type="increment_not_new",
-                problem="增量信息已经写成条目，但 step_5 没有沉淀对应的新事实清单，当前难以核对哪些是真增量。",
-                evidence=(
-                    f"step_6 增量信息共 {len(increment_lines)} 条；"
-                    "但 step_5 的 analysis.new_facts 为空。"
-                ),
-                suggestion="先在 step_5 的 new_facts 中逐条沉淀新增事实，再把增量信息严格对齐到这些条目。",
-            )
+    if not increment_lines or evidence.new_fact_count > 0:
+        return []
+    return [
+        BriefReviewFinding(
+            topic=section.topic,
+            severity="medium",
+            issue_type="increment_not_new",
+            problem="增量信息已经写成条目，但 step_5 没有沉淀对应的新事实清单，当前难以核对哪些是真增量。",
+            evidence=(
+                f"step_6 增量信息共 {len(increment_lines)} 条；"
+                "但 step_5 的 analysis.new_facts 为空。"
+            ),
+            suggestion="先在 step_5 的 new_facts 中逐条沉淀新增事实，再把增量信息严格对齐到这些条目。",
         )
+    ]
+
+
+def review_impact_quality(
+    section: BriefTopicSection,
+    evidence: TopicEvidenceStats,
+) -> list[BriefReviewFinding]:
+    """校验产业/公司影响是否越过了 step 5 能支撑的影响链条。"""
 
     impact_section = section.sections.get("产业/公司影响", "").strip()
-    if impact_section and contains_any(impact_section, OVERREACH_MARKERS + MARKET_LANGUAGE_MARKERS):
-        if not has_analysis_summary and core_point_count == 0 and signal_count == 0:
-            findings.append(
-                BriefReviewFinding(
-                    topic=section.topic,
-                    severity="medium",
-                    issue_type="impact_overreach",
-                    problem="产业/公司影响已经写到竞争格局、估值或盈利层面，但 step_5 还没有给出足够的影响链条证据。",
-                    evidence=(
-                        f"step_6 产业/公司影响写道：{truncate_text(impact_section)}；"
-                        "但 step_5 的 analysis.summary、analysis.core_points 与 analysis.signals 为空。"
-                    ),
-                    suggestion="将影响判断收窄到正文和补充材料能直接支持的层面，避免把方向性信号直接写成市场结论。",
-                )
-            )
+    if not impact_section or not contains_any(impact_section, OVERREACH_MARKERS + MARKET_LANGUAGE_MARKERS):
+        return []
+    has_supporting_chain = evidence.has_analysis_summary or evidence.core_point_count > 0 or evidence.signal_count > 0
+    if has_supporting_chain:
+        return []
+    return [
+        BriefReviewFinding(
+            topic=section.topic,
+            severity="medium",
+            issue_type="impact_overreach",
+            problem="产业/公司影响已经写到竞争格局、估值或盈利层面，但 step_5 还没有给出足够的影响链条证据。",
+            evidence=(
+                f"step_6 产业/公司影响写道：{truncate_text(impact_section)}；"
+                "但 step_5 的 analysis.summary、analysis.core_points 与 analysis.signals 为空。"
+            ),
+            suggestion="将影响判断收窄到正文和补充材料能直接支持的层面，避免把方向性信号直接写成市场结论。",
+        )
+    ]
+
+
+def review_followup_quality(section: BriefTopicSection) -> list[BriefReviewFinding]:
+    """校验跟踪点是否可执行、可检索、可验证。"""
 
     followup_section = section.sections.get("需要继续跟踪的点", "").strip()
     followup_lines = extract_bullet_lines(followup_section)
     if not followup_lines:
-        findings.append(
+        return [
             BriefReviewFinding(
                 topic=section.topic,
                 severity="medium",
@@ -766,9 +915,9 @@ def review_topic_content(section: BriefTopicSection, category: object) -> list[B
                 evidence="step_6 的该分节没有 bullet 条目。",
                 suggestion="把跟踪点改写成 2 到 4 条可执行、可检索、可验证的跟踪事项。",
             )
-        )
-    elif all(is_generic_followup(line) for line in followup_lines):
-        findings.append(
+        ]
+    if all(is_generic_followup(line) for line in followup_lines):
+        return [
             BriefReviewFinding(
                 topic=section.topic,
                 severity="low",
@@ -777,9 +926,8 @@ def review_topic_content(section: BriefTopicSection, category: object) -> list[B
                 evidence="；".join(followup_lines[:3]),
                 suggestion="在跟踪点里加入具体主体、时间窗口、订单/政策/试点/收入等可验证信号。",
             )
-        )
-
-    return findings
+        ]
+    return []
 
 
 def parse_markdown_link_line(content: str) -> tuple[str, str]:
