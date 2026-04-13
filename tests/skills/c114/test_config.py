@@ -378,6 +378,86 @@ class C114ConfigTests(unittest.TestCase):
         self.assertEqual(config.content_analysis.mode, "per_topic")
         self.assertEqual(config.content_analysis.batch_retry_attempts, 3)
 
+    def test_load_c114_runtime_config_reads_source_configs_with_infoq_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "keys": {
+                            "tavily_api_key": "t",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "llm": {
+                            "primary": {
+                                "provider": "kimi",
+                                "model": "kimi-k2.5",
+                                "api_key": "llm-key",
+                                "base_url": "https://api.moonshot.cn/v1",
+                            },
+                            "failover": {
+                                "enabled": False,
+                            },
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_c114_runtime_config(skill_root)
+
+        self.assertEqual(config.source_configs["infoq"]["listing"], "new_list")
+        self.assertEqual(config.source_configs["infoq"]["listing_size"], 12)
+
+    def test_load_c114_runtime_config_allows_source_config_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            skill_root = Path(tmp_dir)
+            (skill_root / "SKILL.md").write_text("---\nname: demo\ndescription: 示例\n---\n", encoding="utf-8")
+            config_dir = skill_root / "config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            (config_dir / "runtime.local.json").write_text(
+                json.dumps(
+                    {
+                        "keys": {
+                            "tavily_api_key": "t",
+                            "aliyun_iqs_api_key": "a",
+                        },
+                        "llm": {
+                            "primary": {
+                                "provider": "kimi",
+                                "model": "kimi-k2.5",
+                                "api_key": "llm-key",
+                                "base_url": "https://api.moonshot.cn/v1",
+                            },
+                            "failover": {
+                                "enabled": False,
+                            },
+                        },
+                        "sources": {
+                            "infoq": {
+                                "listing_size": 24,
+                            },
+                        },
+                        "search": {"recent_days": 30, "max_external_results": 5},
+                        "content": {"fetch_keep_levels": ["strong", "weak"]},
+                        "brief": {"role": "senior_researcher"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_c114_runtime_config(skill_root)
+
+        self.assertEqual(config.source_configs["infoq"]["listing_size"], 24)
+
     def test_load_c114_runtime_config_reads_step7_toggle(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             skill_root = Path(tmp_dir)

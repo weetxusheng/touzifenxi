@@ -85,6 +85,7 @@ class ContentAnalysisRuntimeConfig:
 class C114RuntimeConfig:
     """C114 全流程使用的强类型运行配置。"""
 
+    source_configs: dict[str, dict[str, Any]]
     tavily_api_key: str
     metaso_api_key: str
     baidu_api_key: str
@@ -208,6 +209,7 @@ def load_c114_runtime_config(base_path: Path | None = None) -> C114RuntimeConfig
         normalized_keep_levels = ("strong", "weak")
     llm_config = _build_llm_runtime_config(config)
     return C114RuntimeConfig(
+        source_configs=_build_source_runtime_configs(config),
         tavily_api_key=str(_read_nested_value(config, "keys.tavily_api_key", default=os.getenv("TAVILY_API_KEY", ""))).strip(),
         metaso_api_key=str(_read_nested_value(config, "keys.metaso_api_key", default=os.getenv("METASO_API_KEY", ""))).strip(),
         baidu_api_key=str(_read_nested_value(config, "keys.baidu_api_key", default=os.getenv("BAIDU_API_KEY", ""))).strip(),
@@ -382,6 +384,46 @@ def _build_llm_runtime_config(config: dict[str, Any]) -> dict[str, Any]:
             providers_by_step=providers_by_step,
         ),
     }
+
+
+def _build_source_runtime_configs(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """读取各站点公共抓取配置，并补齐每个 source 的安全默认值。"""
+
+    defaults: dict[str, dict[str, Any]] = {
+        "infoq": {
+            "listing": "new_list",
+            "listing_size": 12,
+        },
+    }
+    sources_root = _read_nested_value(config, "sources", default={})
+    if not isinstance(sources_root, dict):
+        return defaults
+    merged = {source: dict(source_config) for source, source_config in defaults.items()}
+    for source_name, source_payload in sources_root.items():
+        normalized_source = str(source_name).strip().lower()
+        if not normalized_source or normalized_source.startswith("_"):
+            continue
+        if not isinstance(source_payload, dict):
+            continue
+        base = merged.get(normalized_source, {})
+        merged[normalized_source] = _deep_merge(dict(base), dict(source_payload))
+    if "infoq" in merged:
+        merged["infoq"]["listing_size"] = _positive_int_value(
+            merged["infoq"].get("listing_size"),
+            default=12,
+        )
+        merged["infoq"].setdefault("listing", "new_list")
+    return merged
+
+
+def _positive_int_value(value: Any, *, default: int) -> int:
+    """把配置里的正整数参数归一化，非法或空值回落到默认值。"""
+
+    try:
+        normalized = int(value)
+    except (TypeError, ValueError):
+        return default
+    return normalized if normalized > 0 else default
 
 
 def _read_provider_runtime_config(payload: dict[str, Any]) -> LLMProviderRuntimeConfig:

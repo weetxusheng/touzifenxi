@@ -75,6 +75,29 @@ class C114SourceAdapterTests(unittest.TestCase):
 
 
 class InfoQSourceAdapterTests(unittest.TestCase):
+    def test_uses_configured_listing_size_when_fetching_new_list(self) -> None:
+        class CapturingInfoQAdapter(InfoQSourceAdapter):
+            def __init__(self) -> None:
+                super().__init__({"listing_size": 20})
+                self.captured_data: dict[str, object] | None = None
+
+            def _curl_json(self, url: str, *, data: dict[str, object] | None = None, referer: str) -> object:
+                self.captured_data = data
+                return {"data": {"list": []}}
+
+        adapter = CapturingInfoQAdapter()
+
+        refs = adapter.fetch_listing(date(2026, 4, 12))
+
+        self.assertEqual(refs, [])
+        self.assertEqual(adapter.captured_data, {"size": 20})
+
+    def test_defaults_infoq_listing_size_to_twelve(self) -> None:
+        adapter = InfoQSourceAdapter()
+
+        self.assertEqual(adapter.default_source_config()["listing_size"], 12)
+        self.assertEqual(adapter.listing_size, 12)
+
     def test_filters_new_list_refs_by_report_date(self) -> None:
         adapter = InfoQSourceAdapter()
         listing_payload = {

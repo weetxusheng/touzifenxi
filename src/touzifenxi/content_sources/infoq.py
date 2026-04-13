@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 from datetime import date, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from .base import ContentSourceAdapter
@@ -20,11 +21,21 @@ class InfoQSourceAdapter(ContentSourceAdapter):
     """InfoQ 中文站适配器。"""
 
     source_site = "infoq"
+    DEFAULT_LISTING_SIZE = 12
+
+    def __init__(self, source_config: dict[str, object] | None = None) -> None:
+        """读取站点抓取配置；缺省仍保留首页新列表 12 条的安全默认值。"""
+
+        self._source_config = dict(source_config or {})
+        self.listing_size = _positive_int_config(
+            self._source_config.get("listing_size"),
+            default=self.DEFAULT_LISTING_SIZE,
+        )
 
     def fetch_listing(self, report_date: date) -> list[RawArticleRef]:
         payload = self._curl_json(
             INFOQ_NEW_LIST_ENDPOINT,
-            data={"size": 12},
+            data={"size": self.listing_size},
             referer="https://xie.infoq.cn/",
         )
         return self.parse_listing_payload(payload, report_date=report_date)
@@ -134,7 +145,7 @@ class InfoQSourceAdapter(ContentSourceAdapter):
         return refs
 
     def default_source_config(self) -> dict[str, object]:
-        return {"listing": "new_list", "size": 12}
+        return {"listing": "new_list", "listing_size": self.DEFAULT_LISTING_SIZE}
 
     def _curl_json(self, url: str, *, data: dict[str, object] | None = None, referer: str) -> object:
         command = [
@@ -220,6 +231,16 @@ def extract_infoq_content_text(payload: object) -> str:
         if compact:
             lines.append(compact)
     return "\n".join(lines)
+
+
+def _positive_int_config(value: Any, *, default: int) -> int:
+    """把站点配置中的正整数参数归一化，避免无效配置影响抓取入口。"""
+
+    try:
+        normalized = int(value)
+    except (TypeError, ValueError):
+        return default
+    return normalized if normalized > 0 else default
 
 
 def _iter_infoq_text_blocks(node: object) -> list[str]:

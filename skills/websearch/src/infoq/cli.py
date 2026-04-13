@@ -34,6 +34,7 @@ from c114.c114_intelligence import (
 )
 from c114.c114_search import SearchTraceLogger, run_search_workflow, save_search_results
 from c114.checkpoint import StepCheckpointStore, checkpoint_path_for_step
+from c114.config import load_c114_runtime_config
 from c114.llm import StructuredChatClient
 from touzifenxi.briefing.materialize import write_step1_csv
 from touzifenxi.content_sources.infoq import InfoQSourceAdapter
@@ -295,7 +296,8 @@ def fetch_and_materialize_infoq_articles(
     *,
     run_dir: Path | None = None,
 ) -> dict[str, object]:
-    adapter = InfoQSourceAdapter()
+    runtime_config = load_c114_runtime_config()
+    adapter = InfoQSourceAdapter(runtime_config.source_configs.get("infoq", {}))
     articles = adapter.fetch_standard_articles(target_date)
     raw_json_path = (run_dir or paths.raw_dir) / raw_json_name(target_date)
     raw_csv_path = (run_dir or paths.raw_dir) / RAW_CSV_NAME
