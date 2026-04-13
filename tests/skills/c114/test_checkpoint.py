@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from c114.checkpoint import (
+from c114.runtime.checkpoint import (
     StepCheckpointStore,
     checkpoint_path_for_step,
 )

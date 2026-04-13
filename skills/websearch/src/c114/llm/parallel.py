@@ -7,7 +7,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, TypeVar
 
-from ..config import LLMProviderRuntimeConfig
+from ..runtime.config import LLMProviderRuntimeConfig
 
 DEFAULT_LLM_MAX_CONCURRENCY = 3
 T = TypeVar("T")

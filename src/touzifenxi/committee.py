@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 from .agents import EventAgent, FundamentalAgent, RiskAgent, StyleAgent, TechnicalAgent
-from .models import Recommendation, RunResult, StockIdea, StyleView
+from .models import Recommendation, RunResult, StockIdea
 
 
 def classify_stage(stock: StockIdea) -> str:

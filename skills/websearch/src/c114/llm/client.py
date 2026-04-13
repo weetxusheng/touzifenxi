@@ -13,7 +13,8 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from ..config import LLMProviderRuntimeConfig, load_c114_runtime_config
+from ..runtime.config import LLMProviderRuntimeConfig, load_c114_runtime_config
+from .parallel import compute_backoff_delay, create_provider_semaphores, normalize_provider_chain
 from .providers import (
     build_chat_payload,
     classify_http_error,
@@ -23,7 +24,6 @@ from .providers import (
     provider_headers,
 )
 from .retry import RetryClassifier, RetryClassifierConfig, classify_retry_class
-from .runtime import compute_backoff_delay, create_provider_semaphores, normalize_provider_chain
 from .structured_output import StructuredLLMError, parse_json_payload
 
 

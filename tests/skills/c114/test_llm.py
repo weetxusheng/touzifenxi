@@ -229,7 +229,7 @@ class LLMRetryTests(unittest.TestCase):
             trace_path = Path(tmp_dir) / "trace.jsonl"
             client.set_trace_log_path(trace_path, reset_file=True)
             with patch(
-                "c114.llm_runtime.client.urlopen",
+                "c114.llm.client.urlopen",
                 return_value=FakeResponse(
                     json.dumps(
                         {
@@ -314,7 +314,7 @@ class LLMRetryTests(unittest.TestCase):
             failover_consecutive_failures=3,
         )
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             payload = client.complete_json(system_prompt="系统", user_prompt="用户")
 
         self.assertEqual(attempts, 2)
@@ -376,7 +376,7 @@ class LLMRetryTests(unittest.TestCase):
         )
         client.begin_step("step_2")
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             with self.assertRaises(StructuredLLMError):
                 client.complete_json(system_prompt="系统", user_prompt="一次")
             with self.assertRaises(StructuredLLMError):
@@ -436,7 +436,7 @@ class LLMRetryTests(unittest.TestCase):
             failover_consecutive_failures=3,
         )
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             client.begin_step("step_2")
             with self.assertRaises(StructuredLLMError):
                 client.complete_json(system_prompt="系统", user_prompt="一次")
@@ -482,7 +482,7 @@ class LLMRetryTests(unittest.TestCase):
             failover_consecutive_failures=3,
         )
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             payload = client.complete_json(system_prompt="系统", user_prompt="用户")
 
         self.assertEqual(payload["ping"], "pong")
@@ -534,7 +534,7 @@ class LLMRetryTests(unittest.TestCase):
             failover_consecutive_failures=3,
         )
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             payload = client.complete_json(system_prompt="系统", user_prompt="用户")
 
         self.assertEqual(payload["ping"], "pong")
@@ -622,7 +622,7 @@ class LLMRetryTests(unittest.TestCase):
         )
         client.begin_step("step_2")
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             with self.assertRaises(StructuredLLMError):
                 client.complete_json(system_prompt="系统", user_prompt="一")
             with self.assertRaises(StructuredLLMError):
@@ -675,7 +675,7 @@ class LLMRetryTests(unittest.TestCase):
             client.begin_step("step_2")
 
             with patch(
-                "c114.llm_runtime.client.urlopen",
+                "c114.llm.client.urlopen",
                 return_value=FakeResponse('{"choices":[{"message":{"content":"{\\"ping\\":\\"pong\\"}"}}]}', provider="minimax"),
             ):
                 payload = client.complete_json(system_prompt="系统提示", user_prompt="用户提示")
@@ -742,7 +742,7 @@ class LLMRetryTests(unittest.TestCase):
             client.set_trace_log_path(trace_path, reset_file=True)
             client.begin_step("step_3")
 
-            with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+            with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
                 payload = client.complete_json(system_prompt="系统", user_prompt="用户")
 
             self.assertEqual(payload["keywords"], ["a", "b"])
@@ -787,7 +787,7 @@ class LLMRetryTests(unittest.TestCase):
             client.set_trace_log_path(trace_path, reset_file=True)
             client.begin_step("step_5")
 
-            with patch("c114.llm_runtime.client.urlopen", return_value=FakeResponse()):
+            with patch("c114.llm.client.urlopen", return_value=FakeResponse()):
                 payload = client.complete_json(system_prompt="系统", user_prompt="用户")
                 client.record_postprocess_error(error=StructuredLLMError("后置校验失败"), response_payload=payload)
 
@@ -873,7 +873,7 @@ class LLMRetryTests(unittest.TestCase):
             )
             client.set_trace_log_directory(trace_dir, report_date="2026-04-09", reset_files=True)
 
-            with patch("c114.llm_runtime.client.urlopen", return_value=FakeResponse()):
+            with patch("c114.llm.client.urlopen", return_value=FakeResponse()):
                 client.begin_step("step_5")
                 client.complete_json(system_prompt="系统提示", user_prompt="用户提示5")
                 client.begin_step("step_6")
@@ -917,7 +917,7 @@ class LLMRetryTests(unittest.TestCase):
             )
             client.set_trace_log_directory(trace_dir, report_date="2026-04-09", source_prefix="infoq", reset_files=True)
 
-            with patch("c114.llm_runtime.client.urlopen", return_value=FakeResponse()):
+            with patch("c114.llm.client.urlopen", return_value=FakeResponse()):
                 client.begin_step("step_5")
                 client.complete_json(system_prompt="系统提示", user_prompt="用户提示5")
 
@@ -955,10 +955,10 @@ class LLMRetryTests(unittest.TestCase):
         )
         client.begin_step("step_5")
 
-        with patch("c114.llm_runtime.client.urlopen", return_value=FakeResponse()), patch(
-            "c114.llm_runtime.client.time.time", side_effect=lambda: next(now_values)
+        with patch("c114.llm.client.urlopen", return_value=FakeResponse()), patch(
+            "c114.llm.client.time.time", side_effect=lambda: next(now_values)
         ), patch(
-            "c114.llm_runtime.client.time.sleep", side_effect=lambda seconds: sleep_calls.append(seconds)
+            "c114.llm.client.time.sleep", side_effect=lambda seconds: sleep_calls.append(seconds)
         ):
             client.complete_json(system_prompt="系统", user_prompt="第一次")
             client.complete_json(system_prompt="系统", user_prompt="第二次")
@@ -1037,7 +1037,7 @@ class LLMRetryTests(unittest.TestCase):
         )
         client.begin_step("step_5")
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             first = client.complete_json(system_prompt="系统", user_prompt="第一篇")
             second = client.complete_json(system_prompt="系统", user_prompt="第二篇")
             third = client.complete_json(system_prompt="系统", user_prompt="第三篇")
@@ -1112,7 +1112,7 @@ class LLMRetryTests(unittest.TestCase):
         )
         client.begin_step("step_5")
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             payload = client.complete_json(system_prompt="系统", user_prompt="第一篇")
 
         self.assertEqual(attempts, ["kimi-code", "minimax"])
@@ -1195,7 +1195,7 @@ class LLMRetryTests(unittest.TestCase):
         )
         client.begin_step("step_3")
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             first = client.complete_json(system_prompt="系统", user_prompt="第一条")
             second = client.complete_json(system_prompt="系统", user_prompt="第二条")
             third = client.complete_json(system_prompt="系统", user_prompt="第三条")
@@ -1234,8 +1234,8 @@ class LLMRetryTests(unittest.TestCase):
             retry_jitter_seconds=0.0,
         )
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
-            with patch("c114.llm_runtime.client.time.sleep", side_effect=lambda value: sleep_calls.append(value)):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
+            with patch("c114.llm.client.time.sleep", side_effect=lambda value: sleep_calls.append(value)):
                 with self.assertRaises(StructuredLLMError):
                     client.complete_json(system_prompt="系统", user_prompt="用户")
 
@@ -1281,7 +1281,7 @@ class LLMRetryTests(unittest.TestCase):
         )
         client.begin_step("step_5")
 
-        with patch("c114.llm_runtime.client.urlopen", side_effect=fake_urlopen):
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
             payload = client.complete_json(system_prompt="系统", user_prompt="用户")
 
         self.assertTrue(captured_payload["stream"])

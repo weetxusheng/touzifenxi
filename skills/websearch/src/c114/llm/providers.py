@@ -7,7 +7,7 @@ from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.error import HTTPError
 
-from ..config import LLMProviderRuntimeConfig
+from ..runtime.config import LLMProviderRuntimeConfig
 from .structured_output import StructuredLLMError
 
 RETRYABLE_HTTP_CODES = {408, 409, 425, 429, 500, 502, 503, 504, 520, 529}

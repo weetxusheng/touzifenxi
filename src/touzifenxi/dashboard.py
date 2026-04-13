@@ -3,12 +3,11 @@ from __future__ import annotations
 import html
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from urllib.parse import parse_qs, quote_plus, urlparse
 
+from .models import UniverseFilter
 from .settings import AppPaths, resolve_paths
 from .storage import ResearchStore
-from .models import UniverseFilter
 
 
 def _format_pct(value: float | None) -> str:

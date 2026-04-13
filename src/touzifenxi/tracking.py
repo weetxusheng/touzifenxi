@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List
 
 from .market_data import _call_with_timeout, _requests_direct_connection
 

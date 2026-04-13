@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
 
 POSTGRES_SCHEMA_SQL_PATH = Path(__file__).resolve().parents[2] / "docs" / "postgresql_schema.sql"
 

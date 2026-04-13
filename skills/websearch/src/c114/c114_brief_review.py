@@ -23,7 +23,6 @@ from .c114_intelligence import (
     step_6_brief_name,
     step_7_brief_review_name,
 )
-from .checkpoint import StepCheckpointStore
 from .llm import (
     MiniMaxChatClient,
     StructuredLLMError,
@@ -34,7 +33,8 @@ from .llm import (
     normalize_string_list,
     run_parallel_ordered,
 )
-from .settings import AppPaths, resolve_override_path
+from .runtime.checkpoint import StepCheckpointStore
+from .runtime.settings import AppPaths, resolve_override_path
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
 BRIEF_REVIEW_PROMPT_PATH = SKILL_ROOT / "prompts" / "brief-review-agent.md"

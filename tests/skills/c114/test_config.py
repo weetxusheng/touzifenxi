@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from c114.config import (
+from c114.runtime.config import (
     collect_missing_c114_config,
     initialize_c114_local_config,
     load_c114_runtime_config,

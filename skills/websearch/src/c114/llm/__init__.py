@@ -5,21 +5,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .config import LLMProviderRuntimeConfig
-from .llm_runtime.client import ProviderRequestError as _ProviderRequestError
-from .llm_runtime.client import StructuredChatClient
-from .llm_runtime.runtime import DEFAULT_LLM_MAX_CONCURRENCY as _DEFAULT_LLM_MAX_CONCURRENCY
-from .llm_runtime.runtime import run_parallel_ordered as _run_parallel_ordered
-from .llm_runtime.structured_output import (
+from ..runtime.config import LLMProviderRuntimeConfig
+from .client import ProviderRequestError as _ProviderRequestError
+from .client import StructuredChatClient
+from .parallel import DEFAULT_LLM_MAX_CONCURRENCY as _DEFAULT_LLM_MAX_CONCURRENCY
+from .parallel import run_parallel_ordered as _run_parallel_ordered
+from .structured_output import (
     StructuredLLMError as _StructuredLLMError,
 )
-from .llm_runtime.structured_output import (
+from .structured_output import (
     coerce_json_object_payload as _coerce_json_object_payload,
 )
-from .llm_runtime.structured_output import (
+from .structured_output import (
     normalize_string_list as _normalize_string_list,
 )
-from .llm_runtime.structured_output import (
+from .structured_output import (
     parse_json_payload as _parse_json_payload,
 )
 

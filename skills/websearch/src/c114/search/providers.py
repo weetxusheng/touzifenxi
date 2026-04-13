@@ -9,8 +9,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote_plus
 from urllib.request import Request, urlopen
 
-from .search_types import SearchQuery
-from .search_utils import compact_text, normalize_url
+from .types import SearchQuery
+from .utils import compact_text, normalize_url
 
 
 class TavilyClient:

@@ -24,7 +24,7 @@ from c114.c114_content import (
     resolve_content_output_paths,
     run_content_fetch_workflow,
 )
-from c114.c114_search import SearchResult
+from c114.search.workflow import SearchResult
 from touzifenxi.settings import AppPaths
 
 
@@ -519,7 +519,7 @@ categories:
             def search(self, query_text: str) -> list[AliyunSearchDocument]:
                 raise RuntimeError("阿里云 IQS 请求失败: 429 throttled")
 
-        from c114.c114_content import fetch_once
+        from c114.content.fetch import fetch_once
 
         result = fetch_once(
             url="https://www.c114.com.cn/news/41/a1307790.html",
@@ -591,7 +591,7 @@ categories:
             retry_backoff_seconds=0.0,
         )
 
-        with patch("c114.c114_content.urlopen", side_effect=fake_urlopen):
+        with patch("c114.content.fetch.urlopen", side_effect=fake_urlopen):
             documents = client.search("未来移动通信论坛吴建军：6G已转入产业实战阶段")
 
         self.assertEqual(attempts, 2)
@@ -637,7 +637,7 @@ categories:
             retry_backoff_seconds=0.0,
         )
 
-        with patch("c114.c114_content.urlopen", side_effect=fake_urlopen):
+        with patch("c114.content.fetch.urlopen", side_effect=fake_urlopen):
             threads = [
                 threading.Thread(target=client.search, args=(f"query-{index}",))
                 for index in range(2)

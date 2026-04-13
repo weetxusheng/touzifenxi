@@ -11,7 +11,9 @@ from datetime import date
 from pathlib import Path
 
 from c114.c114_intelligence import provider_stats_name
-from c114.c114_search import (
+from c114.llm import StructuredLLMError
+from c114.runtime.checkpoint import StepCheckpointStore, checkpoint_path_for_step
+from c114.search.workflow import (
     ArticleSearchPayload,
     AutoSearchClient,
     QueryResultBucket,
@@ -44,8 +46,6 @@ from c114.c114_search import (
     unique_search_results,
     validate_search_checklist_items,
 )
-from c114.checkpoint import StepCheckpointStore, checkpoint_path_for_step
-from c114.llm import StructuredLLMError
 from touzifenxi.settings import AppPaths
 
 
@@ -682,7 +682,7 @@ class SearchProviderRoutingTests(unittest.TestCase):
         self.assertEqual(normalized[0].published_at, "2026-01-26")
 
     def test_normalize_baidu_results_maps_references_shape(self) -> None:
-        from c114.c114_search import normalize_baidu_results
+        from c114.search.workflow import normalize_baidu_results
 
         raw_results = [
             {
@@ -738,7 +738,7 @@ class SearchProviderRoutingTests(unittest.TestCase):
         self.assertEqual(normalized[0].snippet, "中国联通曹畅表示，智能体互联网补齐AI时代互联网的最后一块拼图。")
 
     def test_rendered_yaml_includes_ai_review_template_only_when_requested(self) -> None:
-        from c114.c114_search import render_result_list
+        from c114.search.workflow import render_result_list
 
         rendered_without_review = render_result_list(
             [

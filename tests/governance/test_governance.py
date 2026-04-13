@@ -15,9 +15,9 @@ except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
 
 from c114.c114_hot_topics import resolve_hot_topics_output_path
 from c114.c114_intelligence import create_search_range_directory, resolve_analysis_output_paths
-from c114.c114_search import resolve_search_output_paths
 from c114.cli import build_parser as build_c114_parser
 from c114.cli import resolve_c114_date_range
+from c114.search.workflow import resolve_search_output_paths
 from touzifenxi.cli import build_parser
 from touzifenxi.settings import AppPaths
 from touzifenxi.skill_packaging import package_skill_directory, validate_skill_directory

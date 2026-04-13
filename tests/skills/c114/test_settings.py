@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from c114.settings import resolve_override_path
+from c114.runtime.settings import resolve_override_path
 
 
 class OverridePathTests(unittest.TestCase):

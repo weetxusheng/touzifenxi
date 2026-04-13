@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping, Sequence
 import re
 import sqlite3
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any
 
 import psycopg
 from psycopg.rows import tuple_row
-
 
 UPSERT_CONFLICT_COLUMNS: dict[str, tuple[str, ...]] = {
     "recommendation_returns": ("recommendation_id",),

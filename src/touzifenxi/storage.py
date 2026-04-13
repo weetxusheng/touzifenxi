@@ -7,10 +7,8 @@ from pathlib import Path
 
 from .db import init_postgres_schema, resolve_database_profile, serialize_rule_snapshot
 from .db_runtime import connect_postgres, connect_sqlite
-from .models import Recommendation, RunResult, StockIdea, UniverseFilter
-from .models import ThemeEvent
+from .models import Recommendation, RunResult, StockIdea, ThemeEvent, UniverseFilter
 from .universe import UniverseSnapshot
-
 
 RULE_VERSION_SNAPSHOT = {
     "theme_prefilter": {"version": "v2.0", "notes": "weekly_50_pool + daily_refresh + theme_score_detail"},
@@ -1615,17 +1613,6 @@ class ResearchStore:
             latest_run = conn.execute("SELECT MAX(id) FROM theme_prefilter_runs").fetchone()[0]
             if latest_run is None:
                 return []
-            theme_map = {
-                str(row[0]): (float(row[1]), float(row[2]), float(row[3]), float(row[4]))
-                for row in conn.execute(
-                    """
-                    SELECT theme_name, total_score, policy_score, valuation_score, performance_score
-                    FROM theme_prefilter_scores
-                    WHERE run_id = ?
-                    """,
-                    (int(latest_run),),
-                ).fetchall()
-            }
             query = """
                 SELECT u.ticker, u.code, u.name, u.exchange, u.board, u.latest_price, u.change_percent,
                        u.turnover_ratio, u.amount, u.is_st, u.is_suspended, u.source, u.synced_at,
@@ -1658,7 +1645,6 @@ class ResearchStore:
                 params = [int(latest_run)]
             conn.row_factory = sqlite3.Row
             rows = conn.execute(query, params).fetchall()
-        enriched: list[sqlite3.Row] = []
         # sqlite rows are immutable; return as fetched and use prefetched scores already embedded
         return rows
 

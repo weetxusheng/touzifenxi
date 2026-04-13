@@ -26,8 +26,8 @@ from c114.c114_content_analysis import (
     render_content_analysis_yaml,
     resolve_content_analysis_output_paths,
 )
-from c114.checkpoint import StepCheckpointStore, checkpoint_path_for_step
 from c114.llm import StructuredLLMError
+from c114.runtime.checkpoint import StepCheckpointStore, checkpoint_path_for_step
 from touzifenxi.settings import AppPaths
 
 

@@ -87,9 +87,9 @@ class SearchOutputPaths:
 
     @staticmethod
     def require_api_key(project_root: Path | None = None) -> str:
-        from .config import load_c114_runtime_config
+        from ..runtime.config import load_c114_runtime_config
 
-        root = project_root or Path(__file__).resolve().parents[2]
+        root = project_root or Path(__file__).resolve().parents[3]
         api_key = load_c114_runtime_config(root).tavily_api_key
         if not api_key:
             raise RuntimeError("未配置 TAVILY_API_KEY，无法执行 C114 搜索层。")
@@ -97,9 +97,9 @@ class SearchOutputPaths:
 
     @staticmethod
     def require_metaso_api_key(project_root: Path | None = None) -> str:
-        from .config import load_c114_runtime_config
+        from ..runtime.config import load_c114_runtime_config
 
-        root = project_root or Path(__file__).resolve().parents[2]
+        root = project_root or Path(__file__).resolve().parents[3]
         api_key = load_c114_runtime_config(root).metaso_api_key
         if not api_key:
             raise RuntimeError("未配置 METASO_API_KEY，无法执行中文搜索层。")
@@ -107,9 +107,9 @@ class SearchOutputPaths:
 
     @staticmethod
     def require_baidu_api_key(project_root: Path | None = None) -> str:
-        from .config import load_c114_runtime_config
+        from ..runtime.config import load_c114_runtime_config
 
-        root = project_root or Path(__file__).resolve().parents[2]
+        root = project_root or Path(__file__).resolve().parents[3]
         api_key = load_c114_runtime_config(root).baidu_api_key
         if not api_key:
             raise RuntimeError("未配置 BAIDU_API_KEY，无法执行百度搜索层。")

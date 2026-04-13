@@ -11,12 +11,10 @@ from .market_data import (
     load_market_universe,
     load_snapshot_universe_from_rows,
 )
-from .models import RunResult, ThemeRouteResult
-from .models import WeeklyPoolResult
+from .models import RunResult, ThemeRouteResult, UniverseFilter, WeeklyPoolResult
 from .report import render_report, write_report
 from .settings import AppPaths
 from .storage import ResearchStore
-from .models import UniverseFilter
 from .theme_router import build_theme_route, load_theme_definitions
 from .weekly_prefilter import build_weekly_pool, refresh_weekly_pool
 

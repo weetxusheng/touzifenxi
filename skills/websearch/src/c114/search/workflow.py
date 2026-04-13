@@ -9,17 +9,18 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from .c114_intelligence import (
+from ..c114_intelligence import (
     c114_reports_root,
     find_latest_search_run_directory,
     provider_stats_name,
     step_2_checklist_name,
     step_3_results_name,
 )
-from .checkpoint import StepCheckpointStore
-from .llm import MiniMaxChatClient
-from .search_logging import SEARCH_TRACE_LOG_PREFIX, SearchTraceLogger, search_trace_log_name_for_step
-from .search_providers import (
+from ..llm import MiniMaxChatClient
+from ..runtime.checkpoint import StepCheckpointStore
+from ..runtime.settings import AppPaths, load_c114_runtime_config, resolve_override_path
+from .logging import SEARCH_TRACE_LOG_PREFIX, SearchTraceLogger, search_trace_log_name_for_step
+from .providers import (
     AutoSearchClient,
     BaiduSearchClient,
     GooglePlaywrightClient,
@@ -29,7 +30,7 @@ from .search_providers import (
     choose_search_provider,
     search_with_provider,
 )
-from .search_review import (
+from .review import (
     SEARCH_REVIEW_PROMPT_PATH,
     STEP3_TOPIC_BATCH_ITEM_LIMIT,
     apply_search_review_result,
@@ -40,7 +41,7 @@ from .search_review import (
     build_search_review_topic_payload,
     split_search_review_items_for_topic,
 )
-from .search_types import (
+from .types import (
     ArticleSearchPayload,
     QueryResultBucket,
     SearchArticleInput,
@@ -50,7 +51,7 @@ from .search_types import (
     SearchResult,
     SearchWorkflowPayload,
 )
-from .search_utils import (
+from .utils import (
     classify_domain,
     compact_text,
     compute_matched_terms,
@@ -70,7 +71,7 @@ from .search_utils import (
     select_results_for_extract,
     unique_search_results,
 )
-from .search_yaml import (
+from .yaml_io import (
     build_review_view_name,
     build_search_queries,
     ensure_search_checklist_keywords,
@@ -86,9 +87,8 @@ from .search_yaml import (
     unquote_yaml_scalar,
     validate_search_checklist_items,
 )
-from .settings import AppPaths, load_c114_runtime_config, resolve_override_path
 
-SKILL_ROOT = Path(__file__).resolve().parents[2]
+SKILL_ROOT = Path(__file__).resolve().parents[3]
 SEARCH_CONFIG_PATH = SKILL_ROOT / "config" / "search_domains.json"
 
 
@@ -143,7 +143,7 @@ def run_search_workflow(
     validate_search_checklist_items(articles)
 
     domain_config = load_domain_config(SEARCH_CONFIG_PATH)
-    runtime_config = load_c114_runtime_config(Path(__file__).resolve().parents[2])
+    runtime_config = load_c114_runtime_config(SKILL_ROOT)
     search_client = client or build_auto_search_client(runtime_config=runtime_config, provider_mode=provider_name)
     grouped: dict[str, list[ArticleSearchPayload]] = {}
     report_day = date.fromisoformat(report_date)

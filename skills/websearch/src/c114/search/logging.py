@@ -10,7 +10,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from .search_types import SearchQuery
+from .types import SearchQuery
 
 SEARCH_TRACE_LOG_PREFIX = "c114_search_trace"
 

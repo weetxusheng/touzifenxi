@@ -7,8 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from .checkpoint import StepCheckpointStore
-from .llm import (
+from ..llm import (
     MiniMaxChatClient,
     StructuredLLMError,
     begin_llm_step,
@@ -16,9 +15,10 @@ from .llm import (
     complete_json_with_postprocess_retry,
     load_prompt_text,
 )
-from .search_types import ArticleSearchPayload, SearchCategoryPayload, SearchResult, SearchWorkflowPayload
+from ..runtime.checkpoint import StepCheckpointStore
+from .types import ArticleSearchPayload, SearchCategoryPayload, SearchResult, SearchWorkflowPayload
 
-SKILL_ROOT = Path(__file__).resolve().parents[2]
+SKILL_ROOT = Path(__file__).resolve().parents[3]
 SEARCH_REVIEW_PROMPT_PATH = SKILL_ROOT / "prompts" / "search-review-agent.md"
 STEP3_TOPIC_BATCH_ITEM_LIMIT = 4
 
@@ -401,13 +401,13 @@ def _record_batch_review_successes(
 
 
 def _article_search_payload_to_dict(payload: ArticleSearchPayload) -> dict[str, Any]:
-    from .c114_search import article_search_payload_to_dict
+    from .workflow import article_search_payload_to_dict
 
     return article_search_payload_to_dict(payload)
 
 
 def _article_search_payload_from_dict(payload: dict[str, Any]) -> ArticleSearchPayload:
-    from .c114_search import article_search_payload_from_dict
+    from .workflow import article_search_payload_from_dict
 
     return article_search_payload_from_dict(payload)
 

@@ -117,7 +117,7 @@ def skill_root(base_path: Path | None = None) -> Path:
     """根据 skill 目录或项目目录推导出 C114 skill 根目录。"""
 
     if base_path is None:
-        return Path(__file__).resolve().parents[2]
+        return Path(__file__).resolve().parents[3]
     candidate = base_path.resolve()
     if (candidate / "SKILL.md").exists():
         return candidate

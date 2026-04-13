@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 SECTOR_KEYWORDS = [
     ("银行", "银行"),
     ("证券", "非银金融"),

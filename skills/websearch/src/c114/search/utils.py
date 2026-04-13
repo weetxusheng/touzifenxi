@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-from .search_types import SearchArticleInput, SearchQuery, SearchResult
+from .types import SearchArticleInput, SearchQuery, SearchResult
 
 TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9&.+-]{1,30}|[\u4e00-\u9fff]{2,16}")
 DATE_PATTERNS = (

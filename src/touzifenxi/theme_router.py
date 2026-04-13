@@ -205,6 +205,15 @@ def collect_theme_signals(
     return theme_defs, theme_strength, matched_events, matched_notice_tickers
 
 
+def _build_base_candidate_rows(candidate_rows: list[dict], extra_rows: list[dict] | None = None) -> dict[str, dict]:
+    """合并候选池和补充池，供主题分配与旁路补齐共用同一视图。"""
+
+    base_rows: dict[str, dict] = {str(row["ticker"]): dict(row) for row in candidate_rows}
+    for row in extra_rows or []:
+        base_rows.setdefault(str(row["ticker"]), dict(row))
+    return base_rows
+
+
 def assign_theme_candidates(
     candidate_rows: list[dict],
     theme_defs: list[ThemeDefinition],
@@ -213,9 +222,7 @@ def assign_theme_candidates(
     matched_notice_tickers: dict[str, dict[str, float]],
     extra_rows: list[dict] | None = None,
 ) -> list[dict]:
-    base_rows: dict[str, dict] = {str(row["ticker"]): dict(row) for row in candidate_rows}
-    for row in extra_rows or []:
-        base_rows.setdefault(str(row["ticker"]), dict(row))
+    base_rows = _build_base_candidate_rows(candidate_rows, extra_rows)
 
     assignments: dict[str, dict[str, object]] = {}
     theme_lookup = {theme.name: theme for theme in theme_defs}
@@ -313,6 +320,8 @@ def build_theme_route(
     final_rows = list(themed_rows)
     used_tickers = {str(row["ticker"]) for row in themed_rows}
     if len(final_rows) < target_pool_size:
+        # 主题池不足时用原始候选池补齐，避免日报因为热点过窄而没有足够候选。
+        base_rows = _build_base_candidate_rows(candidate_rows, extra_rows)
         bypass_candidates = [
             dict(row)
             for _, row in base_rows.items()

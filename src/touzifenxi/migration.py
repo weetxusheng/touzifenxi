@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 import psycopg
 
 from .db import init_postgres_schema
-
 
 TABLE_MIGRATION_ORDER = [
     "research_runs",

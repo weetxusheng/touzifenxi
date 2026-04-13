@@ -21,7 +21,7 @@ from c114.c114_intelligence import (
     render_search_checklist_yaml,
     write_analysis_outputs,
 )
-from c114.checkpoint import StepCheckpointStore, checkpoint_path_for_step
+from c114.runtime.checkpoint import StepCheckpointStore, checkpoint_path_for_step
 
 
 class LoadDailyArticlesFromCsvTests(unittest.TestCase):
