@@ -21,7 +21,7 @@
 - 先保证目录和边界清晰，再补功能；不要靠临时脚本堆出长期能力。
 - 先把需求对应的主场景、边界场景、失败场景和 fallback 用例列清，再进入实现。
 - 原始数据、分析结果、简报、状态文件分目录存放，不混放。
-- 能复用的逻辑进 `src/`，只服务单个 skill 的提示词、脚本、配置放进对应 `skills/` 目录。
+- 能复用的逻辑进 `src/`，只服务单个 skill 的提示词、脚本、配置、说明文档和排障文档放进对应 `skills/` 目录。
 - 文档优先写清“职责边界”和“输入输出”，不要写成流水账。
 
 ## 2. 顶层目录规范
@@ -54,10 +54,12 @@
   - 例如 skill zip、临时构建结果
 - `docs/`
   - 项目说明、架构文档、数据库说明、开发规范
+  - 只放跨项目或跨 skill 的规范与架构；单个 skill 专属文档不得放在这里
 
 约束：
 
-- 不要把提示词、配置、模板散落到 `docs/`、仓库根目录或个人目录。
+- 不要把提示词、配置、模板、skill 专属说明文档散落到 `docs/`、仓库根目录或个人目录。
+- 单个 skill 的运行机制、排障手册、配置说明、agent 说明等文档，必须放到 `skills/<skill-name>/docs/` 或该 skill 内更贴近职责的位置。
 - 不要把临时调试脚本长期放在仓库根目录。
 - 不要把 `build/` 下生成内容视为源码来源。
 
@@ -225,7 +227,7 @@
 当前项目统一使用 `pytest` 作为执行入口；现有部分测试仍可保留 `unittest` 风格编写，但统一由 `pytest` 收集和运行。
 
 ```bash
-PYTHONPATH=src:skills/c114-daily-hot-topics/src python3 -m pytest tests/skills/c114 tests/governance/test_governance.py
+PYTHONPATH=src:skills/websearch/src python3 -m pytest tests/skills/c114 tests/governance/test_governance.py
 ```
 
 新增测试默认直接按 `pytest` 组织，不再新增新的 `unittest` 入口约定。
@@ -371,7 +373,7 @@ skills/<skill-name>/
 
 ### 6.2 skill
 
-- skill 目录名：短横线风格，例如 `c114-daily-hot-topics`
+- skill 目录名：短横线风格，例如 `websearch`
 - 提示词文件名：短横线风格
 - 配置文件名：语义清晰，例如 `channels.json`
 

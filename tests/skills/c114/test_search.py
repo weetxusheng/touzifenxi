@@ -179,7 +179,7 @@ class SearchPathTests(unittest.TestCase):
     def test_resolve_search_output_paths_supports_repo_relative_overrides(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_root = Path(tmp_dir)
-            skill_output = repo_root / "skills" / "c114-daily-hot-topics" / "output"
+            skill_output = repo_root / "skills" / "websearch" / "output"
             app_paths = AppPaths(
                 project_root=skill_output,
                 data_dir=skill_output / "data",
@@ -200,19 +200,19 @@ class SearchPathTests(unittest.TestCase):
                 resolved = resolve_search_output_paths(
                     app_paths,
                     date(2026, 3, 30),
-                    input_override="skills/c114-daily-hot-topics/output/reports/c114_report/run/c114_step_2.yaml",
-                    output_override="skills/c114-daily-hot-topics/output/reports/c114_report/run/c114_step_3.yaml",
+                    input_override="skills/websearch/output/reports/c114_report/run/c114_step_2.yaml",
+                    output_override="skills/websearch/output/reports/c114_report/run/c114_step_3.yaml",
                 )
             finally:
                 os.chdir(original_cwd)
 
             self.assertEqual(
                 resolved.input_path,
-                (repo_root / "skills" / "c114-daily-hot-topics" / "output" / "reports" / "c114_report" / "run" / "c114_step_2.yaml").resolve(),
+                (repo_root / "skills" / "websearch" / "output" / "reports" / "c114_report" / "run" / "c114_step_2.yaml").resolve(),
             )
             self.assertEqual(
                 resolved.output_path,
-                (repo_root / "skills" / "c114-daily-hot-topics" / "output" / "reports" / "c114_report" / "run" / "c114_step_3.yaml").resolve(),
+                (repo_root / "skills" / "websearch" / "output" / "reports" / "c114_report" / "run" / "c114_step_3.yaml").resolve(),
             )
 
     def test_rank_search_results_prefers_official_then_title_match_and_recency(self) -> None:
@@ -1939,6 +1939,59 @@ categories:
         self.assertIn("Tavily", stats_text)
         self.assertIn("Baidu", stats_text)
         self.assertIn("总调用次数", stats_text)
+
+    def test_save_search_results_uses_output_prefix_for_auxiliary_reports(self) -> None:
+        payload = """report_date: '2026-03-30'
+prompt_path: '/tmp/prompt.md'
+categories:
+  - topic: 'AI与工程实践'
+    items:
+      - original_title: 'Agent 工程实践'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/demo'
+        keywords:
+          - 'Agent 工程实践'
+          - 'InfoQ Agent 案例'
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "checklist.yaml"
+            output_path = Path(tmp_dir) / "infoq_step_3_search_results_20260330.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+
+            class FakeClient:
+                def search_with_provider(
+                    self, query: SearchQuery, max_results: int
+                ) -> tuple[str, list[dict[str, object]]]:
+                    return (
+                        "tavily",
+                        [
+                            {
+                                "title": "Agent 工程实践",
+                                "url": "https://news.example.com/agent",
+                                "content": "Agent 工程实践",
+                                "score": 0.9,
+                                "published_date": "2026-03-30",
+                            }
+                        ],
+                    )
+
+                def extract(self, urls: list[str], query: str) -> dict[str, str]:
+                    return {}
+
+            workflow = run_search_workflow(
+                input_path=input_path,
+                report_date="2026-03-30",
+                per_query_limit=1,
+                per_article_limit=1,
+                extract_limit=1,
+                client=FakeClient(),  # type: ignore[arg-type]
+            )
+            save_search_results(output_path, workflow)
+
+            self.assertTrue((output_path.parent / "infoq_provider_stats_20260330.md").exists())
+            self.assertTrue((output_path.parent / "infoq_search_review_view_20260330.yaml").exists())
+            self.assertFalse((output_path.parent / "c114_provider_stats_20260330.md").exists())
+            self.assertFalse((output_path.parent / "c114_search_review_view_20260330.yaml").exists())
 
     def test_enrich_selected_results_only_extracts_top_n(self) -> None:
         article = SearchArticleInput(

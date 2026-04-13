@@ -10,10 +10,10 @@ from c114.settings import resolve_override_path
 
 class OverridePathTests(unittest.TestCase):
     def test_resolve_override_path_uses_project_root_for_managed_directories(self) -> None:
-        resolved = resolve_override_path(Path("/repo/skills/c114-daily-hot-topics/output"), "reports/c114_report/run/file.yaml")
+        resolved = resolve_override_path(Path("/repo/skills/websearch/output"), "reports/c114_report/run/file.yaml")
         self.assertEqual(
             resolved,
-            Path("/repo/skills/c114-daily-hot-topics/output/reports/c114_report/run/file.yaml"),
+            Path("/repo/skills/websearch/output/reports/c114_report/run/file.yaml"),
         )
 
     def test_resolve_override_path_uses_cwd_for_repo_relative_paths(self) -> None:
@@ -23,13 +23,13 @@ class OverridePathTests(unittest.TestCase):
             try:
                 os.chdir(repo_root)
                 resolved = resolve_override_path(
-                    repo_root / "skills" / "c114-daily-hot-topics" / "output",
-                    "skills/c114-daily-hot-topics/output/reports/c114_report/run/file.yaml",
+                    repo_root / "skills" / "websearch" / "output",
+                    "skills/websearch/output/reports/c114_report/run/file.yaml",
                 )
             finally:
                 os.chdir(original_cwd)
 
         self.assertEqual(
             resolved,
-            (repo_root / "skills" / "c114-daily-hot-topics" / "output" / "reports" / "c114_report" / "run" / "file.yaml").resolve(),
+            (repo_root / "skills" / "websearch" / "output" / "reports" / "c114_report" / "run" / "file.yaml").resolve(),
         )

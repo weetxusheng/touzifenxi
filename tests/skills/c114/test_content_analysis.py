@@ -21,6 +21,7 @@ from c114.c114_content_analysis import (
     load_content_analysis_inputs,
     normalize_brief_sections,
     normalize_content_analysis_draft,
+    normalize_content_analysis_topic_response,
     render_brief_markdown,
     render_content_analysis_yaml,
     resolve_content_analysis_output_paths,
@@ -682,6 +683,135 @@ categories:
         self.assertEqual(len(fake_client.postprocess_errors), 1)
         self.assertIn("step 5 缺少 summary", fake_client.postprocess_errors[0])
         self.assertEqual(completed.categories[0].items[0].analysis.summary, "补回摘要")
+
+    def test_normalize_content_analysis_topic_response_accepts_light_title_rewrite(self) -> None:
+        payload = """report_date: '2026-04-13'
+input_path: '/tmp/search_results.yaml'
+generated_at: '2026-04-13T13:37:59'
+categories:
+  - topic: '智能体互联网与AI网络架构'
+    items:
+      - original_title: '《对话》中国联通曹畅 | 智能体互联网补齐AI时代互联网的“最后一块拼图”'
+        topic: '智能体互联网与AI网络架构'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/1.html'
+        original_content:
+          url: 'https://www.c114.com.cn/news/1.html'
+          domain: 'www.c114.com.cn'
+          content_title: '《对话》中国联通曹畅 | 智能体互联网补齐AI时代互联网的“最后一块拼图”'
+          content_summary: '摘要'
+          content_text: '正文内容1'
+          content_source: 'aliyun'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "content.yaml"
+            input_path.write_text(payload, encoding="utf-8")
+            analysis_input = load_content_analysis_inputs(input_path)
+
+        completed = normalize_content_analysis_topic_response(
+            {
+                "topic": "智能体互联网与AI网络架构",
+                "items": [
+                    {
+                        "original_title": "《对话》中国联通曹畅|智能体互联网补齐AI时代互联网的“最后一块拼图”",
+                        "summary": "摘要1",
+                        "core_points": ["核心点1"],
+                    }
+                ],
+            },
+            analysis_input.categories[0],
+        )
+
+        self.assertEqual(completed[0].original_title, "《对话》中国联通曹畅 | 智能体互联网补齐AI时代互联网的“最后一块拼图”")
+        self.assertEqual(completed[0].analysis.summary, "摘要1")
+
+    def test_auto_complete_content_analysis_records_failed_batch_then_completes_same_run(self) -> None:
+        class FakeLLMClient:
+            def __init__(self) -> None:
+                self.calls = 0
+                self.postprocess_errors: list[str] = []
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls += 1
+                if self.calls == 1:
+                    return {
+                        "topic": "AI与算力",
+                        "items": [
+                            {
+                                "original_title": "文章1",
+                                "summary": "",
+                                "core_points": [],
+                            }
+                        ],
+                    }
+                return {
+                    "topic": "AI与算力",
+                    "items": [
+                        {
+                            "original_title": "文章1",
+                            "summary": "补回摘要",
+                            "core_points": ["核心点1"],
+                        }
+                    ],
+                }
+
+            def record_postprocess_error(self, *, error: Exception, response_payload: object | None = None) -> None:
+                self.postprocess_errors.append(str(error))
+
+        payload = """report_date: '2026-03-31'
+input_path: '/tmp/search_results.yaml'
+generated_at: '2026-04-01T17:37:59'
+categories:
+  - topic: 'AI与算力'
+    items:
+      - original_title: '文章1'
+        topic: 'AI与算力'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/1.html'
+        original_content:
+          url: 'https://www.c114.com.cn/news/1.html'
+          domain: 'www.c114.com.cn'
+          content_title: '文章1'
+          content_summary: '摘要'
+          content_text: '正文内容1'
+          content_source: 'aliyun'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "content.yaml"
+            output_path = Path(tmp_dir) / "analysis.yaml"
+            checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=Path(tmp_dir) / "checkpoints" / "c114_step_5_checkpoint_20260331.json",
+                step_name="step_5",
+                report_date="2026-03-31",
+                input_path=input_path,
+                output_path=output_path,
+            )
+            input_path.write_text(payload, encoding="utf-8")
+            analysis_input = load_content_analysis_inputs(input_path)
+            fake_client = FakeLLMClient()
+            completed = auto_complete_content_analysis(
+                analysis_input,
+                fake_client,
+                mode="per_topic",
+                batch_retry_attempts=2,
+                checkpoint_store=checkpoint_store,
+            )
+
+            entry = checkpoint_store.get_entry("batch::AI与算力::1")
+
+        self.assertEqual(fake_client.calls, 2)
+        self.assertEqual(completed.categories[0].items[0].analysis.summary, "补回摘要")
+        self.assertIsNotNone(entry)
+        assert entry is not None
+        self.assertEqual(entry["status"], "success")
+        self.assertEqual(entry["attempt_count"], 2)
+        self.assertIn("step 5 缺少 summary", fake_client.postprocess_errors[0])
 
     def test_auto_complete_content_analysis_per_topic_splits_large_topic_batches(self) -> None:
         class FakeLLMClient:

@@ -221,6 +221,7 @@ class TopicGroupingTests(unittest.TestCase):
 
             def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
                 self.calls += 1
+                case.assertIn('"source_site": "c114"', user_prompt)
                 case.assertIn('"article_id": "article-1"', user_prompt)
                 case.assertIn('"source_bucket": "视频"', user_prompt)
                 case.assertIn('"source_bucket": "新闻"', user_prompt)

@@ -888,6 +888,42 @@ class LLMRetryTests(unittest.TestCase):
             self.assertEqual(step5_records[0]["step"], "step_5")
             self.assertEqual(step6_records[0]["step"], "step_6")
 
+    def test_client_writes_split_trace_logs_with_source_prefix(self) -> None:
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+            def read(self) -> bytes:
+                return json.dumps({"choices": [{"message": {"content": '{"ping":"pong"}'}}]}).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            trace_dir = Path(tmp_dir) / "logs"
+            client = StructuredChatClient(
+                primary=LLMProviderConfig(
+                    provider="minimax",
+                    model="MiniMax M2.7",
+                    api_key="demo",
+                    base_url="https://api.minimaxi.com/v1",
+                    timeout_seconds=30.0,
+                    max_retries=0,
+                    retry_backoff_seconds=0.0,
+                ),
+                fallback=None,
+                failover_enabled=False,
+                failover_consecutive_failures=3,
+            )
+            client.set_trace_log_directory(trace_dir, report_date="2026-04-09", source_prefix="infoq", reset_files=True)
+
+            with patch("c114.llm_runtime.client.urlopen", return_value=FakeResponse()):
+                client.begin_step("step_5")
+                client.complete_json(system_prompt="系统提示", user_prompt="用户提示5")
+
+            self.assertTrue((trace_dir / "infoq_llm_trace_step_5_20260409.jsonl").exists())
+            self.assertFalse((trace_dir / "c114_llm_trace_step_5_20260409.jsonl").exists())
+
     def test_step_rate_limit_waits_before_second_step5_request(self) -> None:
         class FakeResponse:
             def __enter__(self) -> "FakeResponse":

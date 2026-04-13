@@ -35,6 +35,6 @@ data/**
 
 # Skill local runtime files
 skills/.skills_store_lock.json
-skills/c114-daily-hot-topics/config/runtime.local.json
-skills/c114-daily-hot-topics/output/**
-!skills/c114-daily-hot-topics/output/.gitkeep
+skills/websearch/config/runtime.local.json
+skills/websearch/output/**
+!skills/websearch/output/.gitkeep

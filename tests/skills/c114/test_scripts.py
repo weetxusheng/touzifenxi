@@ -12,7 +12,7 @@ from unittest.mock import patch
 from c114.cli import build_parser, infer_trace_run_dir, run_with_args
 from touzifenxi.settings import AppPaths
 
-SCRIPT_PATH = Path(__file__).resolve().parents[3] / "skills" / "c114-daily-hot-topics" / "scripts" / "c114.py"
+SCRIPT_PATH = Path(__file__).resolve().parents[3] / "skills" / "websearch" / "scripts" / "websearch.py"
 
 
 class ScriptEntrypointTests(unittest.TestCase):
@@ -45,6 +45,47 @@ class ScriptEntrypointTests(unittest.TestCase):
         self.assertIn("c114-config-status", commands)
         self.assertIn("c114-config-init", commands)
         self.assertIn("run", commands)
+
+    def test_run_command_accepts_source_argument(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--source", "infoq", "--date", "2026-04-12"])
+
+        self.assertEqual(args.command, "run")
+        self.assertEqual(args.source, "infoq")
+        self.assertEqual(args.date, "2026-04-12")
+
+    def test_run_command_dispatches_infoq_inside_websearch_skill(self) -> None:
+        args = Namespace(
+            command="run",
+            source="infoq",
+            date="2026-04-12",
+            start_date=None,
+            end_date=None,
+        )
+        paths = AppPaths(
+            project_root=Path("/repo"),
+            data_dir=Path("/repo/data"),
+            raw_dir=Path("/repo/data/raw"),
+            processed_dir=Path("/repo/data/processed"),
+            reports_dir=Path("/repo/reports"),
+            state_dir=Path("/repo/state"),
+            db_path=Path("/repo/state/touzifenxi.db"),
+            database_url=None,
+            sample_universe_path=Path("/repo/data/universe_sample.json"),
+            watchlist_path=Path("/repo/data/watchlist_v2.json"),
+            theme_config_path=Path("/repo/data/themes_v1.json"),
+        )
+
+        with (
+            patch("c114.cli.ensure_directories"),
+            patch("infoq.cli.run_with_args") as run_infoq,
+        ):
+            run_with_args(args, paths=paths)
+
+        run_infoq.assert_called_once()
+        forwarded_args = run_infoq.call_args.args[0]
+        self.assertEqual(forwarded_args.command, "run")
+        self.assertEqual(forwarded_args.date, "2026-04-12")
 
     def test_skill_script_runs_as_real_entrypoint(self) -> None:
         completed = subprocess.run(

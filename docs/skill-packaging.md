@@ -13,6 +13,7 @@
 - `scripts/`
 - `src/`
 - `output/`
+- `docs/`（可选；只放该 skill 专属说明、运行机制、排障手册）
 
 其中：
 
@@ -20,9 +21,10 @@
 - 提示词、配置、模板不得依赖 skill 目录外的绝对路径
 - `scripts/` 应只承担 skill 的编排入口
 - `src/` 应只放该 skill 的私有运行代码
+- `docs/` 应只放该 skill 专属文档；跨 skill 的项目规范仍放项目级 `docs/`
 - `src/` 下的长期维护 Python 文件必须具备模块级 docstring；公开数据类、入口方法、关键业务方法应有 docstring
 - `config/runtime.local.json` 属于本地配置，不进入分发包
-- 一个 skill 默认只保留一个总览文档：`SKILL.md`
+- 一个 skill 默认只保留一个总览文档：`SKILL.md`；若需要更细的运行机制、排障、配置说明，必须放在 skill 内的 `docs/` 或 `config/README.md`
 - skill 内不放正式测试代码，测试统一收口到项目级 `tests/skills/`
 - `config/` 若包含 JSON 配置模板，则必须配套 `config/README.md` 或在 `SKILL.md` 中逐项解释 key 含义
 - 若 skill 依赖配置或外部 API，`SKILL.md` 必须明确写出：
@@ -48,13 +50,13 @@
 校验：
 
 ```bash
-PYTHONPATH=src python3 -m touzifenxi.cli validate-skill --skill c114-daily-hot-topics
+PYTHONPATH=src python3 -m touzifenxi.cli validate-skill --skill websearch
 ```
 
 打包：
 
 ```bash
-PYTHONPATH=src python3 -m touzifenxi.cli package-skill --skill c114-daily-hot-topics
+PYTHONPATH=src python3 -m touzifenxi.cli package-skill --skill websearch
 ```
 
 默认输出到：
@@ -67,6 +69,6 @@ build/<skill-name>-skill.zip
 
 1. 完成目录骨架
 2. 填写中文 `SKILL.md`
-3. 确认提示词、配置、脚本都在 skill 目录中
+3. 确认提示词、配置、脚本和 skill 专属文档都在 skill 目录中
 4. 运行校验
 5. 再执行打包

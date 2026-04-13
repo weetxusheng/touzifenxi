@@ -16,7 +16,7 @@ class C114AutomationRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = Path(tmp_dir)
             self._write_env(project_root)
-            run_dir = self._create_run_dir(project_root, "202604121010")
+            run_dir = self._create_run_dir(project_root, "c114", "202604121010")
             step6_path = run_dir / "c114_step_6_brief_20260412.md"
 
             def fake_run(command: list[str], cwd: Path, env: dict[str, str], check: bool, capture_output: bool, text: bool):
@@ -52,7 +52,7 @@ class C114AutomationRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = Path(tmp_dir)
             self._write_env(project_root)
-            run_dir = self._create_run_dir(project_root, "202604121020")
+            run_dir = self._create_run_dir(project_root, "c114", "202604121020")
             step6_path = run_dir / "c114_step_6_brief_20260412.md"
 
             probe_results = [
@@ -111,7 +111,7 @@ class C114AutomationRunnerTests(unittest.TestCase):
             self._write_env(project_root)
 
             def fake_run(command: list[str], cwd: Path, env: dict[str, str], check: bool, capture_output: bool, text: bool):
-                run_dir = self._create_run_dir(project_root, "202604121030")
+                run_dir = self._create_run_dir(project_root, "c114", "202604121030")
                 log_dir = run_dir / "logs"
                 log_dir.mkdir(parents=True, exist_ok=True)
                 log_path = log_dir / "c114_llm_trace_step_6_20260412.jsonl"
@@ -138,15 +138,15 @@ class C114AutomationRunnerTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def _create_run_dir(self, project_root: Path, suffix: str) -> Path:
+    def _create_run_dir(self, project_root: Path, source: str, suffix: str) -> Path:
         run_dir = (
             project_root
             / "skills"
-            / "c114-daily-hot-topics"
+            / "websearch"
             / "output"
             / "reports"
-            / "c114_report"
-            / f"c114_search_{suffix}"
+            / f"{source}_report"
+            / f"{source}_search_{suffix}"
         )
         run_dir.mkdir(parents=True, exist_ok=True)
         return run_dir

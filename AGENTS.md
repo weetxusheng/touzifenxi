@@ -37,13 +37,14 @@
 - 每个 skill 独立放在 `skills/<skill-name>/`
 - `SKILL.md` 正文统一用中文
 - 提示词、配置、脚本必须尽量留在 skill 自己目录内
+- 单个 skill 专属的说明文档、运行机制文档、排障文档必须放在该 skill 目录内，优先使用 `skills/<skill-name>/docs/`
 - skill 目录名、提示词文件名使用短横线风格
 - 可打包产物输出到 `build/`
 
 ## 4. 目录原则
 
 - `src/` 放项目级能力
-- `skills/` 放可分发 skill
+- `skills/` 放可分发 skill；skill 专属文档、提示词、配置、脚本随对应 skill 存放
 - `tests/` 放项目级测试
 - `data/raw/` 放原始结果
 - `data/processed/` 放中间结构化结果
@@ -55,7 +56,7 @@
 开始新增功能前，先确认：
 
 1. 这段逻辑应该放 `src/` 还是 `skills/`
-2. 提示词、配置、模板是否会被放错目录
+2. 提示词、配置、模板、skill 专属文档是否会被放错目录
 3. 主流程场景、边界场景、失败场景和 fallback 用例是否已经先列清
 4. 输出应该进入 `data/raw/`、`data/processed/`、`reports/` 还是 `build/`
 5. 这次改动是否需要补测试

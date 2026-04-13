@@ -180,8 +180,10 @@ def run_c114_daily_brief(
     run_started_at = datetime.now()
     command = [
         "./.venv/bin/python",
-        "skills/c114-daily-hot-topics/scripts/c114.py",
+        "skills/websearch/scripts/websearch.py",
         "run",
+        "--source",
+        "c114",
         "--date",
         effective_date.isoformat(),
     ]
@@ -238,7 +240,7 @@ def step_6_file_name(report_date: date) -> str:
 
 def candidate_c114_report_roots(project_root: Path) -> tuple[Path, ...]:
     return (
-        project_root / "skills" / "c114-daily-hot-topics" / "output" / "reports" / "c114_report",
+        project_root / "skills" / "websearch" / "output" / "reports" / "c114_report",
         project_root / "reports" / "c114_report",
     )
 

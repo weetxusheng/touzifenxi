@@ -79,7 +79,7 @@ class GovernanceDocumentTests(unittest.TestCase):
 
     def test_skill_frontmatter_uses_slug_name_and_chinese_description(self) -> None:
         skill_docs = [
-            PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "SKILL.md",
+            PROJECT_ROOT / "skills" / "websearch" / "SKILL.md",
             PROJECT_ROOT / "docs" / "templates" / "skill-template" / "SKILL.md",
         ]
         for path in skill_docs:
@@ -89,17 +89,17 @@ class GovernanceDocumentTests(unittest.TestCase):
             self.assertNotIn("description: Use when", content)
 
     def test_c114_requirements_document_records_step_7_review_layer(self) -> None:
-        content = (PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "SKILL.md").read_text(encoding="utf-8")
+        content = (PROJECT_ROOT / "skills" / "websearch" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("当前 C114 业务链路共定义 `7` 个步骤", content)
         self.assertIn("Step 7：简报审查 YAML", content)
         self.assertIn("若某一天在 `Step 1` 分析后文章数为 `0`", content)
 
     def test_step_6_contract_uses_industry_researcher_language(self) -> None:
-        requirements = (PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "SKILL.md").read_text(encoding="utf-8")
-        brief_prompt = (PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "prompts" / "brief-agent.md").read_text(
+        requirements = (PROJECT_ROOT / "skills" / "websearch" / "SKILL.md").read_text(encoding="utf-8")
+        brief_prompt = (PROJECT_ROOT / "skills" / "websearch" / "prompts" / "brief-agent.md").read_text(
             encoding="utf-8"
         )
-        agent_config = (PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "agents" / "agent.yaml").read_text(
+        agent_config = (PROJECT_ROOT / "skills" / "websearch" / "agents" / "agent.yaml").read_text(
             encoding="utf-8"
         )
 
@@ -112,19 +112,24 @@ class GovernanceDocumentTests(unittest.TestCase):
         self.assertIn("按产业研究员口径深挖", agent_config)
 
     def test_skill_readme_records_skill_private_code_and_runtime_config(self) -> None:
-        content = (PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "SKILL.md").read_text(encoding="utf-8")
+        content = (PROJECT_ROOT / "skills" / "websearch" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("src/c114", content)
         self.assertIn("runtime.example.json", content)
         self.assertIn("runtime.local.json", content)
         self.assertIn("config/README.md", content)
 
-    def test_c114_scripts_use_single_entrypoint(self) -> None:
-        scripts_dir = PROJECT_ROOT / "skills" / "c114-daily-hot-topics" / "scripts"
+    def test_websearch_scripts_use_single_entrypoint(self) -> None:
+        scripts_dir = PROJECT_ROOT / "skills" / "websearch" / "scripts"
         script_names = sorted(path.name for path in scripts_dir.glob("*.py"))
-        self.assertEqual(script_names, ["c114.py"])
+        self.assertEqual(script_names, ["websearch.py"])
 
-    def test_c114_skill_uses_single_document_and_no_embedded_tests(self) -> None:
-        skill_dir = PROJECT_ROOT / "skills" / "c114-daily-hot-topics"
+    def test_websearch_is_the_only_skill_for_this_workflow(self) -> None:
+        self.assertTrue((PROJECT_ROOT / "skills" / "websearch").exists())
+        self.assertFalse((PROJECT_ROOT / "skills" / "infoq-daily-hot-topics").exists())
+        self.assertFalse((PROJECT_ROOT / "skills" / "c114-daily-hot-topics").exists())
+
+    def test_websearch_skill_uses_single_document_and_no_embedded_tests(self) -> None:
+        skill_dir = PROJECT_ROOT / "skills" / "websearch"
         self.assertFalse((skill_dir / "README.md").exists())
         self.assertFalse((skill_dir / "tests").exists())
 
@@ -270,7 +275,7 @@ class C114OutputPathTests(unittest.TestCase):
 
 class SkillPackagingTests(unittest.TestCase):
     def test_validate_skill_directory_accepts_current_c114(self) -> None:
-        skill_dir = PROJECT_ROOT / "skills" / "c114-daily-hot-topics"
+        skill_dir = PROJECT_ROOT / "skills" / "websearch"
         shutil.rmtree(skill_dir / "scripts" / "__pycache__", ignore_errors=True)
         issues = validate_skill_directory(skill_dir)
         self.assertEqual(issues, [])
@@ -283,7 +288,7 @@ class SkillPackagingTests(unittest.TestCase):
         self.assertTrue(any("SKILL.md" in issue for issue in issues))
 
     def test_package_skill_directory_excludes_pycache(self) -> None:
-        skill_dir = PROJECT_ROOT / "skills" / "c114-daily-hot-topics"
+        skill_dir = PROJECT_ROOT / "skills" / "websearch"
         shutil.rmtree(skill_dir / "scripts" / "__pycache__", ignore_errors=True)
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "skill.zip"
@@ -294,19 +299,19 @@ class SkillPackagingTests(unittest.TestCase):
         self.assertFalse(any("__pycache__" in name for name in names))
 
     def test_package_skill_directory_excludes_runtime_outputs(self) -> None:
-        skill_dir = PROJECT_ROOT / "skills" / "c114-daily-hot-topics"
+        skill_dir = PROJECT_ROOT / "skills" / "websearch"
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "skill.zip"
             package_skill_directory(skill_dir, output_path)
             with zipfile.ZipFile(output_path) as archive:
                 names = archive.namelist()
 
-        self.assertIn("c114-daily-hot-topics/output/.gitkeep", names)
+        self.assertIn("websearch/output/.gitkeep", names)
         self.assertFalse(
             any(
-                name.startswith("c114-daily-hot-topics/output/reports/")
-                or name.startswith("c114-daily-hot-topics/output/data/")
-                or name.startswith("c114-daily-hot-topics/output/state/")
+                name.startswith("websearch/output/reports/")
+                or name.startswith("websearch/output/data/")
+                or name.startswith("websearch/output/state/")
                 for name in names
             )
         )
