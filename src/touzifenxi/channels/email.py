@@ -7,6 +7,7 @@ import os
 import smtplib
 from dataclasses import dataclass
 from email.message import EmailMessage
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Iterable
 
@@ -27,16 +28,22 @@ class EmailChannelConfig:
     timeout_seconds: float = 30.0
 
 
-def load_email_channel_config() -> EmailChannelConfig:
-    """从环境变量加载邮件渠道配置，并对 QQ 邮箱提供默认值。"""
+def load_email_channel_config(env: Mapping[str, str] | None = None) -> EmailChannelConfig:
+    """从环境变量或传入的 env 映射加载邮件渠道配置，并对 QQ 邮箱提供默认值。"""
 
-    sender_email = os.getenv("TOUZIFENXI_EMAIL_FROM", "").strip()
-    username = os.getenv("TOUZIFENXI_EMAIL_USERNAME", "").strip() or sender_email
-    password = os.getenv("TOUZIFENXI_EMAIL_PASSWORD", "").strip()
-    smtp_host = os.getenv("TOUZIFENXI_EMAIL_SMTP_HOST", "").strip()
-    smtp_port_value = os.getenv("TOUZIFENXI_EMAIL_SMTP_PORT", "").strip()
-    use_ssl_value = os.getenv("TOUZIFENXI_EMAIL_USE_SSL", "").strip().lower()
-    timeout_value = os.getenv("TOUZIFENXI_EMAIL_TIMEOUT_SECONDS", "").strip()
+    src: Mapping[str, str] = os.environ if env is None else env
+
+    def getv(key: str) -> str:
+        raw = src.get(key, "")
+        return str(raw or "").strip()
+
+    sender_email = getv("TOUZIFENXI_EMAIL_FROM")
+    username = getv("TOUZIFENXI_EMAIL_USERNAME") or sender_email
+    password = getv("TOUZIFENXI_EMAIL_PASSWORD")
+    smtp_host = getv("TOUZIFENXI_EMAIL_SMTP_HOST")
+    smtp_port_value = getv("TOUZIFENXI_EMAIL_SMTP_PORT")
+    use_ssl_value = getv("TOUZIFENXI_EMAIL_USE_SSL").lower()
+    timeout_value = getv("TOUZIFENXI_EMAIL_TIMEOUT_SECONDS")
 
     if not sender_email:
         raise RuntimeError("未配置 TOUZIFENXI_EMAIL_FROM，无法发送邮件。")

@@ -67,7 +67,17 @@ def build_parser() -> argparse.ArgumentParser:
     c114_runner_parser.add_argument(
         "--to",
         nargs="+",
-        default=["chenxusheng@cjhxfund.com"],
+        default=["zx944532395@sina.com"],
+        help="邮件收件人列表。",
+    )
+    send_c114_latest_parser = subparsers.add_parser(
+        "send-c114-latest-brief-email",
+        help="仅对最近一次生成的 C114 Step6 简报渲染并发送邮件，不重新跑流水线。",
+    )
+    send_c114_latest_parser.add_argument(
+        "--to",
+        nargs="+",
+        default=["zx944532395@sina.com"],
         help="邮件收件人列表。",
     )
     coverage_parser = subparsers.add_parser(
@@ -407,6 +417,20 @@ def main() -> None:
         if result.log_path:
             print(f"日志路径: {result.log_path}")
         raise SystemExit(1)
+
+    if args.command == "send-c114-latest-brief-email":
+        from .c114_automation import send_latest_c114_brief_email
+
+        result = send_latest_c114_brief_email(
+            project_root=paths.project_root,
+            recipients=args.to,
+        )
+        if not result.succeeded:
+            print(result.error_detail or "发送失败。")
+            raise SystemExit(1)
+        print(f"Step 6 文件: {result.step6_path}")
+        print(f"邮件发送完成: {', '.join(args.to)}")
+        return
 
     from .dashboard import serve_dashboard
     from .fundamentals import sync_candidate_financial_profiles

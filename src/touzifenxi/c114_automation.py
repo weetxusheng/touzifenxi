@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -10,14 +11,25 @@ from pathlib import Path
 from typing import Iterable
 from zoneinfo import ZoneInfo
 
-from .channels.email import send_email
+from .channels.email import load_email_channel_config, send_email
 from .channels.renderers import render_c114_brief_email
 
 DEFAULT_PROXY_HTTP = "http://127.0.0.1:7890"
 DEFAULT_PROXY_ALL = "socks5://127.0.0.1:7890"
-DEFAULT_C114_RECIPIENT = "chenxusheng@cjhxfund.com"
+DEFAULT_C114_RECIPIENT = "zx944532395@sina.com"
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 NETWORK_TEST_URL = "https://www.c114.com.cn/"
+
+
+def resolve_project_python(project_root: Path) -> str:
+    """Prefer project .venv interpreter; fall back to the current interpreter."""
+    if sys.platform == "win32":
+        candidate = project_root / ".venv" / "Scripts" / "python.exe"
+    else:
+        candidate = project_root / ".venv" / "bin" / "python"
+    if candidate.exists():
+        return str(candidate)
+    return sys.executable
 
 
 @dataclass(frozen=True)
@@ -42,15 +54,20 @@ class C114AutomationResult:
     log_path: Path | None = None
 
 
+@dataclass(frozen=True)
+class C114SendLatestBriefResult:
+    succeeded: bool
+    step6_path: Path | None = None
+    error_detail: str | None = None
+
+
 def shanghai_today() -> date:
     return datetime.now(SHANGHAI_TZ).date()
 
 
-def load_env_file(project_root: Path) -> dict[str, str]:
-    env = dict(os.environ)
-    env_path = project_root / ".env.local"
+def _merge_dotenv_into(env: dict[str, str], env_path: Path) -> None:
     if not env_path.exists():
-        return env
+        return
     for line in env_path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or "=" not in stripped:
@@ -60,6 +77,13 @@ def load_env_file(project_root: Path) -> dict[str, str]:
         if not key:
             continue
         env[key] = value.strip()
+
+
+def load_env_file(project_root: Path) -> dict[str, str]:
+    """合并 os.environ、项目根目录 `.env` 与 `.env.local`（后者覆盖前者）。"""
+    env = dict(os.environ)
+    for name in (".env", ".env.local"):
+        _merge_dotenv_into(env, project_root / name)
     return env
 
 
@@ -179,7 +203,7 @@ def run_c114_daily_brief(
 
     run_started_at = datetime.now()
     command = [
-        "./.venv/bin/python",
+        resolve_project_python(project_root),
         "skills/websearch/scripts/websearch.py",
         "run",
         "--source",
@@ -223,6 +247,7 @@ def run_c114_daily_brief(
         subject=rendered.subject,
         body_text=rendered.text,
         body_html=rendered.html,
+        config=load_email_channel_config(run_env),
     )
     return C114AutomationResult(
         report_date=effective_date,
@@ -232,6 +257,54 @@ def run_c114_daily_brief(
         step6_path=step6_path,
         email_sent=True,
     )
+
+
+def find_latest_c114_step6_path(project_root: Path) -> Path | None:
+    """按文件 mtime 选取最近一次生成的 Step6 简报 Markdown。"""
+    newest: Path | None = None
+    newest_mtime = -1.0
+    for report_root in candidate_c114_report_roots(project_root):
+        if not report_root.is_dir():
+            continue
+        for run_dir in report_root.iterdir():
+            if not run_dir.is_dir() or not run_dir.name.startswith("c114_search_"):
+                continue
+            for path in run_dir.glob("c114_step_6_brief_*.md"):
+                mtime = path.stat().st_mtime
+                if mtime > newest_mtime:
+                    newest_mtime = mtime
+                    newest = path
+    return newest
+
+
+def send_latest_c114_brief_email(
+    *,
+    project_root: Path,
+    recipients: Iterable[str],
+) -> C114SendLatestBriefResult:
+    """对最近一次 Step6 简报渲染并发送邮件，不重新跑流水线。"""
+    step6_path = find_latest_c114_step6_path(project_root)
+    if step6_path is None:
+        return C114SendLatestBriefResult(succeeded=False, error_detail="未找到任何 c114_step_6_brief_*.md。")
+    env = load_env_file(project_root)
+    try:
+        config = load_email_channel_config(env)
+    except RuntimeError as exc:
+        return C114SendLatestBriefResult(succeeded=False, error_detail=str(exc))
+    markdown_text = step6_path.read_text(encoding="utf-8")
+    rendered = render_c114_brief_email(markdown_text)
+    html_path = step6_path.with_name(f"{step6_path.stem}_email.html")
+    text_path = step6_path.with_name(f"{step6_path.stem}_email.txt")
+    html_path.write_text(rendered.html, encoding="utf-8")
+    text_path.write_text(rendered.text, encoding="utf-8")
+    send_email(
+        recipient_emails=list(recipients),
+        subject=rendered.subject,
+        body_text=rendered.text,
+        body_html=rendered.html,
+        config=config,
+    )
+    return C114SendLatestBriefResult(succeeded=True, step6_path=step6_path)
 
 
 def step_6_file_name(report_date: date) -> str:
@@ -311,12 +384,15 @@ def find_relevant_log_path(*, run_dir: Path | None, report_date: date, failure_s
 
 __all__ = [
     "C114AutomationResult",
+    "C114SendLatestBriefResult",
     "ConnectivityProbeResult",
     "DEFAULT_C114_RECIPIENT",
     "build_route_env",
     "choose_network_route",
+    "find_latest_c114_step6_path",
     "load_env_file",
     "probe_connectivity",
     "run_c114_daily_brief",
+    "send_latest_c114_brief_email",
     "shanghai_today",
 ]
