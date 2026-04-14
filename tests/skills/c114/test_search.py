@@ -1431,6 +1431,134 @@ class SearchProviderRoutingTests(unittest.TestCase):
         self.assertEqual(len(llm_client.calls), 2)
         self.assertEqual(len(llm_client.postprocess_errors), 0)
 
+    def test_auto_review_search_payload_filters_high_risk_results_and_caches_them(self) -> None:
+        class HighRiskFallbackLLMClient:
+            def __init__(self) -> None:
+                self.calls: list[str] = []
+
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                self.calls.append(user_prompt)
+                if len(self.calls) == 1:
+                    raise StructuredLLMError(
+                        'kimi-code 请求失败: 400 {"error":{"message":"The request was rejected because it was considered high risk"}}'
+                    )
+                if "https://example.com/safe" in user_prompt:
+                    return {
+                        "keep_level": "strong",
+                        "reason": "与原标题是同一事件，且补充了新事实。",
+                        "relevance_note": "可作为正文补充来源。",
+                        "value_type": "新增事实",
+                    }
+                raise StructuredLLMError(
+                    'kimi-code 请求失败: 400 {"error":{"message":"The request was rejected because it was considered high risk"}}'
+                )
+
+        class NoCallLLMClient:
+            def complete_json(self, *, system_prompt: str, user_prompt: str) -> object:
+                raise AssertionError("命中 checkpoint 后不应再次请求大模型。")
+
+        payload = SearchWorkflowPayload(
+            report_date="2026-04-07",
+            provider="tavily",
+            input_path=Path("/tmp/input.yaml"),
+            generated_at="2026-04-07T10:00:00",
+            categories=[
+                SearchCategoryPayload(
+                    topic="AI与算力",
+                    items=[
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题A",
+                            original_url="https://www.c114.com.cn/a",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章A",
+                                    url="https://example.com/safe",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要A",
+                                    score=0.9,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["A"],
+                                    extract_text="补充正文A",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
+                        ArticleSearchPayload(
+                            topic="AI与算力",
+                            channel="首页",
+                            original_title="标题B",
+                            original_url="https://www.c114.com.cn/b",
+                            original_published_at="2026-04-07",
+                            queries=[],
+                            search_results=[],
+                            selected_results=[
+                                SearchResult(
+                                    query="原标题",
+                                    query_type="title",
+                                    result_title="外部文章B",
+                                    url="https://example.com/high-risk",
+                                    domain="example.com",
+                                    published_at="2026-04-07",
+                                    snippet="摘要B",
+                                    score=0.8,
+                                    is_official=False,
+                                    source_tier="normal",
+                                    matched_terms=["B"],
+                                    extract_text="补充正文B",
+                                    extract_status="success",
+                                )
+                            ],
+                        ),
+                    ],
+                )
+            ],
+        )
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / "c114_step_3_search_results_20260407.yaml"
+            checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path_for_step(
+                    output_path=output_path,
+                    step_name="step_3",
+                    report_date="2026-04-07",
+                ),
+                step_name="step_3",
+                report_date="2026-04-07",
+                input_path=Path(tmp_dir) / "c114_step_2_search_checklist_20260407.yaml",
+                output_path=output_path,
+            )
+
+            reviewed = auto_review_search_payload(
+                payload,
+                HighRiskFallbackLLMClient(),
+                checkpoint_store=checkpoint_store,
+            )
+
+            safe_result = reviewed.categories[0].items[0].selected_results[0]
+            filtered_result = reviewed.categories[0].items[1].selected_results[0]
+            self.assertEqual(safe_result.keep_level, "strong")
+            self.assertEqual(filtered_result.keep_level, "drop")
+            self.assertEqual(filtered_result.review_status, "reviewed")
+            self.assertIn("风控", filtered_result.review_reason)
+            self.assertEqual(
+                checkpoint_store.get_entry("review_single::AI与算力::标题B::https://example.com/high-risk")["status"],
+                "success",
+            )
+
+            replayed = auto_review_search_payload(payload, NoCallLLMClient(), checkpoint_store=checkpoint_store)
+            replayed_filtered = replayed.categories[0].items[1].selected_results[0]
+            self.assertEqual(replayed_filtered.keep_level, "drop")
+            self.assertEqual(replayed_filtered.review_status, "reviewed")
+
     def test_render_search_results_yaml_only_keeps_ai_review_under_selected_results(self) -> None:
         result = SearchResult(
             query="测试标题",
@@ -1756,7 +1884,56 @@ class SearchWorkflowTests(unittest.TestCase):
         self.assertEqual(records[1]["request_id"], records[0]["request_id"])
         self.assertEqual(records[1]["provider"], "tavily")
         self.assertEqual(records[1]["query"], "测试标题")
+        self.assertEqual(len(records[1]["provider_results"]), 1)
+        self.assertEqual(records[1]["provider_results"][0]["title"], "测试标题 相关报道")
+        self.assertEqual(len(records[1]["retained_results"]), 1)
+        self.assertEqual(records[1]["retained_results"][0]["result_title"], "测试标题 相关报道")
         self.assertEqual(records[1]["result_count"], 1)
+
+    def test_search_query_bucket_logs_provider_results_when_recent_filter_removes_all(self) -> None:
+        domain_config = {"official_domains": [], "blocked_domains": []}
+
+        class FakeClient:
+            def search_with_provider(
+                self, query: SearchQuery, max_results: int
+            ) -> tuple[str, list[dict[str, object]]]:
+                return (
+                    "tavily",
+                    [
+                        {
+                            "title": "过期结果",
+                            "url": "https://news.example.com/old",
+                            "content": "历史摘要",
+                            "score": 0.7,
+                            "published_date": "2025-01-01",
+                        }
+                    ],
+                )
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            trace_path = Path(tmp_dir) / "c114_search_trace_step_3_20260330.jsonl"
+            logger = SearchTraceLogger(trace_path)
+
+            bucket = search_query_bucket(
+                FakeClient(),
+                SearchQuery(query_type="keyword", value="历史关键词"),
+                3,
+                "历史原标题",
+                domain_config,
+                date(2026, 3, 30),
+                30,
+                trace_logger=logger,
+            )
+
+            records = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+
+        self.assertEqual(bucket.provider, "tavily")
+        self.assertEqual(bucket.results, [])
+        self.assertEqual(records[1]["raw_result_count"], 1)
+        self.assertEqual(records[1]["result_count"], 0)
+        self.assertEqual(len(records[1]["provider_results"]), 1)
+        self.assertEqual(records[1]["provider_results"][0]["title"], "过期结果")
+        self.assertEqual(records[1]["retained_results"], [])
 
     def test_search_query_bucket_writes_search_trace_log_for_error(self) -> None:
         domain_config = {"official_domains": [], "blocked_domains": []}

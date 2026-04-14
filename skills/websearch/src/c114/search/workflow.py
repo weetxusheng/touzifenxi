@@ -439,6 +439,8 @@ def search_query_bucket(
             duration_ms=(time.perf_counter() - started_at) * 1000.0,
             raw_result_count=len(raw_provider_results),
             result_count=len(recent_results),
+            provider_results=raw_provider_results,
+            retained_results=recent_results,
         )
     return QueryResultBucket(
         query=query.value,
