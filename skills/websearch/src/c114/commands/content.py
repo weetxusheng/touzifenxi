@@ -120,6 +120,7 @@ def handle_analyze_content_command(args: argparse.Namespace, *, paths: AppPaths,
             checklist_path=run_dir / facade.step_2_checklist_name(target_date),
             search_results_path=run_dir / facade.step_3_results_name(target_date),
             content_path=output_paths.input_path,
+            keyword_count=runtime_config.search_keyword_count if execution_mode == "builtin" else 1,
         )
         facade.save_layer_issues_yaml(output_paths.issues_output, target_date.isoformat(), issues)
         missing_analysis = facade.collect_missing_analysis_fields(payload)

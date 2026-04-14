@@ -59,6 +59,7 @@ def write_analysis_outputs(
     *,
     auto_fill_keywords: bool = True,
     checkpoint_prefix: str = "c114",
+    keyword_count: int = 1,
 ) -> list[SearchChecklistItem]:
     """Persist the analysis CSV and, when available, the step 2 checklist YAML."""
 
@@ -97,6 +98,7 @@ def write_analysis_outputs(
             checklist_items,
             analyses,
             llm_client,
+            keyword_count=keyword_count,
             checkpoint_store=checkpoint_store,
         )
     else:
@@ -108,10 +110,14 @@ def write_analysis_outputs(
                     request_context=build_step2_checkpoint_request_context(item),
                     result={"keywords": list(item.search_queries)},
                 )
-        checklist_items = apply_step2_checkpoint_results(checklist_items, checkpoint_store)
+        checklist_items = apply_step2_checkpoint_results(
+            checklist_items,
+            checkpoint_store,
+            keyword_count=keyword_count,
+        )
     output_paths.checklist_output.parent.mkdir(parents=True, exist_ok=True)
     output_paths.checklist_output.write_text(
-        render_search_checklist_yaml(report_date, checklist_items),
+        render_search_checklist_yaml(report_date, checklist_items, keyword_count=keyword_count),
         encoding="utf-8",
     )
     return checklist_items

@@ -112,7 +112,8 @@
     "aliyun_retry_backoff_seconds": 0.5
   },
   "search": {
-    "_comment": "Step 3 搜索补充配置。recent_days 控制只保留近多少天结果；max_external_results 控制每篇文章保留的外部结果上限。",
+    "_comment": "Step 2/3 搜索配置。keyword_count 控制每篇文章额外生成多少组关键词，默认 1；recent_days 控制只保留近多少天结果；max_external_results 控制每篇文章保留的外部结果上限。",
+    "keyword_count": 1,
     "recent_days": 30,
     "max_external_results": 5
   },

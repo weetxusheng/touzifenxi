@@ -211,6 +211,7 @@ def generate_layer_issues(
     checklist_path: Path | None = None,
     search_results_path: Path | None = None,
     content_path: Path | None = None,
+    keyword_count: int = 1,
 ) -> dict[str, list[dict[str, Any]]]:
     """Collect the most important workflow issues from the completed step outputs."""
     issues: dict[str, list[dict[str, Any]]] = {}
@@ -233,7 +234,7 @@ def generate_layer_issues(
     if checklist_path and checklist_path.exists():
         _yaml_date, items = load_search_checklist_yaml(checklist_path)
         checklist_issues: list[dict[str, Any]] = []
-        incomplete = [item.original_title for item in items if len(item.keywords) != 2]
+        incomplete = [item.original_title for item in items if len(item.keywords) < keyword_count]
         if incomplete:
             checklist_issues.append({"code": "keywords_unfilled", "count": len(incomplete), "examples": incomplete[:5]})
         issues["search_checklist"] = checklist_issues

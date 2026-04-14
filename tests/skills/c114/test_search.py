@@ -86,7 +86,7 @@ categories:
             keywords=["孙正义 OpenAI", "OpenAI 算力入口"],
         )
 
-        queries = build_search_queries(article)
+        queries = build_search_queries(article, keyword_count=2)
 
         self.assertEqual(
             queries,
@@ -97,7 +97,27 @@ categories:
             ],
         )
 
-    def test_rejects_checklist_items_without_two_keywords(self) -> None:
+    def test_builds_two_queries_when_keyword_count_is_one(self) -> None:
+        article = SearchArticleInput(
+            topic="AI与算力",
+            channel="Cloud&AI",
+            original_title="孙正义借巨资押注OpenAI 争夺下一代算力入口",
+            original_url="https://www.c114.com.cn/ai/5339/a1307668.html",
+            original_published_at="2026-03-30",
+            keywords=["孙正义 OpenAI"],
+        )
+
+        queries = build_search_queries(article)
+
+        self.assertEqual(
+            queries,
+            [
+                SearchQuery(query_type="title", value="孙正义借巨资押注OpenAI 争夺下一代算力入口"),
+                SearchQuery(query_type="keyword", value="孙正义 OpenAI"),
+            ],
+        )
+
+    def test_rejects_checklist_items_without_required_keywords(self) -> None:
         article = SearchArticleInput(
             topic="AI与算力",
             channel="Cloud&AI",
@@ -130,7 +150,7 @@ categories:
 
         self.assertEqual(
             completed[0].keywords,
-            ["中国联通 智能体互联网", "智能体互联网 最后一块拼图"],
+            ["中国联通 智能体互联网"],
         )
 
 
@@ -343,7 +363,7 @@ categories:
                 llm_client=llm_client,
                 checkpoint_store=checkpoint_store,
             )
-            self.assertEqual(search_client.search_calls, 3)
+            self.assertEqual(search_client.search_calls, 2)
             self.assertEqual(llm_client.calls, 1)
             self.assertEqual(first_payload.categories[0].items[0].selected_results[0].keep_level, "strong")
 
@@ -370,7 +390,7 @@ categories:
                 checkpoint_store=second_checkpoint_store,
             )
 
-            self.assertEqual(search_client.search_calls, 3)
+            self.assertEqual(search_client.search_calls, 2)
             self.assertEqual(llm_client.calls, 1)
             self.assertEqual(second_payload.categories[0].items[0].selected_results[0].keep_level, "strong")
 
@@ -471,7 +491,7 @@ categories:
                 llm_client=llm_client,
                 checkpoint_store=checkpoint_store,
             )
-            self.assertEqual(search_client.search_calls, 6)
+            self.assertEqual(search_client.search_calls, 4)
             self.assertEqual(llm_client.calls, 1)
             self.assertEqual(len(first_payload.categories[0].items), 2)
 
@@ -506,7 +526,7 @@ categories:
                 checkpoint_store=second_checkpoint_store,
             )
 
-            self.assertEqual(search_client.search_calls, 6)
+            self.assertEqual(search_client.search_calls, 4)
             self.assertEqual(llm_client.calls, 1)
             self.assertEqual(len(second_payload.categories[0].items), 2)
             self.assertEqual(
@@ -2112,9 +2132,7 @@ categories:
             stats_text = stats_path.read_text(encoding="utf-8")
 
         self.assertIn("provider: 'tavily'", search_text)
-        self.assertIn("provider: 'baidu'", search_text)
         self.assertIn("Tavily", stats_text)
-        self.assertIn("Baidu", stats_text)
         self.assertIn("总调用次数", stats_text)
 
     def test_save_search_results_uses_output_prefix_for_auxiliary_reports(self) -> None:

@@ -231,6 +231,7 @@ class C114ConfigTests(unittest.TestCase):
             config = load_c114_runtime_config(skill_root)
 
         self.assertEqual(config.output_mode, "skill")
+        self.assertEqual(config.search_keyword_count, 1)
         self.assertEqual(config.llm_primary.provider, "kimi")
         self.assertEqual(config.llm_primary.model, "kimi-k2.5")
         self.assertEqual(config.llm_primary.api_key, "kimi-key")
