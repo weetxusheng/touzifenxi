@@ -16,6 +16,9 @@ REQUIRED_SKILL_DIRS = (
     "src",
     "output",
 )
+SHARED_BUNDLE_DIRS = (
+    "src/touzifenxi",
+)
 EXCLUDED_SUFFIXES = (".pyc",)
 EXCLUDED_PARTS = {"__pycache__", ".DS_Store"}
 EXCLUDED_FILENAMES = {"runtime.local.json"}
@@ -84,6 +87,7 @@ def package_skill_directory(skill_dir: Path, output_path: Path) -> SkillPackageR
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     archived_files: list[str] = []
+    project_root = skill_dir.parents[1]
     with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(skill_dir.rglob("*")):
             if path.is_dir():
@@ -93,6 +97,18 @@ def package_skill_directory(skill_dir: Path, output_path: Path) -> SkillPackageR
             relative_path = path.relative_to(skill_dir.parent)
             archive.write(path, arcname=str(relative_path))
             archived_files.append(str(relative_path))
+        for relative_dir in SHARED_BUNDLE_DIRS:
+            bundle_root = (project_root / relative_dir).resolve()
+            if not bundle_root.exists() or not bundle_root.is_dir():
+                continue
+            for path in sorted(bundle_root.rglob("*")):
+                if path.is_dir():
+                    continue
+                if not should_archive_shared_path(path):
+                    continue
+                relative_path = path.relative_to(project_root)
+                archive.write(path, arcname=str(relative_path))
+                archived_files.append(str(relative_path))
     return SkillPackageResult(skill_dir=skill_dir, output_path=output_path, archived_files=archived_files)
 
 
@@ -110,6 +126,16 @@ def should_archive_skill_path(skill_dir: Path, path: Path) -> bool:
     if relative_path.parts and relative_path.parts[0] == "output":
         return path.name in OUTPUT_KEEP_FILENAMES
 
+    return True
+
+
+def should_archive_shared_path(path: Path) -> bool:
+    """Return whether a shared dependency file should be bundled."""
+
+    if any(part in EXCLUDED_PARTS for part in path.parts):
+        return False
+    if path.suffix in EXCLUDED_SUFFIXES:
+        return False
     return True
 
 

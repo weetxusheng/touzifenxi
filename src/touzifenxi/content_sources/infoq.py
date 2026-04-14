@@ -168,7 +168,11 @@ class InfoQSourceAdapter(ContentSourceAdapter):
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
         )
+        if completed.stdout is None:
+            raise RuntimeError("curl 未返回标准输出")
         return json.loads(completed.stdout)
 
 

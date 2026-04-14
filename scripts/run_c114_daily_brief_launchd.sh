@@ -8,4 +8,4 @@ PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
 cd "$PROJECT_ROOT"
 export PYTHONPATH="src"
 
-exec "$PYTHON_BIN" -m touzifenxi.cli run-c114-daily-brief --to chenxusheng@cjhxfund.com
+exec "$PYTHON_BIN" -m touzifenxi.cli run-c114-daily-brief --to zx944532395@sina.com
