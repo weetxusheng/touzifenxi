@@ -7,6 +7,7 @@ __pycache__/
 .mypy_cache/
 /.venv/
 dist/
+.env
 .env.local
 *.pyc
 *.pyo
