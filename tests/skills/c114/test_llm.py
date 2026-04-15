@@ -546,6 +546,72 @@ class LLMRetryTests(unittest.TestCase):
         self.assertEqual(captured_payload["messages"][0]["content"], "用户")
         self.assertNotIn("response_format", captured_payload)
 
+    def test_volc_ark_uses_responses_endpoint_and_parses_output(self) -> None:
+        captured_url = ""
+        captured_payload: dict[str, object] = {}
+
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+            def read(self) -> bytes:
+                return json.dumps(
+                    {
+                        "id": "resp_test",
+                        "object": "response",
+                        "status": "completed",
+                        "output": [
+                            {
+                                "type": "message",
+                                "role": "assistant",
+                                "content": [
+                                    {"type": "output_text", "text": '{"ping":"pong"}'},
+                                ],
+                            }
+                        ],
+                    }
+                ).encode("utf-8")
+
+        def fake_urlopen(request, timeout=30.0):  # type: ignore[no-untyped-def]
+            nonlocal captured_url, captured_payload
+            captured_url = request.full_url
+            captured_payload = json.loads(request.data.decode("utf-8"))
+            return FakeResponse()
+
+        client = StructuredChatClient(
+            primary=LLMProviderConfig(
+                provider="volc-ark",
+                model="ep-demo",
+                api_key="ark-key",
+                base_url="https://ark.cn-beijing.volces.com/api/v3/responses",
+                timeout_seconds=30.0,
+                max_retries=0,
+                retry_backoff_seconds=0.0,
+            ),
+            fallback=None,
+            failover_enabled=False,
+            failover_consecutive_failures=3,
+        )
+        client.begin_step("step_5")
+
+        with patch("c114.llm.client.urlopen", side_effect=fake_urlopen):
+            payload = client.complete_json(system_prompt="系统", user_prompt="用户")
+
+        self.assertEqual(payload["ping"], "pong")
+        self.assertEqual(captured_url, "https://ark.cn-beijing.volces.com/api/v3/responses")
+        self.assertEqual(captured_payload["model"], "ep-demo")
+        self.assertEqual(
+            captured_payload["input"],
+            [
+                {"role": "system", "content": "系统"},
+                {"role": "user", "content": "用户"},
+            ],
+        )
+        self.assertFalse(captured_payload.get("stream"))
+
     def test_client_failsover_across_three_provider_chain(self) -> None:
         attempts: list[str] = []
 

@@ -274,7 +274,7 @@ class StructuredChatClient:
                         provider=provider,
                         attempt=int(request_context.get("attempt", 0)),
                         json_mode=True,
-                        stream=self._should_stream(),
+                        stream=self._should_stream(provider),
                         system_prompt=system_prompt,
                         user_prompt=user_prompt + repair_hint,
                         duration_ms=0.0,
@@ -287,7 +287,7 @@ class StructuredChatClient:
                 self._remember_last_completion(
                     provider=provider,
                     json_mode=True,
-                    stream=self._should_stream(),
+                    stream=self._should_stream(provider),
                     system_prompt=system_prompt,
                     user_prompt=user_prompt + repair_hint,
                     response_text=content,
@@ -324,7 +324,7 @@ class StructuredChatClient:
         self._remember_last_completion(
             provider=provider,
             json_mode=False,
-            stream=self._should_stream(),
+            stream=self._should_stream(provider),
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             response_text=content,
@@ -411,7 +411,7 @@ class StructuredChatClient:
     ) -> str:
         """向单个 provider 发送请求，并在 provider 内部完成基础重试。"""
 
-        stream = self._should_stream()
+        stream = self._should_stream(provider)
         payload = build_chat_payload(
             provider,
             system_prompt=system_prompt,
@@ -591,10 +591,14 @@ class StructuredChatClient:
             self._consecutive_failures = 0
             return True
 
-    def _should_stream(self) -> bool:
+    def _should_stream(self, provider: LLMProviderRuntimeConfig | None = None) -> bool:
         """判断当前步骤是否应启用流式接收。"""
 
-        return self.stream_enabled and self._current_step in self.stream_steps
+        if not self.stream_enabled:
+            return False
+        if provider is not None and provider.provider.lower() == "volc-ark":
+            return False
+        return self._current_step in self.stream_steps
 
     def _remember_last_completion(
         self,

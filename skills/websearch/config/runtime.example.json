@@ -20,42 +20,22 @@
     "mode": "builtin"
   },
   "llm": {
-    "_comment": "LLM provider、重试、并发、流式输出和步骤路由配置。providers 顺序决定默认主备链。",
+    "_comment": "LLM provider、重试、并发、流式输出和步骤路由配置。默认使用火山方舟 Responses API（provider=volc-ark，base_url 指向 …/api/v3/responses）；也可按需增加 kimi-code / kimi / minimax 并开启 failover。",
     "providers": [
       {
-        "_comment": "Kimi Code provider，默认作为第一顺位 provider。",
-        "provider": "kimi-code",
-        "model": "kimi-for-coding",
+        "_comment": "火山方舟：控制台推理接入点 ID 填在 model；API Key 使用方舟控制台密钥。",
+        "provider": "volc-ark",
+        "model": "your-ark-endpoint-id",
         "api_key": "",
-        "base_url": "https://api.kimi.com/coding",
-        "timeout_seconds": 180,
-        "max_retries": 2,
-        "retry_backoff_seconds": 2.0
-      },
-      {
-        "_comment": "Moonshot Kimi provider，通常作为备用或步骤路由中的一环。",
-        "provider": "kimi",
-        "model": "kimi-k2.5",
-        "api_key": "",
-        "base_url": "https://api.moonshot.cn/v1",
-        "timeout_seconds": 180,
-        "max_retries": 2,
-        "retry_backoff_seconds": 2.0
-      },
-      {
-        "_comment": "MiniMax provider，通常作为备用或步骤路由中的一环。",
-        "provider": "minimax",
-        "model": "MiniMax-M2.7",
-        "api_key": "",
-        "base_url": "https://api.minimaxi.com/v1",
+        "base_url": "https://ark.cn-beijing.volces.com/api/v3/responses",
         "timeout_seconds": 180,
         "max_retries": 2,
         "retry_backoff_seconds": 2.0
       }
     ],
     "failover": {
-      "_comment": "非路由步骤的主备切换策略。连续 infra 错误达到阈值后切到下一个 provider。",
-      "enabled": true,
+      "_comment": "仅配置 volc-ark 时建议 enabled=false；多 provider 时再开启主备切换。",
+      "enabled": false,
       "consecutive_failures": 3,
       "reset_scope": "step",
       "error_scope": "infra_only"
@@ -76,9 +56,7 @@
       "_comment": "LLM 并发上限。default 是默认并发；providers 可以覆盖单个 provider。",
       "default": 2,
       "providers": {
-        "kimi-code": 2,
-        "kimi": 2,
-        "minimax": 3
+        "volc-ark": 2
       }
     },
     "streaming": {
@@ -93,14 +71,14 @@
       }
     },
     "step_task_routing": {
-      "_comment": "按 step 对多 provider 做轮询分发。每个请求从下一个 provider 开始，infra 失败时沿链路继续尝试。",
+      "_comment": "按 step 对多 provider 做轮询分发。仅 volc-ark 时列表只填一个名称即可。",
       "step_3": {
         "enabled": true,
-        "providers": ["kimi-code", "minimax", "kimi"]
+        "providers": ["volc-ark"]
       },
       "step_5": {
         "enabled": true,
-        "providers": ["kimi-code", "minimax", "kimi"]
+        "providers": ["volc-ark"]
       }
     }
   },

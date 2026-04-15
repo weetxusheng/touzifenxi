@@ -463,6 +463,12 @@ def _provider_defaults(provider_name: str) -> dict[str, str]:
             "model": "kimi-k2.5",
             "base_url": "https://api.moonshot.cn/v1",
         }
+    if normalized == "volc-ark":
+        return {
+            "env_var": "VOLC_ARK_API_KEY",
+            "model": "your-ark-endpoint-id",
+            "base_url": "https://ark.cn-beijing.volces.com/api/v3/responses",
+        }
     return {
         "env_var": "MINIMAX_API_KEY",
         "model": "MiniMax M2.7",

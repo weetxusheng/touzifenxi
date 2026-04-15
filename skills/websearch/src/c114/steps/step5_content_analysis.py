@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -46,15 +47,23 @@ def auto_complete_content_analysis(
 
     begin_llm_step(llm_client, "step_5")
     system_prompt = load_prompt_text(prompt_path)
+    completed_payload: ContentAnalysisInput
     if mode == "per_item":
-        return _auto_complete_content_analysis_per_item(payload, llm_client, system_prompt, checkpoint_store=checkpoint_store)
-    return _auto_complete_content_analysis_per_topic(
-        payload,
-        llm_client,
-        system_prompt,
-        max_attempts=max(1, batch_retry_attempts),
-        checkpoint_store=checkpoint_store,
-    )
+        completed_payload = _auto_complete_content_analysis_per_item(
+            payload,
+            llm_client,
+            system_prompt,
+            checkpoint_store=checkpoint_store,
+        )
+    else:
+        completed_payload = _auto_complete_content_analysis_per_topic(
+            payload,
+            llm_client,
+            system_prompt,
+            max_attempts=max(1, batch_retry_attempts),
+            checkpoint_store=checkpoint_store,
+        )
+    return sanitize_step5_link_candidates(completed_payload)
 
 
 def _auto_complete_content_analysis_per_item(
@@ -423,3 +432,117 @@ def html_fallback_edge_limit(text: str) -> int:
     ascii_count = sum(1 for char in text if char.isascii() and not char.isspace())
     non_ascii_count = sum(1 for char in text if not char.isascii() and not char.isspace())
     return 200 if ascii_count > non_ascii_count else 100
+
+
+MOJIBAKE_MARKERS = ("�", "ï¿½", "&amp;#x", "&#x", "&#xfffd;", "Ã", "â€", "ðŸ")
+CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
+ENCODED_ENTITY_RE = re.compile(r"(?:&#x[0-9a-fA-F]+;|&#\d+;|&amp;#x[0-9a-fA-F]+;)")
+
+
+def sanitize_step5_link_candidates(payload: ContentAnalysisInput) -> ContentAnalysisInput:
+    """在 step 5 阶段清理源地址/补充地址：去重并过滤乱码项。"""
+
+    sanitized_categories: list[ContentAnalysisSection] = []
+    for category in payload.categories:
+        seen_source_urls: set[str] = set()
+        seen_supplement_urls: set[str] = set()
+        sanitized_items: list[ContentAnalysisItem] = []
+        for item in category.items:
+            normalized_title = sanitize_link_text(item.original_title)
+            normalized_published_at = sanitize_link_text(item.original_published_at)
+            normalized_original_url = normalize_link_url(item.original_url)
+            keep_source = (
+                bool(normalized_original_url)
+                and not is_probably_garbled(item.original_title)
+                and normalized_original_url not in seen_source_urls
+            )
+            if keep_source:
+                seen_source_urls.add(normalized_original_url)
+            else:
+                normalized_original_url = ""
+
+            sanitized_selected_contents: list[SelectedDocument] = []
+            for selected in item.selected_contents:
+                normalized_selected_url = normalize_link_url(selected.url)
+                resolved_title = selected.document.title or selected.result_title
+                if (
+                    not normalized_selected_url
+                    or is_probably_garbled(resolved_title)
+                    or normalized_selected_url in seen_source_urls
+                    or normalized_selected_url in seen_supplement_urls
+                ):
+                    continue
+                seen_supplement_urls.add(normalized_selected_url)
+                sanitized_selected_contents.append(
+                    SelectedDocument(
+                        query=selected.query,
+                        query_type=selected.query_type,
+                        url=normalized_selected_url,
+                        domain=selected.domain,
+                        result_title=sanitize_link_text(selected.result_title),
+                        published_at=sanitize_link_text(selected.published_at),
+                        document=ContentDocument(
+                            url=normalized_selected_url,
+                            domain=selected.document.domain,
+                            title=sanitize_link_text(selected.document.title),
+                            summary=selected.document.summary,
+                            text=selected.document.text,
+                            source=selected.document.source,
+                            status=selected.document.status,
+                            error=selected.document.error,
+                        ),
+                    )
+                )
+
+            sanitized_items.append(
+                ContentAnalysisItem(
+                    original_title=normalized_title,
+                    topic=item.topic,
+                    channel=item.channel,
+                    original_url=normalized_original_url,
+                    original_published_at=normalized_published_at,
+                    original_content=item.original_content,
+                    selected_contents=sanitized_selected_contents,
+                    analysis=item.analysis,
+                )
+            )
+        sanitized_categories.append(ContentAnalysisSection(topic=category.topic, items=sanitized_items))
+    return ContentAnalysisInput(
+        report_date=payload.report_date,
+        input_path=payload.input_path,
+        generated_at=payload.generated_at,
+        categories=sanitized_categories,
+    )
+
+
+def sanitize_link_text(value: str) -> str:
+    """清理链接标题/日期中的不可见字符与常见乱码占位符。"""
+
+    text = str(value or "").replace("\uFFFD", "").replace("ï¿½", "")
+    text = CONTROL_CHARS_RE.sub("", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def normalize_link_url(value: str) -> str:
+    """标准化 URL，并只保留 http(s) 链接。"""
+
+    normalized = str(value or "").strip()
+    if not normalized:
+        return ""
+    lowered = normalized.lower()
+    if not (lowered.startswith("http://") or lowered.startswith("https://")):
+        return ""
+    return normalized
+
+
+def is_probably_garbled(value: str) -> bool:
+    """判断文本是否包含明显乱码特征。"""
+
+    text = str(value or "").strip()
+    if not text:
+        return True
+    # 出现高密度 HTML 实体编码通常意味着标题源已乱码。
+    if len(ENCODED_ENTITY_RE.findall(text)) >= 3:
+        return True
+    lowered = text.lower()
+    return any(marker.lower() in lowered for marker in MOJIBAKE_MARKERS)

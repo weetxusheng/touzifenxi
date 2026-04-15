@@ -34,6 +34,15 @@ def build_chat_payload(
             payload["stream"] = True
         return payload
 
+    if normalized_provider == "volc-ark":
+        # 火山方舟 Responses API：input 为多轮消息；json_mode 仍依赖提示词约束（与旧链路一致）。
+        payload["input"] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        payload["stream"] = stream
+        return payload
+
     payload["messages"] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
@@ -55,6 +64,10 @@ def provider_endpoint(provider: LLMProviderRuntimeConfig) -> str:
         if base_url.endswith("/v1"):
             return f"{base_url}/messages"
         return f"{base_url}/v1/messages"
+    if provider.provider.lower() == "volc-ark":
+        if base_url.endswith("/responses"):
+            return base_url
+        return f"{base_url}/responses"
     return f"{base_url}/chat/completions"
 
 
@@ -90,6 +103,9 @@ def extract_provider_content(provider: LLMProviderRuntimeConfig, body: dict[str,
             raise StructuredLLMError(f"{provider.provider} 返回了空内容。")
         return content
 
+    if provider.provider.lower() == "volc-ark":
+        return _extract_volc_ark_assistant_text(body)
+
     return str(body["choices"][0]["message"]["content"]).strip()
 
 
@@ -105,6 +121,9 @@ def extract_streaming_content(provider: LLMProviderRuntimeConfig, raw_text: str)
         parsed = None
     if isinstance(parsed, dict):
         return extract_provider_content(provider, parsed)
+
+    if provider.provider.lower() == "volc-ark":
+        raise StructuredLLMError(f"{provider.provider} 当前未实现 Responses API 流式解析。")
 
     if provider.provider.lower() == "kimi-code":
         content = _extract_anthropic_stream_text(stripped)
@@ -245,6 +264,49 @@ def _flatten_content(value: Any) -> list[str]:
                     parts.append(text)
         return parts
     return []
+
+
+def _extract_volc_ark_assistant_text(body: dict[str, Any]) -> str:
+    """从火山方舟 Responses API 的 response 对象中提取助手可见文本。"""
+
+    err = body.get("error")
+    if isinstance(err, dict) and err.get("message"):
+        raise StructuredLLMError(f"volc-ark API 错误: {err}")
+    status = body.get("status")
+    if status == "failed":
+        raise StructuredLLMError(f"volc-ark 响应失败: {body}")
+    if status in {"in_progress", "incomplete"}:
+        raise StructuredLLMError(f"volc-ark 响应未完成（status={status}）：{body}")
+    output = body.get("output")
+    if not isinstance(output, list):
+        raise StructuredLLMError(f"volc-ark 返回结构不符合预期：{body}")
+    texts = _collect_volc_ark_output_texts(output)
+    content = "\n".join(texts).strip()
+    if not content:
+        raise StructuredLLMError("volc-ark 返回了空内容。")
+    return content
+
+
+def _collect_volc_ark_output_texts(node: Any) -> list[str]:
+    """从 Responses `output` 树中收集助手文本块（兼容 message / output_text 等形态）。"""
+
+    texts: list[str] = []
+    if isinstance(node, dict):
+        ntype = node.get("type")
+        if ntype in {"output_text", "input_text"} and isinstance(node.get("text"), str):
+            t = str(node["text"]).strip()
+            if t:
+                texts.append(t)
+        elif ntype == "message" and isinstance(node.get("content"), list):
+            for block in node["content"]:
+                texts.extend(_collect_volc_ark_output_texts(block))
+        elif isinstance(node.get("content"), list):
+            for block in node["content"]:
+                texts.extend(_collect_volc_ark_output_texts(block))
+    elif isinstance(node, list):
+        for item in node:
+            texts.extend(_collect_volc_ark_output_texts(item))
+    return texts
 
 
 def _try_parse_json(detail: str) -> Any:

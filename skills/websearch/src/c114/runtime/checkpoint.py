@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -54,7 +55,20 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False, indent=2, sort_keys=False)
             handle.write("\n")
-        os.replace(tmp_name, path)
+        # Windows 上目标文件可能被杀毒/索引器短暂占用，原子替换需要短暂重试。
+        last_error: PermissionError | None = None
+        for attempt in range(6):
+            try:
+                os.replace(tmp_name, path)
+                last_error = None
+                break
+            except PermissionError as error:
+                last_error = error
+                if attempt == 5:
+                    raise
+                time.sleep(0.05 * (2**attempt))
+        if last_error is not None:
+            raise last_error
     finally:
         if os.path.exists(tmp_name):
             os.unlink(tmp_name)
