@@ -265,27 +265,22 @@ description: 当用户需要抓取、搜索、分析并审查 C114 或 InfoQ 当
   - `llm.streaming.*`
   - `llm.step_rate_limits.*`
   - `llm.step_task_routing.*`
-- 当前默认 provider 链：
-  - `kimi-code / kimi-for-coding`
-  - `Kimi / kimi-k2.5`
-  - `MiniMax / MiniMax M2.7`
+- 当前默认示例（`runtime.example.json`）为单 provider：
+  - `volc-ark`：火山方舟 Responses API，`base_url` 指向 `…/api/v3/responses`，`model` 为控制台推理接入点 ID
+  - 可选再配置 `kimi-code`、`kimi`、`minimax` 等，并开启 `llm.failover` 与多 provider 路由
 - 当前默认稳定性策略：
-  - 同一步内仅在基础设施错误下切换 provider
+  - 同一步内仅在基础设施错误下切换 provider（仅当 `failover.enabled = true` 且配置了多个 provider）
   - 连续 `3` 次基础设施错误才切到下一个 provider
   - 若服务端返回 `Retry-After`，优先按服务端建议等待
   - provider 级默认并发：
-    - `kimi-code = 2`
-    - `kimi = 2`
-    - `minimax = 3`
-  - `step_5 / step_6 / step_7` 默认启用流式接收
-  - `step_3 / step_5` 默认可开启任务分片路由：
-    - `step_3` 的单条补充结果审查任务会在 `kimi-code / minimax / kimi` 之间轮流选择首发 provider
-    - `step_5` 的单篇文章分析任务会在 `kimi-code / minimax / kimi` 之间轮流选择首发 provider
-    - 若当前任务遇到基础设施错误，会在该任务内部继续尝试下一个 provider
-- 切换规则：
-  - `kimi-code` 连续 `3` 次基础设施错误后，当前步骤剩余请求切到 `Kimi`
-  - `Kimi` 连续 `3` 次基础设施错误后，当前步骤剩余请求切到 `MiniMax`
-  - 进入下一步时，重新优先尝试 `kimi-code`
+    - `volc-ark = 2`（示例）
+    - 多 provider 时可分别配置 `kimi-code`、`kimi`、`minimax` 等
+  - `step_5 / step_6 / step_7` 对 `volc-ark` 使用非流式 Responses JSON；其它 OpenAI 兼容 provider 仍可按配置开启流式
+  - `step_3 / step_5` 可开启任务分片路由；列表里可配置多个 provider 名称（如仅 `volc-ark` 则不做轮询）
+    - 若当前任务遇到基础设施错误，会在该任务内部继续尝试路由中的下一个 provider（多 provider 时）
+- 切换规则（多 provider 且开启 failover 时）：
+  - 按 `llm.providers` 顺序依次尝试；连续 `3` 次基础设施错误后切到链路上下一个 provider
+  - 进入下一步时，重新从链首 provider 开始
 - `JSON` 结构错误不会直接触发主备切换
 - skill 不对模型名做本地白名单校验；若远端接口不接受该模型名，由接口错误直接返回
 - 当 `execution.mode = controller-agent` 时：

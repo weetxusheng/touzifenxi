@@ -102,9 +102,14 @@ def normalize_block_lines(lines: list[str]) -> list[str]:
         if not line:
             continue
         if line.startswith("- "):
-            normalized.append(line[2:].strip())
+            cleaned_line = sanitize_display_text(line[2:].strip())
+            if cleaned_line:
+                normalized.append(cleaned_line)
             continue
-        normalized.extend(parse_embedded_list(line))
+        for parsed in parse_embedded_list(line):
+            cleaned_line = sanitize_display_text(parsed)
+            if cleaned_line:
+                normalized.append(cleaned_line)
     return normalized
 
 
@@ -119,6 +124,19 @@ def parse_embedded_list(line: str) -> list[str]:
         if isinstance(value, list):
             return [str(item).strip() for item in value if str(item).strip()]
     return [line]
+
+
+def sanitize_display_text(value: str) -> str:
+    """清理展示文本中的乱码占位符和不可见控制字符。"""
+
+    if not value:
+        return ""
+    if len(re.findall(r"(?:&#x[0-9a-fA-F]+;|&#\d+;|&amp;#x[0-9a-fA-F]+;)", value)) >= 3:
+        return ""
+    cleaned = value.replace("\uFFFD", "").replace("ï¿½", "")
+    cleaned = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
 
 
 def build_plain_text(
@@ -141,25 +159,30 @@ def build_plain_text(
         for subtitle, items in subsections.items():
             lines.append(f"{subtitle}")
             for item in items:
-                lines.append(format_plain_text_item(str(item)))
+                rendered_item = format_plain_text_item(str(item))
+                if rendered_item:
+                    lines.append(rendered_item)
     return "\n".join(lines).strip()
 
 
 def format_plain_text_item(item: str) -> str:
     """把一条明细转换成文本版项目。"""
 
-    dated_link_match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<date>[^|]+?)\s+\|\s+(?P<url>https?://\S+)$", item)
+    cleaned_item = sanitize_display_text(item)
+    if not cleaned_item:
+        return ""
+    dated_link_match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<date>[^|]+?)\s+\|\s+(?P<url>https?://\S+)$", cleaned_item)
     if dated_link_match:
         label = dated_link_match.group("label").strip()
         published_at = dated_link_match.group("date").strip()
         url = dated_link_match.group("url").strip()
         return f"- {label}（{published_at}）：{url}"
-    link_match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<url>https?://\S+)$", item)
+    link_match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<url>https?://\S+)$", cleaned_item)
     if link_match:
         label = link_match.group("label").strip()
         url = link_match.group("url").strip()
         return f"- {label}：{url}"
-    return f"- {item}"
+    return f"- {cleaned_item}"
 
 
 def build_html(
@@ -294,6 +317,9 @@ def build_html(
         color: #314457;
         font-size: 14px;
       }}
+      .indented-text {{
+        text-indent: 2em;
+      }}
       ul {{
         margin: 0;
         padding-left: 18px;
@@ -314,7 +340,7 @@ def build_html(
         padding: 0 0 0 24px;
       }}
       .link-list li {{
-        margin: 0 0 12px;
+        margin: 0 0 4px;
       }}
       .link-list li:last-child {{
         margin-bottom: 0;
@@ -324,9 +350,6 @@ def build_html(
         font-size: 12px;
         color: #7a8897;
         text-align: center;
-      }}
-      .footer-note {{
-        margin-top: 8px;
       }}
     </style>
   </head>
@@ -344,10 +367,7 @@ def build_html(
         </ul>
       </div>
       {topic_html}
-      <div class="footer">
-        <div>本邮件由 touzifenxi 项目公共邮件渠道自动发送</div>
-        <div class="footer-note">说明：简报内容除链接以外，由模型生成，仅作为参考。</div>
-      </div>
+      <div class="footer">本邮件由投资分析项目公共邮件渠道自动发送  说明:简报内容除链接以外，由模型生成，仅作为参考。</div>
     </div>
   </body>
 </html>
@@ -400,25 +420,34 @@ def render_subsection_body(subtitle: str, items: list[str]) -> str:
     if subtitle in {"需要继续跟踪的点", "增量信息", "描述"}:
         return f"<ul>{''.join(render_list_item(item, subtitle) for item in items)}</ul>"
     text = " ".join(item.strip() for item in items if item.strip())
-    return f'<p class="block-text">{html.escape(text)}</p>'
+    text = sanitize_display_text(text)
+    if not text:
+        return ""
+    text_class = "block-text"
+    if subtitle in {"核心判断", "产业/公司影响", "产品/公司影响"}:
+        text_class = "block-text indented-text"
+    return f'<p class="{text_class}">{html.escape(text)}</p>'
 
 
 def render_list_item(item: str, subtitle: str) -> str:
     """渲染一条列表项，链接小节会生成可点击链接。"""
 
+    cleaned_item = sanitize_display_text(item)
+    if not cleaned_item:
+        return ""
     if subtitle in {"源地址", "补充地址"}:
-        dated_match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<date>[^|]+?)\s+\|\s+(?P<url>https?://\S+)$", item)
+        dated_match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<date>[^|]+?)\s+\|\s+(?P<url>https?://\S+)$", cleaned_item)
         if dated_match:
             label = html.escape(dated_match.group("label").strip())
             published_at = html.escape(dated_match.group("date").strip())
             url = html.escape(dated_match.group("url").strip(), quote=True)
             return f'<li><a href="{url}">{label}（{published_at}）</a></li>'
-        match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<url>https?://\S+)$", item)
+        match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<url>https?://\S+)$", cleaned_item)
         if match:
             label = html.escape(match.group("label").strip())
             url = html.escape(match.group("url").strip(), quote=True)
             return f'<li><a href="{url}">{label}</a></li>'
-    return f"<li>{html.escape(item)}</li>"
+    return f"<li>{html.escape(cleaned_item)}</li>"
 
 
 def make_anchor_id(text: str) -> str:
