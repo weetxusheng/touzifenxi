@@ -79,7 +79,10 @@ def handle_search_command(args: argparse.Namespace, *, paths: AppPaths, facade: 
                 print(f"执行 manifest: {manifest_path}\n")
                 continue
             _report_date, checklist_items = facade.load_search_checklist_yaml(output_paths.input_path)
-            facade.validate_search_checklist_items(checklist_items)
+            facade.validate_search_checklist_items(
+                checklist_items,
+                keyword_count=runtime_config.search_keyword_count,
+            )
         payload = facade.run_search_workflow(
             input_path=output_paths.input_path,
             report_date=target_date.isoformat(),

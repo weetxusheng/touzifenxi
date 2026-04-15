@@ -440,14 +440,14 @@ class SearchChecklistTests(unittest.TestCase):
                 url="https://www.c114.com.cn/satellite/2514/a1307674.html",
             ),
         ]
-        content = render_search_checklist_yaml("2026-03-27", build_search_checklist_items(analyses))
+        content = render_search_checklist_yaml("2026-03-27", build_search_checklist_items(analyses), keyword_count=2)
         self.assertIn("report_date: '2026-03-27'", content)
         self.assertIn("instructions: 'keywords 由 skill 内置模型读取 prompt_path 后自动生成", content)
         self.assertIn("topic: '卫星互联网'", content)
         self.assertIn("original_title: '商业航天再迎重磅利好 两部委优化无线电频率占用费标准'", content)
         self.assertIn("original_published_at: '2026-03-27'", content)
         self.assertIn("keywords:", content)
-        self.assertIn("# 由 skill 内置模型根据标题自动生成两组搜索关键词", content)
+        self.assertIn("# 由 skill 内置模型根据标题自动生成 2 组搜索关键词", content)
 
     def test_autofills_keywords_once_per_topic(self) -> None:
         class FakeLLMClient:
@@ -503,7 +503,7 @@ class SearchChecklistTests(unittest.TestCase):
         ]
 
         items = build_search_checklist_items(analyses)
-        completed = autofill_search_checklist_items(items, analyses, FakeLLMClient())
+        completed = autofill_search_checklist_items(items, analyses, FakeLLMClient(), keyword_count=2)
 
         self.assertEqual(
             [item.search_queries for item in completed],
@@ -551,6 +551,7 @@ class SearchChecklistTests(unittest.TestCase):
             build_search_checklist_items(analyses),
             analyses,
             FakeLLMClient(),
+            keyword_count=2,
         )
 
         self.assertEqual(completed[0].search_queries, ["中国联通 智能体互联网", "曹畅 智能体互联网"])
@@ -631,6 +632,7 @@ class SearchChecklistTests(unittest.TestCase):
                 items,
                 analyses,
                 llm_client,
+                keyword_count=2,
                 checkpoint_store=checkpoint_store,
             )
 
@@ -655,6 +657,7 @@ class SearchChecklistTests(unittest.TestCase):
                 build_search_checklist_items(analyses),
                 analyses,
                 llm_client,
+                keyword_count=2,
                 checkpoint_store=checkpoint_store,
             )
 
@@ -729,12 +732,24 @@ class AnalysisOutputTests(unittest.TestCase):
             )
             llm_client = FakeLLMClient()
 
-            first_items = write_analysis_outputs(output_paths, "2026-04-10", [analysis], llm_client=llm_client)
+            first_items = write_analysis_outputs(
+                output_paths,
+                "2026-04-10",
+                [analysis],
+                llm_client=llm_client,
+                keyword_count=2,
+            )
             self.assertEqual(first_items[0].search_queries, ["Anthropic 芯片", "AI 芯片 自研"])
             self.assertEqual(llm_client.calls, 1)
 
             output_paths.checklist_output.unlink()
-            rebuilt_items = write_analysis_outputs(output_paths, "2026-04-10", [analysis], llm_client=llm_client)
+            rebuilt_items = write_analysis_outputs(
+                output_paths,
+                "2026-04-10",
+                [analysis],
+                llm_client=llm_client,
+                keyword_count=2,
+            )
 
             self.assertTrue(output_paths.checklist_output.exists())
             self.assertEqual(rebuilt_items[0].search_queries, ["Anthropic 芯片", "AI 芯片 自研"])
@@ -746,6 +761,7 @@ class KeywordNormalizationTests(unittest.TestCase):
         keywords = _normalize_keyword_response(
             '{"keywords": ["高同庆 6G与AI", "6G AI双轮驱动"]}',
             title="GTI主席高同庆",
+            keyword_count=2,
         )
 
         self.assertEqual(keywords, ["高同庆 6G与AI", "6G AI双轮驱动"])
@@ -760,13 +776,19 @@ class KeywordNormalizationTests(unittest.TestCase):
                 ]
             },
             title="中国联通曹畅",
+            keyword_count=2,
         )
 
         self.assertEqual(keywords, ["中国联通 智能体互联网", "曹畅 智能体互联网"])
 
-    def test_requires_at_least_two_keywords(self) -> None:
-        with self.assertRaisesRegex(StructuredLLMError, "关键词数量至少为 2"):
-            _normalize_keyword_response({"keywords": ["仅一条"]}, title="测试标题")
+    def test_accepts_single_keyword_when_runtime_requires_one(self) -> None:
+        keywords = _normalize_keyword_response({"keywords": ["中国联通 智能体互联网"]}, title="测试标题")
+
+        self.assertEqual(keywords, ["中国联通 智能体互联网"])
+
+    def test_requires_at_least_one_keyword(self) -> None:
+        with self.assertRaisesRegex(StructuredLLMError, "关键词数量至少为 1"):
+            _normalize_keyword_response({"keywords": []}, title="测试标题")
 
 
 if __name__ == "__main__":

@@ -6,11 +6,12 @@ import atexit
 import json
 import threading
 import time
+from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from .types import SearchQuery
+from .types import SearchQuery, SearchResult
 
 SEARCH_TRACE_LOG_PREFIX = "c114_search_trace"
 
@@ -67,6 +68,8 @@ class SearchTraceLogger:
         duration_ms: float,
         result_count: int = 0,
         raw_result_count: int = 0,
+        provider_results: list[dict[str, Any]] | None = None,
+        retained_results: list[SearchResult] | None = None,
         error_message: str | None = None,
     ) -> None:
         record: dict[str, Any] = {
@@ -84,6 +87,12 @@ class SearchTraceLogger:
             "raw_result_count": raw_result_count,
             "result_count": result_count,
         }
+        if provider_results is not None:
+            # 把 provider 原始返回结果直接记到 trace，便于排查“有返回但被本地过滤掉”的场景。
+            record["provider_results"] = provider_results
+        if retained_results is not None:
+            # 同时保留本地筛选后继续进入业务流的结果，方便对比前后差异。
+            record["retained_results"] = [_serialize_trace_item(item) for item in retained_results]
         if error_message is not None:
             record["error"] = {"message": error_message}
         if request_id:
@@ -136,3 +145,11 @@ class SearchTraceLogger:
                 duration_ms=0.0,
                 error_message="进程退出时该搜索请求仍未完成。",
             )
+
+
+def _serialize_trace_item(item: Any) -> Any:
+    """把 dataclass 结果转成 JSON 可落盘结构，保留调试需要的字段。"""
+
+    if is_dataclass(item):
+        return asdict(item)
+    return item

@@ -8,6 +8,14 @@ from typing import Any
 from touzifenxi.settings import AppPaths
 
 
+def _step2_required_fields(keyword_count: int) -> tuple[str, ...]:
+    return tuple(f"keywords[{index}]" for index in range(keyword_count))
+
+
+def _search_keyword_count(runtime_config: object) -> int:
+    return max(1, int(getattr(runtime_config, "search_keyword_count", 1)))
+
+
 def run_controller_daily_pipeline(
     *,
     args: argparse.Namespace,
@@ -19,6 +27,7 @@ def run_controller_daily_pipeline(
 ) -> None:
     """在 controller-agent 模式下逐步检查并停在当前待补齐的步骤。"""
 
+    search_keyword_count = _search_keyword_count(runtime_config)
     output_map = facade.build_controller_output_paths(day_dir, target_date)
     raw_output = facade.resolve_hot_topics_output_path(
         project_root=paths.project_root,
@@ -47,6 +56,7 @@ def run_controller_daily_pipeline(
             analyses,
             llm_client=None,
             auto_fill_keywords=False,
+            keyword_count=search_keyword_count,
         )
         if not checklist_items:
             print(f"C114 全流程 step 1 完成 {target_date.isoformat()}")
@@ -59,14 +69,14 @@ def run_controller_daily_pipeline(
             output_paths=output_map,
             prompt_paths={"step_2": facade.SEARCH_KEYWORD_PROMPT_PATH},
             input_paths={"step_2": (output_map["step_1"],)},
-            required_fields={"step_2": ("keywords[0]", "keywords[1]")},
+            required_fields={"step_2": _step2_required_fields(search_keyword_count)},
             instruction=facade.StepInstruction(
                 step_name="step_2",
                 prompt_path=facade.SEARCH_KEYWORD_PROMPT_PATH,
                 input_paths=(output_map["step_1"],),
                 output_path=output_map["step_2"],
-                required_fields=("keywords[0]", "keywords[1]"),
-                notes=("请控制 agent 为每篇文章补足两组关键词。",),
+                required_fields=_step2_required_fields(search_keyword_count),
+                notes=(f"请控制 agent 为每篇文章补足 {search_keyword_count} 组关键词。",),
             ),
             next_action="当前已进入 step 2，请补全关键词后重新运行 run。",
         )
@@ -83,13 +93,13 @@ def run_controller_daily_pipeline(
             output_paths=output_map,
             prompt_paths={"step_2": facade.SEARCH_KEYWORD_PROMPT_PATH},
             input_paths={"step_2": (output_map["step_1"],)},
-            required_fields={"step_2": ("keywords[0]", "keywords[1]")},
+            required_fields={"step_2": _step2_required_fields(search_keyword_count)},
             instruction=facade.StepInstruction(
                 step_name="step_2",
                 prompt_path=facade.SEARCH_KEYWORD_PROMPT_PATH,
                 input_paths=(output_map["step_1"],),
                 output_path=output_map["step_2"],
-                required_fields=("keywords[0]", "keywords[1]"),
+                required_fields=_step2_required_fields(search_keyword_count),
                 notes=("step 2 还未补完，请继续填写 step 2 YAML。",),
             ),
             next_action="step 2 尚未完成，请补全关键词后重新运行 run。",
@@ -219,6 +229,7 @@ def run_controller_daily_pipeline(
             checklist_path=day_dir / facade.step_2_checklist_name(target_date),
             search_results_path=day_dir / facade.step_3_results_name(target_date),
             content_path=content_analysis_paths.input_path,
+            keyword_count=search_keyword_count,
         )
         facade.save_layer_issues_yaml(content_analysis_paths.issues_output, target_date.isoformat(), issues)
     if not facade.step5_analysis_completed(output_map["step_5"]):
@@ -356,6 +367,7 @@ def run_builtin_daily_pipeline(
 ) -> None:
     """在 builtin 模式下完整跑通 step 1-7。"""
 
+    search_keyword_count = _search_keyword_count(runtime_config)
     report = facade.collect_daily_report(
         report_date=target_date,
         channel_keys=args.channels,
@@ -402,6 +414,7 @@ def run_builtin_daily_pipeline(
         target_date.isoformat(),
         analyses,
         llm_client=llm_client,
+        keyword_count=search_keyword_count,
     )
     print(f"C114 全流程 step 1-2 完成 {target_date.isoformat()}")
     print(f"文章数: {len(analyses)}")
@@ -507,6 +520,7 @@ def run_builtin_daily_pipeline(
         checklist_path=day_dir / facade.step_2_checklist_name(target_date),
         search_results_path=day_dir / facade.step_3_results_name(target_date),
         content_path=content_analysis_paths.input_path,
+        keyword_count=search_keyword_count,
     )
     facade.save_layer_issues_yaml(content_analysis_paths.issues_output, target_date.isoformat(), issues)
     if facade.collect_missing_analysis_fields(analysis_payload):

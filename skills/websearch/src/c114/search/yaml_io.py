@@ -48,8 +48,8 @@ def load_search_checklist_yaml(input_path: Path) -> tuple[str, list[SearchArticl
     return report_date, items
 
 
-def validate_search_checklist_items(items: list[SearchArticleInput]) -> None:
-    incomplete = [item for item in items if len(item.keywords) != 2]
+def validate_search_checklist_items(items: list[SearchArticleInput], *, keyword_count: int = 1) -> None:
+    incomplete = [item for item in items if len(item.keywords) < keyword_count]
     if not incomplete:
         return
     details = "；".join(f"《{item.original_title}》当前为 {len(item.keywords)} 组" for item in incomplete[:5])
@@ -61,14 +61,19 @@ def validate_search_checklist_items(items: list[SearchArticleInput]) -> None:
     )
 
 
-def ensure_search_checklist_keywords(items: list[SearchArticleInput], llm_client: Any | None) -> list[SearchArticleInput]:
+def ensure_search_checklist_keywords(
+    items: list[SearchArticleInput],
+    llm_client: Any | None,
+    *,
+    keyword_count: int = 1,
+) -> list[SearchArticleInput]:
     from ..c114_intelligence import ArticleAnalysis, SearchChecklistItem, autofill_search_checklist_items
 
-    incomplete = [item for item in items if len(item.keywords) != 2]
+    incomplete = [item for item in items if len(item.keywords) < keyword_count]
     if not incomplete:
         return items
     if llm_client is None:
-        validate_search_checklist_items(items)
+        validate_search_checklist_items(items, keyword_count=keyword_count)
         return items
 
     checklist_items = [
@@ -101,7 +106,12 @@ def ensure_search_checklist_keywords(items: list[SearchArticleInput], llm_client
         )
         for item in items
     ]
-    completed = autofill_search_checklist_items(checklist_items, analyses, llm_client)
+    completed = autofill_search_checklist_items(
+        checklist_items,
+        analyses,
+        llm_client,
+        keyword_count=keyword_count,
+    )
     return [
         SearchArticleInput(
             topic=item.topic,
@@ -126,14 +136,14 @@ def build_article_input(topic: str, payload: dict[str, Any]) -> SearchArticleInp
     )
 
 
-def build_search_queries(article: SearchArticleInput) -> list[SearchQuery]:
-    if len(article.keywords) != 2:
-        raise ValueError(f"搜索清单中的关键词数量必须为 2，当前《{article.original_title}》为 {len(article.keywords)}。")
-    return [
-        SearchQuery(query_type="title", value=article.original_title),
-        SearchQuery(query_type="keyword", value=article.keywords[0]),
-        SearchQuery(query_type="keyword", value=article.keywords[1]),
-    ]
+def build_search_queries(article: SearchArticleInput, *, keyword_count: int = 1) -> list[SearchQuery]:
+    if len(article.keywords) < keyword_count:
+        raise ValueError(
+            f"搜索清单中的关键词数量至少为 {keyword_count}，当前《{article.original_title}》为 {len(article.keywords)}。"
+        )
+    queries = [SearchQuery(query_type="title", value=article.original_title)]
+    queries.extend(SearchQuery(query_type="keyword", value=keyword) for keyword in article.keywords[:keyword_count])
+    return queries
 
 
 def render_search_results_yaml(payload: SearchWorkflowPayload) -> str:

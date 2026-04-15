@@ -86,6 +86,7 @@ def run_with_args(args: argparse.Namespace, *, paths: AppPaths | None = None) ->
         return
 
     if args.command == "run":
+        runtime_config = load_c114_runtime_config()
         llm_client = require_llm_client()
         run_dir = create_run_directory(resolved_paths.reports_dir)
         bind_llm_trace_log(llm_client, run_dir=run_dir, target_date=target_date, reset_file=True)
@@ -128,6 +129,7 @@ def run_with_args(args: argparse.Namespace, *, paths: AppPaths | None = None) ->
             analyses,
             llm_client=llm_client,
             checkpoint_prefix="infoq",
+            keyword_count=runtime_config.search_keyword_count,
         )
         print(f"InfoQ step 1-2 完成 {target_date.isoformat()}")
         print(f"文章数: {len(analyses)}")
@@ -216,7 +218,11 @@ def run_with_args(args: argparse.Namespace, *, paths: AppPaths | None = None) ->
             checkpoint_store=step5_checkpoint,
         )
         save_content_analysis_yaml(step5_output, analysis_payload)
-        save_layer_issues_yaml(layer_issues_output, report_date_text, generate_layer_issues(analysis_payload))
+        save_layer_issues_yaml(
+            layer_issues_output,
+            report_date_text,
+            generate_layer_issues(analysis_payload, keyword_count=runtime_config.search_keyword_count),
+        )
         print(f"Step 5 YAML: {step5_output}")
 
         step6_checkpoint = StepCheckpointStore.load_or_create(
