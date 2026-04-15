@@ -308,23 +308,25 @@ def build_html(
         color: #0f5ea8;
         text-decoration: none;
       }}
-      .link-list li {{
-        padding: 8px 10px;
-        border-radius: 10px;
-        background: #f8fafc;
-        border: 1px solid #e8eef5;
-        list-style-position: inside;
+      .link-list {{
+        list-style: disc;
+        margin: 0;
+        padding: 0 0 0 24px;
       }}
-      .link-meta {{
-        margin-top: 4px;
-        font-size: 12px;
-        color: #718191;
+      .link-list li {{
+        margin: 0 0 12px;
+      }}
+      .link-list li:last-child {{
+        margin-bottom: 0;
       }}
       .footer {{
         margin-top: 24px;
         font-size: 12px;
         color: #7a8897;
         text-align: center;
+      }}
+      .footer-note {{
+        margin-top: 8px;
       }}
     </style>
   </head>
@@ -342,7 +344,10 @@ def build_html(
         </ul>
       </div>
       {topic_html}
-      <div class="footer">本邮件由 touzifenxi 项目公共邮件渠道自动发送</div>
+      <div class="footer">
+        <div>本邮件由 touzifenxi 项目公共邮件渠道自动发送</div>
+        <div class="footer-note">说明：简报内容除链接以外，由模型生成，仅作为参考。</div>
+      </div>
     </div>
   </body>
 </html>
@@ -392,7 +397,7 @@ def render_subsection_body(subtitle: str, items: list[str]) -> str:
 
     if subtitle in {"源地址", "补充地址"}:
         return f'<ul class="link-list">{"".join(render_list_item(item, subtitle) for item in items)}</ul>'
-    if subtitle in {"需要继续跟踪的点", "增量信息"}:
+    if subtitle in {"需要继续跟踪的点", "增量信息", "描述"}:
         return f"<ul>{''.join(render_list_item(item, subtitle) for item in items)}</ul>"
     text = " ".join(item.strip() for item in items if item.strip())
     return f'<p class="block-text">{html.escape(text)}</p>'
@@ -407,12 +412,7 @@ def render_list_item(item: str, subtitle: str) -> str:
             label = html.escape(dated_match.group("label").strip())
             published_at = html.escape(dated_match.group("date").strip())
             url = html.escape(dated_match.group("url").strip(), quote=True)
-            return (
-                "<li>"
-                f'<a href="{url}">{label}</a>'
-                f'<div class="link-meta">{published_at}</div>'
-                "</li>"
-            )
+            return f'<li><a href="{url}">{label}（{published_at}）</a></li>'
         match = re.match(r"^(?P<label>.+?)\s+\|\s+(?P<url>https?://\S+)$", item)
         if match:
             label = html.escape(match.group("label").strip())
