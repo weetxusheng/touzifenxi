@@ -19,6 +19,7 @@ from .c114_intelligence import (
     step_6_brief_name,
     step_7_brief_review_name,
 )
+from .runtime.config import load_c114_runtime_config
 from .runtime.execution import (
     StepInstruction,
     build_checkpoint_sequence,
@@ -97,13 +98,13 @@ def controller_run_directory(paths: AppPaths, target_date: date) -> Path:
 
 
 def step2_keywords_completed(checklist_path: Path) -> bool:
-    """判断 step 2 是否已补齐两组关键词。"""
+    """判断 step 2 是否已补齐当前配置要求的关键词组数。"""
 
     if not checklist_path.exists():
         return False
     try:
         _report_date, items = load_search_checklist_yaml(checklist_path)
-        validate_search_checklist_items(items)
+        validate_search_checklist_items(items, keyword_count=load_c114_runtime_config().search_keyword_count)
     except Exception:
         return False
     return True

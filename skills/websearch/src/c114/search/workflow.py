@@ -139,11 +139,15 @@ def run_search_workflow(
     yaml_report_date, articles = load_search_checklist_yaml(input_path)
     if yaml_report_date and yaml_report_date != report_date:
         raise ValueError(f"输入搜索清单日期为 {yaml_report_date}，与命令日期 {report_date} 不一致。")
-    articles = ensure_search_checklist_keywords(articles, llm_client)
-    validate_search_checklist_items(articles)
+    runtime_config = load_c114_runtime_config(SKILL_ROOT)
+    articles = ensure_search_checklist_keywords(
+        articles,
+        llm_client,
+        keyword_count=runtime_config.search_keyword_count,
+    )
+    validate_search_checklist_items(articles, keyword_count=runtime_config.search_keyword_count)
 
     domain_config = load_domain_config(SEARCH_CONFIG_PATH)
-    runtime_config = load_c114_runtime_config(SKILL_ROOT)
     search_client = client or build_auto_search_client(runtime_config=runtime_config, provider_mode=provider_name)
     grouped: dict[str, list[ArticleSearchPayload]] = {}
     report_day = date.fromisoformat(report_date)
@@ -162,6 +166,7 @@ def run_search_workflow(
                     client=search_client,
                     domain_config=domain_config,
                     recent_days=runtime_config.search_recent_days,
+                    keyword_count=runtime_config.search_keyword_count,
                     trace_logger=trace_logger,
                     checkpoint_store=checkpoint_store,
                 ),
@@ -197,6 +202,7 @@ def search_article(
     client: Any,
     domain_config: dict[str, list[str]],
     recent_days: int,
+    keyword_count: int = 1,
     trace_logger: SearchTraceLogger | None = None,
     checkpoint_store: StepCheckpointStore | None = None,
 ) -> ArticleSearchPayload:
@@ -208,7 +214,7 @@ def search_article(
         if isinstance(cached_article, dict):
             return article_search_payload_from_dict(cached_article)
 
-    queries = build_search_queries(article)
+    queries = build_search_queries(article, keyword_count=keyword_count)
     buckets: list[QueryResultBucket] = []
     raw_results: list[SearchResult] = []
     max_workers = min(3, max(1, len(queries)))
@@ -439,6 +445,8 @@ def search_query_bucket(
             duration_ms=(time.perf_counter() - started_at) * 1000.0,
             raw_result_count=len(raw_provider_results),
             result_count=len(recent_results),
+            provider_results=raw_provider_results,
+            retained_results=recent_results,
         )
     return QueryResultBucket(
         query=query.value,

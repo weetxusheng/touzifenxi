@@ -61,6 +61,7 @@ def auto_review_search_payload(
         for batch_index, batch_items in enumerate(split_search_review_items_for_topic(pending_items), start=1):
             batch_category = SearchCategoryPayload(topic=category.topic, items=batch_items)
             batch_entry_id = build_step3_review_batch_entry_id(category.topic, batch_index)
+            batch_used_high_risk_fallback = False
             try:
                 batch_reviewed_items, missing_targets = complete_search_review_batch_with_retry(
                     llm_client=llm_client,
@@ -94,7 +95,13 @@ def auto_review_search_payload(
                         request_context={"topic": category.topic, "batch_index": batch_index},
                         error={"message": str(error)},
                     )
-                raise
+                # 这类 provider 风控不是业务结构错误。退化为逐条审查后，把命中的单条直接过滤掉，
+                # 可以避免一条脏 snippet 让整批 topic 卡死。
+                if not _is_high_risk_review_error(error):
+                    raise
+                batch_used_high_risk_fallback = True
+                batch_reviewed_items = list(batch_items)
+                missing_targets = _build_all_single_review_targets(batch_items)
             for item_index, result_index, original_item, original_result in missing_targets:
                 single_entry_id = build_step3_review_single_entry_id(original_item, original_result)
                 try:
@@ -118,21 +125,37 @@ def auto_review_search_payload(
                             result=as_review_result_dict(reviewed_result),
                         )
                 except Exception as error:
-                    if checkpoint_store is not None:
-                        status = "postprocess_error" if isinstance(error, StructuredLLMError) else "error"
-                        checkpoint_store.record_entry(
-                            entry_id=single_entry_id,
-                            status=status,
-                            provider=getattr(llm_client, "current_provider_name", "") or "",
-                            source="ai_review_single",
-                            request_context={
-                                "topic": original_item.topic,
-                                "original_title": original_item.original_title,
-                                "url": original_result.url,
-                            },
-                            error={"message": str(error)},
-                        )
-                    raise
+                    if _is_high_risk_review_error(error):
+                        reviewed_result = build_high_risk_filtered_review_result(original_result)
+                        if checkpoint_store is not None:
+                            checkpoint_store.record_entry(
+                                entry_id=single_entry_id,
+                                status="success",
+                                provider=getattr(llm_client, "current_provider_name", "") or "",
+                                source="ai_review_single_filtered",
+                                request_context={
+                                    "topic": original_item.topic,
+                                    "original_title": original_item.original_title,
+                                    "url": original_result.url,
+                                },
+                                result=as_review_result_dict(reviewed_result),
+                            )
+                    else:
+                        if checkpoint_store is not None:
+                            status = "postprocess_error" if isinstance(error, StructuredLLMError) else "error"
+                            checkpoint_store.record_entry(
+                                entry_id=single_entry_id,
+                                status=status,
+                                provider=getattr(llm_client, "current_provider_name", "") or "",
+                                source="ai_review_single",
+                                request_context={
+                                    "topic": original_item.topic,
+                                    "original_title": original_item.original_title,
+                                    "url": original_result.url,
+                                },
+                                error={"message": str(error)},
+                            )
+                        raise
                 item_snapshot = batch_reviewed_items[item_index]
                 selected_results = list(item_snapshot.selected_results)
                 selected_results[result_index] = reviewed_result
@@ -158,6 +181,18 @@ def auto_review_search_payload(
                         result=_article_search_payload_to_dict(reviewed_item),
                     )
                 reviewed_items_by_title[reviewed_item.original_title] = reviewed_item
+            if checkpoint_store is not None and batch_used_high_risk_fallback:
+                checkpoint_store.record_entry(
+                    entry_id=batch_entry_id,
+                    status="success",
+                    provider=getattr(llm_client, "current_provider_name", "") or "",
+                    source="ai_review_batch_high_risk_fallback",
+                    request_context={"topic": category.topic, "batch_index": batch_index},
+                    result={
+                        "original_titles": [item.original_title for item in batch_items],
+                        "fallback": "high_risk_single_filter",
+                    },
+                )
         reviewed_categories.append(
             SearchCategoryPayload(
                 topic=category.topic,
@@ -329,6 +364,34 @@ def as_review_result_dict(result: SearchResult) -> dict[str, Any]:
         "relevance_note": result.relevance_note,
         "value_type": result.value_type,
     }
+
+
+def _is_high_risk_review_error(error: Exception) -> bool:
+    if not isinstance(error, StructuredLLMError):
+        return False
+    message = str(error).lower()
+    return "high risk" in message or "高风险" in message
+
+
+def build_high_risk_filtered_review_result(result: SearchResult) -> SearchResult:
+    return replace(
+        result,
+        review_status="reviewed",
+        keep_level="drop",
+        review_reason="搜索结果片段触发模型风控，已自动过滤，不进入后续正文抓取。",
+        relevance_note="该链接包含高风险噪音片段，无法稳定完成相关性审查。",
+        value_type="跑偏结果",
+    )
+
+
+def _build_all_single_review_targets(
+    items: list[ArticleSearchPayload],
+) -> list[tuple[int, int, ArticleSearchPayload, SearchResult]]:
+    return [
+        (item_index, result_index, item, result)
+        for item_index, item in enumerate(items)
+        for result_index, result in enumerate(item.selected_results)
+    ]
 
 
 def _is_reviewed_search_result(result: SearchResult) -> bool:

@@ -41,6 +41,7 @@ def autofill_search_checklist_items(
     analyses: list[ArticleAnalysis],
     llm_client: MiniMaxChatClient,
     prompt_path: Path = PROMPT_PATH,
+    keyword_count: int = 1,
     checkpoint_store: StepCheckpointStore | None = None,
 ) -> list[SearchChecklistItem]:
     """按 topic 批量生成关键词，再把结果回填到各篇文章。"""
@@ -48,10 +49,10 @@ def autofill_search_checklist_items(
     begin_llm_step(llm_client, "step_2")
     analysis_index = {analysis.title: analysis for analysis in analyses}
     system_prompt = load_prompt_text(prompt_path)
-    materialized_items = apply_step2_checkpoint_results(items, checkpoint_store)
+    materialized_items = apply_step2_checkpoint_results(items, checkpoint_store, keyword_count=keyword_count)
     grouped: dict[str, list[tuple[int, SearchChecklistItem]]] = {}
     for index, item in enumerate(materialized_items):
-        if len(item.search_queries) >= 2:
+        if len(item.search_queries) >= keyword_count:
             continue
         grouped.setdefault(item.topic, []).append((index, item))
 
@@ -70,16 +71,18 @@ def autofill_search_checklist_items(
                 llm_client=llm_client,
                 system_prompt=system_prompt,
                 user_prompt=(
-                    "请基于下面同一 topic 下的多篇文章信息，为每篇文章各生成 2 组搜索关键词。\n"
+                    f"请基于下面同一 topic 下的多篇文章信息，为每篇文章各生成 {keyword_count} 组搜索关键词。\n"
                     "只返回 JSON 对象，格式为 "
-                    "{\"items\": [{\"original_title\": \"标题\", \"keywords\": [\"词组1\", \"词组2\"]}]}。\n"
+                    "{\"items\": [{\"original_title\": \"标题\", \"keywords\": [\"词组1\"]}]}。\n"
                     "每篇文章都必须返回一项，且 original_title 必须与输入完全一致。\n"
-                    "两组关键词必须贴近原标题、便于中文搜索召回、且不能完全重复原标题。\n\n"
+                    "关键词必须贴近原标题、便于中文搜索召回、且不能完全重复原标题。\n\n"
                     f"{json.dumps({'topic': topic, 'items': payload_items}, ensure_ascii=False, indent=2)}"
                 ),
                 normalize_response=lambda response: _extract_topic_keyword_response(
                     response,
                     titles=[item.title for _, item in ordered_items],
+                    analyses_by_title=analysis_index,
+                    keyword_count=keyword_count,
                 ),
                 response_label="step 2 topic 批量关键词结果",
             )
@@ -139,15 +142,17 @@ def autofill_search_checklist_items(
                     llm_client=llm_client,
                     system_prompt=system_prompt,
                     user_prompt=(
-                        "请基于下面这篇文章信息，生成 2 组搜索关键词。\n"
+                        f"请基于下面这篇文章信息，生成 {keyword_count} 组搜索关键词。\n"
                         "只返回 JSON 对象，格式为 "
-                        "{\"keywords\": [\"词组1\", \"词组2\"]}。\n"
+                        "{\"keywords\": [\"词组1\"]}。\n"
                         "关键词必须贴近原标题、便于中文搜索召回、且不能完全重复原标题。\n\n"
                         f"{json.dumps(_build_step2_keyword_payload_item(item, analysis), ensure_ascii=False, indent=2)}"
                     ),
                     normalize_response=lambda response: _normalize_keyword_response(
                         response,
                         title=item.title,
+                        analysis=analysis,
+                        keyword_count=keyword_count,
                     ),
                     response_label=f"step 2 单篇关键词结果：{item.title}",
                 )
@@ -212,8 +217,8 @@ def build_search_checklist_items(analyses: list[ArticleAnalysis]) -> list[Search
     return items
 
 
-def build_title_aligned_queries(analysis: ArticleAnalysis) -> list[str]:
-    """根据标题语义生成两条贴近原标题的检索词。"""
+def build_title_aligned_queries(analysis: ArticleAnalysis, *, keyword_count: int = 1) -> list[str]:
+    """根据标题语义生成贴近原标题的检索词。"""
     segments = extract_title_segments(analysis.title)
     queries: list[str] = []
 
@@ -225,15 +230,15 @@ def build_title_aligned_queries(analysis: ArticleAnalysis) -> list[str]:
     if secondary and secondary not in queries:
         queries.append(secondary)
 
-    if len(queries) < 2:
+    if len(queries) < keyword_count:
         fallback = derive_fallback_query(analysis.title, primary)
         if fallback and fallback not in queries:
             queries.append(fallback)
 
-    if len(queries) < 2 and primary:
+    if len(queries) < keyword_count and primary:
         queries.append(primary)
 
-    return queries[:2]
+    return queries[:keyword_count]
 
 
 def extract_title_segments(title: str) -> list[str]:
@@ -336,6 +341,8 @@ def build_step2_checkpoint_request_context(item: SearchChecklistItem) -> dict[st
 def apply_step2_checkpoint_results(
     items: list[SearchChecklistItem],
     checkpoint_store: StepCheckpointStore | None,
+    *,
+    keyword_count: int = 1,
 ) -> list[SearchChecklistItem]:
     """用已成功的 step 2 checkpoint 结果回填关键词。"""
 
@@ -349,8 +356,8 @@ def apply_step2_checkpoint_results(
             raw_keywords = result.get("keywords")
             if isinstance(raw_keywords, list):
                 normalized = [compact_phrase(str(keyword)) for keyword in raw_keywords if compact_phrase(str(keyword))]
-                if len(normalized) >= 2:
-                    keywords = normalized[:2]
+                if len(normalized) >= keyword_count:
+                    keywords = normalized[:keyword_count]
         completed_items.append(
             SearchChecklistItem(
                 report_date=item.report_date,
@@ -365,8 +372,14 @@ def apply_step2_checkpoint_results(
     return completed_items
 
 
-def _normalize_keyword_response(payload: object, *, title: str) -> list[str]:
-    """校验并规范化模型返回的两组关键词。"""
+def _normalize_keyword_response(
+    payload: object,
+    *,
+    title: str,
+    analysis: ArticleAnalysis | None = None,
+    keyword_count: int = 1,
+) -> list[str]:
+    """校验并规范化模型返回的关键词，并优先保留贴近标题语义的候选。"""
     payload = coerce_json_object_payload(payload, f"《{title}》的关键词返回")
     raw_keywords = payload.get("keywords")
     if not isinstance(raw_keywords, list):
@@ -376,9 +389,15 @@ def _normalize_keyword_response(payload: object, *, title: str) -> list[str]:
     for keyword in normalized:
         if keyword not in deduped:
             deduped.append(keyword)
-    if len(deduped) < 2:
-        raise StructuredLLMError(f"《{title}》的关键词数量至少为 2，当前为 {len(deduped)}。")
-    return deduped[:2]
+    aligned = select_title_aligned_keywords(
+        title=title,
+        candidates=deduped,
+        analysis=analysis,
+        keyword_count=keyword_count,
+    )
+    if len(aligned) < keyword_count:
+        raise StructuredLLMError(f"《{title}》的关键词数量至少为 {keyword_count}，当前为 {len(aligned)}。")
+    return aligned[:keyword_count]
 
 
 def _canonicalize_title_for_match(value: str) -> str:
@@ -401,12 +420,25 @@ def _canonicalize_title_for_match(value: str) -> str:
     return text.strip()
 
 
-def _extract_topic_keyword_response(payload: object, *, titles: list[str]) -> tuple[dict[str, list[str]], list[str]]:
+def _extract_topic_keyword_response(
+    payload: object,
+    *,
+    titles: list[str],
+    analyses_by_title: dict[str, ArticleAnalysis],
+    keyword_count: int = 1,
+) -> tuple[dict[str, list[str]], list[str]]:
     """解析 topic 批量关键词返回，并返回已匹配结果与缺失标题。"""
     payload = coerce_json_object_payload(payload, "topic 批量关键词返回")
     if "items" not in payload and len(titles) == 1:
         title = titles[0]
-        return {title: _normalize_keyword_response(payload, title=title)}, []
+        return {
+            title: _normalize_keyword_response(
+                payload,
+                title=title,
+                analysis=analyses_by_title.get(title),
+                keyword_count=keyword_count,
+            )
+        }, []
     raw_items = payload.get("items")
     if not isinstance(raw_items, list):
         raise StructuredLLMError("topic 批量关键词返回缺少 items 列表。")
@@ -432,14 +464,23 @@ def _extract_topic_keyword_response(payload: object, *, titles: list[str]) -> tu
         )
         if matched_title is None:
             continue
-        keyword_map[matched_title] = _normalize_keyword_response(raw_item, title=matched_title)
+        keyword_map[matched_title] = _normalize_keyword_response(
+            raw_item,
+            title=matched_title,
+            analysis=analyses_by_title.get(matched_title),
+            keyword_count=keyword_count,
+        )
     missing_titles = [title for title in expected_titles if title not in keyword_map]
     return keyword_map, missing_titles
 
 
 def _normalize_topic_keyword_response(payload: object, *, titles: list[str]) -> dict[str, list[str]]:
     """校验 topic 批量关键词返回，并按标题回填两组关键词。"""
-    keyword_map, missing_titles = _extract_topic_keyword_response(payload, titles=titles)
+    keyword_map, missing_titles = _extract_topic_keyword_response(
+        payload,
+        titles=titles,
+        analyses_by_title={},
+    )
     if missing_titles:
         details = "、".join(f"《{title}》" for title in missing_titles[:5])
         if len(missing_titles) > 5:
@@ -453,6 +494,93 @@ def compact_phrase(value: str) -> str:
     text = re.sub(r"\s+", " ", value).strip()
     text = re.sub(r"[|；;]+", " ", text)
     return text[:40].strip()
+
+
+GENERIC_KEYWORD_PATTERNS = (
+    "行业趋势",
+    "产业趋势",
+    "技术发展",
+    "技术趋势",
+    "市场竞争",
+    "产业升级",
+    "行业升级",
+    "生态建设",
+    "发展动态",
+    "市场动态",
+)
+
+
+def select_title_aligned_keywords(
+    *,
+    title: str,
+    candidates: list[str],
+    analysis: ArticleAnalysis | None,
+    keyword_count: int,
+) -> list[str]:
+    """按标题锚点优先保留更贴近原文主题的搜索短语。"""
+
+    ranked_candidates = [
+        (keyword_alignment_score(keyword, title=title, analysis=analysis), keyword) for keyword in candidates
+    ]
+    selected: list[str] = []
+    for score, keyword in ranked_candidates:
+        if score <= 0:
+            continue
+        if keyword in selected:
+            continue
+        selected.append(keyword)
+        if len(selected) >= keyword_count:
+            return selected
+
+    if analysis is not None and candidates:
+        fallback_keywords = build_title_aligned_queries(analysis, keyword_count=max(keyword_count, 2))
+        for keyword in fallback_keywords:
+            if keyword in selected:
+                continue
+            selected.append(keyword)
+            if len(selected) >= keyword_count:
+                return selected
+
+    for _score, keyword in ranked_candidates:
+        if keyword in selected:
+            continue
+        selected.append(keyword)
+        if len(selected) >= keyword_count:
+            break
+    return selected
+
+
+def keyword_alignment_score(keyword: str, *, title: str, analysis: ArticleAnalysis | None) -> int:
+    """用轻量规则给关键词打分，优先保留和标题锚点重合的结果。"""
+
+    score = 0
+    compact_title = compact_phrase(title)
+    if keyword and keyword in compact_title:
+        score += 4
+    if compact_title and compact_title in keyword:
+        score += 2
+    for fragment in extract_title_segments(title)[:4]:
+        if fragment and fragment in keyword:
+            score += 3
+    for token in [part.strip() for part in keyword.split(" ") if len(part.strip()) >= 2]:
+        if token in title:
+            score += 2
+    if analysis is not None:
+        for entity in analysis.entities[:4]:
+            if entity and entity in keyword:
+                score += 4
+        for signal in analysis.signals[:2]:
+            if signal and signal in keyword:
+                score += 1
+        topic = compact_phrase(analysis.topic)
+        if topic and topic in keyword:
+            score += 2
+    action = extract_action_hint(title)
+    if action and action in keyword:
+        score += 2
+    if any(pattern in keyword for pattern in GENERIC_KEYWORD_PATTERNS):
+        score -= 3
+    return score
 
 
 def _build_step2_keyword_payload_item(
@@ -485,14 +613,19 @@ def compact_search_phrase(seed: str, topic: str) -> str:
     return cleaned_seed
 
 
-def render_search_checklist_yaml(report_date: str, items: list[SearchChecklistItem]) -> str:
+def render_search_checklist_yaml(
+    report_date: str,
+    items: list[SearchChecklistItem],
+    *,
+    keyword_count: int = 1,
+) -> str:
     """Render the step 2 YAML template consumed by the keyword-generation agent."""
 
     sections = build_search_checklist_sections(items)
     lines = [
         f"report_date: '{report_date}'",
         f"prompt_path: '{PROMPT_PATH}'",
-        "instructions: 'keywords 由 skill 内置模型读取 prompt_path 后自动生成；每条固定 2 组，且必须贴近原标题。'",
+        f"instructions: 'keywords 由 skill 内置模型读取 prompt_path 后自动生成；每条固定 {keyword_count} 组，且必须贴近原标题。'",
         "categories:",
     ]
     for section in sections:
@@ -510,7 +643,7 @@ def render_search_checklist_yaml(report_date: str, items: list[SearchChecklistIt
                     f"        url: '{escape_yaml_scalar(item.url)}'",
                     f"        original_published_at: '{escape_yaml_scalar(item.publish_date)}'",
                     "        keywords:",
-                    "          # 由 skill 内置模型根据标题自动生成两组搜索关键词",
+                    f"          # 由 skill 内置模型根据标题自动生成 {keyword_count} 组搜索关键词",
                 ]
             )
             for query in item.search_queries:
@@ -521,4 +654,3 @@ def render_search_checklist_yaml(report_date: str, items: list[SearchChecklistIt
 def escape_yaml_scalar(value: str) -> str:
     """转义 YAML 单引号标量中的单引号。"""
     return value.replace("'", "''")
-

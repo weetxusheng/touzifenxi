@@ -8,6 +8,15 @@ from typing import Any
 from touzifenxi.settings import AppPaths
 
 
+def _step2_required_fields(keyword_count: int, *, nested: bool = False) -> tuple[str, ...]:
+    prefix = "categories[*].items[*]." if nested else ""
+    return tuple(f"{prefix}keywords[{index}]" for index in range(keyword_count))
+
+
+def _search_keyword_count(runtime_config: object) -> int:
+    return max(1, int(getattr(runtime_config, "search_keyword_count", 1)))
+
+
 def handle_analyze_command(args: argparse.Namespace, *, paths: AppPaths, facade: Any) -> None:
     """执行 step 1、1.5、2。"""
 
@@ -15,6 +24,8 @@ def handle_analyze_command(args: argparse.Namespace, *, paths: AppPaths, facade:
     target_dates = facade.resolve_c114_date_range(args)
     range_day_dirs = facade.create_c114_range_day_directories(paths, target_dates) if len(target_dates) > 1 else {}
     llm_client = None
+    runtime_config = facade.load_c114_runtime_config()
+    search_keyword_count = _search_keyword_count(runtime_config)
     if execution_mode == "builtin":
         try:
             llm_client = facade.require_llm_client()
@@ -70,6 +81,7 @@ def handle_analyze_command(args: argparse.Namespace, *, paths: AppPaths, facade:
                 output_paths=output_paths,
                 analyses=analyses,
                 briefs=briefs,
+                search_keyword_count=search_keyword_count,
             )
             continue
         try:
@@ -78,6 +90,7 @@ def handle_analyze_command(args: argparse.Namespace, *, paths: AppPaths, facade:
                 target_date.isoformat(),
                 analyses,
                 llm_client=llm_client,
+                keyword_count=search_keyword_count,
             )
         except RuntimeError as error:
             print(f"C114 分析完成 {target_date.isoformat()}")
@@ -97,7 +110,13 @@ def handle_analyze_command(args: argparse.Namespace, *, paths: AppPaths, facade:
 
 
 def _handle_controller_analyze_command(
-    *, facade: Any, target_date: object, output_paths: object, analyses: list[object], briefs: list[object]
+    *,
+    facade: Any,
+    target_date: object,
+    output_paths: object,
+    analyses: list[object],
+    briefs: list[object],
+    search_keyword_count: int,
 ) -> None:
     """controller-agent 模式下只生成 step 2 模板与 manifest。"""
 
@@ -113,13 +132,13 @@ def _handle_controller_analyze_command(
             output_paths=facade.build_controller_output_paths(output_paths.checklist_output.parent, target_date),
             prompt_paths={"step_2": facade.SEARCH_KEYWORD_PROMPT_PATH},
             input_paths={"step_2": (output_paths.analysis_output,)},
-            required_fields={"step_2": ("keywords[0]", "keywords[1]")},
+            required_fields={"step_2": _step2_required_fields(search_keyword_count)},
             instruction=facade.StepInstruction(
                 step_name="step_2",
                 prompt_path=facade.SEARCH_KEYWORD_PROMPT_PATH,
                 input_paths=(output_paths.analysis_output,),
                 output_path=output_paths.checklist_output,
-                required_fields=("keywords[0]", "keywords[1]"),
+                required_fields=_step2_required_fields(search_keyword_count),
                 notes=("step 2 文件已存在；请继续在现有文件上补写或检查。",),
             ),
             next_action="step 2 文件已存在，请继续在现有 YAML 上补全后再继续。",
@@ -134,6 +153,7 @@ def _handle_controller_analyze_command(
         analyses,
         llm_client=None,
         auto_fill_keywords=False,
+        keyword_count=search_keyword_count,
     )
     if not checklist_items:
         print(f"C114 分析完成 {target_date.isoformat()}")
@@ -151,16 +171,16 @@ def _handle_controller_analyze_command(
         output_paths=output_map,
         prompt_paths={"step_2": facade.SEARCH_KEYWORD_PROMPT_PATH},
         input_paths={"step_2": (output_paths.analysis_output,)},
-        required_fields={"step_2": ("categories[*].items[*].keywords[0]", "categories[*].items[*].keywords[1]")},
+        required_fields={"step_2": _step2_required_fields(search_keyword_count, nested=True)},
         instruction=facade.StepInstruction(
             step_name="step_2",
             prompt_path=facade.SEARCH_KEYWORD_PROMPT_PATH,
             input_paths=(output_paths.analysis_output,),
             output_path=output_paths.checklist_output,
-            required_fields=("categories[*].items[*].keywords[0]", "categories[*].items[*].keywords[1]"),
+            required_fields=_step2_required_fields(search_keyword_count, nested=True),
             notes=(
                 "控制 agent 只补关键词，不改原标题、栏目、日期和链接。",
-                "每篇文章必须补足两组关键词，补完后重新运行后续步骤。",
+                f"每篇文章必须补足 {search_keyword_count} 组关键词，补完后重新运行后续步骤。",
             ),
         ),
         next_action="当前已进入 step 2，请控制 agent 读取 prompt 与 step 1 CSV，补全 step 2 YAML 后再继续。",
