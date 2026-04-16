@@ -6,7 +6,7 @@ import csv
 import json
 import re
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date, datetime
 from html import unescape
 from html.parser import HTMLParser
@@ -26,6 +26,16 @@ DATETIME_RE = re.compile(r"(20\d{2})-(\d{1,2})-(\d{1,2})\s+\d{1,2}:\d{1,2}")
 SLASH_DATE_RE = re.compile(r"(20\d{2})/(\d{1,2})/(\d{1,2})")
 CN_DATE_RE = re.compile(r"(\d{1,2})月(\d{1,2})日")
 TITLE_SUFFIX_RE = re.compile(r"\s*[-—]\s*.*?C114通信网\s*$")
+HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+PUBLISH_LABEL_DATE_RE = re.compile(
+    r"(?:发布时间|发稿时间|更新日期|发布日期|时间|日期)\s*[：:]\s*"
+    r"(20\d{2})[-/](\d{1,2})[-/](\d{1,2})"
+)
+ARTICLE_TIME_DATE_RE = re.compile(
+    r'<div[^>]+class=["\'][^"\']*\btime\b[^"\']*["\'][^>]*>\s*'
+    r"(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\s+\d{1,2}:\d{1,2}",
+    re.I,
+)
 CSV_FIELDNAMES = [
     "统计日期",
     "栏目键",
@@ -238,15 +248,24 @@ def parse_publish_date(html: str, summary: str) -> date | None:
     summary_date = parse_cn_date(summary, fallback_year=datetime.now().year)
     if summary_date:
         return summary_date
-    datetime_match = DATETIME_RE.search(html)
-    if datetime_match:
-        year, month, day = (int(value) for value in datetime_match.groups())
+    html_without_comments = strip_html_comments(html)
+    labeled_match = PUBLISH_LABEL_DATE_RE.search(html_without_comments)
+    if labeled_match:
+        year, month, day = (int(value) for value in labeled_match.groups())
         return date(year, month, day)
-    slash_match = SLASH_DATE_RE.search(html)
-    if slash_match:
-        year, month, day = (int(value) for value in slash_match.groups())
+    # C114 的部分频道详情页只在 article_top 的 time 块给出发布时间，
+    # 这里限定 class=time，避免重新误读页面页脚注释或侧栏里的任意日期。
+    article_time_match = ARTICLE_TIME_DATE_RE.search(html_without_comments)
+    if article_time_match:
+        year, month, day = (int(value) for value in article_time_match.groups())
         return date(year, month, day)
-    return parse_cn_date(summary, fallback_year=datetime.now().year)
+    return None
+
+
+def strip_html_comments(html: str) -> str:
+    """删除 HTML 注释，避免把页面生成时间误判成文章发布时间。"""
+
+    return HTML_COMMENT_RE.sub("", html)
 
 
 def parse_cn_date(value: str, fallback_year: int) -> date | None:
@@ -311,16 +330,20 @@ def collect_daily_report(
     for key in selected_keys:
         channel = CHANNELS[key]
         channel_html = fetch_text(channel.url, timeout=timeout)
-        candidates = filter_candidates_for_channel(channel_html, channel)[:candidate_limit]
+        candidates = filter_candidates_for_channel(channel_html, channel)
         articles: list[ArticleMetadata] = []
         for candidate in candidates:
             if candidate.anchor_date and candidate.anchor_date != report_date:
                 continue
             article_html = fetch_text(candidate.url, timeout=timeout)
             metadata = extract_article_metadata(candidate.url, article_html)
+            if metadata.publish_date is None and candidate.anchor_date == report_date:
+                metadata = replace(metadata, publish_date=report_date)
             if metadata.publish_date != report_date:
                 continue
             articles.append(metadata)
+            if len(articles) >= candidate_limit:
+                break
         reports.append(
             ChannelDailyReport(
                 channel_key=channel.key,

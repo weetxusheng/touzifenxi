@@ -24,7 +24,7 @@ def resolve_analysis_output_paths(
 ) -> AnalysisOutputPaths:
     """Resolve canonical input and output paths for the C114 analysis workflow."""
 
-    from ..c114_intelligence import create_search_run_directory, step_1_analysis_name, step_2_checklist_name
+    from ..facades.intelligence import create_search_run_directory, step_1_analysis_name, step_2_checklist_name
 
     input_path = (
         resolve_override_path(paths.project_root, input_override)

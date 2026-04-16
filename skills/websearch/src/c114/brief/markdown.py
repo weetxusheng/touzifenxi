@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..analysis.models import BriefSectionDraft, ContentAnalysisInput
-from ..c114_content import load_search_results_yaml
+from ..facades.content import load_search_results_yaml
 from ..llm import StructuredLLMError
 from .links import format_brief_link_line, infer_brief_title, infer_related_step3_path
 

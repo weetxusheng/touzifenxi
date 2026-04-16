@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from .analysis.models import (
+from ..analysis.models import (
     BRIEF_PROMPT_PATH,
     CONTENT_ANALYSIS_PROMPT_PATH,
     OPTIONAL_ANALYSIS_LIST_FIELDS,
@@ -21,22 +21,22 @@ from .analysis.models import (
     ContentDocument,
     SelectedDocument,
 )
-from .analysis.title_matching import normalize_analysis_title_key
-from .analysis.validation import (
+from ..analysis.title_matching import normalize_analysis_title_key
+from ..analysis.validation import (
     collect_missing_analysis_fields,
     normalize_content_analysis_draft,
     normalize_content_analysis_topic_response,
 )
-from .analysis.yaml_io import (
+from ..analysis.yaml_io import (
     load_content_analysis_inputs,
     render_content_analysis_yaml,
     resolve_content_analysis_output_paths,
     save_content_analysis_yaml,
 )
-from .brief.links import format_brief_link_line, infer_brief_title, infer_related_step3_path
-from .brief.markdown import build_brief_runtime_summary, render_brief_markdown, render_generated_brief_markdown
-from .brief.render import escape_yaml, render_analysis_list, render_layer_issues_yaml
-from .steps.step5_content_analysis import (
+from ..brief.links import format_brief_link_line, infer_brief_title, infer_related_step3_path
+from ..brief.markdown import build_brief_runtime_summary, render_brief_markdown, render_generated_brief_markdown
+from ..brief.render import escape_yaml, render_analysis_list, render_layer_issues_yaml
+from ..steps.step5_content_analysis import (
     auto_complete_content_analysis,
     build_content_analysis_prompt_payload,
     build_content_analysis_topic_prompt_payload,
@@ -51,7 +51,7 @@ from .steps.step5_content_analysis import (
     split_content_analysis_items_for_topic,
     truncate_html_fallback_prompt_text,
 )
-from .steps.step6_brief import (
+from ..steps.step6_brief import (
     auto_complete_brief_sections,
     brief_section_draft_from_dict,
     brief_section_draft_to_dict,

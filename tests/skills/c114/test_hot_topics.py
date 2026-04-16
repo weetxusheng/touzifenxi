@@ -5,12 +5,14 @@ import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 from c114.c114_hot_topics import (
     CHANNELS,
     ArticleMetadata,
     ChannelDailyReport,
     build_keyword_summary,
+    collect_daily_report,
     extract_article_metadata,
     filter_candidates_for_channel,
     parse_anchor_date,
@@ -41,6 +43,25 @@ class FilterCandidatesForChannelTests(unittest.TestCase):
         )
         self.assertIn("福建移动量子城域网", items[0].anchor_text)
         self.assertEqual(str(items[0].anchor_date), "2026-03-31")
+
+    def test_extracts_date_when_time_is_inside_homepage_card_link(self) -> None:
+        html = """
+        <html>
+          <body>
+            <div class="center_list">
+              <a href="https://www.c114.com.cn/news/118/a1308582.html">
+                <div class="title">中国移动绿色多频段基站天线补采，规模为19.07万面</div>
+                <div class="text_bottom"><div class="time">4/16 14:14</div></div>
+              </a>
+            </div>
+          </body>
+        </html>
+        """
+
+        items = filter_candidates_for_channel(html, CHANNELS["home"])
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(str(items[0].anchor_date), "2026-04-16")
 
 
 class ParseAnchorDateTests(unittest.TestCase):
@@ -96,6 +117,106 @@ class ExtractArticleMetadataTests(unittest.TestCase):
         )
 
         self.assertEqual(item.publish_date, date(2026, 3, 30))
+
+    def test_prefers_article_publish_time_over_html_comment_timestamp(self) -> None:
+        html = """
+        <html>
+          <head>
+            <title>《对话》TM Forum CTO George Glass | AN L5将让网络真正拥有“生命力” - 访谈 — C114通信网</title>
+            <meta name="keywords" content="自智网络,TM Forum" />
+            <meta name="description" content="《对话》TM Forum CTO George Glass | AN L5将让网络真正拥有“生命力”" />
+          </head>
+          <body>
+            <!--2026-4-16 3:13:03-->
+            <div class="article-info">发布时间：2026-4-14 09:00</div>
+          </body>
+        </html>
+        """
+
+        item = extract_article_metadata(
+            url="https://www.c114.com.cn/video/5918/a1305191.html",
+            html=html,
+        )
+
+        self.assertEqual(item.publish_date, date(2026, 4, 14))
+
+    def test_extracts_article_top_time_when_publish_label_missing(self) -> None:
+        html = """
+        <html>
+          <head>
+            <title>Gartner预测，到2030年生成式AI推理成本将降低 - Cloud&AI — C114通信网</title>
+            <meta name="description" content="Gartner预测，到2030年，生成式AI提供商对大语言模型的推理成本将降低。" />
+          </head>
+          <body>
+            <!--2026-4-17 3:13:03-->
+            <div class="article_top">
+              <div class="time">2026/4/16 14:13</div>
+              <h1 class="article_title">Gartner预测，到2030年生成式AI推理成本将降低</h1>
+            </div>
+          </body>
+        </html>
+        """
+
+        item = extract_article_metadata(
+            url="https://www.c114.com.cn/ai/5339/a1308581.html",
+            html=html,
+        )
+
+        self.assertEqual(item.publish_date, date(2026, 4, 16))
+
+
+class CollectDailyReportTests(unittest.TestCase):
+    def test_applies_candidate_limit_after_date_filtering(self) -> None:
+        listing_html = """
+        <html>
+          <body>
+            <a href="https://www.c114.com.cn/video/5918/a1305191.html">旧视频没有列表日期</a>
+            <div class="center_list">
+              <a href="https://www.c114.com.cn/news/118/a1308582.html">
+                <div class="title">中国移动绿色多频段基站天线补采，规模为19.07万面</div>
+                <div class="text_bottom"><div class="time">4/16 14:14</div></div>
+              </a>
+            </div>
+          </body>
+        </html>
+        """
+        old_detail_html = """
+        <html>
+          <head>
+            <title>旧视频没有列表日期 - 访谈 — C114通信网</title>
+            <meta name="description" content="旧视频没有列表日期" />
+          </head>
+          <body><!--2026-4-16 3:13:03--></body>
+        </html>
+        """
+        today_detail_html = """
+        <html>
+          <head>
+            <title>中国移动绿色多频段基站天线补采，规模为19.07万面 - C114通信网</title>
+            <meta name="description" content="中国移动绿色多频段基站天线补采，规模为19.07万面,C114讯 4月16日消息（焦焦）..." />
+          </head>
+        </html>
+        """
+
+        def fake_fetch_text(url: str, timeout: float = 20.0) -> str:
+            del timeout
+            if url == CHANNELS["home"].url:
+                return listing_html
+            if url.endswith("a1305191.html"):
+                return old_detail_html
+            if url.endswith("a1308582.html"):
+                return today_detail_html
+            raise AssertionError(f"Unexpected URL: {url}")
+
+        with patch("c114.c114_hot_topics.fetch_text", side_effect=fake_fetch_text):
+            reports = collect_daily_report(
+                date(2026, 4, 16),
+                channel_keys=["home"],
+                candidate_limit=1,
+            )
+
+        self.assertEqual(reports[0].article_count, 1)
+        self.assertEqual(reports[0].articles[0].url, "https://www.c114.com.cn/news/118/a1308582.html")
 
 
 class BuildKeywordSummaryTests(unittest.TestCase):
