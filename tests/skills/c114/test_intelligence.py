@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from c114.c114_intelligence import (
+from c114.facades.intelligence import (
     AnalysisOutputPaths,
     ArticleAnalysis,
     RawArticleRecord,

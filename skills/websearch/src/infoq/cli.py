@@ -7,7 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from c114.c114_content import (
+from c114.facades.content import (
     ArticleContentPayload,
     ContentCategoryPayload,
     ContentWorkflowPayload,
@@ -15,7 +15,7 @@ from c114.c114_content import (
     run_content_fetch_workflow,
     save_content_results,
 )
-from c114.c114_content_analysis import (
+from c114.facades.content_analysis import (
     ContentAnalysisOutputPaths,
     auto_complete_content_analysis,
     generate_brief_markdown,
@@ -24,7 +24,7 @@ from c114.c114_content_analysis import (
     save_content_analysis_yaml,
     save_layer_issues_yaml,
 )
-from c114.c114_intelligence import (
+from c114.facades.intelligence import (
     LLM_TRACE_LOG_DIR_NAME,
     AnalysisOutputPaths,
     ArticleAnalysis,

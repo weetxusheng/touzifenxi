@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
 
-from c114.c114_content import (
+from c114.facades.content import (
     AliyunIQSClient,
     AliyunSearchDocument,
     FetchResult,

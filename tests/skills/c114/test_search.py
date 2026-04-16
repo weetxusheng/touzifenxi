@@ -10,7 +10,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from c114.c114_intelligence import provider_stats_name
+from c114.facades.intelligence import provider_stats_name
 from c114.llm import StructuredLLMError
 from c114.runtime.checkpoint import StepCheckpointStore, checkpoint_path_for_step
 from c114.search.workflow import (

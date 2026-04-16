@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from ..c114_intelligence import (
+from ..facades.intelligence import (
     c114_reports_root,
     find_latest_search_run_directory,
     step_3_results_name,

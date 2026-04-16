@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from ..brief.render import escape_yaml
-from ..c114_intelligence import (
+from ..facades.intelligence import (
     c114_reports_root,
     find_latest_search_run_directory,
     layer_issues_name,
