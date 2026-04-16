@@ -9,6 +9,7 @@ description = "Multi-agent A-share research team MVP for daily top-5 stock ideas
 requires-python = ">=3.9"
 readme = "README.md"
 dependencies = [
+  "tzdata>=2024.1",
   "pandas>=2.0,<3",
   "akshare>=1.18.39",
   "SQLAlchemy>=2.0,<3",

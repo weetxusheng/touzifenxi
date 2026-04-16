@@ -8,6 +8,9 @@ import re
 from dataclasses import dataclass
 
 
+C114_EMAIL_FOOTER_DISCLAIMER = "说明：本邮件由邮件渠道自动发送，简报内容由大模型生成，仅作为参考。"
+
+
 @dataclass(frozen=True)
 class RenderedEmail:
     """表示已经准备好的邮件标题与正文。"""
@@ -76,8 +79,20 @@ def render_c114_brief_email(markdown_text: str) -> RenderedEmail:
     flush_subsection()
 
     subject = title
-    plain_text = build_plain_text(title=title, role_line=role_line, summary_items=summary_items, topics=topic_sections)
-    html_body = build_html(title=title, role_line=role_line, summary_items=summary_items, topics=topic_sections)
+    plain_text = build_plain_text(
+        title=title,
+        role_line=role_line,
+        summary_items=summary_items,
+        topics=topic_sections,
+        footer_disclaimer=C114_EMAIL_FOOTER_DISCLAIMER,
+    )
+    html_body = build_html(
+        title=title,
+        role_line=role_line,
+        summary_items=summary_items,
+        topics=topic_sections,
+        footer_disclaimer=C114_EMAIL_FOOTER_DISCLAIMER,
+    )
     return RenderedEmail(subject=subject, text=plain_text, html=html_body)
 
 
@@ -145,6 +160,7 @@ def build_plain_text(
     role_line: str,
     summary_items: list[tuple[str, str]],
     topics: list[dict[str, object]],
+    footer_disclaimer: str = C114_EMAIL_FOOTER_DISCLAIMER,
 ) -> str:
     """生成文本版邮件正文，作为 HTML 邮件的备用正文。"""
 
@@ -162,7 +178,10 @@ def build_plain_text(
                 rendered_item = format_plain_text_item(str(item))
                 if rendered_item:
                     lines.append(rendered_item)
-    return "\n".join(lines).strip()
+    body = "\n".join(lines).strip()
+    if footer_disclaimer:
+        body = f"{body}\n\n{footer_disclaimer}"
+    return body
 
 
 def format_plain_text_item(item: str) -> str:
@@ -191,11 +210,16 @@ def build_html(
     role_line: str,
     summary_items: list[tuple[str, str]],
     topics: list[dict[str, object]],
+    footer_disclaimer: str = C114_EMAIL_FOOTER_DISCLAIMER,
 ) -> str:
     """生成带卡片和分类的 HTML 邮件正文。"""
 
     topic_html = "".join(render_topic_section(topic) for topic in topics)
     navigation_html = "".join(render_navigation_item(topic) for topic in topics)
+    subtitle_block = ""
+    if role_line.strip():
+        subtitle_block = f'        <div class="subtitle">{html.escape(role_line.strip())}</div>\n'
+    footer_text = html.escape(footer_disclaimer)
     return f"""\
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -357,8 +381,7 @@ def build_html(
     <div class="wrapper">
       <div class="hero">
         <h1>{html.escape(title)}</h1>
-        <div class="subtitle">{html.escape(role_line or "项目自动生成的主题研究简报")}</div>
-        <div class="hero-divider"></div>
+{subtitle_block}        <div class="hero-divider"></div>
       </div>
       <div class="topic-nav">
         <h2 class="topic-nav-title">主题导航</h2>
@@ -367,7 +390,7 @@ def build_html(
         </ul>
       </div>
       {topic_html}
-      <div class="footer">本邮件由投资分析项目公共邮件渠道自动发送  说明:简报内容除链接以外，由模型生成，仅作为参考。</div>
+      <div class="footer">{footer_text}</div>
     </div>
   </body>
 </html>

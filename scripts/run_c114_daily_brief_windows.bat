@@ -1,14 +1,38 @@
 @echo off
 setlocal
 
-set "PROJECT_ROOT=E:\AI\touzifenxi"
-set "PYTHON_BIN=E:\Programs\Python310\python.exe"
+rem Repo root = parent of this script's directory (works on any drive/path).
+for %%I in ("%~dp0..") do set "PROJECT_ROOT=%%~fI"
+
+rem Prefer project .venv python; otherwise use PATH python (can override via PYTHON_BIN).
+if not defined PYTHON_BIN (
+  if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
+    set "PYTHON_BIN=%PROJECT_ROOT%\.venv\Scripts\python.exe"
+  ) else (
+    set "PYTHON_BIN=python"
+  )
+)
+
 set "MAIL_TO_1=zx944532395@sina.com"
 set "MAIL_TO_2=chenxusheng@cjhxfund.com"
 
 cd /d "%PROJECT_ROOT%"
 set "PYTHONPATH=src"
 echo [C114] %date% %time% starting daily brief run...
+echo [C114] PROJECT_ROOT=%PROJECT_ROOT%
+echo [C114] PYTHON_BIN=%PYTHON_BIN%
+
+"%PYTHON_BIN%" --version >nul 2>&1
+if errorlevel 1 (
+  echo [C114] ERROR: Python not runnable. Install Python and add it to PATH, or set PYTHON_BIN to python.exe.
+  endlocal & exit /b 2
+)
+
+"%PYTHON_BIN%" -c "import touzifenxi; from zoneinfo import ZoneInfo; ZoneInfo('Asia/Shanghai')" >nul 2>&1
+if errorlevel 1 (
+  echo [C114] ERROR: Python env missing project/tzdata dependency. Run: pip install -e . ^&^& pip install tzdata
+  endlocal & exit /b 3
+)
 
 if exist "%PROJECT_ROOT%\.env" (
   for /f "usebackq tokens=1* delims==" %%A in ("%PROJECT_ROOT%\.env") do (

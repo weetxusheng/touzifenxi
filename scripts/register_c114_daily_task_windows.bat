@@ -10,9 +10,10 @@ rem   register_c114_daily_task_windows.bat 09:15 "touzifenxi-c114-daily-brief"
 
 set "DEFAULT_TIME=08:30"
 set "DEFAULT_TASK_NAME=touzifenxi-c114-daily-brief"
-set "DEFAULT_SCRIPT_PATH=E:\AI\touzifenxi\scripts\run_c114_daily_brief_windows.bat"
+rem Default: run_c114_daily_brief_windows.bat next to this script (any drive/path).
+for %%I in ("%~dp0run_c114_daily_brief_windows.bat") do set "DEFAULT_SCRIPT_PATH=%%~fI"
 
-set "RUN_TIME=%~1"、
+set "RUN_TIME=%~1"
 if "%RUN_TIME%"=="" set "RUN_TIME=%DEFAULT_TIME%"
 
 set "TASK_NAME=%~2"

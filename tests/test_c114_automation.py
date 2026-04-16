@@ -48,6 +48,31 @@ class C114AutomationRunnerTests(unittest.TestCase):
         render_mock.assert_called_once()
         send_mock.assert_called_once()
 
+    def test_runner_skips_smtp_when_send_mail_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = Path(tmp_dir)
+            self._write_env(project_root)
+            run_dir = self._create_run_dir(project_root, "c114", "202604121010")
+            step6_path = run_dir / "c114_step_6_brief_20260412.md"
+
+            def fake_run(command: list[str], cwd: Path, env: dict[str, str], check: bool, capture_output: bool, text: bool):
+                step6_path.write_text("# C114 主题简报（2026-04-12）\n\n## 新闻\n", encoding="utf-8")
+                return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+
+            rendered = RenderedEmail(subject="C114 主题简报（2026-04-12）", text="text-body", html="<html>html-body</html>")
+
+            with (
+                patch("touzifenxi.c114_automation.probe_connectivity", return_value=ConnectivityProbeResult(ok=True, route="direct")),
+                patch("touzifenxi.c114_automation.subprocess.run", side_effect=fake_run),
+                patch("touzifenxi.c114_automation.render_c114_brief_email", return_value=rendered),
+                patch("touzifenxi.c114_automation.send_email") as send_mock,
+            ):
+                result = run_c114_daily_brief(project_root=project_root, report_date=date(2026, 4, 12), send_mail=False)
+
+        self.assertTrue(result.succeeded)
+        self.assertFalse(result.email_sent)
+        send_mock.assert_not_called()
+
     def test_runner_falls_back_to_proxy_when_direct_probe_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             project_root = Path(tmp_dir)
