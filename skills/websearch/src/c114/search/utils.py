@@ -247,6 +247,11 @@ def rank_search_results(results: list[SearchResult], report_date: date, original
 
 
 def filter_recent_results(results: list[SearchResult], report_date: date, max_age_days: int) -> list[SearchResult]:
+    """Keep only records whose published_at date exactly matches report_date.
+
+    NOTE: max_age_days is retained for backward-compatible signature but no longer used.
+    """
+
     filtered: list[SearchResult] = []
     for result in results:
         if not result.published_at:
@@ -255,8 +260,7 @@ def filter_recent_results(results: list[SearchResult], report_date: date, max_ag
             published_date = date.fromisoformat(result.published_at[:10])
         except ValueError:
             continue
-        age_days = (report_date - published_date).days
-        if 0 <= age_days <= max_age_days:
+        if published_date == report_date:
             filtered.append(result)
     return filtered
 

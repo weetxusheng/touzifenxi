@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
+import ssl
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote_plus
@@ -11,6 +13,23 @@ from urllib.request import Request, urlopen
 
 from .types import SearchQuery
 from .utils import compact_text, normalize_url
+
+
+def _urlopen_with_tls(request: Request, timeout: float) -> Any:
+    """Open URL with certifi CA bundle when available, fallback to system default."""
+
+    if str(os.getenv("TOUZIFENXI_INSECURE_SSL", "")).strip().lower() in {"1", "true", "yes", "on"}:
+        insecure_context = ssl.create_default_context()
+        insecure_context.check_hostname = False
+        insecure_context.verify_mode = ssl.CERT_NONE
+        return urlopen(request, timeout=timeout, context=insecure_context)
+
+    try:
+        import certifi  # type: ignore
+    except Exception:  # pragma: no cover - optional dependency
+        return urlopen(request, timeout=timeout)
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    return urlopen(request, timeout=timeout, context=ssl_context)
 
 
 class TavilyClient:
@@ -63,11 +82,13 @@ class TavilyClient:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=self.timeout) as response:
+            with _urlopen_with_tls(request, timeout=self.timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as error:  # pragma: no cover
             detail = error.read().decode("utf-8", errors="ignore")
             raise RuntimeError(f"Tavily 请求失败: {error.code} {detail}") from error
+        except ssl.SSLError as error:  # pragma: no cover
+            raise RuntimeError(f"Tavily SSL 证书校验失败: {error}") from error
         except URLError as error:  # pragma: no cover
             raise RuntimeError(f"Tavily 请求失败: {error.reason}") from error
         except socket.timeout as error:  # pragma: no cover
@@ -104,11 +125,13 @@ class MetasoClient:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=self.timeout) as response:
+            with _urlopen_with_tls(request, timeout=self.timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as error:  # pragma: no cover
             detail = error.read().decode("utf-8", errors="ignore")
             raise RuntimeError(f"Metaso 请求失败: {error.code} {detail}") from error
+        except ssl.SSLError as error:  # pragma: no cover
+            raise RuntimeError(f"Metaso SSL 证书校验失败: {error}") from error
         except URLError as error:  # pragma: no cover
             raise RuntimeError(f"Metaso 请求失败: {error.reason}") from error
         except socket.timeout as error:  # pragma: no cover
@@ -147,11 +170,13 @@ class BaiduSearchClient:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=self.timeout) as response:
+            with _urlopen_with_tls(request, timeout=self.timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as error:  # pragma: no cover
             detail = error.read().decode("utf-8", errors="ignore")
             raise RuntimeError(f"百度搜索请求失败: {error.code} {detail}") from error
+        except ssl.SSLError as error:  # pragma: no cover
+            raise RuntimeError(f"百度搜索 SSL 证书校验失败: {error}") from error
         except URLError as error:  # pragma: no cover
             raise RuntimeError(f"百度搜索请求失败: {error.reason}") from error
         except socket.timeout as error:  # pragma: no cover

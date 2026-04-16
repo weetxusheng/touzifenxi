@@ -61,6 +61,7 @@ class AliyunIQSClient:
         self.max_retries = max(0, max_retries)
         self.retry_backoff_seconds = max(0.0, retry_backoff_seconds)
         self._search_gate = threading.BoundedSemaphore(value=max(1, max_concurrency))
+        self._search_http_rounds = 0
 
     @staticmethod
     def from_env(project_root: Path | None = None) -> AliyunIQSClient | None:
@@ -101,6 +102,7 @@ class AliyunIQSClient:
         )
         last_error: RuntimeError | None = None
         for attempt in range(self.max_retries + 1):
+            self._search_http_rounds += 1
             try:
                 with self._search_gate:
                     with urlopen(request, timeout=self.timeout) as response:
@@ -135,6 +137,14 @@ class AliyunIQSClient:
                 )
             )
         return documents
+
+    def take_search_http_rounds(self) -> int:
+        """返回自上次清零以来 IQS search() 的 HTTP 尝试次数（含重试），读完后清零。"""
+
+        total = self._search_http_rounds
+        self._search_http_rounds = 0
+        return total
+
 
 def fetch_article_contents(
     article: SearchContentArticleInput,

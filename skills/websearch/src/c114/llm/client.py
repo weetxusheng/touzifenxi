@@ -169,6 +169,7 @@ class StructuredChatClient:
         self._last_request_started_at_by_step: dict[str, float] = {}
         self._thread_local = threading.local()
         self._pending_trace_records: dict[str, dict[str, Any]] = {}
+        self._http_round_counter = 0
         atexit.register(self._flush_pending_trace_records_on_exit)
 
     @classmethod
@@ -210,6 +211,15 @@ class StructuredChatClient:
             self._current_provider_index = 0
             self._consecutive_failures = 0
             self._step_task_route_index_by_step[step_name] = 0
+            self._http_round_counter = 0
+
+    def take_http_round_count(self) -> int:
+        """返回本步内 provider HTTP 尝试次数（含失败后重试的轮次），读完后清零。"""
+
+        with self._lock:
+            total = self._http_round_counter
+            self._http_round_counter = 0
+            return total
 
     def set_trace_log_path(self, trace_log_path: Path | None, *, reset_file: bool = False) -> None:
         """配置当前运行的 LLM 调用日志文件。"""
@@ -432,6 +442,8 @@ class StructuredChatClient:
             self.max_attempts_for_retry_class("fatal", default=1),
         )
         for attempt in range(max_provider_attempts):
+            with self._lock:
+                self._http_round_counter += 1
             self._respect_step_rate_limit()
             started_at = time.time()
             request_id = self._next_request_id()

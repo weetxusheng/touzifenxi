@@ -1,8 +1,8 @@
 @echo off
 setlocal
 
-set "PROJECT_ROOT=E:\AI\touzifenxi"
-set "PYTHON_BIN=E:\Programs\Python310\python.exe"
+for %%I in ("%~dp0..") do set "PROJECT_ROOT=%%~fI"
+if not defined PYTHON_BIN set "PYTHON_BIN=python"
 
 cd /d "%PROJECT_ROOT%"
 set "PYTHONPATH=src"

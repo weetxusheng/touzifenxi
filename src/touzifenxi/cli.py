@@ -62,7 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
     c114_runner_parser.add_argument(
         "--date",
         default=None,
-        help="可选日期，格式 YYYY-MM-DD；不传时使用 Asia/Shanghai 当天日期。",
+        help="可选日期，格式 YYYY-MM-DD；不传时使用 Asia/Shanghai 的 T-1 日期。",
+    )
+    c114_runner_parser.add_argument(
+        "--no-email",
+        action="store_true",
+        help="仅跑流水线并生成本地 Step6 与邮件版 HTML/TXT，不发送邮件。",
     )
     c114_runner_parser.add_argument(
         "--to",
@@ -397,18 +402,22 @@ def main() -> None:
     if args.command == "run-c114-daily-brief":
         from datetime import date as date_cls
 
-        from .c114_automation import run_c114_daily_brief, shanghai_today
+        from .c114_automation import run_c114_daily_brief, shanghai_yesterday
 
-        report_date = date_cls.fromisoformat(args.date) if args.date else shanghai_today()
+        report_date = date_cls.fromisoformat(args.date) if args.date else shanghai_yesterday()
         result = run_c114_daily_brief(
             project_root=paths.project_root,
             report_date=report_date,
             recipients=args.to,
+            send_mail=not args.no_email,
         )
         if result.succeeded:
             print(f"运行目录: {result.run_dir}")
             print(f"Step 6 文件: {result.step6_path}")
-            print(f"邮件发送完成: {', '.join(args.to)}")
+            if args.no_email:
+                print("已跳过邮件发送（--no-email）。")
+            else:
+                print(f"邮件发送完成: {', '.join(args.to)}")
             return
         print(f"失败步骤: {result.failure_step}")
         print(f"失败原因: {result.failure_reason}")

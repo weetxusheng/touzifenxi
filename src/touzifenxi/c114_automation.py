@@ -6,7 +6,7 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 from zoneinfo import ZoneInfo
@@ -63,6 +63,10 @@ class C114SendLatestBriefResult:
 
 def shanghai_today() -> date:
     return datetime.now(SHANGHAI_TZ).date()
+
+
+def shanghai_yesterday() -> date:
+    return shanghai_today() - timedelta(days=1)
 
 
 def _merge_dotenv_into(env: dict[str, str], env_path: Path) -> None:
@@ -181,8 +185,9 @@ def run_c114_daily_brief(
     project_root: Path,
     report_date: date | None = None,
     recipients: Iterable[str] = (DEFAULT_C114_RECIPIENT,),
+    send_mail: bool = True,
 ) -> C114AutomationResult:
-    effective_date = report_date or shanghai_today()
+    effective_date = report_date or shanghai_yesterday()
     base_env = load_env_file(project_root)
     route, run_env, diagnostics = choose_network_route(base_env)
     if route is None:
@@ -219,6 +224,13 @@ def run_c114_daily_brief(
         capture_output=True,
         text=True,
     )
+    # Relay child process logs so batch scripts can see per-step runtime details.
+    stdout_text = completed.stdout or ""
+    stderr_text = completed.stderr or ""
+    if stdout_text.strip():
+        print(stdout_text, end="" if stdout_text.endswith("\n") else "\n")
+    if stderr_text.strip():
+        print(stderr_text, end="" if stderr_text.endswith("\n") else "\n", file=sys.stderr)
     run_dir = find_latest_run_directory(project_root=project_root, report_date=effective_date, started_after=run_started_at)
     step6_path = run_dir / step_6_file_name(effective_date) if run_dir else None
     if not step6_path or not step6_path.exists():
@@ -242,20 +254,21 @@ def run_c114_daily_brief(
     text_path = step6_path.with_name(f"{step6_path.stem}_email.txt")
     html_path.write_text(rendered.html, encoding="utf-8")
     text_path.write_text(rendered.text, encoding="utf-8")
-    send_email(
-        recipient_emails=list(recipients),
-        subject=rendered.subject,
-        body_text=rendered.text,
-        body_html=rendered.html,
-        config=load_email_channel_config(run_env),
-    )
+    if send_mail:
+        send_email(
+            recipient_emails=list(recipients),
+            subject=rendered.subject,
+            body_text=rendered.text,
+            body_html=rendered.html,
+            config=load_email_channel_config(run_env),
+        )
     return C114AutomationResult(
         report_date=effective_date,
         route_used=route,
         succeeded=True,
         run_dir=run_dir,
         step6_path=step6_path,
-        email_sent=True,
+        email_sent=bool(send_mail),
     )
 
 

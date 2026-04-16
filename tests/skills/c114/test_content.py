@@ -24,6 +24,7 @@ from c114.c114_content import (
     resolve_content_output_paths,
     run_content_fetch_workflow,
 )
+from c114.steps.step4_content_fetch import normalize_step4_result_title_key
 from c114.search.workflow import SearchResult
 from touzifenxi.settings import AppPaths
 
@@ -805,3 +806,20 @@ class C114ExtractionTests(unittest.TestCase):
         self.assertNotIn("导航", text)
         self.assertNotIn("相关链接", text)
         self.assertNotIn("热门文章", text)
+
+
+class Step4TitleDedupKeyTests(unittest.TestCase):
+    def test_title_key_collapses_internal_spaces(self) -> None:
+        a = normalize_step4_result_title_key("中国 移动 发布 5G 白皮书")
+        b = normalize_step4_result_title_key("中国移动发布5G白皮书")
+        self.assertEqual(a, b)
+
+    def test_title_key_matches_compact_vs_spaced_latin(self) -> None:
+        a = normalize_step4_result_title_key("Hello World News")
+        b = normalize_step4_result_title_key("HelloWorldNews")
+        self.assertEqual(a, b)
+
+    def test_title_key_still_strips_trailing_site_suffix_before_space_collapse(self) -> None:
+        base = "工信部发文推进算网融合"
+        with_suffix = f"{base} - C114通信网"
+        self.assertEqual(normalize_step4_result_title_key(with_suffix), normalize_step4_result_title_key(base))

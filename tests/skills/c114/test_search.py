@@ -559,15 +559,15 @@ categories:
         self.assertEqual(len(selected), 5)
         self.assertEqual(selected[-1].url, "https://example.com/4")
 
-    def test_filter_recent_results_keeps_only_results_within_recent_window(self) -> None:
+    def test_filter_recent_results_keeps_only_results_matching_report_date(self) -> None:
         results = [
             SearchResult(
                 query="q",
                 query_type="title",
-                result_title="recent",
-                url="https://example.com/recent",
+                result_title="same-day",
+                url="https://example.com/same-day",
                 domain="example.com",
-                published_at="2026-03-15",
+                published_at="2026-03-31",
                 snippet="x",
                 score=0.9,
                 is_official=False,
@@ -610,7 +610,7 @@ categories:
 
         filtered = filter_recent_results(results, report_date=date(2026, 3, 31), max_age_days=30)
 
-        self.assertEqual([item.url for item in filtered], ["https://example.com/recent"])
+        self.assertEqual([item.url for item in filtered], ["https://example.com/same-day"])
 
     def test_infer_published_at_from_url_or_snippet(self) -> None:
         self.assertEqual(
