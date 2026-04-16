@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 def test_first_batch_package_layout_exposes_runtime_llm_and_search_entrypoints() -> None:
     """第一批目录收口后，横向能力应从职责子包暴露。"""
@@ -54,6 +58,51 @@ def test_step4_content_fetch_is_split_from_content_facade() -> None:
     assert callable(fetch_article_contents)
     assert callable(extract_visible_text)
     assert callable(run_content_fetch_workflow)
+
+
+def test_legacy_facades_are_grouped_under_facades_package() -> None:
+    """历史兼容门面应集中到 facades 目录，根目录只保留薄转发层。"""
+
+    from c114.facades import content, content_analysis, intelligence
+
+    assert callable(content.run_content_fetch_workflow)
+    assert callable(content_analysis.generate_brief_markdown)
+    assert callable(intelligence.write_analysis_outputs)
+
+
+def test_internal_modules_depend_on_neutral_facade_paths() -> None:
+    """内部模块应优先依赖 facades 或职责子包，而不是继续引用旧的 c114_* 门面。"""
+
+    targets = [
+        PROJECT_ROOT / "skills/websearch/src/c114/analysis/output_paths.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/analysis/yaml_io.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/brief/markdown.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/content/yaml_io.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/controller_state.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/search/workflow.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/search/yaml_io.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/steps/step6_brief.py",
+        PROJECT_ROOT / "skills/websearch/src/infoq/cli.py",
+    ]
+    forbidden_tokens = ("c114_content", "c114_content_analysis", "c114_intelligence")
+
+    for path in targets:
+        content = path.read_text(encoding="utf-8")
+        for token in forbidden_tokens:
+            assert token not in content, f"{path} 仍在依赖旧门面 {token}"
+
+
+def test_root_level_legacy_facade_files_are_removed() -> None:
+    """旧的根目录兼容壳应被移除，避免继续制造历史导入路径。"""
+
+    legacy_files = [
+        PROJECT_ROOT / "skills/websearch/src/c114/c114_content.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/c114_content_analysis.py",
+        PROJECT_ROOT / "skills/websearch/src/c114/c114_intelligence.py",
+    ]
+
+    for path in legacy_files:
+        assert not path.exists(), f"{path} 仍然存在，应迁移到 facades/ 或直接删除"
 
 
 def test_cli_is_split_into_pipeline_and_commands() -> None:

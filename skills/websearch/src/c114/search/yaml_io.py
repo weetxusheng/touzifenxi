@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from ..c114_intelligence import provider_stats_name
+from ..facades.intelligence import provider_stats_name
 from .types import SearchArticleInput, SearchQuery, SearchResult, SearchWorkflowPayload
 
 
@@ -67,7 +67,7 @@ def ensure_search_checklist_keywords(
     *,
     keyword_count: int = 1,
 ) -> list[SearchArticleInput]:
-    from ..c114_intelligence import ArticleAnalysis, SearchChecklistItem, autofill_search_checklist_items
+    from ..facades.intelligence import ArticleAnalysis, SearchChecklistItem, autofill_search_checklist_items
 
     incomplete = [item for item in items if len(item.keywords) < keyword_count]
     if not incomplete:

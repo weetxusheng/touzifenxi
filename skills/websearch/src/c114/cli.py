@@ -21,51 +21,12 @@ from .c114_brief_review import (
     validate_brief_markdown_for_agent,
     validate_brief_review_yaml_for_agent,
 )
-from .c114_content import (
-    load_search_results_yaml,
-    resolve_content_output_paths,
-    run_content_fetch_workflow,
-    save_content_results,
-    validate_content_fetch_inputs,
-)
-from .c114_content_analysis import (
-    BRIEF_PROMPT_PATH,
-    CONTENT_ANALYSIS_PROMPT_PATH,
-    auto_complete_content_analysis,
-    collect_missing_analysis_fields,
-    generate_brief_markdown,
-    generate_layer_issues,
-    load_content_analysis_inputs,
-    render_brief_markdown,
-    resolve_content_analysis_output_paths,
-    save_content_analysis_yaml,
-    save_layer_issues_yaml,
-)
 from .c114_hot_topics import (
     collect_daily_report,
     render_daily_report,
     resolve_hot_topics_output_path,
     save_daily_report,
 )
-from .c114_intelligence import (
-    LLM_TRACE_LOG_DIR_NAME,
-    ArticleAnalysis,
-    analyze_daily_articles,
-    auto_group_analysis_topics,
-    create_search_range_directory,
-    create_search_run_directory,
-    layer_issues_name,
-    resolve_analysis_output_paths,
-    step_1_analysis_name,
-    step_2_checklist_name,
-    step_3_results_name,
-    step_4_content_name,
-    step_5_content_analysis_name,
-    step_6_brief_name,
-    step_7_brief_review_name,
-    write_analysis_outputs,
-)
-from .c114_intelligence import PROMPT_PATH as SEARCH_KEYWORD_PROMPT_PATH
 from .commands.config import (
     handle_config_apply_command,
     handle_config_init_command,
@@ -91,6 +52,45 @@ from .controller_state import (
     step_manifest_path,
     write_controller_agent_manifest,
 )
+from .facades.content import (
+    load_search_results_yaml,
+    resolve_content_output_paths,
+    run_content_fetch_workflow,
+    save_content_results,
+    validate_content_fetch_inputs,
+)
+from .facades.content_analysis import (
+    BRIEF_PROMPT_PATH,
+    CONTENT_ANALYSIS_PROMPT_PATH,
+    auto_complete_content_analysis,
+    collect_missing_analysis_fields,
+    generate_brief_markdown,
+    generate_layer_issues,
+    load_content_analysis_inputs,
+    render_brief_markdown,
+    resolve_content_analysis_output_paths,
+    save_content_analysis_yaml,
+    save_layer_issues_yaml,
+)
+from .facades.intelligence import (
+    LLM_TRACE_LOG_DIR_NAME,
+    ArticleAnalysis,
+    analyze_daily_articles,
+    auto_group_analysis_topics,
+    create_search_range_directory,
+    create_search_run_directory,
+    layer_issues_name,
+    resolve_analysis_output_paths,
+    step_1_analysis_name,
+    step_2_checklist_name,
+    step_3_results_name,
+    step_4_content_name,
+    step_5_content_analysis_name,
+    step_6_brief_name,
+    step_7_brief_review_name,
+    write_analysis_outputs,
+)
+from .facades.intelligence import PROMPT_PATH as SEARCH_KEYWORD_PROMPT_PATH
 from .llm import StructuredChatClient
 from .runtime.checkpoint import StepCheckpointStore, checkpoint_path_for_step
 from .runtime.config import (
@@ -188,7 +188,7 @@ def create_c114_range_day_directories(
 def find_required_step_input(paths: AppPaths, target_date: date, file_name: str, label: str) -> Path:
     """查找某一天最新的上游步骤文件，找不到时抛出可读错误。"""
 
-    from .c114_intelligence import find_latest_c114_step_file
+    from .facades.intelligence import find_latest_c114_step_file
 
     resolved = find_latest_c114_step_file(paths.reports_dir, target_date, file_name)
     if resolved is None:

@@ -7,7 +7,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from c114.c114_content_analysis import (
+from c114.facades.content_analysis import (
     auto_complete_brief_sections,
     auto_complete_content_analysis,
     build_brief_prompt_payload,

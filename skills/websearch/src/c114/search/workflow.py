@@ -9,7 +9,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from ..c114_intelligence import (
+from ..facades.intelligence import (
     c114_reports_root,
     find_latest_search_run_directory,
     provider_stats_name,

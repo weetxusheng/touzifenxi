@@ -15,8 +15,8 @@ from ..analysis.models import BRIEF_PROMPT_PATH, BriefSectionDraft, ContentAnaly
 from ..analysis.yaml_io import load_content_analysis_inputs
 from ..brief.markdown import render_brief_markdown, render_generated_brief_markdown
 from ..brief.render import render_layer_issues_yaml
-from ..c114_content import load_search_results_yaml
-from ..c114_intelligence import load_daily_articles_from_csv
+from ..facades.content import load_search_results_yaml
+from ..facades.intelligence import load_daily_articles_from_csv
 from ..llm import (
     MiniMaxChatClient,
     StructuredLLMError,
