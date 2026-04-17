@@ -41,7 +41,7 @@ if exist "%PROJECT_ROOT%\.env" (
   )
 )
 
-"%PYTHON_BIN%" -m touzifenxi.cli run-c114-daily-brief --no-email >> "%LOG_FILE%" 2>&1
+"%PYTHON_BIN%" -m touzifenxi.cli run-c114-daily-brief --no-email
 set "EXIT_CODE=%ERRORLEVEL%"
 
 echo [C114] %date% %time% finished with exit code %EXIT_CODE%.

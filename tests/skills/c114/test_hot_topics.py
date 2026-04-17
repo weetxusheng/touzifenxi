@@ -195,6 +195,11 @@ class CollectDailyReportTests(unittest.TestCase):
             <title>中国移动绿色多频段基站天线补采，规模为19.07万面 - C114通信网</title>
             <meta name="description" content="中国移动绿色多频段基站天线补采，规模为19.07万面,C114讯 4月16日消息（焦焦）..." />
           </head>
+          <body>
+            <div class="article_top">
+              <div class="time">2026/4/16 14:14</div>
+            </div>
+          </body>
         </html>
         """
 

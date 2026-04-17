@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import http.client
 import socket
 import threading
 import time
@@ -422,7 +423,7 @@ def fetch_url_content(url: str, timeout: float = 20.0) -> FetchResult:
             fetch_error="",
             content_source="html_fallback",
         )
-    except (HTTPError, URLError, socket.timeout) as error:
+    except (HTTPError, URLError, socket.timeout, TimeoutError, ConnectionResetError, http.client.RemoteDisconnected) as error:
         return FetchResult(
             url=url,
             domain=extract_domain(url),

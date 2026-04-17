@@ -25,6 +25,7 @@ CHINESE_WORD_RE = re.compile(r"[\u4e00-\u9fff]{2,12}")
 DATETIME_RE = re.compile(r"(20\d{2})-(\d{1,2})-(\d{1,2})\s+\d{1,2}:\d{1,2}")
 SLASH_DATE_RE = re.compile(r"(20\d{2})/(\d{1,2})/(\d{1,2})")
 CN_DATE_RE = re.compile(r"(\d{1,2})月(\d{1,2})日")
+C114_NEWS_DATE_RE = re.compile(r"C114讯\s*(\d{1,2})月(\d{1,2})日(?:消息|讯)")
 TITLE_SUFFIX_RE = re.compile(r"\s*[-—]\s*.*?C114通信网\s*$")
 HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
 PUBLISH_LABEL_DATE_RE = re.compile(
@@ -36,6 +37,9 @@ ARTICLE_TIME_DATE_RE = re.compile(
     r"(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\s+\d{1,2}:\d{1,2}",
     re.I,
 )
+_DIV_OPEN_RE = re.compile(r"<div\b", re.I)
+_DIV_CLOSE_RE = re.compile(r"</div\s*>", re.I)
+_CLASS_ATTR_RE = re.compile(r'\bclass=["\']([^"\']*)["\']', re.I)
 CSV_FIELDNAMES = [
     "统计日期",
     "栏目键",
@@ -58,6 +62,10 @@ class ChannelSpec:
     name: str
     url: str
     path_prefixes: tuple[str, ...]
+    # CSS class names of sections to scrape; empty = scrape full page.
+    include_section_classes: tuple[str, ...] = ()
+    # CSS class names that disqualify an otherwise-matching section div.
+    exclude_section_classes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -93,34 +101,113 @@ CHANNELS: dict[str, ChannelSpec] = {
     "home": ChannelSpec(
         key="home",
         name="首页",
-        url="https://www.c114.com.cn/",
+        # Use ?c=web to get the standard web layout with 专题推荐 and 热点新闻 sections.
+        url="https://www.c114.com.cn/?c=web",
         path_prefixes=("/news/", "/ftth/", "/video/", "/cloud/", "/5g/", "/ai/", "/quantum/", "/satellite/", "/la/"),
+        # 专题推荐 section (topic_list) + 热点新闻 section (page_content_center_list).
+        # Excludes: operator tab panels (content_l_list_top_two) which surface old
+        # pinned 《对话》 videos and vendor PR articles with stale publication dates.
+        include_section_classes=("topic_list", "page_content_center_list"),
     ),
     "quantum": ChannelSpec(
         key="quantum",
         name="量子信息",
         url="https://www.c114.com.cn/quantum/",
         path_prefixes=("/quantum/",),
+        # 最新报道 articles are inside choose-videos; 热门文章 are inside new_video.
+        # 特别策划 shares the new_video class but also carries special_planning → excluded.
+        include_section_classes=("choose-videos", "new_video"),
+        exclude_section_classes=("special_planning",),
     ),
     "satellite": ChannelSpec(
         key="satellite",
         name="卫星互联网",
         url="https://www.c114.com.cn/satellite/",
         path_prefixes=("/satellite/",),
+        include_section_classes=("choose-videos", "new_video"),
+        exclude_section_classes=("special_planning",),
     ),
     "la": ChannelSpec(
         key="la",
         name="数智低空",
         url="https://www.c114.com.cn/la/",
         path_prefixes=("/la/",),
+        include_section_classes=("choose-videos", "new_video"),
+        exclude_section_classes=("special_planning",),
     ),
     "ai": ChannelSpec(
         key="ai",
         name="Cloud&AI",
         url="https://www.c114.com.cn/ai/",
         path_prefixes=("/ai/",),
+        include_section_classes=("choose-videos", "new_video"),
+        exclude_section_classes=("special_planning",),
     ),
 }
+
+
+def _find_closing_div(html: str, open_start: int) -> int:
+    """Return the index just past the </div> that closes the div opened at open_start."""
+    tag_end = html.find(">", open_start)
+    if tag_end < 0:
+        return len(html)
+    pos = tag_end + 1
+    depth = 1
+    while pos < len(html) and depth > 0:
+        next_open = html.lower().find("<div", pos)
+        next_close = html.lower().find("</div", pos)
+        if next_open < 0:
+            next_open = len(html)
+        if next_close < 0:
+            next_close = len(html)
+        if next_open < next_close:
+            depth += 1
+            tag_end2 = html.find(">", next_open)
+            pos = (tag_end2 + 1) if tag_end2 >= 0 else len(html)
+        else:
+            depth -= 1
+            close_end = next_close + len("</div>")
+            pos = close_end
+    return pos
+
+
+def extract_section_html(
+    html: str,
+    include_classes: tuple[str, ...],
+    exclude_classes: tuple[str, ...] = (),
+) -> str:
+    """Return only HTML from divs whose class list contains any of include_classes.
+
+    Divs that also contain any of exclude_classes are skipped.  When
+    include_classes is empty the full HTML is returned unchanged.
+    """
+    if not include_classes:
+        return html
+    blocks: list[str] = []
+    seen_ranges: list[tuple[int, int]] = []
+    pos = 0
+    while pos < len(html):
+        m = _DIV_OPEN_RE.search(html, pos)
+        if not m:
+            break
+        tag_end = html.find(">", m.start())
+        if tag_end < 0:
+            break
+        tag_html = html[m.start(): tag_end + 1]
+        cm = _CLASS_ATTR_RE.search(tag_html)
+        if cm:
+            classes = cm.group(1).split()
+            if any(inc in classes for inc in include_classes):
+                if not exclude_classes or not any(exc in classes for exc in exclude_classes):
+                    end = _find_closing_div(html, m.start())
+                    # Skip if already covered by a previous (outer) block.
+                    if not any(s <= m.start() and end <= e for s, e in seen_ranges):
+                        blocks.append(html[m.start():end])
+                        seen_ranges.append((m.start(), end))
+                    pos = end
+                    continue
+        pos = tag_end + 1
+    return "\n".join(blocks)
 
 
 class AnchorParser(HTMLParser):
@@ -181,8 +268,13 @@ def fetch_text(url: str, timeout: float = 20.0) -> str:
 def filter_candidates_for_channel(html: str, channel: ChannelSpec) -> list[ArticleCandidate]:
     """Extract article candidates from a channel page for the configured URL prefixes."""
 
+    scoped_html = extract_section_html(
+        html,
+        include_classes=channel.include_section_classes,
+        exclude_classes=channel.exclude_section_classes,
+    )
     parser = AnchorParser()
-    parser.feed(html)
+    parser.feed(scoped_html)
     seen: set[str] = set()
     candidates: list[ArticleCandidate] = []
     for href, anchor_text in parser.links:
@@ -245,9 +337,6 @@ def split_keywords(raw_value: str) -> list[str]:
 def parse_publish_date(html: str, summary: str) -> date | None:
     """Infer article publish date, preferring story metadata over page refresh timestamps."""
 
-    summary_date = parse_cn_date(summary, fallback_year=datetime.now().year)
-    if summary_date:
-        return summary_date
     html_without_comments = strip_html_comments(html)
     labeled_match = PUBLISH_LABEL_DATE_RE.search(html_without_comments)
     if labeled_match:
@@ -259,6 +348,9 @@ def parse_publish_date(html: str, summary: str) -> date | None:
     if article_time_match:
         year, month, day = (int(value) for value in article_time_match.groups())
         return date(year, month, day)
+    summary_news_date = parse_summary_news_date(summary, fallback_year=datetime.now().year)
+    if summary_news_date:
+        return summary_news_date
     return None
 
 
@@ -272,6 +364,16 @@ def parse_cn_date(value: str, fallback_year: int) -> date | None:
     """Parse compact Chinese month/day strings using the supplied fallback year."""
 
     match = CN_DATE_RE.search(value)
+    if not match:
+        return None
+    month, day = (int(part) for part in match.groups())
+    return date(fallback_year, month, day)
+
+
+def parse_summary_news_date(value: str, fallback_year: int) -> date | None:
+    """Only parse summary date when it uses explicit C114 news lead format."""
+
+    match = C114_NEWS_DATE_RE.search(value)
     if not match:
         return None
     month, day = (int(part) for part in match.groups())
@@ -337,8 +439,6 @@ def collect_daily_report(
                 continue
             article_html = fetch_text(candidate.url, timeout=timeout)
             metadata = extract_article_metadata(candidate.url, article_html)
-            if metadata.publish_date is None and candidate.anchor_date == report_date:
-                metadata = replace(metadata, publish_date=report_date)
             if metadata.publish_date != report_date:
                 continue
             articles.append(metadata)
@@ -399,13 +499,15 @@ def save_daily_report(output_path: Path, report_date: date, reports: list[Channe
 
 
 def save_daily_report_csv(csv_path: Path, report_date: date, reports: list[ChannelDailyReport]) -> None:
-    """Append one day's flattened raw rows into the canonical C114 CSV."""
+    """Replace one day's rows in the canonical C114 CSV and keep all other dates intact."""
 
     new_rows = flatten_reports_to_csv_rows(report_date, reports)
     existing_rows = load_existing_csv_rows(csv_path)
-    new_keys = {(row["统计日期"], row["文章链接"]) for row in new_rows if row["文章链接"]}
+    date_str = report_date.isoformat()
+    # Replace ALL rows for report_date; stale rows from old runs (with looser date
+    # filtering) would otherwise linger and pollute downstream analysis steps.
     merged_rows = new_rows + [
-        row for row in existing_rows if (row.get("统计日期", ""), row.get("文章链接", "")) not in new_keys
+        row for row in existing_rows if row.get("统计日期", "") != date_str
     ]
 
     buffer = StringIO()
