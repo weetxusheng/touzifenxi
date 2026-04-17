@@ -221,21 +221,17 @@ def run_c114_daily_brief(
         cwd=project_root,
         env=run_env,
         check=False,
-        capture_output=True,
+        capture_output=False,
         text=True,
     )
-    # Relay child process logs so batch scripts can see per-step runtime details.
-    stdout_text = completed.stdout or ""
-    stderr_text = completed.stderr or ""
-    if stdout_text.strip():
-        print(stdout_text, end="" if stdout_text.endswith("\n") else "\n")
-    if stderr_text.strip():
-        print(stderr_text, end="" if stderr_text.endswith("\n") else "\n", file=sys.stderr)
+    # When capture_output=False, stdout/stderr may be None; child process output is already streamed live.
+    stdout_text = getattr(completed, "stdout", None) or ""
+    stderr_text = getattr(completed, "stderr", None) or ""
     run_dir = find_latest_run_directory(project_root=project_root, report_date=effective_date, started_after=run_started_at)
     step6_path = run_dir / step_6_file_name(effective_date) if run_dir else None
     if not step6_path or not step6_path.exists():
         failure_step = infer_failure_step(run_dir=run_dir, report_date=effective_date)
-        failure_reason = completed.stderr.strip() or completed.stdout.strip() or "标准 run 未产出 step 6 文件。"
+        failure_reason = stderr_text.strip() or stdout_text.strip() or "标准 run 未产出 step 6 文件。"
         return C114AutomationResult(
             report_date=effective_date,
             route_used=route,
