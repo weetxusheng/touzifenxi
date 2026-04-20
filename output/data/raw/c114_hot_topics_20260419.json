@@ -1,0 +1,94 @@
+{
+  "report_date": "2026-04-19",
+  "generated_at": "2026-04-20T15:16:09",
+  "channels": [
+    {
+      "channel_key": "home",
+      "channel_name": "首页",
+      "channel_url": "https://www.c114.com.cn/?c=web",
+      "article_count": 2,
+      "hot_topics": [
+        {
+          "keyword": "云服务",
+          "count": 1
+        },
+        {
+          "keyword": "华为ICT大赛",
+          "count": 1
+        },
+        {
+          "keyword": "产教协同",
+          "count": 1
+        },
+        {
+          "keyword": "实战型人才",
+          "count": 1
+        },
+        {
+          "keyword": "AI人才培养",
+          "count": 1
+        },
+        {
+          "keyword": "昇腾开源生态",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/news/116/a1308719.html",
+          "title": "欧盟授予四家公司1.8亿欧元 通过云服务加强数字主权",
+          "publish_date": "2026-04-19",
+          "keywords": [
+            "云服务"
+          ],
+          "summary": "欧盟授予四家公司1.8亿欧元 通过云服务加强数字主权,C114讯 北京时间4月19日晚间消息（蒋均牧）继2025年10月启动招标程序后，欧盟委员会近日决定"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/126/a1308717.html",
+          "title": "杨超斌：华为ICT大赛十年新起点，为数字产业锻造实战型人才",
+          "publish_date": "2026-04-19",
+          "keywords": [
+            "华为ICT大赛",
+            "产教协同",
+            "实战型人才",
+            "AI人才培养",
+            "昇腾开源生态"
+          ],
+          "summary": "杨超斌：华为ICT大赛十年新起点，为数字产业锻造实战型人才,C114讯 4月19日上午消息（蒋均牧）第十届华为ICT大赛中国总决赛在华中科技大学落下帷幕，华为常"
+        }
+      ]
+    },
+    {
+      "channel_key": "quantum",
+      "channel_name": "量子信息",
+      "channel_url": "https://www.c114.com.cn/quantum/",
+      "article_count": 0,
+      "hot_topics": [],
+      "articles": []
+    },
+    {
+      "channel_key": "satellite",
+      "channel_name": "卫星互联网",
+      "channel_url": "https://www.c114.com.cn/satellite/",
+      "article_count": 0,
+      "hot_topics": [],
+      "articles": []
+    },
+    {
+      "channel_key": "la",
+      "channel_name": "数智低空",
+      "channel_url": "https://www.c114.com.cn/la/",
+      "article_count": 0,
+      "hot_topics": [],
+      "articles": []
+    },
+    {
+      "channel_key": "ai",
+      "channel_name": "Cloud&AI",
+      "channel_url": "https://www.c114.com.cn/ai/",
+      "article_count": 0,
+      "hot_topics": [],
+      "articles": []
+    }
+  ]
+}
