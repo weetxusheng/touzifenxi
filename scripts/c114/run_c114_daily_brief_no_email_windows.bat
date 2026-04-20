@@ -1,8 +1,9 @@
 @echo off
 setlocal
 
-for %%I in ("%~dp0..") do set "PROJECT_ROOT=%%~fI"
-set "LOG_FILE=%CD%\log.txt"
+rem Repo root = scripts/c114 -> two levels up from this file.
+for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
+set "LOG_FILE=%PROJECT_ROOT%\log.txt"
 
 if not defined PYTHON_BIN (
   if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -77,13 +78,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     send_c114_latest_parser = subparsers.add_parser(
         "send-c114-latest-brief-email",
-        help="仅对最近一次生成的 C114 Step6 简报渲染并发送邮件，不重新跑流水线。",
+        help="仅根据 Step6 简报渲染并发送邮件，不重新跑流水线；可与 --t1-gate 联动早间跑数后再发信。",
     )
     send_c114_latest_parser.add_argument(
         "--to",
         nargs="+",
         default=["zx944532395@sina.com"],
         help="邮件收件人列表。",
+    )
+    send_c114_latest_parser.add_argument(
+        "--t1-gate",
+        action="store_true",
+        help=(
+            "按 Asia/Shanghai 的 T-1 统计日选取 Step6，并要求其在「上海」今日不早于 --gate-time 生成"
+            "（用于定时：先跑流水线，再在稍后任务中校验产物后再发邮件）。"
+        ),
+    )
+    send_c114_latest_parser.add_argument(
+        "--gate-time",
+        default="10:00",
+        help="与 --t1-gate 联用：Step6 的 mtime 不得早于上海当日的该时刻（默认 10:00）。",
+    )
+    send_c114_latest_parser.add_argument(
+        "--report-date",
+        default=None,
+        help="指定统计日 YYYY-MM-DD；仅发送该日的 c114_step_6_brief_YYYYMMDD.md（不要与 --t1-gate 同用）。",
+    )
+    send_c114_latest_parser.add_argument(
+        "--require-built-not-before",
+        dest="require_built_not_before",
+        default=None,
+        help="与 --report-date 联用：要求 Step6 在上海「今日」不早于 HH:MM 写盘。",
     )
     coverage_parser = subparsers.add_parser(
         "coverage", help="Show current candidate coverage for industries and daily factors."
@@ -428,11 +453,46 @@ def main() -> None:
         raise SystemExit(1)
 
     if args.command == "send-c114-latest-brief-email":
-        from .c114_automation import send_latest_c114_brief_email
+        from datetime import date as date_cls
+
+        from .c114_automation import (
+            parse_clock_hh_mm,
+            send_latest_c114_brief_email,
+            shanghai_local_today_at,
+            shanghai_yesterday,
+        )
+
+        report_date = None
+        require_dt = None
+        if args.t1_gate:
+            if args.report_date:
+                print("--t1-gate 不能与 --report-date 同时使用。", file=sys.stderr)
+                raise SystemExit(2)
+            try:
+                gh, gm = parse_clock_hh_mm(args.gate_time)
+            except ValueError as exc:
+                print(f"--gate-time 无效: {exc}", file=sys.stderr)
+                raise SystemExit(2) from exc
+            report_date = shanghai_yesterday()
+            require_dt = shanghai_local_today_at(gh, gm)
+        elif args.report_date:
+            report_date = date_cls.fromisoformat(args.report_date)
+            if args.require_built_not_before:
+                try:
+                    bh, bm = parse_clock_hh_mm(args.require_built_not_before)
+                except ValueError as exc:
+                    print(f"--require-built-not-before 无效: {exc}", file=sys.stderr)
+                    raise SystemExit(2) from exc
+                require_dt = shanghai_local_today_at(bh, bm)
+        elif args.require_built_not_before:
+            print("--require-built-not-before 需要同时指定 --report-date。", file=sys.stderr)
+            raise SystemExit(2)
 
         result = send_latest_c114_brief_email(
             project_root=paths.project_root,
             recipients=args.to,
+            report_date=report_date,
+            require_modified_not_before=require_dt,
         )
         if not result.succeeded:
             print(result.error_detail or "发送失败。")

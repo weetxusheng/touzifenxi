@@ -286,15 +286,87 @@ def find_latest_c114_step6_path(project_root: Path) -> Path | None:
     return newest
 
 
+def find_step6_path_for_report_date(project_root: Path, report_date: date) -> Path | None:
+    """在所有 c114_search_* 运行目录中查找指定统计日的 Step6 Markdown（同名取最新 mtime）。"""
+    name = step_6_file_name(report_date)
+    hits: list[Path] = []
+    for report_root in candidate_c114_report_roots(project_root):
+        if not report_root.is_dir():
+            continue
+        for run_dir in report_root.iterdir():
+            if not run_dir.is_dir() or not run_dir.name.startswith("c114_search_"):
+                continue
+            candidate = run_dir / name
+            if candidate.is_file():
+                hits.append(candidate)
+    if not hits:
+        return None
+    return max(hits, key=lambda p: p.stat().st_mtime)
+
+
+def shanghai_local_today_at(hour: int, minute: int) -> datetime:
+    """Asia/Shanghai 当日本地时钟对应的带时区 datetime（用于与文件 mtime 比较）。"""
+    today = datetime.now(SHANGHAI_TZ).date()
+    return datetime(today.year, today.month, today.day, hour, minute, tzinfo=SHANGHAI_TZ)
+
+
+def parse_clock_hh_mm(value: str) -> tuple[int, int]:
+    """解析 `10:00`、`09:30` 形式的时刻（24 小时制）。"""
+    parts = value.strip().split(":")
+    if len(parts) != 2:
+        raise ValueError("时刻须为 HH:MM 格式，例如 10:00")
+    hour, minute = int(parts[0].strip(), 10), int(parts[1].strip(), 10)
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        raise ValueError("无效时刻")
+    return hour, minute
+
+
 def send_latest_c114_brief_email(
     *,
     project_root: Path,
     recipients: Iterable[str],
+    report_date: date | None = None,
+    require_modified_not_before: datetime | None = None,
 ) -> C114SendLatestBriefResult:
-    """对最近一次 Step6 简报渲染并发送邮件，不重新跑流水线。"""
-    step6_path = find_latest_c114_step6_path(project_root)
-    if step6_path is None:
-        return C114SendLatestBriefResult(succeeded=False, error_detail="未找到任何 c114_step_6_brief_*.md。")
+    """对 Step6 简报渲染并发送邮件，不重新跑流水线。
+
+    - `report_date` 为 None 时：仍按全局最新 mtime 选取 Step6（兼容旧行为）。
+    - `report_date` 指定时：必须存在对应 `c114_step_6_brief_YYYYMMDD.md`。
+    - `require_modified_not_before`：要求 Step6 文件的 mtime 不早于该时刻（用于校验早间跑数任务已成功写盘）。
+    """
+    if report_date is not None:
+        step6_path = find_step6_path_for_report_date(project_root, report_date)
+        if step6_path is None:
+            return C114SendLatestBriefResult(
+                succeeded=False,
+                error_detail=f"未找到统计日 {report_date.isoformat()} 的 Step6 文件（{step_6_file_name(report_date)}）。",
+            )
+    else:
+        step6_path = find_latest_c114_step6_path(project_root)
+        if step6_path is None:
+            return C114SendLatestBriefResult(succeeded=False, error_detail="未找到任何 c114_step_6_brief_*.md。")
+        if require_modified_not_before is not None:
+            return C114SendLatestBriefResult(
+                succeeded=False,
+                error_detail="使用「最新 mtime」模式时不能指定 require_modified_not_before；请改用 --report-date 或 --t1-gate。",
+            )
+
+    if require_modified_not_before is not None:
+        if require_modified_not_before.tzinfo is None:
+            return C114SendLatestBriefResult(
+                succeeded=False,
+                error_detail="require_modified_not_before 必须为带时区的 datetime。",
+            )
+        mtime = datetime.fromtimestamp(step6_path.stat().st_mtime, tz=SHANGHAI_TZ)
+        if mtime < require_modified_not_before:
+            return C114SendLatestBriefResult(
+                succeeded=False,
+                error_detail=(
+                    f"Step6 已找到但生成时间早于要求：文件={step6_path.name}，"
+                    f"mtime（上海）={mtime.isoformat(timespec='minutes')}，"
+                    f"要求不早于 {require_modified_not_before.isoformat(timespec='minutes')}。"
+                ),
+            )
     env = load_env_file(project_root)
     try:
         config = load_email_channel_config(env)
@@ -399,9 +471,13 @@ __all__ = [
     "build_route_env",
     "choose_network_route",
     "find_latest_c114_step6_path",
+    "find_step6_path_for_report_date",
     "load_env_file",
+    "parse_clock_hh_mm",
     "probe_connectivity",
     "run_c114_daily_brief",
     "send_latest_c114_brief_email",
+    "shanghai_local_today_at",
     "shanghai_today",
+    "shanghai_yesterday",
 ]

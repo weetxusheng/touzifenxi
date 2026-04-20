@@ -380,18 +380,54 @@ def parse_summary_news_date(value: str, fallback_year: int) -> date | None:
     return date(fallback_year, month, day)
 
 
+def _try_date(year: int, month: int, day: int) -> date | None:
+    """Return a calendar date or None when components are invalid."""
+
+    try:
+        return date(year, month, day)
+    except ValueError:
+        return None
+
+
+# List-page text may include `20/04/2026` (day/month/year); a naive M/D regex
+# can match `20/04` and treat 20 as the month.
+_TRIPLE_SLASH_DATE_RE = re.compile(r"(?<!\d)(\d{1,2})/(\d{1,2})/(20\d{2})(?!\d)")
+# Short M/D or D/M must not be a prefix of `/year` (handled by triple rule first).
+_SHORT_SLASH_MD_RE = re.compile(r"(?<!\d)(\d{1,2})/(\d{1,2})(?!/\d{4})(?!\d)")
+
+
 def parse_anchor_date(value: str, fallback_year: int | None = None) -> date | None:
     """Extract a date from list-page anchor text such as `3/30 14:30`."""
 
     slash_match = SLASH_DATE_RE.search(value)
     if slash_match:
         year, month, day = (int(part) for part in slash_match.groups())
-        return date(year, month, day)
+        parsed = _try_date(year, month, day)
+        if parsed:
+            return parsed
+    triple = _TRIPLE_SLASH_DATE_RE.search(value)
+    if triple:
+        a, b, year = (int(part) for part in triple.groups())
+        if a > 12:
+            parsed = _try_date(year, b, a)
+        elif b > 12:
+            parsed = _try_date(year, a, b)
+        else:
+            parsed = _try_date(year, a, b)
+            if parsed is None:
+                parsed = _try_date(year, b, a)
+        if parsed:
+            return parsed
     fallback = fallback_year or datetime.now().year
-    short_match = re.search(r"(?<!\d)(\d{1,2})/(\d{1,2})(?!\d)", value)
+    short_match = _SHORT_SLASH_MD_RE.search(value)
     if short_match:
-        month, day = (int(part) for part in short_match.groups())
-        return date(fallback, month, day)
+        first, second = (int(part) for part in short_match.groups())
+        month, day = first, second
+        if month > 12 and 1 <= second <= 12:
+            month, day = second, first
+        parsed = _try_date(fallback, month, day)
+        if parsed:
+            return parsed
     return parse_cn_date(value, fallback_year=fallback)
 
 

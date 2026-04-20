@@ -3,12 +3,20 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
-from touzifenxi.c114_automation import ConnectivityProbeResult, run_c114_daily_brief
+from touzifenxi.c114_automation import (
+    ConnectivityProbeResult,
+    find_step6_path_for_report_date,
+    run_c114_daily_brief,
+    send_latest_c114_brief_email,
+)
 from touzifenxi.channels.renderers import RenderedEmail
+
+SHANGHAI = ZoneInfo("Asia/Shanghai")
 
 
 class C114AutomationRunnerTests(unittest.TestCase):
@@ -175,3 +183,59 @@ class C114AutomationRunnerTests(unittest.TestCase):
         )
         run_dir.mkdir(parents=True, exist_ok=True)
         return run_dir
+
+
+class SendLatestC114BriefEmailGateTests(C114AutomationRunnerTests):
+    def test_find_step6_prefers_newer_when_duplicate_report_dirs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = Path(tmp_dir)
+            older = self._create_run_dir(project_root, "c114", "202604120900")
+            newer = self._create_run_dir(project_root, "c114", "202604121200")
+            name = "c114_step_6_brief_20260412.md"
+            (older / name).write_text("# old\n", encoding="utf-8")
+            (newer / name).write_text("# new\n", encoding="utf-8")
+            picked = find_step6_path_for_report_date(project_root, date(2026, 4, 12))
+            self.assertEqual(picked, newer / name)
+
+    def test_send_fails_when_step6_older_than_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = Path(tmp_dir)
+            self._write_env(project_root)
+            run_dir = self._create_run_dir(project_root, "c114", "202604121010")
+            step6 = run_dir / "c114_step_6_brief_20260412.md"
+            step6.write_text("# x\n", encoding="utf-8")
+            gate = datetime(2099, 1, 1, 10, 0, tzinfo=SHANGHAI)
+            result = send_latest_c114_brief_email(
+                project_root=project_root,
+                recipients=["x@example.com"],
+                report_date=date(2026, 4, 12),
+                require_modified_not_before=gate,
+            )
+            self.assertFalse(result.succeeded)
+            self.assertIsNotNone(result.error_detail)
+            self.assertIn("早于要求", result.error_detail or "")
+
+    def test_send_ok_when_step6_newer_than_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            project_root = Path(tmp_dir)
+            self._write_env(project_root)
+            run_dir = self._create_run_dir(project_root, "c114", "202604121010")
+            step6 = run_dir / "c114_step_6_brief_20260412.md"
+            step6.write_text("# C114 主题简报（2026-04-12）\n\n## 新闻\n", encoding="utf-8")
+            gate = datetime(2000, 1, 1, 0, 0, tzinfo=SHANGHAI)
+            rendered = RenderedEmail(subject="subj", text="t", html="<html>h</html>")
+            with patch("touzifenxi.c114_automation.render_c114_brief_email", return_value=rendered), patch(
+                "touzifenxi.c114_automation.send_email"
+            ) as send_mock:
+                result = send_latest_c114_brief_email(
+                    project_root=project_root,
+                    recipients=["x@example.com"],
+                    report_date=date(2026, 4, 12),
+                    require_modified_not_before=gate,
+                )
+            self.assertTrue(result.succeeded)
+            send_mock.assert_called_once()
+
+
+if __name__ == "__main__":
+    unittest.main()
