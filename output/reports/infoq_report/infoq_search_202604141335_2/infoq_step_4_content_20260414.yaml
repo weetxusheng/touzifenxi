@@ -1,0 +1,1312 @@
+report_date: '2026-04-14'
+input_path: 'E:\AI\touzifenxi\skills\websearch\output\reports\infoq_report\infoq_search_202604141335_2\infoq_step_3_search_results_20260414.yaml'
+generated_at: '2026-04-14T13:38:58'
+categories:
+  - topic: 'AI Agent 工程实践与平台演进'
+    items:
+      - original_title: 'Hermes Agent 集成实践：从协议到生产'
+        topic: 'AI Agent 工程实践与平台演进'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/1bc1f3245efbf5b482bcf9087'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/1bc1f3245efbf5b482bcf9087'
+          domain: 'www.infoq.cn'
+          content_title: 'Hermes Agent 集成实践：从协议到生产'
+          content_summary: 'Hermes Agent 集成实践：从协议到生产 分享 HagiCode 集成 Hermes Agent 的完整实践，包括 ACP 协议适配、会话池管理、前后端契约同步等核心经验。 背景 在构建 AI 辅助编码平台 HagiCode...'
+          content_text: 'Hermes Agent 集成实践：从协议到生产
+分享 HagiCode 集成 Hermes Agent 的完整实践，包括 ACP 协议适配、会话池管理、前后端契约同步等核心经验。
+背景
+在构建 AI 辅助编码平台 HagiCode 的过程中，团队需要集成一个既能在本地运行又能扩展到云端的 Agent 框架。经过调研，Nous Research 的 Hermes Agent 被选为综合 Agent 的底层引擎。
+其实选型这事儿，说难也不难，说简单也不简单。毕竟市面上能打的 Agent 框架也不少，只是 Hermes 那个 ACP 协议和工具系统确实有点东西，刚好契合 HagiCode "既要又要"的需求场景——本地开发、团队协作和云端扩展。但要把 Hermes 真正融入生产系统，还需要解决一系列工程问题，这可不是闹着玩的。
+HagiCode 的技术栈基于 Orleans 构建分布式系统，前端使用 React + TypeScript。集成 Hermes 需要在保持现有架构统一性的前提下，让 Hermes 成为与 ClaudeCode、OpenCode 等并行的"一等公民"执行器。说起来容易，做起来嘛，也就那样吧。
+本文分享我们在 HagiCode 项目中集成 Hermes Agent 的实践经验，希望能给面临类似需求的团队提供参考。毕竟，踩过的坑，没必要让别人再踩一遍。
+关于 HagiCode
+本文分享的方案来自我们在HagiCode项目中的实践经验。HagiCode 是一个 AI 驱动的编码辅助平台，支持多种 AI Provider 的统一接入和管理。在集成 Hermes Agent 的过程中，我们设计了一套通用的 Provider 抽象层，使得新的 Agent 类型可以无缝接入现有系统。
+如果你对 HagiCode 感兴趣，欢迎访问GitHub了解更多。多个人看，多份力量罢了。
+架构设计
+分层设计思路
+HagiCode 的 Hermes 集成采用了清晰的分层架构，每层各司其职：
+后端核心层
+HermesCliProvider: 实现IAIProvider接口，作为统一的 AI Provider 入口
+HermesPlatformConfiguration: 管理 Hermes 可执行文件路径、参数、认证等配置
+ICliProvider<HermesOptions>: HagiCode.Libs 提供的底层 CLI 抽象，处理子进程生命周期
+传输层
+StdioAcpTransport: 通过标准输入输出与 Hermes ACP 子进程通信
+ACP 协议方法：initialize、authenticate、session/new、session/prompt
+运行时层
+HermesGrain: Orleans Grain 实现，处理分布式会话执行
+CliAcpSessionPool: 会话池，复用 ACP 子进程，避免频繁启动开销
+前端层
+ExecutorAvatar: Hermes 视觉标识和图标
+executorTypeAdapter: Provider 类型映射逻辑
+SignalR 实时消息传递：保持 Hermes 身份在消息流中的一致性
+这种分层设计使得各层可以独立演进，比如未来要添加新的传输方式（如 WebSocket），只需修改传输层即可。毕竟，谁愿意因为改一个传输方式就把整个系统都翻一遍呢？多累啊。
+统一接口抽象
+所有 AI Provider 都实现IAIProvider接口，这是 HagiCode 架构的核心设计：
+public interface IAIProvider { string Name { get; } ProviderCapabilities Capabilities { get; } IAsyncEnumerable<AIStreamingChunk> StreamAsync( AIRequest request, CancellationToken cancellationToken = default); Task<AIResponse> ExecuteAsync( AIRequest request, CancellationToken cancellationToken = default); }
+HermesCliProvider实现了这个接口，与ClaudeCodeProvider、OpenCodeProvider等处于平等地位。这种设计带来的好处：
+可替换性: 切换 Provider 不影响上层业务逻辑
+可测试性: 可以轻松 Mock Provider 进行单元测试
+可扩展性: 新增 Provider 只需实现接口即可
+说到底，接口这东西，就像规矩一样。有了规矩，大家才能和谐共处，各自发挥所长，互不干扰。这难道不是一种美吗？
+核心实现
+Provider 层实现
+HermesCliProvider是整个集成的核心，它负责协调各个组件完成一次 AI 调用：
+public sealed class HermesCliProvider : IAIProvider, IVersionedAIProvider { private readonly ICliProvider<LibsHermesOptions> _provider; private readonly ConcurrentDictionary<string, string> _sessionBindings; public ProviderCapabilities Capabilities { get; } = new() { SupportsStreaming = true, SupportsTools = true, SupportsSystemMessages = true, SupportsArtifacts = false }; public async IAsyncEnumerable<AIStreamingChunk> StreamAsync( AIRequest request, [EnumeratorCancellation] CancellationToken cancellationToken = default) { // 1. 解析会话绑定 key var bindingKey = ResolveBindingKey(request.CessionId); // 2. 通过会话池获取或创建 Hermes 会话 var options = new HermesOptions { ExecutablePath = _platformConfiguration.ExecutablePath, Arguments = _platformConfiguration.Arguments, SessionId = _sessionBindings.TryGetValue(bindingKey, out var sessionId) ? sessionId : null, WorkingDirectory = request.WorkingDirectory, Model = request.Model }; // 3. 执行并收集流式响应 await foreach (var message in _provider.ExecuteAsync(options, request.Prompt, cancellationToken)) { // 4. 映射 ACP 消息到 AIStreamingChunk if (_responseMapper.TryConvertToStreamingChunk(message, out var chunk)) { yield return chunk; } } } }
+这里有几个关键设计点：
+会话绑定: 通过CessionId将多个请求绑定到同一个 Hermes 子进程，实现多轮对话的上下文连续性
+响应映射: 将 Hermes ACP 消息格式转换为统一的AIStreamingChunk格式
+流式处理: 使用IAsyncEnumerable支持真正的流式响应
+其实会话绑定这事儿，就像人和人之间的关系一样。一旦建立了联系，后续的交流就有了上下文，不用每次都从头开始。只是这关系要维护好，不然断了就断了。
+ACP 协议适配
+Hermes 使用 ACP（Agent Communication Protocol）协议，与传统的 HTTP API 不同。ACP 是基于标准输入输出的协议，有几个特点：
+启动标记: Hermes 进程启动后会输出//ready标记
+动态认证: 认证方法不是固定的，需要通过协议协商
+会话复用: 通过SessionId复用已建立的会话
+响应分散: 完整响应可能分散在多个session/update通知中
+HagiCode 通过StdioAcpTransport处理这些特性：
+public class StdioAcpTransport { public async Task InitializeAsync(CancellationToken cancellationToken) { // 等待 //ready 标记 var readyLine = await _outputReader.ReadLineAsync(cancellationToken); if (readyLine != "//ready") { throw new InvalidOperationException("Hermes did not send ready signal"); } // 发送 initialize 请求 await SendRequestAsync(new { jsonrpc = "2.0", id = 1, method = "initialize", @params = new { protocolVersion = "2024-11-05", capabilities = new { }, clientInfo = new { name = "HagiCode", version = "1.0.0" } } }, cancellationToken); } }
+协议这东西，就像人与人之间的默契。有了默契，交流就会顺畅很多。只是建立默契需要时间，磨合嘛，谁都免不了。
+会话池管理
+频繁启动 Hermes 子进程的开销很大，因此我们实现了会话池机制：
+services.AddSingleton(static _ => { var registry = new CliProviderPoolConfigurationRegistry(); registry.Register("hermes", new CliPoolSettings { MaxActiveSessions = 50, IdleTimeout = TimeSpan.FromMinutes(10) }); return registry; });
+会话池的关键参数：
+MaxActiveSessions: 控制并发上限，避免资源耗尽
+IdleTimeout: 空闲超时，平衡启动成本和内存占用
+实践中我们发现：
+空闲超时设置太短会导致频繁重启，设置太长会占用内存
+并发上限需要根据实际负载调整，过大可能导致系统卡顿
+需要监控会话池的使用情况，以便及时调整参数
+这就好比人生中的许多选择，太激进容易出问题，太保守又错失机会。找个平衡点罢了。
+前端集成
+类型映射
+前端需要正确识别 Hermes Provider 并显示对应的视觉元素：
+// executorTypeAdapter.ts export const resolveExecutorVisualTypeFromProviderType = ( providerType: PCode_Models_AIProviderType | null | undefined ): ExecutorVisualType => { switch (providerType) { case PCode_Models_AIProviderType.HERMES_CLI: return ''Hermes''; default: return ''Unknown''; } };
+视觉呈现
+Hermes 有专属的图标和颜色标识：
+// ExecutorAvatar.tsx const renderExecutorGlyph = (executorType: ExecutorVisualType, iconSize: number) => { switch (executorType) { case ''Hermes'': return ( <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4"> <rect x="4" y="4" width="16" height="16" rx="4" fill="currentColor" opacity="0.16" /> <path d="M8 7v10M16 7v10M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /> </svg> ); default: return <DefaultAvatar />; } };
+毕竟，美的东西也要有美的呈现。只是这美要被人看见，还得靠前端同学的努力。
+契约同步
+前后端通过 OpenAPI 生成保持契约一致。后端定义了AIProviderType枚举：
+public enum AIProviderType { Unknown, ClaudeCode, OpenCode, HermesCli // 新增 }
+前端通过 OpenAPI 生成对应的 TypeScript 类型，确保枚举值一致。这是避免前端显示 "Unknown" 的关键。
+契约这东西，就像承诺一样。说好了就要做到，不然就会出现"Unknown"这种尴尬的局面。
+配置管理
+Hermes 的配置通过appsettings.json管理：
+{ "Providers": { "HermesCli": { "ExecutablePath": "hermes", "Arguments": "acp", "StartupTimeoutMs": 10000, "ClientName": "HagiCode", "Authentication": { "PreferredMethodId": "api-key", "MethodInfo": { "api-key": "your-api-key-here" } }, "SessionDefaults": { "Model": "claude-sonnet-4-20250514", "ModeId": "default" } } } }
+这种配置驱动的设计带来了灵活性：
+可以覆盖可执行文件路径，方便开发测试
+可以自定义启动参数，适配不同版本的 Hermes
+可以配置认证信息，支持多种认证方式
+配置这东西，就像人生的选择题。给足了选项，总能找到适合自己的那一个。只是有时候选项太多，也会让人犯选择困难症。
+实践经验
+健康检查
+实现一个可靠的 Provider 需要完善的健康检查：
+public async Task<ProviderTestResult> PingAsync(CancellationToken cancellationToken = default) { var response = await ExecuteAsync(new AIRequest { Prompt = "Reply with exactly PONG.", CessionId = null, AllowedTools = Array.Empty<string>(), WorkingDirectory = ResolveWorkingDirectory(null) }, cancellationToken); var success = string.Equals(response.Content.Trim(), "PONG", StringComparison.OrdinalIgnoreCase); return new ProviderTestResult { ProviderName = Name, Success = success, ResponseTimeMs = stopwatch.ElapsedMilliseconds, ErrorMessage = success ? null : $"Unexpected Hermes ping response: ''{response.Content}''." }; }
+健康检查需要注意：
+使用简单的测试用例，避免复杂场景
+设置合理的超时时间
+记录响应时间，便于性能分析
+就像人需要体检一样，系统也需要健康检查。早发现早治疗，省得到时候出大问题。
+验证工具
+HagiCode 提供专用控制台用于验证 Hermes 集成：
+# 基础验证 HagiCode.Libs.Hermes.Console --test-provider # 完整套件（含仓库分析） HagiCode.Libs.Hermes.Console --test-provider-full --repo . # 自定义可执行文件 HagiCode.Libs.Hermes.Console --test-provider-full --executable /path/to/hermes
+这个工具在开发过程中非常有用，可以快速验证集成是否正确。毕竟，谁愿意在发现问题的时候才想起来去测试呢？
+常见问题处理
+认证失败
+检查Authentication.PreferredMethodId与 Hermes 实际支持的认证方法是否匹配
+确认认证信息格式正确（API Key、Bearer Token 等）
+会话超时
+增加StartupTimeoutMs值
+检查 MCP 服务器可达性
+查看系统资源使用情况
+响应不完整
+确保正确聚合session/update通知和最终结果
+检查流式处理的取消逻辑
+验证错误处理是否完整
+前端显示 Unknown
+确认 OpenAPI 生成已包含HermesCli枚举值
+检查类型映射是否正确
+清除浏览器缓存重新生成类型
+问题嘛，总会有的。只是遇到问题的时候，别慌，慢慢找原因，总能解决的。毕竟，办法总比困难多。
+性能优化建议
+使用会话池: 复用 ACP 子进程，减少启动开销
+合理设置超时: 平衡内存和启动成本
+复用会话 ID: 批量任务使用同一个CessionId
+按需配置 MCP: 避免不必要的工具调用
+性能这东西，就像生活中的效率。做对了，事半功倍；做错了，事倍功半。只是找到那个"对"的点，需要经验和运气。
+总结
+集成 Hermes Agent 到生产系统需要考虑多个层面的问题：
+架构层面: 设计统一的 Provider 接口，实现可替换的组件架构
+协议层面: 正确处理 ACP 协议的特殊性，如启动标记、动态认证等
+性能层面: 通过会话池复用资源，平衡启动成本和内存占用
+前端层面: 确保契约同步，提供一致的视觉体验
+HagiCode 的实践表明，通过良好的分层设计和配置驱动，可以将复杂的 Agent 系统无缝集成到现有架构中。
+其实这些道理说起来都挺简单的，只是真正做起来的时候，总会遇到各种各样的问题。不过没关系，问题解决了就是经验，解决不了就是教训，都是有价值的东西。
+美的事物或人，不一定要占有，只要她还是美的，自己好好看着她的美就好了。技术也是如此，只要能让系统变得更好，用什么框架、什么协议，其实都没那么重要......
+参考资料
+HagiCode 项目地址
+HagiCode 官网
+Hermes Agent 文档
+ACP 协议规范
+HagiCode 安装指南
+HagiCode Desktop
+原文与版权说明
+感谢您的阅读,如果您觉得本文有用,欢迎点赞、收藏和分享支持。本内容采用人工智能辅助协作,最终内容由作者审核并确认。
+本文作者:newbe36524
+原文链接:https://docs.hagicode.com/go?platform=infoq&target=%2Fblog%2F2026-04-14-hermes-agent-integration-practice%2F'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+          - query: 'Agent 协议到生产'
+            query_type: 'keyword'
+            url: 'https://tianpan.co/zh/blog/2026-04-12-consensus-protocols-multi-agent-decisions-when-agents-disagree'
+            domain: 'tianpan.co'
+            result_title: '多Agent 决策的共识协议：当你的Agent 意见不一致时会发生什么'
+            published_at: '2026-04-12'
+            content_title: ''
+            content_summary: 'LLM Agent 之间的多数投票在有争议的问题上几乎有 24% 的失败率。分布式系统原语——领导者选举、法定人数投票和 CRDT——为协调多 Agent 决策提供了经过实战检验的替代方案。'
+            content_text: '多 Agent 决策的共识协议：当你的 Agent 意见不一致时会发生什么 跳到主要内容 TianPan.co 中文 English 中文 课程 所有课程 系统设计与架构 产品管理 进入 Web3 打磨界面 重启灵魂 博客 投资备忘录 产品 论坛 搜索 最近的帖子 2026 对非确定性 AI 功能进行 A/B 测试：为何你的实验框架假设了错误的零假设 抽象反转问题：当 AI 框架迫使你在错误的层级思考 智能体凭据轮换：尚未被映射到 AI 领域的 DevOps 难题 智能体死锁：当 AI 代理永远在等待彼此 AI 辅助故障响应：为你的值班 Agent 提供运维手册 多 Agent 决策的共识协议：当你的 Agent 意见不一致时会发生什么 2026年4月12日 · 阅读需 10 分钟 Tian Pan Software Engineer Your browser does not support the audio element. Open in ChatGPT 你有三个 Agent 在分析一个客户支持工单。两个说"立即退款"，一个说"升级到欺诈审查"。你选择了多数答案并执行了退款。三天后，欺诈团队问你为什么自动退款了一个已知的拒付模式。 这就是多 Agent 系统中的共识问题，事实证明分布式系统工程师几十年前就解决了其中的重要部分。但天真地移植这些解决方案——或者更糟糕的是，默认使用多数投票——会在你的"节点"是有自己观点的语言模型时产生独特的危险故障模式。 为什么多数投票会产生自信的错误答案 ​ 多数投票背后的直觉是孔多塞陪审团定理：如果每个独立投票者正确的概率大于错误的概率，那么随着群体规模增长，群体的多数会收敛到正确 答案。关键词是 独立 。在重叠数据上训练、用类似的 RLHF 管道微调、并使用共享上下文进行提示的 LLM Agent 完全不是独立的。它们共享系统性的盲点。 近期的对照研究描绘了一幅严峻的画面。当研究人员让 LLM Agent 群组进行辩论然后投票时，从正确到错误的答案翻转在每种测试配置中都超过了从错误到正确的翻转。在 MMLU 基准测试中，混合能力的 Agent 群组在辩论轮次后准确率下降了 8 到 12 个百分点——辩论让它们变得 更差 了。在 Agent 最初意见不一致的问题中，23.9% 在第三轮时收敛为一致的错误共识。近四分之一有争议的问题最终以每个 Agent 都自信地同意错误答案而告终。 根本原因是 RLHF 引起的谄媚行为。被训练为讨人喜欢的模型会反射性地迎合而不是批判性地评估。更强的 Agent 将其正确答案翻转为与较弱同伴一致的频率，高于较弱 Agent 从更强的 Agent 那里学到正确答案的频率。多数压力抑制了独立纠正——弱 Agent 推翻初始多数的概率不到 5%。 这不是你可以忽略的边缘情况。这是默认行为。 分布式系统已经解决了其中的部分问题 ​ 共识问题并不新鲜。分布式系统花了几十年时间构建协议，让节点在面对故障、延迟和拜占庭行为时必须就共享状态达成一致。三个原语可以直接转用于多 Agent AI 协调。 领导者选举 指定单个节点提出决策，其他节点进行验证。在多 Agent 系统中，这意味着一个 Agent 起草计 划或答案，其他 Agent 评估它而不是独立生成竞争性解决方案。这消除了 token 重复问题——对主要多 Agent 框架的分析显示，MetaGPT 的重复率为 72%，CAMEL 为 86%，AgentVerse 为 53%。按当前定价，一个每天处理一百万 token 的系统如果有 72% 的重复率，月成本会从 225 美元膨胀到 387 美元。领导者选举通过让一个 Agent 生成、其余 Agent 批评来削减这一成本。 法定人数投票 要求严格多数（或超级多数）来批准决策，每个节点在每个任期内只投一次票。这防止两个竞争提案同时获胜。在拜占庭容错（BFT）系统中，基本阈值是 N ≥ 3f + 1：一个有 N 个 Agent 的系统可以容忍最多 f 个拜占庭（任意故障）Agent。对于一个三 Agent 系统，你可以容忍零个拜占庭故障。你至少需要四个 Agent 才能处理一个不可靠的 Agent 并仍然达成正确共识。 **无冲突复制数据类型（CRDT）**让副本独立更新并自动合并为一致状态，无需协调。对于管理共享上下文的多 Agent 系统——多个专业 Agent 同时丰富一个客户档案——CRDT 保证无需锁定即可收敛。每个 Agent 的更新是组合而非冲突，这正是当一个研究 Agent 和一个分析 Agent 都在向共享工作区追加发现时你想要的属性。 投票 vs. 共识：为任务选择正确的协议 ​ 并非所有决策都相同，近期研究精确量化了何时使用哪种方法。 ACL 2025 上发表的实证研究在推理和知识任务上测试了投票和共识协议。发现是明确且不对称的： 投票协议将推理任务性能提高了 13.2% ，与其他决策方法相比。对于需要逻辑推演、数学推理或多步推理的问题，让 Agent 独立求解然后投票优于辩论。 共识协议将知识任务性能提高了 2.8% 。对于事实回忆和知识综合，迭代辩论和收敛产生了比投票更好的结果。 共识在知识任务上更快达成决策，而投票需要更多轮次但在推理任务上提供了更优结果。 计算成本差异显著：共识协议使用大约单个 Agent 5 倍的 token，而投票协议使用大约 10 倍。 实际的收获是一个路由决策。如果任务是分析性的——代码审查、数学验证、逻辑验证——使用独立生成加投票。如果任务是综合性的——总结研究、构建知识图谱、制作细致的回复——使用迭代辩论达成共识。最糟糕的做法是对所有事情使用同一种协议。 五种真正有效的协调模式 ​ 除了基本的投票与共识之分，生产环境的多 Agent 系统需要具体的协调架构。以下是经受住现实考验的模式。 **模式 1：辩论然后投票的混合方式。**Agent 进行固定轮数的辩论（通常两到三轮），如果分歧持续则进行投票。这捕获了辩论的知识丰富化收益，同时使用投票作为防止错误共识收敛的断路器。关键约束是限制辩论轮数——不加限制的辩论会随着谄媚性收敛的累积而降低准确率。 **模式 2：加权置信度投票。**并非所有 Agent 对每个任务都同样可靠。根据领域专长或在类似任务上的历史准确率分配投票权重。编码 Agent 的投票在代码审查决策中应该更有分量；法律分析 Agent 的投票应该在合规问题中占主导。这直接解决了更强 Agent 迎合较弱同伴的故障模式——通过加权，更强 Agent 的原始答案占主导，即使它后来"同意"了较弱 Agent 的意见。 **模式 3：层级目标分解与专家仲裁。**规划 Agent 分解问题，专家 Agent 独立处理子任务，单独的评估 Agent 综合结果。这映射到领导者选举加法定人数模式：规划者是选举出的领导者，专家是投票者，评估者执行法定人数。关键设计选择是让评估者使用与专家不同的模型或提示配置，打破相关故障问题。 **模式 4：结构化分歧升级。**当 Agent 意见不一致时，不要只选择多数——对分歧进行分类。强分歧（Agent 引用矛盾证据）升级到人工审查。弱分歧（Agent 给出措辞不同的相似答案）通过置信度加权合并解决。模糊分歧（中间层，结构化分析在此显示最大改进）在做出任何决策之前触发额外的证据收集。 **模式 5：检查点和回滚协调。**在战略里程碑处捕获完整的工作流状态——Agent 消息、工具调用、共享内存。当协调崩溃时（这是必然的），回滚到最后已知的良好状态，而不是试图修补损坏的共享上下文。这是多 Agent 等价的数据库事务：协调决策要么干净地提交，要么完全回滚。 你必须设计应对的故障模式 ​ 即使有好的协调协议，多 Agent 共识也有需要显式处理的特征性故障模式。 错误共识收敛 是最危险的，因为它看  起来像成功。所有 Agent 都同意，置信度很高，答案却是错的。防御：始终运行异议检查——一个单独的 Agent（或用对抗性提示的相同 Agent）专门负责查找共识答案中的缺陷。如果异议 Agent 无法表达连贯的异议，共识就更值得信赖。如果可以，则升级处理。 无止境的辩论循环 消耗 token 而不收敛。主要框架间的 token 重复已经达到 53-86%，不加限制的辩论会成倍增加。防御：辩论轮数的硬性上限（三轮通常足够）加上空闲时间保护，终止 Agent 在重述而非改进立场的对话。 级联上下文污染 发生在一个 Agent 的错误输出被纳入共享状态并毒害下游 Agent 推理时。生产评估显示，单 Agent 规格故障占多 Agent 系统故障的大多数。防御：在每个 Agent 的输出进入共享状态之前，根据模式或约束集进行验证。将共享上下文视为数据库——写入需要验证，而不仅仅是读取。 角色漂移 发生在 Agent 逐渐扩展超出其指定职责范围，相互重复工作或留下空白。防御：在每个协调步骤检查的显式职责矩阵，加上基于能力的路由，从根本上防止超出领域的操作，而不是依赖提示指令来保持在正轨上。 选择你的共识架构 ​ 正确的共识协议取决于三个变量：错误决策的成本、协调开销的成本，以及你的 Agent 错误之间的相关性。 对于 低风险、高吞吐量 的决策（内容分类、常规数据提取），三到五个 Agent 的简单多数投票就足够了。速度和低 token 成本超过了偶尔的相关错误。 对于 高风险、低吞吐量 的决策（金融交易、医疗建议、安全评估），使用 N ≥ 3f + 1 个 Agent 的拜占庭容错法定人数、加权置信度投票和强制异议检查。协调开销因错误的代价而合理。 对于 创造性或综合性 任务（报告生成、策略综合、客户沟通），使用有时间限制的辩论加投票回退。迭代改进提高质量，但时间限制防止收敛到平庸。 分布式系统的元教训是，共识不是你事后附加的功能——它是塑造下游一切的架构决策。正确处理多 Agent 协调的团队是那些将其 Agent 视为分布式节点的团队：对一致保持怀疑，对故障模式保持显式，并围绕任何单个 Agent 有时会出错的假设来设计。问题不在于你的 Agent 是否会意见不一致。而在于你的系统在它们意见不一致时是否知道该怎么做。 标签： multi-agent distributed-systems consensus coordination 最后 于 2026年4月12日 更新 References: https://arxiv.org/html/2509.05396v1 https://aclanthology.org/2025.findings-acl.606/ https://galileo.ai/blog/multi-agent-coordination-strategies https://galileo.ai/blog/why-multi-agent-systems-fail https://arxiv.org/html/2502.14743v2 https://medium.com/@edoardo.schepis/patterns-for-democratic-multi-agent-ai-debate-based-consensus-part-1-8ef80557ff8a https://arxiv.org/pdf/2507.14928 Let''s stay in touch and Follow me for more thoughts and updates Twitter LinkedIn Telegram Discord 小红书 较新一篇 AI Agent 的混沌工程：在生产环境之前注入你的 Agent 将真正面对的故障 较旧一篇 上下文窗口即 IDE：AI 编程智能体成败的关键在于它能看到什么 为什么多数投票会产生自信的错误答案 分布式系统已经解决了其中的部分问题 投票 vs. 共识：为任务选择正确的协议 五种真正有效的协调模式 你必须设计应对的故障模式 选择你的共识架构 关于 Tian Pan 我是 Tian Pan，一名工程师型创始人，专注于智能体工程——构建自主 AI 系统并扩展工程团队。我撰写关于系统设计、技术领导力和 AI 智能体实战的实用指南。曾在 Uber、Brex 和 IoTeX 担任早期工程师。 GitHub · LinkedIn · Twitter · RSS · 中文 RSS · Products · 论坛 · 私信 · 隐私政策 · 服务条款 2008 - 2025 TianPan.co v3 (78a4b27 / Updated 2025-07-01 18:10:42 -0700). Made with heart in San Francisco'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+      - original_title: '用好Agent最重要的技巧不是Skills，是这四个字。'
+        topic: 'AI Agent 工程实践与平台演进'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/f9300e53f174b92cacdc27fe5'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/f9300e53f174b92cacdc27fe5'
+          domain: 'www.infoq.cn'
+          content_title: '用好Agent最重要的技巧不是Skills，是这四个字。'
+          content_summary: '今天这篇文章，来分享一下我自己最近几个月高强度使用Agent之后，我自己总结出来的怎么给Agent设定规则，如何让它Agent更好的工作更聪明的一个非常重要的心得。'
+          content_text: '今天这篇文章，来分享一下我自己最近几个月高强度使用Agent之后，我自己总结出来的怎么给Agent设定规则，如何让它Agent更好的工作更聪明的一个非常重要的心得。
+就四个字。
+约束先行。
+就是在你让Agent干任何事情之前，先把规范定好，全局的规矩，项目的规矩，文件夹的规矩。
+规矩从上往下穿透，一层套一层，没有规矩的地方，不动手。
+就这么简单的一个道理，我真的用了好几个月才真正想明白，然后完整的落地，你可以说我很菜，花了这么久的时间，但是我觉得，我踩过了坑，我还是想把这个经验分享出来。
+我为什么觉得这四个字比一切Prompt技巧都重要？得从昨天我的发生的一个很小的小事说起。
+事情是这样的。
+我这个人有一个毛病，就是完美主义强迫症。
+一个东西如果不是井井有条的，我就浑身难受。
+这可能跟我是处女座，也是交互设计师，同时还是重度模拟经营玩家有关。
+《城市天际线》里路网没规划好我能推倒重来三次，《动物园之星》里动物园分区不合理我能纠结一下午，《双点医院》里如果有一个科室的动线设计得不顺，哪怕医院已经盈利了，我也会拆了重来。
+我到现在还是记得我打《戴森球计划》的时候那没日没夜的规划生产线的日子。
+我朋友经常说，我就是那种，对秩序有一种近乎偏执的追求。
+虽然我很喜欢kk写的那本《失控》，我也赞同混乱中涌现一些智慧，但秩序和规范，可能就是我种在骨子里的东西。
+所以昨天下午，当我无意中，发现我的一个Claude Code的工作文件夹里面越来越乱的时候，我是真的坐不住了。
+我前几天新建了一个给Claude Code用的专门用来开发Skills的文件夹，结果我昨天打开一看，根目录散了十几个东西。打包文件跟源码混在一起，测试图片随便丢，评估报告的HTML文件找不到归属。
+最离谱的是命名，test_batch是哪个Skill的测试？test_v2又是谁的v2？我自己做的东西，放了两天我自己都看不出来。
+我当时就有点应激了，真的，一时间无语凝噎，只能含泪打开Claude Code让它去给我规整了，然后直接给我定一个规范。
+没过一会，他弄完了。
+然后写了一个这个项目级别的CLAUDE.md文档，你可以把这个文档，理解为这就是Claude Code进入到这个文件夹以后，第一个必须要读且要遵守的东西，就是它以后的行为准则。
+规范还是挺全面的。
+有了这个CLAUDE.md文件以后，我的这个工作区，就可以不断的进行各种各样的Skills开发和实验了，每个新的Skills，都会自动给我新建一个文件夹，一些实验性的东西会放在_sandbox里，里面的东西超过一个月就会删除。
+再也不会再混乱的要死，而是按照文件目录，管理的仅仅有条。
+就这个非常非常小的事情，让我好好反思了一下。
+就是，为什么我的Claude Code进到一个新文件夹、或者开一个新项目的时候，自己不会给自己定这个规范呢？一定要我给他定呢？一定要乱七八糟以后我发现了才能去知道收拾那个烂摊子呢？
+原因也特别简单，我给Claude Code的顶层约束没有做好。
+也就是在最最顶层，无论是打开什么文件都会加载的全局CLAUDE.md文档里面，我并没有定好这一层约束。
+我自己脑子里过去在开发各种各样的项目的时候一直都有这个意识，一般我都会在每个项目里，让它先强制写好文档再进行开发。
+但是还有很多是知识管理类的工作，不是开发，比如画图、比如创造skills、比如做研究报告等等，而这些工作，并没有开发类型的管理意识，所以一般都不会留下规范文档，而我自己也没发现。
+而对于AI来说，你脑子里知道的东西，如果没有写进文档，就是不存在的。
+Agent的短期记忆会丢失，对话框一关全忘了，下次打开，它唯一能看到的就是你留下来的文档和记忆文件。
+你的文档里写了什么，是不是足够清晰，直接决定了Agent每一次醒来的时候，是清醒的还是懵的。
+OpenClaw很多时候越用越蠢，其实就是他的规范和记忆体系真的就是纯种屎山，这点Hermes agent比它要做的好的多。
+所以这也就是我今天想聊的核心，用好Agent的真正核心，其实我真的觉得，就是这一整套约束从上往下穿透的体系。
+这里解释一下Claude Code的规则体系，其实包括Codex之类的很多Agent都是这样。
+是一层一层叠下来的。
+最顶层，是全局CLAUDE.md。放在用户目录下面，无论你打开什么项目都会加载。这是最高指令和原则，你是谁、你做事的原则、你希望AI用什么方式跟你协作。
+第二层，是项目级CLAUDE.md。进入到某个项目文件夹才加载。这是这个项目的宪法，目录结构怎么组织、命名规范是什么、什么文件放哪里。
+第三层，是项目里的各种规范文档、设计文档、架构说明。
+最底层，是记忆文件。比如Auto Memory啥的，还有对话记录，Claude自己给自己做的笔记。
+约束从上往下穿透，一层管一层，一层约束一层。
+跟治理公司是一样的，制度在最上面，部门规范在中间，具体操作流程在最下面，你不可能靠CEO每天挨个盯着员工干活，你靠的是制度穿透下去。
+这就是「约束先行」的完整含义。
+而如何设计这套体系，特别是顶层的制度规范，真的不是一个简单活，开过公司的人相信都能明白我在说啥，那真的是血和泪的教训。
+而全局CLAUDE.md，对应的就是这个最高制度。
+我的全局CLAUDE.md，其实已经迭代了好多个版本了。
+去年最早的时候我也不懂，抄了很多开发大神的所谓的开发规则，然后又不断地往里面迭代经验，搞得后面特别臃肿。后来慢慢意识到适合自己的才是最好的，以及很多经验就不该在这一层，又开始一轮一轮地瘦身。
+在今天补了规则之后，现在我的全局CLAUDE.md文档长这样，这里我也完整的给大家展示出来。
+##关于我
+数字生命卡兹克，虚实传媒创始人。
+用户体验设计师出身，不是程序员。我用 Claude Code 做两件事：**开发产品**和**知识管理**。工作哲学：把任何重复 3 遍的事 AI 化或自动化。技术决策跟我说「为什么」和「对用户的影响」，不要只讲实现。
+##第一性原理
+所有决策从问题本质出发，不因「惯例如此」照搬。回到问题本身：要解决什么？最直接的路径是什么？从零设计会怎么做？不要谄媚。不要夸我的想法好、不要说「这是个很好的问题」、不要开头加「当然可以」。给我真实判断——方案有问题直接指出来。发现更好的做法直接说，不用等我问。
+##约束先行
+无论开发项目还是知识管理项目，第一步永远是建规则：新项目先写 CLAUDE.md，新目录先定结构约定（什么放哪、怎么命名、何时清理）。没有规范的工作空间不动手。
+已有规范的项目，严格遵守其 CLAUDE.md 中的约定。需要调整规范时先改文档、再改实践，不要反过来。
+##交互设计原则
+**用户体验是所有产品的最高准则，优先级高于技术偏好、代码整洁度、架构优雅度。后端可以很复杂，但用户触碰到的每一层必须丝滑。**
+这不只是 GUI——CLI、对话式交互、Skill、系统反馈，都是交互体验。所有界面都适用以下原则：
+-**为目标设计，不为功能设计**：先问「用户要完成什么」，再决定怎么实现。不要因为技术上能做就加功能
+-**不要让用户思考**：交互应该不言自明。需要说明书才能用，设计就是失败的
+-**系统承担复杂性**：能自动化的不手动，能推断的不让用户填，能一步完成的不拆成三步
+-**渐进式展示**：先给核心，细节按需展开。不要一次性把所有选项甩给用户
+-**反馈引导行动**：不要只报告问题（"连接失败"），要引导下一步（"正在重试，预计 5 秒后恢复"）
+##工作方式
+- 默认中文，代码、命令、变量名用英文
+- 结论先行，再给理由，不要先铺垫背景
+- 遇到模糊需求，先给最合理的方案，再问要不要调整
+- 不要问「你确定要这样吗」——除非有真实风险
+##开发习惯
+- 改完主动跑验证（test / lint / build），不要只改不验
+- 不要为了让代码跑起来而注释掉报错，找根本原因
+- 密钥、token、密码不进代码
+##Git 与部署
+- commit message 用英文，简洁描述变更意图
+- git push 仅用于跨设备同步，不要自动执行，等我说
+- 部署走项目自己的命令（查项目 CLAUDE.md），不依赖 git push
+你会发现，这里面的每一条，其实现在我觉得最好的基于某种形式的约束。
+比如第一性原理，是对思考方式的约束，不要因为惯例就照搬，要回到问题本身。
+比如反谄媚，是对沟通方式的约束，不要拍马屁，给真实判断。
+比如，交互设计原则。我是用户体验出身，所以我对从我手上出去的东西有一个执念，后端可以很复杂，但用户碰到的每一层必须丝滑。这不只是GUI的事，CLI也是交互，Skill也是交互，对话式AI也是交互。
+现在这个年代，大家都在vibe coding，但我发现越来越多的人开始不重视用户体验了，很多产品都是能跑起来就行，管你用着爽不爽。
+这个我是真的觉得不行。
+所以我在全局规范里写了五条我总结的交互设计核心原则。写进去之后Claude做出来的东西确实不一样了。
+而约束先行这条，它就两段话，但它解决的也是一个根问题。
+##约束先行
+无论开发项目还是知识管理项目，第一步永远是建规则：新项目先写 CLAUDE.md，新目录先定结构约定（什么放哪、怎么命名、何时清理）。没有规范的工作空间不动手。
+已有规范的项目，严格遵守其 CLAUDE.md 中的约定。需要调整规范时先改文档、再改实践，不要反过来。
+以前Agent进到一个新项目，因为特性，所以第一反应总是立刻开始干活。
+现在，你定好了约束之后，它的第一反应是先看看有没有规范，没有的话先建规范。
+后面那句需要调整规范时先改文档、再改实践不要反过来也很重要。
+规则不是死的，但改规则也要走规则的路。
+不然Agent为了赶进度绕过约定，事后你想补文档真的都不知道从哪补起。
+写到这，我真的忽然觉得，引导Agent，真的，跟我现在管理公司的时候，真的好像没什么两样。
+公司你也要部门、要制度、要SOP、要协同，要规矩，要一切，不一个样吗。
+而且不只是开公司，很多真正玩模拟经营的人都知道一个道理。
+游戏前期最重要的不是赶紧建建建，而是先把路网规划好。
+路网一旦规划歪了，后面再怎么优化你都没招，只能一切全部铲了重来，我经历过无数血和泪的教训。
+你的CLAUDE.md就是你的路网。
+全局CLAUDE.md是城市主干道，项目CLAUDE.md是片区支路，主干道规划好了，支路自然就顺了。
+你花一个小时把它写好，你相信我，后面能省无数个小时的返工。
+今天分享的这些东西，你要说这算Harness Engineering，那也行，因为Harness本身就是约束。
+你要说这不算，就是一些基本的项目管理常识，那也没错。
+反正我觉得，名字不重要，最重要的，就是你有没有找到一套让自己跟Agent协作起来舒服的方式。
+我有时候觉得吧，我这辈子做的事情其实都是同一件事。
+做交互设计的时候，是在给用户行为建约束。
+玩模拟经营的时候，是在给虚拟城市建约束。
+开公司了，是在给业务和人建约束。
+现在跟Agent协作，还是在建约束。
+对象变了，方法却是一样的。
+先想清楚你要什么，定好规则，然后在规则框架里做出最优解。
+这就是最棒的方法。
+以上，既然看到这里了，如果觉得不错，随手点个赞、收藏、转发三连吧～谢谢你看我的文章，我们，下次再见。
+/ 作者：卡兹克
+/ 投稿或爆料，请联系邮箱：wzglyay@virxact.com'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+          - query: 'Agent 不是Skills'
+            query_type: 'keyword'
+            url: 'https://www.secrss.com/articles/89333'
+            domain: 'www.secrss.com'
+            result_title: 'OWASP发布Agentic Skill十大安全风险 - 安全内参 | 决策者的网络安全知识库'
+            published_at: '2026-04-11'
+            content_title: 'OWASP发布Agentic Skill十大安全风险 - 安全内参 | 决策者的网络安全知识库'
+            content_summary: 'skill 是 Agent 的行为封装层，也是现实世界攻击面真正落地的一层。'
+            content_text: 'OWASP发布Agentic Skill十大安全风险 - 安全内参 | 决策者的网络安全知识库 Toggle navigation 首页 政策法规 威胁态势 技术前沿 安全实践 产业研究 登录/注册 OWASP发布Agentic Skill十大安全风险 标准 模安局 2026-04-11 skill 是 Agent 的行为封装层，也是现实世界攻击面真正落地的一层。 skill 是 Agent 的行为封装层，也是现实世界攻击面真正落地的一层。对 OpenClaw、Claude Code、Cursor/Codex、VS Code 这类生态来说，skill 不只是一个描述文件，它常常还绑定了权限声明、依赖、脚本、配置和执行逻辑。换句话说，skill 不是“提示词模板”，而是“可执行的行为包”。 OWASP 最近发布的 Agentic Skills Top 10（AST10） ，本质上就是想把这一层单独拎出来：模型负责思考，MCP 负责连接工具，而 skill 负责定义“这个 Agent 到底会怎么干活”。 https://owasp.org/www-project-agentic-skills-top-10/ 需要说明的是，这个项目目前仍处在 OWASP 新项目/Incubator 阶段。官方 proposal 页面把它标成 “New Project Proposal”，目标是在 2026 年继续完善 v1.0、补全 10 个风险页面、通用 Skill 格式、清单和配套材料。所以，严格来说，它现在更像一个 正在成形中的行业框架 ，而不是已经完全定型的最终标准。 OWASP 在总表里给出了 10 个风险项： AST01 恶意技能 AST02 供应链妥协 AST03 过度授权 AST04 不安全元数据 AST05 不安全反序列化 AST06 弱隔离 AST07 更新漂移 AST08 扫描不足 AST09 缺乏治理 AST10 跨平台复用 其严重度上，AST01 和 AST02 是 Critical，AST03 到 AST06 是 High，AST07 到 AST10 是 Medium。 十大安全风险 AST01：恶意技能 AST01 指向的是最直接、也最容易被低估的一类风险： skill 本体就是恶意的。 它伪装成一个正常的能力包，看起来像在帮你接入搜索、邮箱、文档、浏览器、数据库，实际上却在借 Agent 的权限读文件、拿密钥、写记忆、出网外传。OWASP 在总表里把 AST01 设成 Critical，并把 Merkle root signing 和注册表扫描列为关键缓解措施。 这类风险之所以危险，不在于“skill 里有恶意代码”这么简单，而在于它常常会把恶意意图藏在 自然语言描述、执行脚本和工作流编排 里。过去大家防木马，更多是看二进制、看静态特征、看 IOC。今天 skill 生态里的很多恶意行为，可能就写在几行“如何使用本 skill”的说明里。 AST02：供应链妥协 如果说 AST01 是 skill 自己有毒，那 AST02 说的就是： skill 就算原本没毒，也可能在分发链上被污染。 OWASP 在 AST02 里把焦点放到注册表、市场、依赖、发布者身份、透明日志、更新通道这些环节上。它建议做发布者验证、依赖分析、注册表透明性、内部镜像、变更管理和组织级 inventory。换句话说，OWASP 已经把 skill 当成一种新的软件供应链对象来对待了。 因为 skill 和传统软件包很像，但又更危险：软件包通常是“被程序调用”，而 skill 是“驱动 Agent 自主执行”。一旦供应链被打穿，损失的不是某个库函数，而是整个任务链。 AST03：过度授权 AST03 在总表里被列为 High，关键缓解措施是 最小权限 manifest 和 schema 校验 。现实证据则是 2026 年 2 月 Snyk 报告中提到的 280 多个泄露凭据的 skill。 这条风险的关键不在于“权限太多”这么笼统，而在于：skill 的权限边界经常和任务边界脱钩。 一个本来只需要读某个 API 的 skill，可能顺手申请了整目录读取； 一个只需要访问单个域名的 skill，可能申请了开放网络出站； 一个本来不该碰 identity file 和记忆文件的 skill，却获得了写 SOUL.md 、 MEMORY.md 、 AGENTS.md 的能力。 OWASP 在通用 Skill 格式提案里，甚至专门把 deny_write 放进默认保护项，并强调网络权限应该是 allowlist，而不是一个简单的 network: true 。 这说明 OWASP 已经意识到：Agent 世界里的权限问题，不是传统 RBAC 那种“你能不能访问某张表”而已，而是 你能不能长期改变 Agent 的行为状态。 AST04：不安全元数据 这是这份框架里我觉得很容易被忽视、但特别有现实感的一条。 OWASP 把 AST04 定义成元数据层面的风险：名字、描述、权限声明、风险等级、manifest 字段这些看起来像“说明信息”的东西，本身也可能被攻击者利用。总表里给的现实案例就是假冒 “Google” skill 的品牌冒充。 这条风险的本质是：今天用户安装一个 skill，首先看到的往往不是代码，而是元数据。如果元数据可以伪装、夸大、误导，攻击者其实就已经赢了第一步。 所以 AST04 的价值在于提醒平台方：安装前的信任界面，本身就是安全边界。不是说 skill 代码没问题就够了， manifest、权限描述和风险提示也必须可校验、可审计、可约束。 AST05：不安全反序列化 这条风险放在 skill 生态里非常合理。 因为大量 skill 都依赖 YAML、JSON、Markdown、manifest、配置脚本这些结构化或半结构化内容来完成加载。OWASP 在首页和开发建议里都明确提到：要使用安全的 YAML/JSON loader，禁用危险 tag，在执行前做 schema 校验，避免把不可信配置直接交给解析器。 它真正想提醒的是：skill 的风险不只发生在运行时，也发生在加载时。 用户以为自己只是“安装了一个 skill”，平台以为自己只是“读取了一份 manifest”，但如果解析器、加载器和执行器之间边界模糊，攻击可能在 skill 还没正式开始工作前就已经触发了。 AST06：弱隔离 如果说 AST03 是权限拿多了，AST06 就是更根本的问题： 哪怕权限声明写得再漂亮，skill 最后还是和宿主跑在一个安全上下文里。 OWASP 在总表里把 AST06 定成 High，建议默认容器化、默认 Docker sandbox，把 host mode 变成显式 opt-in；同时要求平台记录 skill 的文件访问、shell、网络调用和 memory 写入。 这背后的意思很明确：skill 不能只靠“自觉”来守边界，必须靠隔离来守边界。 只要 skill 还默认共享宿主的文件系统、shell、凭据和网络出口，那 manifest 再精细，也很容易在现实里被绕过。尤其在 Agent 这类长会话、持久凭据、多工具联动的环境里，弱隔离的后果会被放大得非常快。 AST07：更新漂移 AST07 被 OWASP 归为 Medium，但我觉得很多企业环境里它的破坏力被低估了。所谓 update drift，本质上就是： 你以为你装的是那个 skill，过一阵子它已经不是那个 skill 了。 OWASP 给出的缓解思路是版本固定、哈希校验、不可变 pinning、更新策略和重新扫描。它在开发建议里甚至直接写了：依赖要锁定到不可变哈希，而不是版本范围。 这件事在 Agent 生态里特别危险，因为 skill 通常不是孤立运行的，它会连着记忆、配置、依赖、脚本、外部 API 一起变化。一旦更新过程不可验证，团队很快就会失去对行为边界的控制。 AST08：扫描不足 这是整份框架里最有现实批判意味的一条。 OWASP 在总表里直接说，关键缓解措施不是普通扫描，而是 “语义 + 行为”的多工具流水线 ；在 Skill Scanner Integration 页面里，它也明确强调：自动化扫描必须发生在发布前和安装前，单纯的 pattern matching 不够。 这其实点破了一个行业现状：很多团队还在用扫软件包、扫依赖、扫代码仓的思路，去扫一种“代码 + 配置 + 自然语言 + 行为编排”的新对象。 而 skill 最危险的部分，恰恰常常不是传统静态规则最擅长发现的那一层，意指令可能不藏在脚本里，而藏在描述里；风险不一定体现在某个 API 调用本身，而体现在“这串动作组合起来之后会发生什么”。 所以 OWASP 才会强调：要做语义扫描，要做行为分析，要把扫描接到安装链路和发布链路里，而不是把它当成一个离线安全报告。 AST09：缺乏治理 如果说前面几条偏技术，AST09 就明显是企业治理问题了。 OWASP 对 AST09 的描述很直接：组织在部署 AI Agent 时，缺少 inventory、policy、review process 和 audit trail，导致开发者自己装 skill，SOC 看不见，没有审批流，也没有撤销机制，最终形成一层安全团队无法看见和控制的 “shadow AI”。 这条风险对企业尤其重要，因为真正让组织出事的，往往不只是一个恶意 skill，而是： 你根本不知道谁装了什么； 不知道它申请了什么权限； 不知道它把哪些数据传到了哪里； 也不知道出事后该怎么一键撤销、统一下线、追溯影响范围。 换句话说， skill 一旦进入企业，就不再只是开发效率问题，而是资产治理问题。 OWASP 在 AST10 总页的“Getting Started”部分其实已经给出了组织级动作：先做 skill inventory，把它视为立即优先事项；再建立 AST09 所说的治理框架，包括审批流、审计日志和 agentic identity controls。 AST10：跨平台复用 这是这份框架里很有前瞻性的一条。 OWASP 把它列为 Medium，但单独为它提出了一个 Universal Skill Format 提案，希望用统一的 YAML 格式去承载跨平台安全属性。官方明确说，这个格式是为了缓解 AST10，同时给 AST01 到 AST09 提供共同的元数据基础。 这条风险非常容易被低估，大家通常会觉得“跨平台复用”是好事，代表生态繁荣、开发者效率高。但安全上，跨平台复用还有另一层含义： 恶意 skill 也可以跨平台迁移。 一个在 A 平台上被包装好的 skill，到了 B 平台，权限字段变了，风险等级字段没了，签名机制不兼容，扫描规则也不一样。结果就是代码迁过去了， 安全语义却丢了。 OWASP 的提案正是在补这个缺口，比如它把 permissions.deny_write 、 network.allow 、 risk_tier 、 scan_status 、 signature 、 content_hash 这些字段都拉进了通用格式里，本质上就是希望“skill 的安全属性”也能跟着 skill 一起迁移，而不是每到一个平台就重新解释一遍。 5个防护动作 第一，skill 必须纳入供应链治理。 要有发布者验证、签名、透明日志、哈希校验、内部镜像和变更审批。skill 不再是“小插件”，而是新的软件供应链单元。 第二，skill 必须按最小权限设计。 不要再用粗粒度的“开/关”权限模型，而要细到文件路径、域名 allowlist、shell 开关、身份文件默认拒写。OWASP 的通用格式提案已经把这件事写得很具体了。 第三，skill 必须默认隔离运行。 不是“高风险的才沙箱”，而是反过来：默认沙箱，宿主执行是例外。因为在 Agent 环境里，执行权一旦拿到，后果往往不是一次性，而是会话级、记忆级、身份级的持续影响。 第四，skill 必须进入持续扫描和持续审计。 不是装之前扫一次就完了，而是发布时扫、安装时扫、更新后重扫、运行中留审计。OWASP 已经把 scanner integration 和 risk assessment 单独做成了配套页面，说明它并不把扫描视为附属工作，而是整个体系的一部分。 第五，企业必须把 skill 当正式资产管理。 做 inventory、做审批、做审计、做吊销、做 agent 身份治理。否则你治理的只是“模型”，没治理“行为”，最后 AI 风险还是会从 skill 这层漏出来。 声明：本文来自模安局，版权归作者所有。文章内容仅代表作者独立观点，不代表安全内参立场，转载目的在于传递更多信息。如有侵权，请联系 anquanneican@163.com。 标准 相关资讯 OWASP发布MCP十大安全风险 标准 模安局 2026-04-12 MCP的风险有哪些？它和skill风险有什么区别？ 《网络安全技术 网络安全威胁信息评价方法》等3项国家标准公开征求意见 标准 全国网安标委 2026-04-09 ​《网络安全技术 物理不可克隆功能安全技术规范》《网络安全技术 网络安全威胁信息评价方法》《网络安全技术 区块链系统安全实施指南》。 《数据 基础术语》等22项国家标准公开征求意见 标准 全国数标委 2026-04-01 数据利用管理技术要求、数据匿名化流通实施及评估指南、数据基础设施 互联互通基本要求等。 关于我们 联系我们 用户协议 隐私政策 安全内参 © 2026 沪ICP备19008222号-1 微信公众号 回到顶部'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+          - query: '用好Agent技巧'
+            query_type: 'keyword'
+            url: 'https://cloud.tencent.com/developer/article/2653294'
+            domain: 'cloud.tencent.com'
+            result_title: '9 个让我上瘾的Agent Skills，用得上头，根本停不下来 - 腾讯云'
+            published_at: '2026-04-11'
+            content_title: '9 个让我上瘾的 Agent Skills，用得上头，根本停不下来-腾讯云开发者社区-腾讯云'
+            content_summary: 'AgentSkills是提升AI智能体生产力的关键工具，涵盖文档处理、科研分析、UI设计等全场景应用。精选9个持续维护的技能库，包括AwesomeClaudeSkills、AntigravityAwesomeSkills等，提供即装即用的自动化能力。从科研数据库集成到AI写作优化，这些技能库能快速提升Claude、Co...'
+            content_text: '9 个让我上瘾的 Agent Skills，用得上头，根本停不下来-腾讯云开发者社区-腾讯云 HELLO程序员 9 个让我上瘾的 Agent Skills，用得上头，根本停不下来 原创 关注作者 腾讯云 开发者社区 文档 建议反馈 控制台 登录/注册 首页 学习 活动 专区 圈层 工具 MCP广场 文章/答案/技术大牛 搜索 搜索 关闭 发布 HELLO程序员 社区首页 > 专栏 > 9 个让我上瘾的 Agent Skills，用得上头，根本停不下来 9 个让我上瘾的 Agent Skills，用得上头，根本停不下来 HELLO程序员 关注 发布 于 2026-04-11 15:30:36 发布 于 2026-04-11 15:30:36 125 0 举报 概述 Agent Skills如今已经成了打造实用 AI 智能体的黄金标准，可这生态系统到底有多杂乱，却从来没人跟你说实话。 文章被收录于专栏： 大模型应用开发 大模型应用开发 原创声明：本文系作者授权腾讯云开发者社区发表，未经许可，不得转载。 如有侵权，请联系 cloudcommunity@tencent.com 删除。 腾讯云架构师技术同盟 原创声明：本文系作者授权腾讯云开发者社区发表，未经许可，不得转载。 如有侵权，请联系 cloudcommunity@tencent.com 删除。 腾讯云架构师技术同盟 评论 登录 后参与评论 0 条评论 热度 最新 登录 后参与评论 推荐阅读 相关产品与服务 数据库 云数据库为企业提供了完善的关系型数据库、非关系型数据库、分析型数据库和数据库生态工具。您可以通过产品选择和组合搭建，轻松实现高可靠、高可用性、高性能等数据库需求。云数据库服务也可大幅减少您的运维工作量，更专注于业务发展，让企业一站式享受数据上云及分布式架构的技术红利！ 产品介绍 2026采购季 | AI焕新·智启新局 领券 社区 技术文章 技术问答 技术沙龙 技术视频 学习中心 技术百科 技术专区 活动 自媒体同步曝光计划 邀请作者入驻 自荐上首页 技术竞赛 圈层 腾讯云最具价值专家 腾讯云架构师技术同盟 腾讯云创作之星 腾讯云TDP 关于 社区规范 免责声明 联系我们 友情链接 MCP广场开源版权声明 腾讯云开发者 扫码关注腾讯云开发者 领取腾讯云代金券 热门产品 域名注册 云服务器 区块链服务 消息队列 网络加速 云数据库 域名解析 云存储 视频直播 热门推荐 人脸识别 腾讯会议 企业云 CDN加速 视频通话 图像分析 MySQL 数据库 SSL 证书 语音识别 更多推荐 数据安全 负载均衡 短信 文字识别 云点播 大数据 小程序开发 网站监控 数据迁移 Copyright © 2013 - 2026 Tencent Cloud. All Rights Reserved. 腾讯云 版权所有 深圳市腾讯计算机系统有限公司 ICP备案/许可证号： 粤B2-20090059 粤公网安备44030502008569号 腾讯云计算（北京）有限责任公司 京ICP证150476号 | 京ICP备11018762号 问题归档 专栏文章 快讯文章归档 关键词归档 开发者手册归档 开发者手册 Section 归档 Copyright © 2013 - 2026 Tencent Cloud. All Rights Reserved. 腾讯云 版权所有 登录 后参与评论 0 0 0 推荐'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+      - original_title: 'AI没我们想的那么聪明！复盘我的Vibe Coding翻车案例'
+        topic: 'AI Agent 工程实践与平台演进'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/24bc8b5a9b45bf77f7245ee6d'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/24bc8b5a9b45bf77f7245ee6d'
+          domain: 'www.infoq.cn'
+          content_title: 'AI没我们想的那么聪明！复盘我的Vibe Coding翻车案例'
+          content_summary: '我已经失去了编写代码的能力，变成只会写提示词的提示词工程师。但也没有完全丧失，我还会Review代码，偶尔手动改几行代码。'
+          content_text: '我已经失去了编写代码的能力，变成只会写提示词的提示词工程师。但也没有完全丧失，我还会Review代码，偶尔手动改几行代码。
+比如用Swift写UI，我在完全不复制粘贴的情况下，已经不会从0行代码写出一个页面，只会在AI生成的代码微调布局。
+准确的说，不是丧失了能力，而是丧失了记忆！
+回顾最近在开发ApiCatcher这款iOS端HTTPS抓包和调试工具的过程中，除了用AI开发核心功能遇到困难，其实在开发UI过程中也遇到一些困难。
+今天分享我用AI开发ApiCatcher UI遇到的两个问题。解决这两个问题，我从Gemini 3.1 Pro模型，升级到Claude Opus 4.6模型，又从Claude Opus 4.6模型降到Gemini 3 Flash，最新只用Gemini 3 Flash就解决了问题。
+第一个案例，我让AI帮我开发ApiCatcher的“AI对话生成脚本”功能，这里遇到的问题就是Markdown渲染。AI响应的消息里面包含代码。
+关于UI，我的提示词大概是这样的：
+页面做成聊天对话界面，底部是输入框和发送按钮，其余空间是显示聊天记录，用户只能发送文本消息，AI响应的消息是Markdown格式，AI响应的消息包含代码块，需要能高亮渲染代码块，代码不自动换行，而是代码块可以左右滚动。
+这里的难点就是要支持代码块的高亮和代码块可以水平滚动。
+无论是Gemini还是Claude，他们的思路都是先用开源的Swift语言编写的Markdown渲染开源库，怎么调都调不出令我满意的效果，渲染结果太丑了。在尝试完几个开源库后，Gemini和Claude会走向自己实现，写得非常复杂，然后实现的效果更加糟糕！
+在无数次挫败后，我开始自己思考解决方案。我告诉Claude，SwiftUI的Markdown渲染开源库不好用，我们可以用Web技术栈，找JS开源库，然后用WebView来渲染Markdown消息。
+这次Claude终于开窍了，但也没完全开窍。他把每个Markdown消息，都用一个WebView来渲染....
+我再告诉他，为什么不是只用一个WebView来渲染所有消息呢？这时候Claude限制额度了......
+我降回了Gemini 3 Flash。终于在几次调整后，Gemini做出了我想要的效果。
+最终用到的技术栈：WebView、CodeMirror、Highlight.js。
+第二个案例，JSON可折叠可搜索。
+这次一上来就用Claude Sonnet 4.6模型，提示词：帮我实现JSON全屏预览页面，要求：JSON高亮显示，路径可以折叠和展开，可以搜索，搜索结果高亮，可以点击“下一个”按钮跳转到下一个搜索结果的位置。
+Claude还是一样的思路，先找SwiftUI的开源库，但折腾半天卡在了搜索功能。还是一样折腾到耗尽Claude额度。
+SwiftUI没有好用的开源库，那就换个思路，于是我又想到了WebView。最后选择WebView+CodeMirror+Highlight.js，加上CodeMirror的一个行号插件、搜索插件，用Gemini 3 Flash开发，完美实现！
+在这两个案例中，无论是Claude还是Gemini，他们的思考方式都是先找SwiftUI可以使用的开源库，如果达不到目的，就改变策略，自己实现，但这种复杂的任务，他们根本没能力实现好。他们无法变通到通过WebView去乔接，从使用Swift技术栈，转变为使用Web开发技术栈。
+我们只要告诉AI方法，他们就能实现，所以，目前AI的能力，其实受限于使用者的能力、认知。初级程序员+AI 无法超越 高级程序员+AI！
+未来提示词会替代编程语言，程序员从写代码变成写提示词，但我们依然需要学习提升写提示词的能力。编程能力从来不是指代码写得多漂亮，而是对底层原理的认知深度，同样写提示词的能力也并非是指表达能力，同样是对底层原理的认知深度和广度。
+以上面两个案例为例，我们需要认识到Swift原生开发并不是只能使用Swift，SwiftUI开发的原生应用也可以使用WebView来渲染网页，可以Swift生成网页代码传递给WebView渲染，并且可以生成JS代码让WebView执行。我们可以不懂怎么去写代码实现，只需要知道可以这样做，这极大降低了学习难度！
+AI放大了我们个人的能力：从需要学会如何编码实现，了解具体的底层原理，到只需要知道可以这样实现。
+但只是放大个人能力，AI遇强则强，遇弱则弱。我们依然需要保持学习。'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+      - original_title: 'Anthropic 托管 Agent 平台上线后，测试对象开始从功能点转向运行系统'
+        topic: 'AI Agent 工程实践与平台演进'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/5d92520159f8509586aebed16'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/5d92520159f8509586aebed16'
+          domain: 'www.infoq.cn'
+          content_title: 'Anthropic 托管 Agent 平台上线后，测试对象开始从功能点转向运行系统'
+          content_summary: 'Anthropic 把 Claude Managed Agents 推到 public beta，开始直接提供托管式 Agent 运行基础设施；DeepSeek 在产品入口中加入了 instant 和 expert 模式，模型能力开始显式分层；PyTorch Foundation 接收 Safetensors，模型分发安全开始进入更明确的标准化阶'
+          content_text: '导读
+Anthropic 把 Claude Managed Agents 推到 public beta，开始直接提供托管式 Agent 运行基础设施；DeepSeek 在产品入口中加入了 instant 和 expert 模式，模型能力开始显式分层；PyTorch Foundation 接收 Safetensors，模型分发安全开始进入更明确的标准化阶段；前端代码生成开始引入视觉反馈闭环；Google 也在继续推进端侧 AI Gallery。
+把这些变化连起来看，重点已经不是“模型又发了什么新版本”，而是 AI 工程的底层形态正在变化。运行时、交付链路、验证方式和部署环境，都在一起发生调整。对测试岗位来说，测试对象也不再只是一个个离散功能点，而是一整套持续运行、跨环境协作的系统。
+目录
+为什么这些变化更像一次工程升级
+Claude Managed Agents，说明 Agent 运行时开始平台化
+DeepSeek 模式分层之后，测试也要分层
+Safetensors 进入基金会，模型交付链路开始收口
+前端代码生成进入视觉反馈闭环
+端侧 AI 继续推进，测试环境会更碎片化
+测试开发岗位怎么应对这类变化
+1. 为什么这些变化更像一次工程升级
+如果只从行业资讯视角去看，最近这批AI更新内容会显得很杂：有平台更新，有模型模式变化，有框架治理，也有研究论文和端侧应用。但从工程角度看，它们涉及的是同一件事：AI 系统怎么被构建、怎么被交付、怎么被验证、怎么被部署。
+换句话说，行业竞争正在从“谁的模型更强”，逐渐转向“谁的系统更可用、更可控、更容易落地”。
+这对测试岗位的影响非常直接。系统形态一旦变化，测试对象就会跟着变化。以前主要验证接口、页面和业务流程；现在还要开始关注 session、sandbox、模型文件、视觉结果、本地设备和多环境行为。工作内容不是变少了，而是验证边界变宽了。
+flowchart LR A[过去关注重点] --> A1[模型能力] A --> A2[参数规模] A --> A3[价格与榜单] B[现在关注重点] --> B1[运行时] B --> B2[交付链路] B --> B3[验证闭环] B --> B4[部署环境]
+2. Claude Managed Agents，说明 Agent 运行时开始平台化
+Anthropic 这次最值得工程团队关注的，不是单独放出一个更强模型，而是把 Agent 运行能力直接做成了平台级产品。
+Claude Managed Agents 进入 public beta 之后，代表平台厂商开始正面接管 Agent 落地里最麻烦的一层：运行容器、状态管理、工具封装、事件流、执行环境和持续会话。对于很多企业来说，这一层过去往往需要自己搭。现在平台直接把这一部分产品化，意味着 Agent 的工程门槛正在发生变化。
+这背后的信号很明确：企业以后做 Agent，难点不再只是“会不会调模型”，而是“会不会设计任务规则、权限边界、运行时限制、回放能力和质量门禁”。
+从测试角度看，这会新增一层非常明确的测试对象：Agent runtime。
+以后不只是要验证模型答得对不对，还要开始验证：
+session 生命周期是不是稳定
+sandbox 和真实环境之间有没有行为偏差
+工具权限是不是控制得足够细
+长任务运行过程中状态会不会漂移
+执行日志、事件流和回放能力是否完整
+这些问题，已经不属于传统意义上的功能测试，而更接近运行时测试、链路测试和系统验证。
+flowchart LR A[用户任务] --> B[Managed Agent] B --> C[Session] C --> D[Sandbox] C --> E[Built-in Tools] C --> F[Event Streaming] D --> G[执行结果] E --> G F --> H[监控与回放]
+3. DeepSeek 模式分层之后，测试也要分层
+DeepSeek 这次更值得关注的，不是外界对版本号的猜测，而是它的产品入口已经出现明显分层。
+当一个系统开始区分 instant 和 expert 这类模式，意味着模型能力不再是统一输出，而是按任务场景做显式拆分。表面上看，这像是一次交互层更新；但从工程和测试视角看，它其实意味着资源调度、能力边界、用户预期和降级逻辑都在变化。
+过去测试一个模型产品，很多时候只需要回答“能不能用”“答得对不对”。模式分层之后就不够了。不同模式本身就意味着不同目标：
+快速模式更看重时延、基础正确率和高并发下的体验稳定性
+专家模式更看重复杂问题处理、长链路执行、搜索能力、文件处理和压力下的退化行为
+一旦这两类模式都存在，测试设计就不能再混在一起做。否则最后用户看到的就不是“不同场景有不同能力”，而是“为什么同一个问题切个模式，结果差这么多”。
+模式分层，本质上是在要求测试也做分层验证。
+flowchart TD A[模型入口分层] --> B[Instant模式] A --> C[Expert模式] B --> B1[速度优先] B --> B2[基础正确率] B --> B3[高并发体验] C --> C1[复杂推理] C --> C2[长链路执行] C --> C3[搜索与文件处理]
+4. Safetensors 进入基金会，模型交付链路开始收口
+很多人会把 Safetensors 进入 PyTorch Foundation 这条消息当成社区治理新闻，但从工程角度看，它其实非常关键。
+它碰到的是 AI 系统里一个很底层的问题：模型文件本身，是不是可信的生产资产。
+过去很多团队把关注点放在模型效果、显存占用和推理速度上，却忽略了模型包加载这一步本身也可能有安全风险。模型下载、校验、加载、部署、回滚，这些环节如果没有明确的可信链路，问题就不只是“服务会不会挂”，还可能变成“生产环境是否引入了不可信执行风险”。
+Safetensors 进入基金会，意味着模型分发安全正在从“建议采用的最佳实践”，往“更正式的基础设施标准”推进。
+这对测试工作的影响非常直接。以后模型交付测试不只是验证“能不能加载”，而是要补上更完整的一条链：
+来源是否可信
+下载后是否可校验
+加载过程是否安全
+多节点、多 GPU 场景下是否一致
+出现故障后能否快速回滚
+很多团队现在还把模型交付当成部署动作来处理，但后面它会越来越像一条正式的质量验证链路。
+flowchart LR A[模型来源] --> B[下载] B --> C[校验] C --> D[安全加载] D --> E[推理服务] E --> F[监控] F --> G[回滚]
+5. 前端代码生成进入视觉反馈闭环
+前端代码生成这条线，最近也出现了非常适合测试视角解读的新变化。
+过去很多前端生成能力，更多停留在“给你一段代码”的阶段。代码能不能运行、语法对不对、结构是否完整，往往是主要验证目标。但真正影响用户体验的问题，很多并不在源码层，而在渲染层。页面对齐有没有偏、间距是否合理、层级是否错乱、组件状态切换是否异常，这些问题只看代码通常抓不出来。
+最近这类视觉反馈闭环思路的核心价值，就在于它把这个问题说透了：前端生成结果是否正确，不能只看文本，也不能只看 DOM，还要看真实渲染后的表现。
+这意味着未来前端 Agent 的验证方式，会越来越接近一个自动闭环：
+先生成代码，再渲染页面，再用视觉模型检查结果，然后再把反馈回流给生成过程，继续修正。
+对测试开发来说，这件事很重要。因为它意味着视觉回归测试、截图比对、结构化反馈和自动纠偏，接下来会越来越多地进入前端自动化流程里。前端是否“对”，不再只是一组断言，也会是一轮轮真实渲染后的反馈修正。
+flowchart LR A[生成前端代码] --> B[实际渲染] B --> C[视觉评估] C --> D[结构化反馈] D --> E[代码修正] E --> B
+6. 端侧 AI 继续推进，测试环境会更碎片化
+Google 继续推进端侧 AI 这条线，同样值得测试团队重点关注。
+以前很多 AI 能力都运行在统一的云端服务里，测试时更容易集中验证：接口是否稳定、响应是否一致、结果是否正确。端侧能力推进之后，情况就不同了。模型真正落到设备端运行，测试对象就会从服务接口扩展到硬件和环境本身。
+一个能力在某台设备上可以正常工作，换一个机型、换一个芯片、换一个系统版本，可能就会出现速度下降、发热增加、资源占用异常甚至推理失败。
+这意味着端侧测试环境会迅速碎片化，测试团队需要关注的维度也会明显增多：
+设备型号差异
+系统版本差异
+芯片和加速单元差异
+推理速度与内存占用
+发热与功耗
+离线状态下的稳定性
+端云协同时的结果一致性
+所以，端侧 AI 的测试不会只是“真机走一遍功能”这么简单，而会越来越接近兼容性测试、性能测试、系统测试和稳定性测试的融合。
+flowchart TD A[端侧AI测试] --> B[机型兼容] A --> C[系统版本] A --> D[芯片与加速] A --> E[性能与内存] A --> F[功耗与发热] A --> G[离线能力] A --> H[端云一致性]
+7. 测试开发岗位怎么应对这类变化
+把最近这些变化连起来看，测试开发岗位接下来更值得投入的方向，大致有四个。
+第一，Agent runtime 测试。重点关注 session 生命周期、sandbox 隔离、权限边界和长任务执行稳定性。
+第二，模型交付测试。重点关注模型文件安全、校验链路、加载过程和回滚机制。
+第三，视觉闭环测试。重点关注渲染结果、视觉一致性和自动反馈纠偏。
+第四，端侧环境测试。重点关注机型差异、硬件加速、资源占用、离线行为和端云一致性。
+这些能力的共同点在于，它们都要求测试开发从“验证一个功能点”，逐步转向“验证一个持续运行的系统”。系统里有运行时，有状态，有权限，有外部工具，有多环境部署，也有自动修正和结果回流。谁能更早建立这种系统视角，谁就更容易跟上下一阶段的 AI 工程落地。
+结尾
+这几天连续出现的这些更新，真正值得工程团队关注的，不是某个模型又换了一个名字，而是 AI 系统已经在运行时、交付链路、验证闭环和部署环境上同时发生变化。
+测试对象因此不再只是一个个离散功能点，而是一整套持续运行、跨环境协作的工程系统。当系统从“模型能力竞争”走向“工程运行能力竞争”，测试工作的价值也会继续往系统级、工程级和安全级方向上移。'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+          - query: 'Anthropic 托管 Agent 平台上线后，测试对象开始从功能点转向运行系统'
+            query_type: 'title'
+            url: 'https://www.80aj.com/2026/04/10/anthropic-agent-aws/'
+            domain: 'www.80aj.com'
+            result_title: 'Anthropic 不想只卖模型，它想成为 Agent 时代的 AWS'
+            published_at: '2026-04-10'
+            content_title: 'Anthropic 不想只卖模型，它想成为 Agent 时代的 AWS'
+            content_summary: '当很多人还在把 Agent 理解成“更复杂一点的 Prompt + Workflow”时，Anthropic 已经开始往另一条路上走了。Claude Managed Agents 的真正意义，落点不在于它把长任务、沙盒、记忆、多智能体协作这些能力打包成了一个新产品，真正关键的是它在重写整个问题的层级：**Agent 的'
+            content_text: 'Anthropic 不想只卖模型，它想成为 Agent 时代的 AWS Toy''s Tech Notes AI编程 · 架构思考 · 技术人生  首页 AI 前沿 专题 碎片 架构 实战 安全 生活 工具 管理 监控 读者墙 标签云 文章存档 友情链接    当前位置： Toy''s Tech Notes  架构  正文 Anthropic 不想只卖模型，它想成为 Agent 时代的 AWS 2026-04-10 分类： 架构 阅读(46) 评论(0)  赞( 0 ) 当很多人还在把 Agent 理解成“更复杂一点的 Prompt + Workflow”时，Anthropic 已经开始往另一条路上走了。Claude Managed Agents 的真正意义，落点不在于它把长任务、沙盒、记忆、多智能体协作这些能力打包成了一个新产品，真正关键的是它在重写整个问题的层级： Agent 的核心难点，正从模型编排转向智能体运行，转向一套可托管、可恢复、可隔离、可计费的云平台能力。 如果这个判断成立，那么 Claude Managed Agents 的意义就远不止“Anthropic 也出了个托管 Agent 服务”。它释放的是一个更大的行业信号： 顶级模型公司开始把 Agent 从开发者自己拼装的能力，改造成一种可以被平台消费的云运行时。 这就是为什么它值得被当作一篇深度长文来写，不能只按功能快讯去理解。 一、Claude Managed Agents 真正上线的，是长周期 Agent 的托管运行时 Anthropic 官方对 Managed Agents 的核心定义，是一个面向 long-horizon agent work 的 hosted service。这个表述非常关键，因为它把产品定位从“更自动的对话体验”直接拉到了“可持续执行的任务系统”。 所谓 long-horizon，不只是任务做得更久；它意味着系统必须开始正面处理一整组传统聊天产品原本不用承担的问题： 任务可能运行几十分钟甚至几小时 中间会读写文件、跑代码、调用外部工具 上下文窗口迟早不够，状态必须被外化 执行环境会失败，失败后必须恢复 资源可能位于企业私有网络而非同一宿主机 模型生成的代码本身不可信，不能和企业凭证混在同一个风险平面 这类问题只要做过真正的 Agent 落地，就知道它们都属于主问题，不是边角料。 很多 demo 会让人产生错觉：只要 Agent 能点网页、能接几个工具、能写几段代码，就已经接近“企业可用”。但只要你真的把它放进生产环境：接 Git 仓库、接内部 OAuth、接私有 VPC、连续执行长链路任务，你就会很快发现，问题的重点不再是“模型到底会不会做”，而是“这个系统能不能在现实世界的不确定性里持续做下去”。 Anthropic 这次真正押注的，就是后一个问题。 换句话说，它在把 Claude 往 可托管的工作进程 方向推，而不再停留在聊天产品层。 二、官方工程文最有洞察力的一句话：不要把今天的 harness，当成明天的平台基础 Claude Managed Agents 官方工程文里最值得反复看的，是一句非常系统设计导向的话： Harnesses encode assumptions that go stale as models improve. 翻成更直白的话就是： 很多 Agent harness 里的逻辑，本质上只是针对“当前模型还不够强”的临时补丁；模型一旦升级，这些补丁就可能从增强器变成包袱。 过去一年多，几乎所有 Agent 框架都在做同一件自然的事：哪里不稳，就往 harness 层补。 容易忘上下文，就加 compaction 容易提前结束，就加 reset 不会拆任务，就加 planner 不会重试，就加 evaluator 不会调工具，就加 router 不会统筹多步骤，就加 coordinator 这些做法在当下都未必错，甚至常常必要。但真正的问题在于：如果你把这些“当前模型短板的补丁”直接固化成平台基础设施，你其实是在让未来的系统长期适配今天的局限。 Anthropic 这次不想继续这样做。它没有把某一种具体 harness 神化成平台本身，而是开始抽取那些更可能长期稳定存在的接口，把不断变化的部分留给实现层。 这其实是一种非常“操作系统式”的思路： 平台稳定的是接口，不是当前实现 平台要为未来尚未出现的实现预留空间 上层能力可以持续演化，而不被某一代 workaround 绑死 所以 Claude Managed Agents 更准确的定位，是一个 meta-harness runtime 。把它理解为“官方版 Agent 编排器”会低估它的野心。它不预设未来 Claude 一定依赖哪种 harness，只提供一组稳定接口，让未来不同的 harness 都能挂上来继续演进。 这件事为什么重要？因为它说明 Anthropic 已经把 Agent 从“prompt + tools + orchestration”的应用层问题，推进成一种 长期演化系统的接口设计问题 。这是平台公司思维，也更接近底座思维。 三、真正的技术骨架：Session、Harness、Sandbox 三层抽象 Anthropic 官方把 Managed Agents 拆成了三层： Session ：append-only 的事件日志，记录任务过程中发生的一切 Harness ：负责调用 Claude、推进 agent loop、路由工具调用 Sandbox ：Claude 真正运行代码、编辑文件、做执行动作的环境 如果只看这三个词，似乎不算惊艳。真正关键的是： 这三层不再默认绑死在一个容器里。 这就是整个架构升级的核心。 过去很多 Agent 系统天然会走向一种“把所有东西塞进一个容器”的实现： 思考循环在里面 文件系统在里面 session 状态在里面 工具访问在里面 凭证也可能在里面 这种设计短期好处非常明显：实现快、路径短、延迟低、调试直觉、文件编辑也是直接 syscall。但一旦进入生产环境，它会迅速暴露几个典型 infra 问题： 容器挂了，session 可能跟着挂 容器卡住，工程师只能进容器排查，而容器里可能混着用户数据 思考、执行、状态、凭证处在同一边界里，风险互相污染 客户想接自己的 VPC，要么 network peering，要么把整套 harness 带进客户环境 模型生成的不可信代码，可能与企业 credential 处在同一执行平面 Anthropic 这次真正做的，是把“容器不该承担的职责”拆出去，而不是继续在单个容器上缝缝补补。这一步意味着它开始把 Agent 从“一个能跑的原型容器”，升级成“一组有稳定接口、可独立替换的系统部件”。 这背后对应的也不只是实现偏好，核心是一条非常明确的平台判断： 长周期 Agent 的可靠性，必须建立在组件之间可恢复、可重建、可替换的关系上，不能押注某个具体宿主进程永远不出事。 四、brain / hands / session 解耦，为什么是这次发布真正的分水岭 Anthropic 在文中用了一个很直观的说法：把 brain 和 hands 解耦。 brain ：Claude + harness，负责思考、判断、规划、调用 hands ：sandbox、外部工具、执行环境，负责真正动手 session ：作为 durable log，记录整个任务过程中的事实轨迹 这个拆法的价值，远远不止概念更漂亮；它同时重写了失败语义、记忆语义、安全语义和扩展语义。 1. 失败语义：失败不再是系统事故，而是可处理状态 旧设计里，一个容器往往就是整个 agent session 的命门。容器挂了，状态可能没了；容器卡了，就得人工进去救；容器断了，会话就像死在一块黑盒里。 Anthropic 现在把这件事改写了： sandbox 死掉，只是一次 tool-call error harness 挂掉，可以通过 wake(sessionId) 再次拉起 session log 依旧存在，可以从上次事件继续恢复 container 可以重新 provision({resources}) 也就是说，它把很多过去只能靠人工救火的问题，收敛成了系统内部的一类正常状态迁移。对企业环境来说，这一点比任何单次 benchmark 都重要，因为长周期 Agent 不可能像宠物服务器一样被照看，它必须按照 cattle 的方式管理。 这里最值得注意的，是 Anthropic 把“稳定”理解成“出了错也能继续”，而不是“永远不出错”。这是一种更成熟的生产系统观：真正的韧性来自失败后的恢复路径、状态路径和重启语义。 2. 记忆语义：持久化记忆的本质，在于状态被系统外化 传播里最容易被说歪的一点，是“Managed Agents 让模型有持久化记忆”。方向没错，但不够准确。 更准确的说法是： Anthropic 把记忆从上下文窗口问题，提升成了状态系统问题。 上下文窗口有几个天然限制： 不是持久化存储 容量有限 压缩往往不可逆 你并不知道未来哪段信息会再次重要 Anthropic 的解法则是： session log 作为 durable state，放在模型窗口之外 harness 通过 getEvents() 选择性回捞 Claude 不需要一直背着全部历史 token 前进 context engineering 可以变化，但底层状态存储不需要跟着推倒重来 所以更准确的说法是：系统替模型保留了一份可查询、可恢复、可再利用的任务历史，而不是把希望押在“模型自己记得更久”上。这一步很像从 prompt engineering 转向 event-sourcing：它把“长期任务记忆”从一个提示词技巧，升级成了运行时能力。 这件事带来的真正变化，是把“上下文”从一次性消费品变成了可审计的工作资产。对企业来说，这种变化比“记忆更长”本身更重要，因为它决定了 Agent 能否进入真正需要追责、复盘、合规、回放的业务系统。 3. 安全语义：安全边界不再靠少给权限，而靠结构性隔离 Anthropic 官方文里最硬的一段，其实是安全设计。他们明确承认：如果 Claude 生成的不可信代码和 credential 在同一容器里，那么 prompt injection 一旦诱导模型读取环境变量，就可能拿走 token，进一步扩展成平台级风险。 这很关键，因为它说明 Anthropic 已经把 Agent 安全看成了 运行时边界问题 ，不再停留在“提示词别被骗”“权限再细一点”这类局部修补。 他们给出的结构性解法包括： token 不进入 sandbox 的直接可读范围 Git token 在 sandbox 初始化阶段完成 remote 绑定，但不交给 agent 自己持有 MCP / OAuth 凭证放在外部 vault Claude 调工具通过 proxy 代调 harness 本身不感知凭证明文 这意味着 Anthropic 在卖的，已经超出了“Claude 更聪明”这一层，真正关键的是“Claude 自动化运行时更不容易把企业安全边界炸穿”。这对企业客户的吸引力，可能比任何 benchmark 都更现实。 而且它揭示了一个更深的趋势：随着 Agent 越来越像“会执行的软件”，传统 LLM 安全问题也会越来越接近“云原生权限与边界设计问题”，不再只是 prompt safety 问题。 4. 扩展语义：many brains, many hands 从架构图变成平台能力 Anthropic 在文中明确提到 many brains, many hands 。这件事表面像多智能体，实际上更接近多执行环境的统一运行时抽象。 它意味着： brain 不需要和某个固定容器永久绑定 hand 可以是容器、浏览器、MCP server，甚至任意工具环境 brain 与 hand 通过统一接口连接，而不是靠宿主关系耦合 多个 brain 可以只在需要时才拉起更多 hands 这件事早就超出了“多开几个 agent”那么简单的层面，它把多智能体从应用层编排推进到了平台层调度。 更重要的是，这种设计把多智能体协作从“谁负责拆任务”推进到了“谁负责调度资源与边界”。换句话说，Anthropic 想做的是一套 coordinator 可以放心依赖的基础设施层，而不只是一个更聪明的 coordinator。 五、时间到首 token（TTFT）背后的真正含义：Anthropic 优化的是交互成本，不只是速度 官方工程文中有一个容易被忽略，但很值得写进长文的点： TTFT（time-to-first-token） 。 他们提到，过去如果把 brain 也放在容器里，那么每个会话都要先付出完整的容器准备成本： 拉环境 启进程 clone repo 把 pending events 拉下来 这意味着即使一个任务暂时根本不需要 sandbox，它也得先等那一整套准备动作完成。用户最直接感受到的，就是系统“反应很慢”。 Anthropic 现在的做法，是把 brain 从容器里移出来，让 sandbox 只在真正需要时才被 provision。于是： 不需要动手的任务，不再等整套执行环境冷启动 有些推理可以更快开始 orchestration 可以先基于 session log 工作 hands 变成按需调用，而不是固定前置依赖 官方给出的结果是： p50 TTFT 下降约 60% p95 TTFT 下降超过 90% 这组数字本身当然值得关注，但更重要的是它说明 Anthropic 很清楚： Agent 平台的体验，并不只取决于模型推理速度，而取决于整个运行时是否把“无效等待”降到了最低。 这实际上是在把 Agent 用户体验，从“模型快不快”推进到“系统有没有把不必要的启动成本延迟暴露给用户”。这是典型的平台思维，也区别于单点模型优化思维。 六、从技术到商业：Anthropic 正在把 Agent 从 token 经济学推向 runtime 经济学 从商业角度看，这次发布的意义甚至可能比技术层更大。 过去大模型公司的收入逻辑，大多围绕 token 展开：你调用多少输入输出，就收多少钱。这种模式有两个天然局限： 高度可比较，容易卷入价格战 无法完整覆盖长任务 Agent 的运行成本 因为一旦 Agent 进入长周期执行，真正消耗资源的部分就不止模型推理，还包括： session 状态保留 sandbox 初始化与占用 tool proxy 与 MCP 调用 vault 与凭证代理 orchestration 调度 crash recovery 日志与可观测性 安全隔离带来的系统开销 这些资源不可能都用 token 计价表达清楚。 从当前公开传播来看， $0.08 / 小时 这个数字在大量二级报道和解读中频繁出现，但我暂时还没有从 Anthropic 官方工程文里直接看到定价明文。因此更稳妥的判断应该是： Anthropic 正在明显把 Managed Agents 往 runtime / session / sandbox 这类平台级计费逻辑推进 $0.08/hr 可以作为市场传播信号引用，但正式文章中应写成“多家报道提及，需以官方 pricing 为准” 即便先不锁死这个数字，趋势已经足够清晰：Anthropic 想卖的，已经超出了“单次推理的智力”，核心是“持续运行智能体的云能力”。这更接近 Agent Runtime as a Service ，也高于单纯的模型 API。 这件事的真正冲击在于：一旦顶级模型厂商开始把 session、sandbox、vault、proxy、recovery、orchestration 这些资源能力一起打包出售，它和传统 API 供应商就已经不在一个层级上竞争了。它更像是在从“模型供应商”转型成“智能体云平台”。 七、客户案例、传播数字与可采信边界 围绕 Claude Managed Agents 的外部讨论里，最容易失真的部分，不在技术架构，而在客户名单、传播数字和市场口径。 目前相对稳妥的公开信息包括： Notion、Rakuten、Asana、Sentry 这些名字，已经在多家外部报道中反复出现，可以视作早期采用者线索 “面向 long-running sessions”“支持 multi-agent orchestration”“帮助企业更快部署 agent” 这类表述，与 Anthropic 官方工程文章释放出的方向基本一致 “10x faster” 这类说法传播很广，但更适合被理解为发布期的官方宣传口径，引用时需要保留距离感 相对需要谨慎处理的，则是另一类信息： $0.08 / 小时 这类价格数字，在二级传播中出现频繁；如果缺少官方 pricing 页面或明确文档支撑，就不宜写成硬事实 “成功率提高 10 个百分点” 这类效果数字，如果没有公开 benchmark、白皮书或可复核实验条件，也不宜直接下结论 过于夸张的商业数字与客户战报，更适合直接剔除，避免削弱整篇文章的可信度 因此，更稳妥的写法是： 技术骨架尽量立在官方工程叙事上，客户与市场信息只作为侧面佐证，所有高风险数字都保持克制。 这样处理的好处很直接：文章的判断力不会被传播口径拖垮，读者也更容易分清什么是 Anthropic 已经公开展示的能力，什么只是发布期被放大的市场叙事。 八、这次发布真正冲击的，涵盖开源框架，也涵盖一整层“基础设施伪平台” 很多人会问：Claude Managed Agents 会不会冲击 LangChain、AutoGen 这类开源框架？ 会，但这不是最核心的冲击对象。 真正更危险的是过去两年里大量围绕“让模型跑起来”而成长起来的一类中间层： 通用 Agent 编排平台 通用 session 托管平台 通用 sandbox 执行中间件 通用工具代理层 通用企业级 memory / context 层 通用 Git / 文档 / 浏览器 / 工单 / OAuth 连接层 如果这些平台的价值主要建立在“我能帮你把模型接成一个长期运行 Agent”，那 Anthropic 这次的官方托管 runtime 一旦成熟，它们会立刻面临一个尖锐问题： 既然底层模型厂商已经把最难的 session、sandbox、recovery、安全边界、tool proxy 官方化了，我为什么还要多叠你这层中间复杂度？ 这就是最典型的平台阳谋。它不需要消灭所有生态玩家，只要先把最通用、最脏、最基础的那层水电煤吸进自己的底座里，就足以迫使大量中间层重新证明自己的存在价值。 未来还能长期成立的，不会是“我也做一个托管 Agent 运行时”，而更可能是： 更懂行业结果的 更懂组织流程的 更懂特定软件栈的 更能把工作流写成治理规则的 更能做垂直数据与业务闭环的 换句话说： 底层 runtime 一旦被平台商品化，真正昂贵的就不再是通用编排，而是行业理解。 这里的关键词其实不在“开源死不死”，真正该看的是“哪一层会被平台吸收、哪一层还保有稀缺性”。开源框架当然仍然有意义，尤其在实验、适配、多模型切换和特定团队内部搭建流程上；但如果一个产品的核心价值仅仅是“帮你把 Claude 或其他模型接成一个托管 Agent”，那它面对 Managed Agents 这类官方能力时，未来的空间一定会变窄。 九、Anthropic 和 OpenAI 正在走两条不同的路 如果把 Managed Agents 放回竞争格局里看，Anthropic 的方向其实非常清楚。 OpenAI 过去更强的势能，大量来自： C 端触达 多模态体验 大众级产品频率 品牌与分发能力 Anthropic 这次 Managed Agents 的落点则明显偏向另一侧： 长任务 可恢复 可托管 安全边界 企业资源接入 多执行环境协调 平台级稳定接口 这其实是在讲一个非常明确的差异化故事： 我不一定要在所有消费级体验上赢你，但我可以成为那个最适合进入企业生产环境的 Agent 平台。 这个故事为什么有吸引力？因为 CTO 真正在意的，往往不在模型偶尔答偏一点，而在于： 会不会掉状态 能不能恢复 安全会不会出洞 接私有系统会不会太重 一旦出事能不能查清 会话一多会不会崩 Anthropic 现在就是在把这些最不性感、但最要命的问题，变成自己的平台护城河。 更进一步看，这种分化可能会让未来的大模型公司出现非常清晰的角色分层： 有的更像“消费级智能入口” 有的更像“企业级智能运行底座” Anthropic 显然更想站在第二个位置上。 十、对传统 SaaS 与企业软件意味着什么：从 seat 逻辑走向 runtime 逻辑 如果 Managed Agents 真按 Anthropic 设想的路径发展下去，它的冲击会从 AI infra 生态内部继续外溢，进一步影响企业软件本身。 过去很多 SaaS 软件的商业逻辑建立在 seat 上： 一个员工一个座位 一个部门一套权限 一批人围绕软件界面完成协作 但 Agent 一旦真正被平台化、托管化，企业购买的对象就可能从“让某个人使用某个软件”，转向“让一个可以持续执行任务的智能体完成某类工作”。 这不意味着 seat 模式会立刻消失，但它会带来几个非常现实的问题： 哪些工作流程其实并不需要一直以人类 UI 为中心？ 哪些任务原本依赖 seat 软件里的表单流转，其实可以被 runtime 化？ 企业未来买的是更多人头，还是更多可控的自动执行能力？ 这也是为什么外界会把 Managed Agents 的影响往 Workday、Asana、Notion 这类企业协作与工作流产品延伸。短期看，它们还是 Anthropic 的客户与合作方；中长期看，Agent runtime 一旦成熟，也会逼迫它们重新定义自己的价值。 未来真正能长期成立的 SaaS，不会只是“有一个界面让人点”，而更可能是： 有深流程沉淀 有数据与权限边界 有行业语义 能把人类和 Agent 同时纳入治理框架 也就是说，Managed Agents 的长期影响不会停留在“谁做 Agent 平台”，它还会推动 企业软件重新定义‘软件中的执行者’ 。 十一、对中国企业和 AI 平台团队真正有价值的启发：别再重复造会被平台吸收的水电煤 如果站在中国企业、创业团队或内部 AI 平台负责人的角度看，这次发布真正值得带走的，不是某几个新 feature 本身，更是一种战略过滤器： 哪些东西你现在花大力气去造，未来很可能会被顶层平台快速吸收？ 过去很多团队都很容易把下面这些能力当作长期壁垒： 通用 orchestration 通用 sandbox runtime 通用会话恢复 通用 tool routing 通用 memory / context management 这些能力当然必要，但是否值得继续作为“长期核心壁垒”去重仓，要重新想了。 因为顶层模型厂商一旦开始把这些通用脏活做成默认能力，继续把主要精力押在这里，很可能只是替平台做需求验证。 真正更值得深投入的，反而是那些不容易被 Anthropic、OpenAI、Google 直接商品化的层： 行业语义 数据治理 业务结果定义 组织规则与流程内化 特定软件生态的深集成 评估体系与闭环反馈 说得更直白一点： 未来越来越便宜的是 Agent 的运行，越来越贵的是对真实行业问题的理解。 谁还在重复造通用水电煤，谁就越容易被动；谁能把 runtime 平台化之后的红利，转成行业结果能力，谁才更可能留下真正的护城河。 对国内团队来说，这个判断尤其重要。因为中国市场很容易在每一波技术浪潮初期涌现一大批“平台层复制者”：看见国外有 framework、就做 framework；看见国外有 runtime、就做 runtime；看见国外有 memory layer、就做 memory layer。但如果顶层平台演化速度足够快，这些中间复制层很容易在产品还没形成真正护城河之前，就被源头能力吸走。 所以更值得问的问题，不在“要不要也做一个 Managed Agents”，而在： 在 Managed Agents 这类能力普及之后，我们在本地市场真正还能提供什么不可替代的价值？ 十二、为什么这件事对开发者心态也是一次重构：从“造 Agent”到“定义 Outcome” Claude Managed Agents 的另一个深层影响，是它会改变开发者和平台团队的重心。 过去大家做 Agent，很容易把注意力集中在这些问题上： prompt 怎么写 memory 怎么配 orchestration 怎么搭 工具怎么接 sandbox 怎么起 容错怎么补 但一旦这些东西逐步被平台官方吸收，开发者最有价值的工作就会发生转移： 你到底想让 Agent 交付什么结果？ 什么叫“完成”？ 什么叫“可接受”？ 什么叫“必须重试”？ 什么叫“风险过高要停下来交给人”？ 这其实是在把开发者的核心职责，从“搭好一套能跑的管道”，转向“定义好一套能衡量结果的标准”。 这也是为什么 outcome / self-evaluation 这类能力在传播里会被不断强调。因为未来真正昂贵的，并非让 Agent 运行起来本身，而是让 Agent 朝着正确结果稳定收敛。 平台负责越来越多的基础设施，开发者和企业团队就必须把注意力转到： 任务定义 质量门槛 风险边界 人机协作点 组织级 policy 从这个角度看，Managed Agents 其实不仅是在改变技术栈，也是在改变 AI 时代的软件工程分工。 十三、结论：Agent 时代真正开始工业化的信号，是系统更可托管 如果一定要用一句话概括 Claude Managed Agents 的意义，我会这样说： Anthropic 正在把 Agent 从一种“开发者自己拼起来的能力”，改造成一种“可以按平台方式被消费的运行时”。 这句话背后的变化非常深： 从 prompt engineering 转向 runtime engineering 从模型会不会做事，转向系统能不能托管事 从单轮回答质量，转向长任务生命周期管理 从 demo 成功率，转向生产系统可靠性 从“更会想”，转向“更能持续稳定地干” 这并不意味着 Anthropic 已经赢了，也不意味着所有开源 Agent 框架会立刻失去意义。但它确实清晰地指出了一条趋势线： 未来 Agent 生态的主战场，越来越像云平台竞争，而越来越不像 prompt + workflow 的脚手架竞争。 如果 Anthropic 真能把这条路走通，那么它争夺的就远不止下一代 Claude 用户，更是下一代 AI 生产系统默认建在哪个底座之上。 那时候它卖的，也早已超出 Claude 本身。 它卖的是： 让 Claude 长时间、低风险、带状态、可恢复、可审计地替你干活的整套云能力。 而对所有还在做 AI 平台、Agent 产品、企业智能化改造的人来说，这次发布真正的提醒也许只有一句： 别再只盯着模型会不会做事，要开始问：这套系统，是否已经到了能真正托管工作的程度。 AD： 【OpenClaw】 2026新时代的个人助手(一键安装)  赞( 0 ) 未经允许不得转载： Toy''s Tech Notes » Anthropic 不想只卖模型，它想成为 Agent 时代的 AWS 分享到          AI Agent anthropic claude 云平台 智能体 上一篇 挑战“纯AI”极限：从代码构建到内容运营，全程零人工干预的导航站 下一篇 AI Agent“自主决策”翻车实录：自动切换昂贵模型，开发者差点烧光预算 相关推荐 AI 编程效率倍增：GitHub 热门项目 awesome-design-md，用 DESIGN.md 让 Agent 自动生成品牌级 UI 专为开发者打造：MIT开源CC GUI桌面客户端发布，集成MCP支持多模态AI引擎 从Pika实时交互看未来：人人都需要一个高智商的‘数字分身’吗？ 开源项目 cc-telegram-bridge：将 Claude Code/Codex 搬进 Telegram，实现手机端多 Agent 编程 Codex展现“元智能”？自主调配子代理模型与思考深度引发热议 解决 AI Agent 代码盲区：开发者开源工具将 Git Diff 转为加密预览页 实测发现：Claude Code 在消耗“额外额度”时性能飙升，编程效率惊人 企业微信部署AI Agent翻车：开源项目“爱马仕”Bug频出，适配难题待解 评论 抢沙发 取消 有人回复时邮件通知我 Δ 提交评论 作者介绍 Toy  1.6万 文章总数 170.0万 阅读总数 113 点赞总数 量化自我新尝试：地方客 App 将 GPS 轨迹转化为生活语义 手写Linter修复生产事故：一次Go语言静态分析实战 AionUi V1.9.14 发布：引入“多Agent团战”模式，让AI互为Boss解放人类双手 阅读作者的全部文章  文章目录 一、Claude Managed Agents 真正上线的，是长周期 Agent 的托管运行时 二、官方工程文最有洞察力的一句话：不要把今天的 harness，当成明天的平台基础 三、真正的技术骨架：Session、Harness、Sandbox 三层抽象 四、brain / hands / session 解耦，为什么是这次发布真正的分水岭 1. 失败语义：失败不再是系统事故，而是可处理状态 2. 记忆语义：持久化记忆的本质，在于状态被系统外化 3. 安全语义：安全边界不再靠少给权限，而靠结构性隔离 4. 扩展语义：many brains, many hands 从架构图变成平台能力 五、时间到首 token（TTFT）背后的真正含义：Anthropic 优化的是交互成本，不只是速度 六、从技术到商业：Anthropic 正在把 Agent 从 token 经济学推向 runtime 经济学 七、客户案例、传播数字与可采信边界 八、这次发布真正冲击的，涵盖开源框架，也涵盖一整层“基础设施伪平台” 九、Anthropic 和 OpenAI 正在走两条不同的路 十、对传统 SaaS 与企业软件意味着什么：从 seat 逻辑走向 runtime 逻辑 十一、对中国企业和 AI 平台团队真正有价值的启发：别再重复造会被平台吸收的水电煤 十二、为什么这件事对开发者心态也是一次重构：从“造 Agent”到“定义 Outcome” 十三、结论：Agent 时代真正开始工业化的信号，是系统更可托管 置顶推荐 OpenClaw 资源导航：服务器、Token、IM 接入一页搞定 2026-03-09 7.9 元嫖一个月 Kimi K2.5：阿里云 Coding Plan 薅羊毛指南 2026-02-21 1分钟拥有自己的 7×24 AI 助手：阿里云一键部署 OpenClaw（原 Clawdbot） 2026-01-31 月省5000刀！20+个Claude Code公益站横评：注册就送钱，签到更疯狂 2025-12-24 FoxCode 使用体验：国内稳定 + 按量付费的那点事 2025-12-12 真正免费的Claude Code神器:AnyRouter深度体验 2025-10-16 前沿哨所 量化自我新尝试：地方客 App 将 GPS 轨迹转化为生活语义 针对现有足迹记录应用仅能展示“在哪里”而缺乏“做什么”的痛点，开发者推出了一款名为“地方客”的创新应用。该应用旨在将枯燥的 GPS 轨迹数据转化为具有生活语义的信息。通过算法识别停留节点与移动轨迹，App 能半自动推断用户的活动类型，并以时间线和多样化地图形式展示，帮助用户复盘生活模式。该项目已上架 iOS 商店并开源源码，为“量化自我”领域提供了从数据采集向语义理解升级的新思路。 原文链接： V2EX 分享发现 25分钟前 手写Linter修复生产事故：一次Go语言静态分析实战 文章记录了作者从一次难以察觉的数据库事务泄漏Bug出发，进而开发Go语言静态分析工具的全过程。这种Bug常因在事务回调中误用外部Repo而导致数据不一致，且极易逃过常规测试和AI代码审查。作者利用`go/analysis`框架，通过AST遍历和递归检查，成功在编译期拦截此类错误。文章不仅展示了技术实现细节，更强调了在特定场景下，定制化静态分析工具比通用的AI审查更为精准可靠，为提升代码库健壮性提供了极佳范本。 原文链接： Hacker News 26分钟前 AionUi V1.9.14 发布：引入“多Agent团战”模式，让AI互为Boss解放人类双手 开源项目 AionUi 推出 V1.9.14 版本，重点升级了“多Agent团战”能力，旨在解决多Agent协作中的“人工瓶颈”问题。以往用户需在不同Agent会话间手动搬运信息，导致效率低下；新版借鉴了Claude Code的设计思路，支持Agent之间直接通信与协作。用户可手动创建团队或由Leader自动调度，让规划、编码、测试等Agent自行通过Battle完成任务，人类从繁琐的传话工作中解脱，回归指挥者与观察者的角色。 原文链接： Linux.do 26分钟前 Product Hunt 榜单已沦为服务商的精准获客池？独立开发者上榜后的真实反馈 一位独立开发者分享了其产品 uTerminal 在未做任何推广的情况下，登上 Product Hunt 日榜第 17 名的经历。然而，高排名并未带来预期的用户增长，仅收获 18 个注册用户。相反，开发者收到了 17 封邮件，绝大多数是来自提供 AI 外联、内容营销、官网建设及漏洞扫描等服务商的推销。这一现象揭示了 Product Hunt 等平台生态的变化，以及独立开发者在冷启动过程中面临的“获客难、收割快”的尴尬现状。 原文链接： V2EX 分享发现 1小时前 Steve Yegge 炮轰谷歌：AI 采用水平仅如“拖拉机公司”，招聘冻结致工程平庸 著名技术大牛 Steve Yegge 猛烈抨击谷歌在生成式 AI 领域的内部应用现状，称其工程部门的 AI 采用率竟然与约翰·迪尔（拖拉机公司）处于同一水平。他观察到行业普遍呈现出“20-20-60”的分化格局：仅 20% 的工程师进化为 AI 代理重度用户，20% 顽固拒绝，而 60% 仍停留在 Cursor 等初级聊天工具阶段。Yegge 更是指出，过去 18 个月的招聘冻结导致没有新鲜血液注入，使得谷歌工程组织在缺乏外界对照下变得日益平庸且不自知。 原文链接： V2EX 分享发现 1小时前 重构GPU编程：VectorWare首次实现Rust标准线程在GPU上运行 VectorWare宣布在Nvidia GPU上成功运行Rust的标准库线程std::thread。针对传统GPU编程模型与Rust所有权模型不匹配的问题，该团队创新性地将GPU的Warp映射为Rust线程，使开发者能使用熟悉的CPU编程范式编写GPU代码。这一突破不仅消除了Warp分歧风险，让借用检查器和生命周期机制在GPU上自然生效，还打通了Rayon、Tokio等Rust生态库与GPU算力的壁垒，为构建高性能、内存安全的GPU原生应用奠定了基础。 原文链接： Hacker News 1小时前 最新文章 Harness Engineering 火起来以后，AI 工程团队真正该补的课是什么？ 2026-04-13 这一周，AI 能自动写浏览器漏洞了，而你的 npm 依赖可能已经被投了毒 2026-04-13 小红书黑客松巅峰赛，热闹背后真正值得看的是什么 2026-04-12 “蒸馏老板”到底在蒸馏什么：拆开 `boss-skills` 之后，我看到的是一套行为规则生成器 2026-04-10 大模型周刊第26期 一个"太危险不敢发"的AI，一个开源的国产编码之王 2026-04-10 Karpathy 最新分享：用 LLM 搭建你的个人知识库，让 AI 帮你「养」一座活的 Wiki 2026-04-08 热门专题 AI周刊：大模型、智能体与产业动态追踪 程序员数学扫盲课 冲浪推荐：AI工具与技术精选导航 Claude Code 全体系指南：AI 编程智能体实战 热门标签 AI (1984) claude (1668) AI编程 (1588) 人工智能 (1419) AI Agent (1297) Gemini (1038) 大模型 (977) 开源项目 (936) 开源 (848) GitHub (783) 开发者工具 (753) 开源工具 (685) AI工具 (622) Claude Code (604) 开发工具 (561) openai (446) cursor (435) anthropic (369) 网络安全 (367) AI应用 (344) 谷歌 (337) agent (328) deepseek (327) llm (324) Chatgpt (291) google (283) AI开发 (266) 智能体 (262) 提示词工程 (259) AI安全 (259) 网站统计 日志总数： 16361 评论总数： 491 标签总数： 20969 链接总数： 52 最新评论 Alex Chen 3周前 (03-27)： 统一封装成兼容 API 这点很实用，团队里混用 Codex 和 Gemini 会省很多接线成本。 Sarah K 3周前 (03-27)： 流式输出时先缓冲再增量渲染这个思路靠谱，之前我们前端也被列表错位坑过。 刘明 3周前 (03-26)： 这篇把综合榜和 Agent 榜拆开讲清楚了，选模型确实不能只盯总分。 CloudNinja 3周前 (03-26)： 按环境变量给 Antigravity 走代理最省事，照着配基本不用再到处翻文档。 码农小王 3周前 (03-26)： 这种按注册送和签到力度横向对比很有用，省得一个个注册后才发现额度太少。 安全研究员 3周前 (03-26)： GLM-4.7 在智能体赛道确实不错，我们测试下来推理速度比 GPT-4 快不少 DBA老马 3周前 (03-26)： GLM-4.7 在智能体赛道确实不错，我们测试下来推理速度比 GPT-4 快不少 产品经理小陈 3周前 (03-26)： 国产模型能在细分赛道反超确实不容易，选型时还是要看具体场景 十年稳如初 — LocVPS，用时间证明实力 10+ 年老牌云主机服务商，全球机房覆盖，性能稳定、价格厚道。 老品牌，更懂稳定的价值  你的第一台云服务器，从 LocVPS 开始  © 2010-2026 Toy''s Tech Notes 本站主题由 themebetter 提供 网站地图 ｜ 隐私政策 | 关于我们 | 联系我们 请求次数：24 次，加载用时：0.530 秒，内存占用：6.19 MB'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+          - query: 'Agent 测试 运行系统'
+            query_type: 'keyword'
+            url: 'https://tianpan.co/zh/blog/2026-04-10-integration-testing-ai-agents-ci'
+            domain: 'tianpan.co'
+            result_title: '如何在 CI 中对 AI Agent 工作流进行集成测试，而无需完全 Mock 模型'
+            published_at: '2026-04-10'
+            content_title: ''
+            content_summary: '一种针对 AI Agent 的三层 CI 测试架构，既能避免实时 API 调用产生的成本，也能避免完全 Mock 模型带来的空洞感 —— 通过使用 StubLLM 测试替身、VCR 录制回放以及工具契约测试，在编排 Bug 进入生产环境前将其捕获。'
+            content_text: '如何在 CI 中对 AI Agent 工作流进行集成测试，而无需完全 Mock 模型 跳到主要内容 TianPan.co 中文 English 中文 课程 所有课程 系统设计与架构 产品管理 进入 Web3 打磨界面 重启灵魂 博客 投资备忘录 产品 论坛 搜索 最近的帖子 2026 对非确定性 AI 功能进行 A/B 测试：为何你的实验框架假设了错误的零假设 抽象反转问题：当 AI 框架迫使你在错误的层级思考 智能体凭据轮换：尚未被映射到 AI 领域的 DevOps 难题 智能体死锁：当 AI 代理永远在等待彼此 AI 辅助故障响应：为你的值班 Agent 提供运维手册 如何在 CI 中对 AI Agent 工作流进行集成测试，而无需完全 Mock 模型 2026年4月10日 · 阅读需 13 分钟 Tian Pan Software Engineer Your browser does not support the audio element. Open in ChatGPT 大多数构建 AI Agent 的团队在经历第一次生产事故后，都会发现同一个测试陷阱。你有两个明显的选择：在 CI 中进行实时的 API 调用（缓慢、昂贵、且具有非确定性），或者将 LLM 完全 Mock 掉（快速、廉价、但内容空洞）。这两种方法都会以不同但可预见的方式失败，而第二种方法的失败模式更糟糕，因为它是隐形的。 Mock 掉 LLM 的团队可能会跑六个月的全绿 CI，发布到生产环境后，才发现代码库中一直潜伏着一个 bug：在 8 步循环的第 6 步，Agent 处理畸形工具响应的方式有问题。那个总是返回 "Agent response here" 的 Mock 根本没有触及编排层。实际的工具分发、重试逻辑、状态累积和兜底路由代码从未被测试过。 好消息是还有第三条路。它与其说是一种单一的技术，不如说是一个由三层测试组成的架构，每一层都旨在捕获不同类别的失败，且无需承担其他方法的成本。 双面测试陷阱 ​ 在深入解决方案之前，值得精确分析一下每种幼稚方法所缺失的内容。 实时 API 测试 在每个 PR 上都会对 OpenAI 或 Anthropic 发起实际调用。成本积累得很快：一个包含 20 个场景、使用 LLM 作为裁判（LLM-as-judge）进行评分的评估套件，每次运行需要花费 0.50 美元到 3.00 美元。考虑到开发者数量、每天的 PR 数量，以及 PR 经常多次推送的事实，对于一个规模不大的团队来说，在还没实施每晚例行的全面运行之前，每月就要支出 200 到 1,000 美元。延迟是另一个致命伤：一次 15 秒的 LLM 调用会让你 CI 的反馈循环变得无法使用。而且至关重要的是，由于各提供商区域的硬件级浮点运算差异，即使在 temperature=0 的情况下，LLM 的输出也会有所波动，因此今天通过的测试在没有任何代码更改的情况下，明天可能会失败。 Mock 掉 LLM 解决了延迟和成本问题，但却掏空了你实际测试的内容。这种危险是微妙的：你的测试套件达到了 90% 的覆盖率指标，却让整个编排层处于未测试状态。考虑一下，一个返回硬编码字符串的桩程序（Stub）无法测试哪些内容： 当工具返回空结果时会发生什么？ Agent 是否正确地将上下文从工具 A 的输出传播到工具 B 的输入？ 重试逻辑是在 429 错误时启动，还是默默地吞掉了错误？ 在 10 步循环的第 7 步，当累积状态超过上下文窗口时会发生什么？ 这些正是困扰生产系统的失败模式。它们都不涉及模型输出质量——它们是纯粹的编排 bug。Mock 掉模型意味着你的测试套件根本无法发现它们。 第一层：使用 Fake LLM 的结构化测试（每次提交，零成本） ​ 第一层使用 LLM 测试替身（Test Doubles）——即 LLM 提供商接口的桩实现，它根据传入的提示词内容进行确定性响应。 StubLLM 实现了与你真实 LLM 客户端相同的接口，但它不是发起网络调用，而是解析提示词中的测试触发器并返回硬编码的工具调用响应： class StubLLM : def generate ( self , prompt : str ) - > Response : if "trigger_timeout" in prompt : raise TimeoutError ( "Request timeout" ) if "trigger_rate_limit" in prompt : raise RateLimitError ( "429: Too many requests" ) # 默认：请求天气工具 return Response ( tool_call = "get_weather" , args = { "city" : "NYC" } ) 关键的洞察在于，Stub 不会伪造最终的文本响应。它触发一个特定的工具调用，这会强制你真实的中间件去执行。你的测试架（Harness）分发工具，处理结果，更新状态，并带着下一轮上下文再次调用 LLM。Stub 的第二次调用触发下一步。现在，你在没有进行任何实际 API 调用的情况下，测试了整个编排循环。 这种模式对于测试基础设施关注点特别有价值：你的测试架是否通过 RBAC 正确拦截了 delete_user_account  调用？它是否将已认证的用户身份传播到了工具执行中？当工具在第 4 步超时时，错误恢复路径是否执行？这些是成千上万个确定性测试案例，成本为零，且在毫秒内运行。 局限性显而易见：Stub LLM 无法测试提示词注入防御能力、模型输出质量，或者你的系统提示词是否真的能诱导出你想要的行为。它们测试的是模型周围的“轨道”，而不是模型本身。 第二层：通过磁带录制进行确定性重放（每个 PR，近乎零成本） ​ 第二层填补了结构化测试与实时评估之间的空白。VCR 风格的磁带录制（Cassette recording）在传输层拦截 HTTP 调用，将完整的请求/响应对序列化到文件中，将该文件提交到版本控制，并在后续运行中重放。 pytest-recording 通过一个简单的装饰器封装了这一功能： @pytest . mark . vcr ( ) def test_multi_step_research_agent ( ) : result = run_research_agent ( "What caused the 2024 semiconductor shortage?" ) assert result . steps_taken <= 8 assert "supply chain" in result . summary . lower ( ) 第一次运行时使用 --record-mode=once ：测试进行实际 API 调用并写入磁带文件。之后的所有运行——包括 CI 中的每个 PR——都从磁盘重放。没有 API 调用，结果确定，CI 运行时间与普通单元测试相同。 除了节省成本之外，更深层次的价值在于：如果 HTTP 请求的 Payload 以任何方式发生变化——提示词措辞变动、模型参数更新、输入序列化改变——磁带匹配就会失败，测试就会中断。这能捕获到在传统单元测试中根本无法发现的意外提示词修改。 多轮对话问题 。普通的 VCR.py 适用于单次调用测试。多轮 Agent 对话则更难：第 N 轮的请求体包含了模型在第 N-1 轮的响应。如果 Agent 在第 2 步分支走向不同，后续的每个磁带匹配都会失败。解决方法包括： BAML VCR 运行在 BAML 运行时层而非 HTTP 层，保留了跨轮次的核心类型信息，并逐块处理流式响应。 vcr-langchain 对 VCR.py 进行了补丁，以捕获非网络的 LangChain 工具调用，尽管在装饰器范围之外初始化的工具不会应用录制。 对于没有专门 VCR 支持的框架，务实的方法是在轮次（Turn）级别而不是会话（Session）级别进行录制——每个独立的 LLM 调用都有自己的磁带，然后由测试将其拼接起来。 一个陷阱：磁带会  记录所有内容，包括 Authorization 标头。在将磁带提交到任何公共或共享存储库之前，请配置 filter_headers: ["authorization"] 。 磁带无法解决的问题 。当你升级模型版本时，根据定义，所有磁带都会失效。磁带也无法防御流式 Schema 的更改或新的模型行为。这是预料之中的——磁带是你代码行为的回归测试，而不是模型行为的测试。 第 3 层：工具契约测试（针对每个 PR，进行 Schema 漂移检测） ​ 工具漂移（Tool drift）是生产级智能体（Agent）系统中最为隐蔽的失败模式。外部 API 可能会静默地添加一个必填字段。枚举（Enum）增加了一个新值。浏览器工具在不同的字符计数处开始截断结果。单个组件看起来没问题。智能体也完成了任务。但在内部，编排逻辑（orchestration）正在以某种掩盖不匹配的方式进行静默补偿——直到它再也无法维持下去。 预防模式在工具的输入和输出上均使用 Pydantic schema，然后测试完整的往返过程。你不仅要测试工具函数是否执行，还要测试模型是否选择了正确的工具、是否提取了类型正确的参数、是否收到了有效的响应，以及该响应是否正确地传递给了依赖它的下一个工具。 值得在每个 PR 上运行的九项契约测试包括： Schema 锁定测试 ：针对实时 schema 重放已知的工具调用；如果必 填字段发生偏移或枚举发生变化，则测试失败。 相似工具路由测试 ：设计对抗性提示（Adversarial prompts），旨在混淆语义相似的工具（测试 “给团队发消息” 不会路由到 “给个人发消息”）。 错误语义测试 ：每个错误类别（无效参数、权限拒绝、超时、部分结果）都应该触发特定的预定下一步操作。 跨工具交付测试 ：工具 A 的输出应以正确的类型传递给工具 B。大多数多步骤回归问题都隐藏在这个边界处。 工具清单漂移测试 ：快照完整的工具列表（名称、描述、作用域），并在每次发布时进行差异对比（diff）。 分页测试 ：在小规模结果上表现良好的智能体在处理真实数据集时会崩溃；需要显式地测试页面边界。 这些测试成本很低，因为它们使用记录好的响应和 schema 验证——无需调用实时的 LLM。它们能捕捉到实时 API 测试经常遗漏的特定失败类别（智能体与工具接口之间的 schema 漂移），因为模型会以隐藏底层不匹配的方式来适应意外情况。 三层 CI 流水线 ​ 整合这些层级： 层级 触发条件 运行内容 成本 结构化 每次提交 StubLLM 测试、单元测试、Schema 契约检查 ~$0 重放 每次 PR VCR 录制文件（cassette）测试、工具漂移契约测试 ~$0 实时 合并至 main / 每晚 完整的 LLM 评估、LLM 作为评委（LLM-as-judge）打分、多轮智能体运行 $0.50–$50 实现此方案的 GitHub Actions 结构如下： name : agent - ci on : pull_request : paths : [ "agent/**" , "prompts/**" , "tools/**" ] push : branches : [ main ] jobs : fast-checks : runs-on : ubuntu - latest steps : - uses : actions/checkout@v4 - run : pytest tests/unit/ tests/replay/ - x - - vcr - record=none live-evals : if : github.ref == ''refs/heads/main'' runs-on : ubuntu - latest env : OPENAI_API_KEY : $ { { secrets.OPENAI_API_KEY } } steps : - run : pytest tests/integration/ - - eval - threshold=0.85 重放作业中的 --vcr-record=none 标志非常重要：它会导致测试在任何录制文件缺失时报错，而不是去调用实时 API。这可以防止在 PR 过程中意外产生 API 费用，并确保缺少录制文件的测试会直接报错，而不是通过实时数据静默通过。 这种架构能防止什么 ​ 第 N 步的编排 Bug 。在一个 8 步循环的第 6 步中，智能体处理空工具响应的方式如果存在 Bug，则需要前 7 步全部成功才能暴露。带有完整历史追踪的重放录制文件是在 CI 中复现此类问题且无需搭建完整环境的唯一可行方法。回归追踪测试模式——在任何代码更改后重放高价值的历史追踪——正是为此设计的。 静默的模型版本回归 。据估计，40% 的生产环境智能体故障是由模型更新引起的。应对模式是：固定到特定的模型版本，在升级模型之前针对新模型运行 Schema 锁定测试，并将你的录制文件视为回归基准。任何在模型升级时失效的录制文件都是已确认的回归，需要进行分选处理（triage）。 工具 Schema 漂移 。外部 API 更改导致必填字段偏移的情况会被边界处的 Schema 锁定测试捕获，从而避免演变成看起来像是 LLM 质量退化的模型行为变化。 权限策略绕过 。StubLLM 模式可以确定性地请求 delete_user_account 工具调用——而在实时调用测试中，你需要依靠真实模型自发生成该调用才能进行测试。这使得针对智能体控制框架的安全测试变得可行，而实时测试则难以做到这一点。 随时间变化的成本概况 ​ 一个拥有三名开发者的团队，如果在每次提交时运行第 1 层和第 2 层测试，仅在合并到 main 分支时运行第 3 层测试，通常每月会运行 200–300 个快速 CI 作业和 15–20 个实时评估运行。按照目前的 API 价格，实时评估运行的成本为每月 30–80 美元。快速作业则是免费的。 更重要的指标是测试套件捕捉到了什么。实施这种三层结构的团队一致报告称，在 main 分支上发现的第一波实时评估回归问题其实早已被录制文件测试覆盖——录制文件在引入回归的同一个 PR 中就失效了。第 2 层测试在进行真正的回归预防工作，而不仅仅是为了省钱。 组织层面的转变在于将录制文件视为一等公民的测试工件：在 PR 中进行评审，在提示词更改时刻意更新，并与生成它们的代码一起提交。这是一个微小的流程变化，但对于你在用户发现之前可靠地捕捉智能体回归问题的能力，具有不成比例的巨大影响。 这种方法的局限性 ​ 这种架构并没有解决大规模模型输出质量的评估问题。VCR cassettes 测试的是你的编排代码是否执行了与之前相同的操作 —— 它们无法告诉你之前执行的操作是否足够好。在 Tier 3 中使用 LLM-as-judge 进行评分对于衡量实际输出质量仍然是必要的，而且在大规模情况下，这依然既昂贵又存在噪声。 另一个限制是对新失效模式的覆盖。基于 cassette 的回放仅涵盖了在录制期间运行过的路径。从未在特定输入组合上进行过 测试的智能体（agent）没有对应的 cassette。这就是为什么针对多样化输入分布的 Tier 3 实时评估仍然至关重要的原因 —— 它们能发现新的失效模式，而一旦发现，Tier 2 回归测试就会将其固定下来。 正确的心智模型：Tier 1 和 Tier 2 防范你已经知道的回归。Tier 3 发现你尚未知晓的回归。没有 Tier 3 的团队会交付尚未发现的回归。没有 Tier 1 和 Tier 2 的团队则会不断地重新发现相同的回归。 标签： ai-agents testing ci-cd llm 最后 于 2026年4月11日 更新 References: https://anaynayak.medium.com/eliminating-flaky-tests-using-vcr-tests-for-llms-a3feabf90bc5 https://pypi.org/project/pytest-recording/ https://github.com/gr-b/baml_vcr https://github.com/amosjyng/vcr-langchain https://langwatch.ai/scenario/testing-guides/mocks/ https://www.tigera.io/blog/how-to-stub-llms-for-ai-agent-security-testing-and-governance/ https://medium.com/@duckweave/tool-drift-hides-in-the-gaps-75a68d8198d3 https://blog.langchain.com/evaluating-deep-agents-our-learnings/ https://www.braintrust.dev/articles/ai-agent-evaluation-framework https://www.braintrust.dev/articles/best-ai-evals-tools-cicd-2025 https://labs.sogeti.com/building-a-smart-cost-efficient-llm-test-pipeline https://hamel.dev/blog/posts/evals-faq/how-do-i-evaluate-agentic-workflows.html https://docs.langchain.com/langsmith/cicd-pipeline-example Let''s stay in touch and Follow me for more thoughts and updates Twitter LinkedIn Telegram Discord 小红书 较新一篇 混合云边 LLM 推理：端侧模型何时优于云端 较旧一篇 意图鸿沟：当你的 LLM 完美回答了错误的问题 双面测试陷阱 第一层：使用 Fake LLM 的结构化测试（每次提交，零成本） 第二层：通过磁带录制进行确定性重放（每个 PR，近乎零成本） 第 3 层：工具契约测试（针对每个 PR，进行 Schema 漂移检测） 三层 CI 流水线 这种架构能防止什么 随时间变化的成本概况 这种方法的局限性 关于 Tian Pan 我是 Tian Pan，一名工程师型创始人，专注于智能体工程——构建自主 AI 系统并扩展工程团队。我撰写关于系统设计、技术领导力和 AI 智能体实战的实用指南。曾在 Uber、Brex 和 IoTeX 担任早期工程师。 GitHub · LinkedIn · Twitter · RSS · 中文 RSS · Products · 论坛 · 私信 · 隐私政策 · 服务条款 2008 - 2025 TianPan.co v3 (78a4b27 / Updated 2025-07-01 18:10:42 -0700). Made with heart in San Francisco'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+      - original_title: '【大卷一 | LangGraph】Agent 框架与 LangGraph 核心｜这一卷会讲什么'
+        topic: 'AI Agent 工程实践与平台演进'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/7a90a43f428d4925c2470f942'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/7a90a43f428d4925c2470f942'
+          domain: 'www.infoq.cn'
+          content_title: '【大卷一 | LangGraph】Agent 框架与 LangGraph 核心｜这一卷会讲什么'
+          content_summary: '2026 年春招，面试官不再满足于 API 调用能力，而是转向框架选型判断与底层原理深挖。'
+          content_text: '2026 年春招季，一位候选人在二面被问到："你项目里用了 LangGraph，为什么不用 LangChain 原生的 Agent 或 AutoGen？
+"他愣了三秒，开始背文档特性列表。面试官打断："我问的是你的判断，不是官网介绍。"这个瞬间，暴露了一个普遍问题：很多人会用框架，但不知道自己在用什么，更不知道为什么选它。
+这不是个例。OpenAI 的 Applied AI Engineer 岗位 JD 明确要求："理解 Agent 框架的设计权衡，能根据场景做出技术选型"1。
+Anthropic 的 Fellows Program 也强调候选人需要展示对 AI 系统架构的深度理解，而非仅限于 API 调用能力2。
+如果你正在准备 AI Agent 相关岗位的面试，这类问题不是"会不会遇到"，而是"什么时候遇到"。
+标准答案：这一卷的核心内容是什么
+Agent 框架是构建 AI Agent 的基础设施，它解决了三个核心问题：状态管理、流程控制和工具集成。当前主流框架可以分为三类：基于图的、基于对话的和基于角色的。
+LangGraph 属于基于图的框架，其核心是 StateGraph——一个有向图结构，节点代表处理单元，边代表状态转移。
+与 LangChain 原生 Agent 不同，LangGraph 的图结构允许你精确定义 Agent 的执行流程，而不是依赖 LLM 的隐式决策。
+这一卷会系统覆盖五个核心板块，每个板块对应面试中的一类高频问题。
+第一是主流 Agent 框架横向对比：LangGraph vs LangChain Agent vs AutoGen vs CrewAI，不只是特性列表，而是定位、适用场景、设计哲学的对比。
+第二是 LangGraph 核心原理：StateGraph、Node、Edge、Checkpointing，不只是概念解释，而是源码视角的设计逻辑。
+第三是 ReAct 与推理范式：Reasoning + Acting、Plan-and-Execute、Reflection，不同范式对 Agent 行为的影响。
+第四是 Function Calling / Tool Use：工具定义、调用协议、错误处理，工程实现的细节与坑点。
+第五是 Harness Engineering：上下文工程、约束与防护、多 Agent 架构，Agent 稳定运行的保障3。
+这五个板块构成了一条从"选型判断"到"原理理解"再到"工程落地"的认知链。任何一个环节掉链子，你的 Agent 都可能在生产环境翻车。
+为什么一面爱问这个
+面试官问 Agent 框架，本质上是在筛三类人：只会调 API 的"API 工程师"、理解原理的"系统工程师"、能做架构决策的"架构师"。
+NVIDIA 在 GTC 2026 发布的 Agent Toolkit 公告中明确指出："Claude Code 和 OpenClaw 已经引发了 Agent 拐点——将 AI 从生成和推理扩展到行动"4。
+这意味着企业需要的不再是会写 prompt 的人，而是能构建稳定 Agent 系统的工程师。
+以 OpenAI 的 Applied AI Engineer 岗位为例，薪资范围385K，JD 明确要求能评估不同框架的适用场景，理解底层实现原理1。
+Anthropic 的 Fellows Program 同样强调候选人需要展示对 AI 安全和系统架构的深度理解2。
+这些岗位的共同点是：不满足于 API 调用能力，而是要求框架选型判断和原理深挖。
+面试官：你看过源码吗？
+根据 2026 年春招的面试趋势，框架选型题约占 20%，原理深挖题约占 30%，推理范式与架构设计题约占 25%，Tool Use 实现细节题约占 15%，Harness Engineering 与系统设计题约占 10%。
+原理深挖和架构设计占了半壁江山，这意味着如果你只会调 API，可能连 50% 的分都拿不到。
+常见追问
+追问一：为什么选 LangGraph 而不是 AutoGen？
+答题思路：从场景需求出发，对比两个框架的设计哲学。LangGraph 强调图结构和精确流程控制，适合需要确定性执行的场景；AutoGen 强调多 Agent 对话，适合探索性任务。
+你需要说出具体场景，比如"在需要处理复杂状态流转的客服系统中，我选 LangGraph，因为它的 StateGraph 能精确控制对话分支"。
+不要只说"LangGraph 更强大"，要说出权衡：LangGraph 学习曲线陡峭，AutoGen 难以精确控制流程。
+追问二：StateGraph 的状态是如何在节点间传递的？
+答题思路：从源码视角解释。StateGraph 维护一个全局状态对象，每个节点接收当前状态，返回状态更新。状态更新通过 reducer 函数合并到全局状态。
+Checkpointing 机制在关键节点保存状态快照，支持回滚和恢复。
+你需要提到StateGraph.compile()返回的 Runnable，以及checkpointer参数的作用。
+如果面试官继续追问 reducer 的实现细节，你需要解释默认的 dict 合并策略和自定义 reducer 的场景。
+追问三：ReAct 和 Plan-and-Execute 有什么区别？
+答题思路：从推理模式出发。ReAct 是"边想边做"，每一步都结合思考和行动，适合需要实时反馈的场景；
+Plan-and-Execute 是"先规划再执行"，先生成完整计划再逐步执行，适合任务结构清晰的场景。
+你需要说出权衡：ReAct 更灵活但可能陷入循环，Plan-and-Execute 更稳定但缺乏适应性。
+面试官可能会追问：什么场景用 ReAct，什么场景用 Plan-and-Execute？你需要给出具体例子。
+追问四：你的 Agent 如何处理长时间任务？
+答题思路：从系统层面设计解决方案。你需要说清楚上下文管理、错误恢复、进度追踪的机制。
+LangGraph 的 Checkpointing 可以解决状态持久化问题，但你需要考虑 Token 成本和存储开销。进度追踪可以通过在状态中维护progress字段实现。
+错误恢复需要设计重试策略和降级方案。这不再是单一知识点的问题，而是系统设计题。
+Agent 跑飞了，日志里全是乱码
+易错点
+易错点一：只会背特性列表，无法解释选型依据
+误答方式："LangGraph 支持图结构、有 Checkpointing、可以..."——这是在背文档，面试官一听就知道你没真正用过。正确方向是从场景需求出发，说出权衡。
+比如："我选 LangGraph 是因为项目需要处理复杂的状态流转，AutoGen 的对话模式难以精确控制流程。
+LangGraph 的 StateGraph 让我能明确定义每个分支的条件，Checkpointing 机制解决了长时间任务的恢复问题。但它的学习曲线陡峭，团队花了两周才上手。"
+易错点二：混淆框架特性和设计哲学
+误答方式："LangGraph 比 AutoGen 更好"——这是无依据的判断。正确方向是理解每个框架的设计哲学。
+LangGraph 的设计哲学是"显式优于隐式"，通过图结构让流程可控；AutoGen 的设计哲学是"对话即协作"，通过多 Agent 对话涌现智能。没有绝对的好坏，只有场景适配。
+面试官想看的是你能不能在多个选项之间做出有依据的选择，而不是站队。
+易错点三：无法回答原理层面的追问
+误答方式："这个我没研究过，我只知道怎么用"——这暴露了原理理解的缺失。正确方向是承认边界，展示学习路径。
+比如："Checkpointing 的具体实现我还没深入源码，但我知道它通过序列化状态对象并在关键节点保存快照来实现。
+如果需要深入，我会从checkpointer参数的实现入手，看它是如何与 StateGraph 的执行流程集成的。"这比直接说"不知道"好得多。
+你的 Agent 又把数据库删了
+项目里怎么说
+在简历项目中，不要只写"使用了 LangGraph"，要展示你的框架判断力。以一个真实案例为例：某候选人在简历中写道"在智能客服项目中，选择 LangGraph 构建多轮对话系统。
+通过 StateGraph 定义了 12 个对话节点和 20 条状态转移边，实现了基于用户意图的精确路由。
+遇到的问题是长时间对话的状态丢失，通过配置 SqliteSaver 作为 checkpointer 解决。
+相比 AutoGen，LangGraph 的图结构更适合需要确定性流程的客服场景。"
+这个描述展示了三个关键点：选型依据、具体实现、问题解决。面试官看到的是你的工程判断力，而不是 API 调用能力。
+另一个案例来自 NVIDIA 的 AI-Q Blueprint：它使用混合架构，用前沿模型做编排，用 Nemotron 开放模型做研究，声称能将查询成本降低 50% 以上5。
+这说明框架选型不仅是技术问题，也是成本和效率问题。
+在项目中，你需要展示你如何权衡这些因素。比如："在选型阶段，我对比了 LangGraph 和 AutoGen。
+LangGraph 的图结构更适合我们的客服场景，但它的 Checkpointing 机制会增加存储开销。
+我通过配置 Redis 作为 checkpointer backend，并设置 TTL 自动清理过期状态，将存储成本控制在可接受范围内。"这才是面试官想看到的。
+写在最后
+Agent 框架面试的核心不是考你的记忆力，而是考你的工程判断力。
+当你能在面试中清晰地说出"我选 LangGraph 是因为它的 StateGraph 设计适合 XX 场景，Checkpointing 机制解决了 XX 问题，但它在 XX 方面有局限，所以我做了 XX 补充设计"——你就不是在背文档，而是在展示系统思维。
+这一卷会带你从选型到底层，建立完整的认知框架。但记住，读完不是终点，能输出才是。如果你现在被问到"为什么选 LangGraph"，你能说出几条有技术含量的理由？
+数据来源：公开社区、公司页面、公开案例或公开分享汇总整理；涉及个人经历的内容已做脱敏处理，仅供参考。
+参考文献
+OpenAI Applied AI Engineer 岗位要求
+Anthropic Fellows Program — AI Safety
+LangChain deepagents 仓库
+Nvidia goes all-in on agents at GTC with toolkits, OpenClaw & models
+NVIDIA Intros Open Source Tools for Building and Deploying AI Agents
+延伸入口
+Hexo 站点：https://tobemagic.github.io/ai-magician-blog
+公众号：微信搜索「计算机魔术师」'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+      - original_title: '立正请站好：一个组件复用 Skill 的工程化实践｜得物技术'
+        topic: 'AI Agent 工程实践与平台演进'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/f77e3f370a93e6b765f3606ff'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/f77e3f370a93e6b765f3606ff'
+          domain: 'www.infoq.cn'
+          content_title: '立正请站好：一个组件复用 Skill 的工程化实践｜得物技术'
+          content_summary: '做这个 Skill 的初衷很直接，也很现实：功能开发时容易"顺手新建一个"，而不是先复用已有组件，造成组件库越来越臃肿。所以做这个 Skill 的目标不是"帮 AI 搜索一下"，而是把"复用优先"的思考过程流程化......'
+          content_text: '一、背景：为什么要做这个 Skill
+做这个 Skill 的初衷很直接，也很现实：功能开发时容易"顺手新建一个"，而不是先复用已有组件，造成组件库越来越臃肿。这件事对团队的伤害其实是复利型的：
+重复组件越来越多；
+维护成本越来越高；
+UI/交互一致性越来越差；
+AI 生成代码时也更容易继续复制混乱。
+所以做这个 Skill 的目标不是"帮 AI 搜索一下"，而是：把"复用优先"的思考过程流程化，让 AI 在写代码前先走一遍"查索引 → 判断是否复用 → 命不中再新建"的路径。
+二、想解决的不是搜索问题，而是“思考顺序”问题
+一开始很容易把问题理解成："做个组件搜索工具给 AI 用就好了"。但实际落地后发现，真正的问题不是工具有没有，而是：
+AI 会不会主动用；
+AI 什么时候用；
+AI 用完之后是否还能回到项目上下文；
+AI 能不能稳定走同一条流程。
+这和 Vercel 在他们的 agent 评测里观察到的现象很像：skills 本身不是没用，而是 agent 往往不会稳定触发；而把基础知识放进AGENTS.md这种"被动上下文"后，稳定性反而更高。Vercel 的实验里，默认 skill 触发并没有提升通过率，加入显式指令后才明显改善，而AGENTS.md文档索引方案表现更稳定。这给了我一个很关键的设计方向：先解决 AI 的"决策点"问题，再解决 AI 的"能力"问题。
+三、核心设计思路：AGENTS.md + Hook + Skill（三层结构）
+最终采用的是三层结构：
+AGENTS.md：放基础上下文（常驻）
+把"组件复用优先"的规则、组件索引入口、扫描后需要做的事情，放进 AGENTS.md（或同类常驻上下文机制）里。目的不是塞满文档，而是让 AI 每轮都知道：
+这个仓库有组件复用机制；
+默认应该先查可复用组件；
+查不到再考虑新建；
+扫描后还有描述补全流程需要继续执行。
+这层解决的是：AI 根本不知道你有这套机制。不写进去，AI 主动使用 skill 的概率确实会很低（这点我踩过坑）。
+Hook：做路由增强（提高触发概率）
+如果运行环境支持 hooks（例如 Claude Code 的UserPromptSubmit支持在用户 prompt 处理前注入额外上下文），就可以做一层"意图路由增强"：在用户提到"组件复用 / 是否有现成组件 / 封装组件 / 查组件"等语义时，给 AI 注入提示，让它优先走组件复用流程。Claude 的文档明确写了UserPromptSubmit会在处理前触发，并且可通过additionalContext注入上下文。这层解决的是：AI 知道有 skill，但不一定想起来用。
+Skill：提供流程和工具（真正执行）
+Skill 不是只写说明文档，而是要提供：
+明确的调用入口；
+稳定的输出格式；
+可执行脚本；
+失败时的兜底逻辑。
+OpenAI 的 Codex Skills 文档里提到 skills 是"渐进披露"机制：运行时先看到 skill 的元信息（尤其是description），只有决定使用时才加载完整SKILL.md；而且隐式触发高度依赖description。这也是为什么 skill 的触发边界和描述要写得非常清楚。这层解决的是：AI 想用了，但执行过程不稳定。
+四、这套 Skill 在源码里是怎么落地的（我的实现）
+下面是我这次组件复用 Skill 的几个关键实现点：
+先把"入口"收敛成一个：find-component.js
+我在 SKILL.md 里明确规定：Agent 必须调用统一入口find-component.js。这样做的原因很简单：
+避免 AI 在多个脚本之间犹豫（scan-components、match-component、resolve-scope……）；
+避免 AI 漏掉前置步骤（比如索引不存在时先扫描）；
+避免 AI 调用路径不一致导致结果不稳定。
+统一入口做了几件事（都在 find-component.js 里）：接收查询词（query）、仓库根路径（repoRoot）、当前聚焦路径（startDir）。
+如果 components.csv 缺失，内部自动触发run-scan.js；
+调用 resolve-scope 计算当前应用和允许搜索范围；
+调用 match-component 做匹配排序；
+命中时记录使用（用于后续加权）；
+按固定 JSON 协议返回结果（成功/失败/无匹配/是否触发扫描等）。
+这一步本质上是把分散逻辑聚合成"一个业务动作"："查一下有没有可复用组件"，而不是"先算 scope，再查 CSV，再排序，再补扫，再记 usage"。这对 AI 很关键。
+不是"全仓库乱搜"，而是"当前应用 + 根级共享"优先
+在 monorepo 场景里，组件复用很容易踩两个坑：
+只搜当前 app，漏掉根级共享组件；
+全仓乱搜，结果太多太噪音。
+所以我在 resolve-scope.js 里做了一个比较工程化的范围解析策略：
+读取 pnpm-workspace.yaml 解析 workspace 包；
+根据当前聚焦文件/目录反推 currentAppRoot；
+再结合 root_scope_patterns（例如 apps/_share/、packages/ 等）构建允许范围；
+最终形成一个搜索集合：当前应用 + 根作用域共享包。
+如果没有聚焦子项目（比如 startDir 就是 repo root），则切换为全量 scope。这个设计很像人类工程师的查找策略：先看"我这个业务应用里有没有"，再看"全局共享有没有"，而不是直接在整个 monorepo 海里捞针。
+匹配不是纯关键字：我做了"多因素加权"
+组件匹配如果只做字符串包含，很快就会变成垃圾召回器。我在 match-component.js + fuzzy-match.js 里做了一个组合评分，核心包括：
+名称精确/包含匹配；
+模糊匹配（编辑距离）；
+Token 重叠；
+首字母缩写匹配（例如 dlp 匹配 DateLinkPicker）；
+当前应用加权（当前 app 的组件优先）；
+使用频率加权（常用组件更靠前）；
+来源质量加权（README 推断质量高于纯 inferred）；
+存在性校验（文件不存在则降权/过滤）；
+记录类型权重（组件优先于依赖）。
+这一步的目标不是追求"算法先进"，而是让排序更符合团队真实使用习惯："更可能被复用的组件排在前面"。此外我还加了一个低分阈值（NO_MATCH_SCORE_THRESHOLD）：
+如果最高分太低，就认为是噪音命中；
+可以触发一次扫描后再查；
+还是低分则按"无匹配"返回，不把噪音结果塞给 AI。
+这个点很重要，因为 AI 一旦拿到一些低质量候选，很容易"将错就错"。
+把"索引构建"做成可复用流水线，而不是一次性脚本
+很多类似方案停在“扫一遍生成 CSV”，然后就过时了。我这次把扫描做成了 run-scan.js -> index-manager -> enrich 的流水线，核心考虑是持续维护：
+run-scan.js 负责编排流程
+resolve-scope；
+updateIndex；
+自动触发 autoEnrich（可配置）。
+index-manager.js 负责索引更新策略
+保留历史记录并合并；
+根据 source_hash 跳过未变化组件；
+记录 last-scan-changed-ids.json；
+支持并行扫描（包数量较多时启用）；
+对缺失文件支持标记 exists=0（在查找阶段也会回写）。
+扫描后进入 Agent 富化（enrich）流程
+读取 agent-enrich-prompts.json；
+找出 summary 占位符项；
+按 id 回到 components.csv；
+读取源码/README；
+生成 summary + keywords；
+再通过 update-component-summary.js 写回。
+更关键的是在配置里启用了：
+agent_mode_no_fallback = true。
+也就是说，在 Agent 模式下不走规则引擎降级，而是要求Agent 必须完成这一步。这其实就是"流程化思考"的精髓：不是建议，而是纳入主流程。
+让 Skill 不只是"搜索器"，还是"反馈回路"
+一个很容易被忽视的点是：查找命中后，我还记录了使用行为（usage-tracker）。这意味着系统不是静态的，它会逐步学习团队偏好：
+哪些组件经常被复用；
+哪些组件在某个 app 里更常出现；
+哪些结果应该在排序中更靠前。
+这是一种很轻量但非常实用的反馈机制——不需要搞复杂训练，也能提升 AI 下一次推荐质量。
+五、这次实现里，总结出"让 AI 流程化"的 3 条原则
+这也是我最想分享的部分：
+原则 1：把基础上下文放进 AGENTS.md（或用 Hook 注入）
+如果不这样做，AI 主动使用 skill 的概率很低。原因不是 AI 笨，而是 agent 的执行是有"决策成本"的：
+它要先意识到有 skill；
+再判断该不该用；
+再决定什么时候用。
+而把基础上下文放进 AGENTS.md 或通过 hook 提前注入，本质上是在减少决策点。Vercel 的评测结果说明了这种"被动上下文"在某些场景下会更稳定。
+原则 2：Skill 需要直接提供工具函数给 AI 调
+只写一堆说明文档不够。AI 在工程任务里最需要的是：
+一个可以直接执行的入口；
+明确的参数；
+稳定的返回结构。
+所以我把 find-component.js 做成统一入口，并定义了固定 JSON 输出（ok / matches / noMatch / scanTriggered / hint / error 等），这会明显提升 AI 的执行稳定性。
+原则 3：显式告诉 AI 调哪些函数，并把分散逻辑聚合到一个入口
+这是最容易被忽略、也是最影响稳定性的一点。如果给 AI 暴露一堆脚本：
+resolve-scope.js；
+match-component.js；
+run-scan.js；
+scan-components.js；
+index-manager.js。
+它理论上能拼起来，但实践里很容易漏步骤、顺序错、参数错。所以我在 Skill 里显式规定：
+查找时用 find-component.js；
+构建时用 run-scan.js；
+更新描述时用 update-component-summary.js。
+把复杂系统收敛成几个明确入口，AI 才容易稳定执行。
+六、这次实践里一个很重要的认知转变
+我原来以为"写 skill"是在给 AI 增加能力。现在更像是在做：给 AI 增加"默认工作方式"。换句话说，skill 不只是能力包（capability bundle），也是流程控制器（workflow controller）。
+AGENTS.md 负责"告诉 AI 世界观"；
+Hook 负责"提醒 AI 现在该用哪套流程"；
+Skill 负责"把动作做完，并且做得稳定"；
+日志/CSV/usage 负责"让系统可观测、可迭代"。
+这套思路不只适用于组件复用，后面也可以迁移到：
+任务优化闭环；
+日志分析标准化；
+策略诊断流程；
+代码规范治理。
+七、这套方案当前的价值
+AI 开发前先查可复用组件，而不是直接新建；
+monorepo 下按"当前应用 + 共享组件"范围检索；
+索引缺失自动扫描；
+组件描述富化进入主流程；
+匹配质量有加权与反馈回路；
+整体流程有明确入口和输出协议。
+八、结语：让 AI 少一点"即兴发挥"，多一点"工程纪律"
+这次组件复用 Skill 的开发过程，对我最大的启发不是"AI 能帮我写多少代码"，而是：AI 其实非常适合被放进一套清晰流程里工作。只要把下面三件事做好：
+基础上下文（AGENTS.md / hooks）；
+可执行入口（工具函数）；
+明确流程边界（统一入口 + 输出协议）。
+AI 就不会只是"一个会说话的代码补全器"，而会更像一个遵守团队规范的工程协作者。而这，才是我做这个 Skill 真正想要的结果。
+引用文档： https://vercel.com/blog/agents-md-outperforms-skills-in-our-agent-evals
+往期回顾
+1.财务数仓 Claude AI Coding 应用实战｜得物技术
+2.日志诊断 Skill：用 AI + MCP 一键解决BUG｜得物技术
+3.Redis 自动化运维最佳实践｜得物技术
+4.Claude在得物App数仓的深度集成与效能演进
+5.Claude Code + OpenSpec 正在加速 AICoding 落地
+文 /魏无涯
+关注得物技术，每周一、三更新技术干货
+要是觉得文章对你有帮助的话，欢迎评论转发点赞～
+未经得物技术许可严禁转载，否则依法追究法律责任。'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+  - topic: '行业数字化与物联网应用'
+    items:
+      - original_title: '中国水界瞩目！2026青岛国际水大会暨水利博览会'
+        topic: '行业数字化与物联网应用'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/59dd8c4b4cae2b5704a8de29c'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/59dd8c4b4cae2b5704a8de29c'
+          domain: 'www.infoq.cn'
+          content_title: '中国水界瞩目！2026青岛国际水大会暨水利博览会'
+          content_summary: '致水处理企业决策者的一封信'
+          content_text: '致水处理企业决策者的一封信
+尊敬的行业同仁：
+您是否正在经历这些困境？
+销售团队奔波数月，却始终敲不开大客户的门？
+新产品技术领先，但知道的人太少，市场迟迟打不开？
+竞争对手频频中标，你却连项目信息都拿不到？
+营销预算花了不少，带来的有效线索却寥寥无几？
+如果以上任何一个问题戳中了您，那么2026（第二十一届）青岛国际水大会暨水科技展览会，就是您2026年不容错过的破局之战。
+时间：2026年6月30日—7月2日
+地点：中铁·青岛世界博览城
+主题：水——生命之源 发展之基
+这不是一场普通的展会。这是亚太地区水处理领域规模最大、规格最高、专业买家最集中的年度盛会。20,000㎡展览面积，600+参展企业，15,000+专业观众，2,600+会议代表，300+演讲嘉宾——这些数字背后，是实打实的商机。
+算一笔账：参展的真实回报率
+很多企业犹豫是否参展，担心投入产出不成正比。让我们来算一笔真实的账：
+投入成本
+以一个标准展位（9㎡）为例：
+展位费：11,000元
+展台搭建（简易标摊已含）：0元
+人员差旅（3人×3天）：约9,000元
+宣传物料：约2,000元
+总计投入：约22,000元
+潜在收益
+根据往届参展商数据统计：
+平均有效线索：80-150张名片/展商
+平均意向订单：5-15个/展商
+平均签约金额：30-100万元/展商（中小型展位）
+头部展商：单届签约金额可达500万元以上
+投入22,000元，换来数十万甚至上百万的订单——这笔账，值得算。
+更重要的是，一次参展带来的品牌曝光、行业影响力提升、客户信任建立等隐性价值，远远超过短期订单本身。
+为什么客户都在青岛水展？
+理由一：来的都是“说了算”的人
+我们每年对观众进行画像分析，结果令人振奋：
+企业技术/采购决策者：47%
+政府/事业单位负责人：18%
+工程公司项目经理：22%
+经销商/代理商：8%
+其他：5%
+也就是说，近90%的专业观众手握采购决策权或强推荐权。他们来到展会，不是为了闲逛，而是带着明确的需求——找技术、找产品、找合作伙伴。
+理由二：需求高度集中，三天见遍全年目标客户
+一家水处理企业的销售总监曾这样感慨：“平时拜访一个大客户，要约时间、约见面，来回至少一周。在青岛水展，我三天见了30多个潜在客户，其中一半以上是平时约不上的。”
+展会最大的价值，是把分散在全国甚至全球的目标客户，在三天内集中到一个场馆。您不需要一年365天到处跑，只需要在这里，用三天时间，完成全年的客户触达。
+理由三：信任成本最低的成交场景
+陌生拜访的成交率通常只有1%-3%。但在展会上，当客户主动走进您的展位、观看您的演示、与您面对面交流时，信任门槛已经大幅降低。展会场景下的成交转化率，是日常销售的5-10倍。
+谁应该来参展？
+如果您是以下类型的企业，青岛水展就是您2026年最重要的营销战场：
+✅膜技术企业——您的客户（工程公司、水厂、设计院）全部到场，一次见面胜过百次电话
+✅工业废水处理企业——化工、电力、钢铁、印染等终端用户集中寻找零排放解决方案
+✅泵阀管件企业——水务集团、工程公司每年都在展会上筛选新的供应商
+✅智慧水务企业——水务数字化转型正当时，您的系统需要面对决策者现场演示
+✅海水淡化企业——沿海项目业主、海岛开发单位都在寻找成熟可靠的技术
+✅净水设备企业——经销商、工程商、企事业单位采购负责人现场选品
+✅初创/创新企业——这是您以最低成本获得行业关注、对接投资与渠道的最佳平台
+往届参展商真实反馈
+“我们2025年是第一次参展，说实话开始有些担心效果。结果三天下来，收到有效名片237张，现场达成意向订单6个，总金额约120万。这个投入产出比，我们非常满意。”——华东某环保设备公司 总经理“青岛水展是我们每年必参的展会，已经连续参加了8年。每一年都有新收获，每一年都能见到老朋友、认识新客户。这个平台的专业性，国内没有第二家。”——北方某膜科技企业 市场总监“作为一家外资企业，我们很看重青岛水展的国际影响力。在这里，我们不仅接触到了中国本土的优质客户，还认识了来自东南亚、中东的采购商，打开了新的市场。”——欧洲某水处理药剂企业 亚太区负责人
+展位及赞助方案速览
+赞助方案：首席赞助、铂金赞助、金牌赞助、银牌赞助、单项赞助（晚宴/饮水/酒水/飘旗等），详询组委会。
+三步锁定您的展位
+拨打热线——联系下方任意一位招商经理，咨询展位情况
+选定位置——根据展位图，锁定心仪展位（先到先得）
+签约付款——签订合同，支付费用，锁定展位
+最后的提醒
+2025年，青岛水展展位在开展前3个月全部售罄，有20多家企业因为犹豫错过，只能排队等下一届。
+2026年是“十五五”开局之年，水处理行业将迎来新一轮政策红利和市场爆发。谁能在这个时间窗口抢先亮相、抢占客户心智，谁就能在未来的竞争中占据主动。
+目前，A区、B区优质展位预订率已超60%。如果不想再次错过，请即刻联系我们。
+2026年6月30日—7月2日
+中铁·青岛世界博览城
+我们不见不散
+第21届中国（青岛）国际水大会暨水利博览会 组委会
+联系人：吴先生
+手机：+86-186 0090 7907 同微信
+邮箱：coalexpo@qq.com
+官方网站：www.ybexpo.cn
+官方网站：www.binyiexpo.cn
+官方网站：www.hbminingexpo.cn'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+          - query: '水利博览会 行业数字化'
+            query_type: 'keyword'
+            url: 'https://politics.gmw.cn/2026-04/11/content_38701874.htm'
+            domain: 'politics.gmw.cn'
+            result_title: '焦点访谈｜“智”赋产业新蓝图 催生万亿新空间 _光明网'
+            published_at: '2026-04-11'
+            content_title: ''
+            content_summary: '     í}ùoGðÏ `ÿ.$Ðâ¥Ë$ ÌfÏ7»X,ÙP$ÃÃç ¨¤J¶î[².[%Y²Dì2au7ò¿ð½WÕÝì&»)ÉG|_bØÍîêW¯^½»^UßùçOþýã{ÿõÕ§Îh¿å~sGýç¼-¸èâ£%Àuñw­Ñÿó@{ÐjñQ>½ûÞ_­>¯õ»ÁÞèúÐ¬·¬N»£IwVJ«/Iÿ6'
+            content_text: '     í}ùoGðÏ `ÿ.$Ðâ¥Ë$ ÌfÏ7»X,ÙP$ÃÃç ¨¤J¶î[².[%Y²Dì2au7ò¿ð½WÕÝì&»)ÉG|_bØÍîêW¯^½»^UßùçOþýã{ÿõÕ§Îh¿å~sGýç¼-¸èâ£%Àuñw­Ñÿó@{ÐjñQ>½ûÞ_­>¯õ»ÁÞèúÐ¬·¬N»£IwVJ«/Iÿ6yö¨xþXX$b2a A/ïÙÿþ vñ}¡¨%öÜµÖÕùº:nvt=¸é Ô}© ÅÚü>Ok¤ ó7¿X-\4Ìw£|Ë:ö^£ÚDøè]ëîý«­Éj©StF£!ÿ}Ìwÿ®õcºíÞÃ_ 5Êÿ­Ã±ßVÀÄ¢í Åçéäm) ôktq?Ø¸þ®Ý¬óPëèâ4o63{áÓ B¾0 Ñ¼¡Í¦%Ì¼|kZ=àÛ¾óEÿæãm(ðâ ''Ø²V¼yßÇ?ÃQí>o´ó®¿ïóð6úãC/àú8¿-âáüü]ÇMû.¸×ëÒÝâ~ÐÜrá­XÓß\Ü  çò?múÈÙâ¢>h¨ÁæóOï: z:ÃA@×a­ ¹g < à 4/ý#¾øc < ÈÂ¶T- ¿:&ãÛÅ³=äËü¬Ùâýä`R\ÏsBòq)¾"Ìæ¤Þs1^ Sûä|Mws}âóçÅl¼}FúKi³[ Æ kÝZïQ´Ã < "Úîë  I»Ãîl|}poË@sîKÎ¸FQ_ÔÏÃ V^/¤|I/÷£( < ^$óÒó\X.f¹ÜæJÓGÿôVÒfFÅóñ;u Ô;uÔÆÂE[ÐûÐâñsÈ]k­+ØbCYàm6 I s;¥üY§=ÅÉÖÅfÃ^ß} \àÓ`Äð× úcQþv4ºekÿB?ÜöóíQõUë·ìpÕÉû::£ô2x·ûnuú¼^>pÛëüÜÃ[`¿mm¹45 oÈç©Ë/ AÅH:täÍ"æ ËòP ¹È «¬(;ÐÎòhËU©ôà{¾P©dÿ´Ïºà Ýõ ÇÕM´iPù1¼{D¨² þ@ó$}Ú\ÚzDé¢ ÷®ÕjB£.¸®óA¯H¡ Iî-fûþ{k < ös ªÀ«.ôz^µ èx} ãÈ CYH\³op°2ï\`9>lD¤ K×§Â^U×üà >\!% IÍX@x¶dÌú0u ZáZãôøò0[¨µF¾×òÁ7\;ö©ýH{''¬çkv¥ïFN eTª.å+èµx^ ''GÅCF4µ nTVÙKÙázÀ ÃÁ íË'']«g ÔÓ4ª¢)­ z·Éi§@ráhÙPpà!ø¼`Ô½­hráVk{Ìïoµ;¬:Õ¦îxY¥­ Á>:lhÀq7äZDÞOÛYSÿ>HK0V%üz8à Õâ½6^ê~-4(5Do·r\GÇ¥}=â¹y0Æ©îL(ècå(~ îÀö­m~.ðÌ)HzF":ný''lR×XïtÝìðµ ò4aúÜd&Îw9 ÙÓ+º2Çi_#{gRâYusS±4ÄBrHXÈ;{ìa=¸@yO` p÷mmÑÀõä¨ U"GÁãûeÑ ÚBÔõuë ©ëj yZ¡{¦5½¯ ÌªËDPFá¨o¹û óÛnÝú¼ïÛ?¸Í7Í?ö#f¨&Åè ¡: ×èÑÀ÷ÐÓÙJ_ÌêíNG éßV \?Õùµ/ù}-0@á«ËãzÄûØ+ÐÏï5GæÏK³ý××nhJ{}×íäÇ¤Lî =14fÑ Å)Ñ§®"ïé¬àÖ¸_ ïÕ@nrVêyq h tÁ®Z¤k@ôûÚkP á(¯wã) ¾ó×êá¤ð"yjJG1û¸´6s ÚÌ}úÇÏ¾øüS¡E®UaÖªv[çÂNsGÔÅ¢¶p0ª²ëôÕk zh_¢¢-GýVË}Î £6e¾§I7 ¶X4 = 4)2H¬­Ëeº] ÀàØK×pÃ*ì¯ x ïâB7;£]&ÎõeÎ < è|Z_H;BYËiÅ¾BºyCïX[Öj:Î´ÅÂêõJªÕP­^C§^SV)ÓJåiÊÅlP¸@9ô4oóáÑl£>ÿ:)LàÌÝ''da»4Ó/íå_Í½)ÀÊ!T[KETÏ"i]p-GSÑapí ÇºÚ"U±® #ÁXØQ«°¸!äÆ@uà Dnz < Ñû7=Á®:\éª³»ë öº¾¾÷ù_"ÿÅ}üÙ''vòõÿÖõ§ÃûM³³ÁîvØoFpý¼ÊØhiýÜ5YÏH[t5S¢eL£¾.ý\}k»÷ZÊËoûV}sUÄ]+k£#®aºG7OrâÙ¶f¬Sófío ¡µÍmßÿ`&&>ô¬{t/> W«Rü¸]¦A® t!¿b7´¾ëhçÀIæ_ü§2G×ÀÐ×¼ddós©Y0Q Úy¤èd³x±%¬¤k* ¿N×¨iÒ7ÈR®üèhÈ¶ë1ï´újÊùBt=¤ÛÒ×ïû¼¼a6WßÃØG0£ºîå/!$ð}rÎ¯:­Êò¢² h 0½ ÊW>ÏÂþ7 ðM¬*ë7Á!Ìß3¡¬jÖ¡ äæ"T¹è«NÓi â¡P8âÃÑ lÎ}Þ¥È B½wK ª4Ú-û¦ ÐÃgwXM|ÁÖßÜcpîÈÕ : ª% *% ²µ% wêïDäC®^ú°HJ¹­ýñEqôNhÌ®î°²°tRîÔÉ?èMtºU·D½A 1ý®«¸Q§`yZdßÌðF¨ Ý típ c¨²û¯Î:Ú%Áó)rz$ÌìÁ < îbnþàºÞY Ä§CðôÕÙpÅSuÈÉ FÅü Ù?fmý)tä»0½½üOiûý1> NÏ£Ûd0'' æIbZJõÀ h©íZbQ7ºíRaºÒf· %%x]*`aQipóyZUqãÅüspI|Ò( nk«¥Hz Lþïa(æ7  < ÒýtébV½ 5YÝCáEðÙ{Áïø¸{w¥½bvDÚ% ûéß ë[Å³iÒà(«zÉØ(ÐÐ < ÉïR\Èé1+ çäñëÃEÊ±>àZ@³b¤­>x$æ^ =Òc@Hì ®O FarìN³»È ù¹ Ü±ñÈ < ÈðëZØ?"§ R>î:É- ¢Åó!µAÆS0 ÅÓeVY& < _e½Òé0­D¼ÉfOñ|²f¯Ë5 t¢´^ÈãgÅÜ < +d#ãkøbØ/MÙ¤´õæÅ !@þ®qö7ªxH''âf^ `1;%N {@qéå¼TÅìz1û 8+ï¶ ³ÂÁrñ4Y < År6õq> ìDÆ·¥SP*äq7¼íJq 72}µÁº 2Ú#Å±:¸ Ýfá)âp|Xzú¤æQßå¶ªWÑ) Q  £$ãÒ£ ,u Ö*ÑÄÎsBúÌ  Ö¡Ø½È²®¾(^Ùg$ý!zç°#xb_ Ý§å3ÀÌ¸¸ "³8¸I )6)ì¥Aþ°ÂzûÉÀK¤ßù Öü1i£0%àÆÅ8$9`qåHF*âÙ,sN''¼AYóË IH¥ AGGAÈ7¢Çm4Âa ^1¢¦ZbÉ È3T¼Å| PV:%giF5¡§Oì0ö¤gdGÀE)Öa17,æÄnÄ.¹#¤Ó ð pRf i4¹_LÄ1 KIÛÒ\d Bñ|D:ÚOµ´£:j$©¢\B ò < ù.ØÄ4Ðw£ lè(q#ÍÔS6@XG3p(îNUz3«0M*=Ø\S&³¢ãK/ ²LÓYcÅlúTÕtß?`¥ª1:%7,%g¨vÜÞJ=é < :OL Hÿ{"¥È2(íÐ}Åü¨\º>UÚVaÈ+RâD 4Y\bòËI8N4t"#½ðSáné¸ßYo·£s}VÇJ¯°Nõ¸_ N6Äí!¦5ADpÜµ-¤âÂÂ -@+i©e )¾Lr àÐ¯æCs$ejyê_vCÿJl¼´zJÖGÅ -SK q´ÝÔlQ;!ÞBfÈçÄ!iÄé ¥G>­ùÅ·rN¥¨y''`''ä.Ú |%2æÎ kQ»Îõ¡5ZßúÆa:sdy.äH=Cm @ÆÆ«®÷/ }0 qatM ùh$]gf½''»¢´\õÄ  ÙÍ/Äóâü8æM  MC¢»P²ÃMßã ×¯Îæeøà©oÀt% ¡§òÀrÕûýyüX¦2ã&© pÁCL\ÞP®.¿]V&WÅ¬H[¶Ó¥éâéVKãSäþÒÓ < ô@Ù.¡ ×«³$.Ø(dEÈ¢«Gõ#»öv ©Y¸wh¨Õ¢pæµ£cªKØ©5ÆØ ^ ÜQfÛQ\û(¢c£Å 8 kpá« < "L? ? ó¡%6Ø;-Í[q³1/Îgl|þ^èEzÙ§"Ì&tÌN¥&±» $[ zèÏ4C{ w­AáTð,¸Ãz"+ï@¬ Ãª»*aaÍ%0 QäX ªðF@GkG+æNàr*7TÙPX ¦ øªÌ93 Ôù]@@ÊÈÙ bd)TÕ`±ÐkL ÏQ@()^-c¼KEáTàBñP°4ë:5 TÆ6¡K³c¯$''åð*âì ²wOÂ §ÀFØxíP ÀÆä)S×>ýª4Ü < ½Ùd¼ÿ aºÞ°Ùä# Áçy$''«E©6Ö.4Ë3°°] º¹gÀjXAÆF@ÄP ùÒåGv_bæj9ÄFuuÚ1LÎ £{NËá¤P(%ÿ=2;q¥Åy´ O2§¦¥ó¥îÇR²±M½ÔÇ àE K¥¦½VÙ2ËÉÑB^î? Âô4;G¨^eomªè  a ;è$ c»ÀHZfÃL9­ÒcØêð¤øHñ^ivábF])Ë{¥{äNTú1æ,§eè+¥µ²¼\&*.ºa"¬Ä}ä-ôßs&+OðD¥]¤äï[&éiö6.§¶MDe3Bù-ÊYq äÄ¬°LªfEÊ|ÊV¾Ç(iàwSÅ < #j7¤ËÁ¹t¾ËUûi8ñórtÁC°ÕaÔ#ð"[Ã°[3U-p //·)¢õ?EDÓ£èÉõ÷l°ä;R+sÌVKA Ê«PÀ»³t-$ÀÝÇ+Âó æ · ä?NLùVÇeP ÒùFªC+]{!§¡_1¯°ÒÖ,ÿ½*J yUâÑ00Ùêb( x=!nr Í%¨·ÄÅeôòö¥«rÅÀÚëÊKNÇ;JQ ã&ÌÎ wÓù(g+(~èpt³ÂóÕÒ%Ìó_ LªBÅrþä".3 µ Ìê¼Á RB ´ùvÝG^! X@VÙÖGÔ³à õHg¥LC  fÊÂ3y u*k£:tRM¦¨7{Q¶0>ª=Tu¤D yp]+¹¦£dÿéãy°X ®¦µÈü¼ªµPÈ5JZEC®ù OJê Ð{Lñ³ýû}Nºå_~ÚåÄùq1³ZÑaE1 úô/Ô>)õ!Ýekfq,sýå0&X`À°%Y xxº{^µA¬@ $5C¸uÔ-3:J$f6 ÝÀèL_"íM2_¡º«Ó¸ðG]ãLRKò6ØùÙ=¶âDWûiÅÇY\¸Àq\,}ÆÚT < 8 xl¹ì£Ï3Ò¸ºÊ¼s9eKW» ¦JÆòX²¬XWÀ*·ºªº7ý ó:Féèx6eÞDW¬ú¶{Á ßâ÷qm>P Í $Ë;¥ÿÛbX¹mZÁ^­-¦ý¢Ü!Ã÷§(g)]­ËÿÔløZÕ´åÒ`g§i°ý3$ù´x>Kkk_%tCÙB|º]ÿÕYòº¥Òjtzª4Û« ñ Kkãd¿»´¸V«°Ï»:þ æBf¥³zd^ Êüªìª:Òÿ!»¾ðÕ#´ÿøkÜ«:© < ¡AÙ 1Z tÝ h1¹7ÓíA²Ðµ¶á °ú³ÉmÿÁá´·²züõÊ''TØÇ9U N÷ÔÓIIëâÂ ¾­èz2& o{±ùèx2ä''·,z _yË¯öÉN]¶0ïÿZsØÉNgöÅ;up£j3°üÒüåÆ''Ã_åóÔ>0fËà4 ÃvÚ­ºm5¶\Z-mÁ°Ó³ðä K7;N§æ?*µþ çu_e`­ÖÕ{Xuä³¶/éa `xìÿ¯OLy;àÕG~%$\&(Sòü?Ùê?pè×aîmô[{´Vßi*ÿoª{ì¡´º ñ®ZÖ(_Üýÿ^ÃZá:xf í5ô¨?ÙÈ''>zÀÂrïìF¯[Ùù F;½ìá TæBÏ¶°».Lã æûzûe~£òí.Ûý`­hyc;Þ­èkîh D1Ü+ 6Á1;±RV¶Ã]É& Ë¬{è}7¹ÛfÚ Fi:Ïè''>]u2«ÞU¡Óß¾öºÁkwõ³òr£AýýÂô£®& < ÿ)2¾­ÙÉH¡REseD6uÎ©\ÐjN.hu(´3~Ý£0m¡î+lç < üçÙç ¶2`­åà+® Ò¨S­h,Rî÷F¥Ïø ]B¯?Lb]ò¿ÍB>¿ [[~hnWÂ3ßév} Ý/íõè pþà|»P» ¿ö pýàz»ÄK¿ö pÿà~ËðdæW)²¤y\¾P ù(øTvtÛ¼+ö·|WmO ^a3xnô-7ÛÂ¥­i+Éé¯"ã§,ì¸ vGù êQ[moj(­ÃÈ{¸¨§[|Vh#{pÌ K MqºÐ < ³cÙª8HÚn=a·oT ¦¬ T *%om®s¸Ôtîv¹ÜîÇéj|ÝeW]»ÛíuÙëyÎÝÖàls74»íõv[f© ËÌ«»µHÙtiñnO >ÆÍ:CÓäà «2¿VÒ õ®õõ¿ qécá°´9%,®bªý|­¼XHóì¸U0WÀRÂ¸7 â«êX2¯LÑ&91 ³p±hð¶µ2°iíjç¾íhê|ø]g9¼¡ 2¯9b¿ t25ûþ_À|p3âFÛ zc!Ë]KÕ­¿ýÍòßÿóÁÍP,Òùþ_©nôyoY¬±½±¡Éú!½³ êÃ#->ì)yðÜ²DÃ1 ÿýÛT¡ªg×_¬b¿ < ¡pðfçóÆÐúø < ôÄ¼YóÕyºØyûØÿ±Z¼|;N6ýÇjÑ OéT »jµ¦a²w!.öî2í÷újÕÑà´`áúÙÉ¬éTmWd¤Ñb¬Z;Q95S¡ZËTÕªªU­ðz &ÏÐb² ñ¦ Þí¨7Ñ )ëÉÖ×íÔf[Ç3âD^ÞOÙÔ ä;u )Å[è½Þ¨w, é%§G¥ÙcññKÉ?&.  °¯$5¯A6ºt >üHø ÓêP»¡Z½zßé,:öw5 e:âü¥,8©%º s-?Ëë#iÜv09H Â§ÓÒâSº¶ºÆ7ÇÎUaÈdìÄÝÒtû¸ú : fðÄP9-.x G@R«op¸up7ÙßÑÌ¹ gîtEÚYÌn³£²  c­Ý7ÁÆºÙÍ·(îÆf·¡JçÙÆQù\L#]gê\ï`ê®Êö¦ã ü1BÚ«"ìciã£a$uzkçé>¼óÇXT°>%fV¥ êã\ ý Âl¯ZÜo{¼5çPÏ±õõÍÍf ^FÝø1>ÎN%ÀLæÄXiÎ {§ÒÞ"=ñf +ïgöÄ¥]aa\ËûÈYp!}Ó×× ù»T² OMïNT ÕKº¥1GÆ r*&O¥ä V!(îóOPµ²öÝ±·k? 5+Ìp < »?F¦-Bï I§ÀoÇzkIlKÃ»`Xíáº¦öÁe2g¨r. âÖ Mv¤ÁgÂ2A³}Åòq ûiPBïÞ«³nËß,¬4Ýa>dÜtÈïS½¾_´|°Ytç¶¨$&âäÝ6B} *§XRÕüG|þà2´8 Ó#ëÏÈá~îD&§ÐT9¹ÚhÔM?mt4¼+Él¶º?xRuzä27z"8$ < Ú%üèM4Ü j]  ''ÌË¨ÙÓãT³¿ ïs¼÷ÓÒü. Zeg³o¢Ýß}BrxTÌXB\Ïáé ¸wWx¾%¦wñ²£-òKiV''WÚ±àv§½ ²¶T,8oº]¿5 ²Ã^5æKs4Ày[]vûÎz»AÀî¬üäHkôÛm®Pg;.ª /Ë º¯PªM4c¸¯ < Ðe4¨ièÒx&4Aúeø¿µÄ®WÔ.ò/§ªòºjöV=OXûês µÇCÏ±à~w$ i 6Í*T¥k/I×B i}?I [$èç¿Áå´B9Ùìv¸«ÒPåW»j~³L:HiúUWÓÕ ×;Jö]ëöûZYjR¿ àÁ¬¤¹RÐX*pGCÓñ®.{S9Ùàõ:Û õÛîj4N@*ºB{®?èùÎAjyk#VÆñÈGÃÒÉK¯ðhÕ *mõ°õófUä ñ&7ÚL43ã^Îar2C Á¨À³'',ð*È×`sLÞsÔ;{ b·ú¶&WcËÉq®Æ×aâ·Ð´»ÞªhË=ÊËUï^rìÍï^r´©û& $ÇÞènpÚÛ~É1 ¡ì²½xXdþtâÒàvÕ× *H Im¿[¡1Çç­ pA Ð46¶×7:ìÎ_ºÐ4: Íï\£T¬wq\c};bÎDhÌGÈv©þçâÆ.=xNHà¦qvX ZPúÌý|âTßè2§þ %9QI¿''ý¦9i+ñåÊ±·(Wõ¬ÓXïjk´ÛÝo$WJéÑW¶t~§î{£ÛÒÈ+*ý]ÍO²nhª´+ÏÈÇÉDªÉ×ÀjçeÕ´ªä&Á¹×ö©|CÄÐÕ¦ÃÕ;á7rü\Ó ZÈæ öû"Ñ²È~TãâÇ6-¦ûUp_´¶  ÔHwv£ÁË2 MM?A o÷Ö×óm®FÇ < ßè´; ¹^Ëço`Ô£§AÌºÞ ÔzLð`+ ë+Ml.Åqº?û.''öKÓGÂÊ¹°>"M < Ò ÒÐ4ÝWÝETÿuÅQËÑ¤£Ý~rjløyxª\_ OÒ@¼Å£OW ú7Ä¼°¸Q§¤Ä3ahD=C8Éáiä¬Å < 7x8''¬m «c ÆÎ1±=Û¤Åú Ñ§ÂÌ ;CLù||78ÊÚ¹¯¹oÕ»~y¼V_ÿ³ðmÏ/×Ìh ¥p¡nf4p:UËÀ6 äIFNãÉ ·pÿqéÉ(î^Ælí¸| Ïï~ñ´®Åùyaââ åvüâª¡©ág`¨v»·Áéþ¥0) ØiäÂÙ@1ÿ üÊ þ^afTÈövNKûR2ÇMJ[=Å³éÒÓ¼t|Xõ¶ ei( ÈÉ8ûbòiis øþÆsè} ä5qøaýàÛÚ%ò« ìÓ?~b©}1ìðó@ãËû ð7 ñEÚ?v-b {ãÒ-ßëV  F °ÓYCíüÍñÇ?|óì_ý _[uõÿêE©uðrQî üe¹ü¡|?ÜÆÖí±w¬Y°÷?ø«ÚÕF ãÐ|pûïØ¶zïÛÈ{ ZüË'' LãXçP~æ£Ý× ÞÓ¢û^U1¬µe£Ãá> ìêFP\&ÀëÍúîó·ñ[Ç¶ï/ü-ûíóY¾QY½³·¶òöqÃoR+Mác\ £ËèÐØkÄ( 7¾9 N £qú½yä£|QÅ¨Uw)?¥½}¦ôÖú (WFû:0L0Ö}o­é d~©´_©b7(Ìó|gÓ`}§®-è}H/ð{Ç-ÿ{ÕÑÓC  '
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+          - query: '2026青岛国际水大会'
+            query_type: 'keyword'
+            url: 'https://i.ifeng.com/c/8sBTb5XRIjN'
+            domain: 'i.ifeng.com'
+            result_title: '当会展成为城市战略 青岛的370场能撬动什么？凤凰网青岛_凤凰网'
+            published_at: '2026-04-09'
+            content_title: '当会展成为城市战略 青岛的370场能撬动什么？凤凰网青岛_凤凰网'
+            content_summary: '会展业已从一个辅助性服务业，跃升为青岛城市战略棋盘上的重要落子。'
+            content_text: '当会展成为城市战略 青岛的370场能撬动什么？凤凰网青岛_凤凰网 首页 资讯 视频 直播 凤凰卫视 财经 娱乐 体育 时尚 汽车 房产 科技 军事 文化 旅游 佛教 国学 数码 更多 健康 公益 教育 酒业 美食 青岛 > 要闻 > 正文 当会展成为城市战略 青岛的370场能撬动什么？ 界面山东 下载客户端 独家抢先看 2026年04月09日 15:47:26 来自北京 文 | 徐雅琳 4月8日，青岛市政府新闻办召开新闻发布会，公布2026年全市会展活动安排。全年预计举办较大规模会展活动370场，展览面积520万平方米，预计拉动消费超300亿元。 这一安排，与今年年初青岛市政府工作报告中“举办各类会展活动370场”的目标完全吻合。 2026年是“十五五”开局之年，青岛市政府工作报告明确提出，全市将重点做好扩大内需、创新驱动、产业发展等九个方面工作，确保“十五五”开好局、起好步。在扩大内需的具体部署中，“举办各类会展活动370场”被明确写入“着力推动服务业扩能提质”板块，与“力争新一代信息技术产业规模突破2000亿元”等目标并列。 会展业已从一个辅助性服务业，跃升为青岛城市战略棋盘上的重要落子。 这份底气，有扎实的数据支撑。2025年前三季度，青岛市共举办展会、节庆活动294场，展览展示面积402万平方米，吸引客流417万人次，拉动消费231.5亿元。 也就是说，2026年370场、520万平方米、300亿元的目标，并非凭空设定，而是在2025年实践基础上的稳步攀升。 政策加码下，会展业升级“新引擎” 会展业素有“一业兴、百业旺”的声誉。一场展会的展开，牵动着酒店、餐饮、交通、零售、文旅等数十个行业的联动运转。 青岛显然深谙此道，2025年青岛市会展业综合实力已位居全国第七，获评“中国最具竞争力会展城市”“中国十佳会展名城”。 真正值得留意的，是支撑这套计划的政策组合。 根据青岛市出台的支持会展业高质量发展新政策，对符合条件的市场化展会，市区两级叠加最高支持440万元；对符合条件的市场化专业会议，市区两级叠加最高支持162万元。补助标准按展览面积实行阶梯式递增，每增加5000平方米增加支持5万元，规模越大支持越多。淡季首次办展的补助标准还能上浮10%。在政策执行层面，青岛市实行“当季申报、隔季兑现”，加快资金拨付效率。 如果只盯着440万元这个数字，很容易错过更重要的信号。 据发布会消息，上合示范区配套出台的16条措施，首次将专业展览、国际会议、企业出海、文体活动等一并纳入支持体系；西海岸新区则对符合重点产业链方向的首次落地展会，额外给予5万至20万元的一次性扶持。 这些政策设计传递出一个清晰的意图—— 青岛举办的会展不再只是“把展商请进来、把产品卖出去”的大卖场角色，而是升级为整合产业资源、链接全球市场的战略支点。 政策落地的效果，最终要看展会的具体安排。在展会安排上，这一逻辑体现得更加具体。 2026年青岛市将举办90余场较大规模贸易类展会，其中5万平方米以上的16场，涉及智能装备、生命健康、人工智能、高端化工与新材料等10个产业类型。 中国国际渔业博览会作为全球最大的海洋水产类展会，已在青岛举办12届，每年吸引来自40余个国家和地区的超1500家企业参展，今年展览面积有望再创新高；中国国际消费电子博览会将由“消费电子展”向“智能科技与创新应用展”转型升级，加大人工智能、机器人等新型项目比重。 青岛市贸促会会长张磊娜在发布会上表示，90余场展会深度对接全市“10+1”创新型产业体系、现代海洋产业体系等重大部署。 把视线从青岛拉升至全国，会发现这种思路并非孤例。 根据商务部商务大数据，2026年一季度消费品以旧换新销售额超4331.7亿元，惠及6093.3万人次。Wind统计数据显示，一季度地方债发行量约3.11万亿元，新增专项债发行量突破1万亿元。 消费修复仍偏缓慢，而会展经济恰好扮演了“中间态”角色。它既能直接拉动终端消费，又能为产业链上下游搭建对接平台，在投资与消费之间架起一座桥梁。 热闹背后，会展业步入深水区 如果说政策与产业对接回答了“青岛为什么要办展”的问题，那么接下来的挑战则是“青岛如何把展办好”。 热闹的展会之外，会展业自身正站在一场深刻的范式迁移临界点上。 中国会展经济研究会会长曲维玺在2026无锡会展目的地建设大会上指出，产展融合、创新驱动、开放合作三大方向正引领全行业转型升级。这意味着，过去那种“政府搭台、企业唱戏、热热闹闹开三天会”的模式，正在被一种更复杂、更复合的产业逻辑所取代。 对青岛而言，这场转型来得尤为迫切。 青岛会展业起步早、底子厚，但面临的竞争也在加剧。全国已有超过30个城市将会展经济写入“十五五”规划或年度政府工作报告，深圳、成都、杭州等城市在政策力度和国际化程度上持续加码。 面对这种竞争态势，青岛要想在激烈的城市竞赛中守住身位，仅靠数量和规模远远不够。 更深层的变革推力来自技术。中国会展经济研究会副会长兼秘书长姜淮在同一场合提出，AI的出现正在消解会展业作为“信息中介”的传统价值。当大数据和算法可以瞬间穿透价格底线、打通买卖双方信息时，会展的核心价值必须从“撮合交易”转向“创造体验差与意义差”。展台还在，但展会的“魂”变了。姜淮认为，2026年将是会展业规模化应用AI的关键窗口期。 值得一提的是，在青岛的展会矩阵中，应对这种转型的探索已经悄然展开。 在产展融合层面，渔博会、机床展等龙头展会深度绑定海洋经济、智能制造等青岛的支柱产业，不再满足于做“展销平台”，而是向技术发布、标准研讨、产业链对接延伸；上合示范区明确打出“展产融合”的旗帜，计划以即将开业的丝路千古情景区为核心，推动会展与文旅、体育、消费深度融合，试图把参展流量转化为在地消费的“留量”。 在消费端，2026年青岛市将举办100余场消费类展会，覆盖汽车消费、家居生活、时尚潮流、文化休闲等多个领域。刚落下帷幕的2026山东春季国际车展，汇聚近70个主流品牌、600余款车型，观展人数超12万人次，成交金额突破15亿元。这类展会直接面向终端消费者，考验的是策展能力和场景营造水平，而不仅仅是展位出租率。 在技术应用层面，青岛部分龙头展会已开始尝试数字化预约、智能匹配、线上展馆等工具，但距离“规模化应用AI”尚有距离。发布会上表示，将鼓励会展企业加大数字化投入，推动线上线下融合办展，提升参展体验和交易效率。 换而言之，青岛会展正在经历一个从“量”到“质”的爬坡期。 370场的数量目标是一张明牌，但真正的看点在于，这些展会有多少能从“热闹三天”沉淀为产业发展的长期动能。 全球经济不确定性持续攀升，会展经济也许不是唯一的答案，但它至少提供了一条看得见、摸得着的路径。 青岛的选择，是把赌注押在“人”。让国内外客商来到青岛，让展馆里每一个展位、每一次握手、每一张订单，成为经济齿轮上的润滑油。 用一场展会撬动一条产业链，用一座城市的活力对冲外部环境的寒意。剩下的，交给时间。 原标题：时评｜当会展成为城市战略，青岛的370场能撬动什么？ 频道推荐 周末新趋势：前海微度假正升温！ 0 条评论 2025-11-09 16:41:53 凰家体验官探游兰州新区 集采“反内卷” 我们能对药品更放心吗？ 不只是“多了两个假” 中国多地推行中小学春秋假 中国多地滑雪场提前“开板” 周边酒店订单走俏 科创合肥：澎湃创新动能 31省份工业盈亏图鉴 谁赚到钱了？ “鸡排哥”全国“巡炸”南昌站 有游客排队三小时 “300元以下难购真羽绒服”？ 武汉一高校发起捐赠1000元冠名座椅活动 图片新闻 山东海阳核电3号机组核岛大型模块吊装完成 中国车企扎堆海外建厂 居延遗址新发现青铜时代遗存 河南开封：大宋“百戏”引游人'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+          - query: '水利博览会 行业数字化'
+            query_type: 'keyword'
+            url: 'https://caifuhao.eastmoney.com/news/20260409093726746401140'
+            domain: 'caifuhao.eastmoney.com'
+            result_title: 'IOTE 2026 国际物联网展 —— 全球最具影响力的 AIoT 全产业链生态盛会_财富号_东方财富网'
+            published_at: '2026-04-09'
+            content_title: 'IOTE 2026 国际物联网展 —— 全球最具影响力的 AIoT 全产业链生态盛会_财富号_东方财富网'
+            content_summary: '东方财富网旗下财经自媒体平台“财富号”，于2017年3月1日上线，汇聚权威、全面、专业的财经自媒体，为中国广大投资者提供个性化、专业化的财经资讯和一站式金融理财服务。'
+            content_text: 'IOTE 2026 国际物联网展 —— 全球最具影响力的 AIoT 全产业链生态盛会_财富号_东方财富网 财经 焦点 股票 新股 期指 期权 行情 数据 全球 美股 港股 期货 外汇 银行 基金 理财 债券 直播 股吧 基金吧 博客 财富号 搜索 行情中心 指数 期指 期权 个股 板块 排行 新股 基金 港股 美股 期货 外汇 黄金 自选股 自选基金 数据中心 资金流向 主力排名 板块资金 个股研报 新股申购 转债申购 北交所申购 AH股比价 年报大全 融资融券 龙虎榜 限售解禁 IPO审核 大宗交易 估值分析 首页 > 社区 > 正文 IOTE 2026 国际物联网展 —— 全球最具影响力的 AIoT 全产业链生态盛会 IOTE国际物联网展 2026年04月09日 09:37 广东 返回 财富号评论吧> 点赞 0 评论 0 收藏 大 中 小 IOTE 国际物联网展 华南人工智能和物联网年度盛会 | AIoT全产业链覆盖 | 专业商贸对接平台 一、展会概况 IOTE国际物联网展创办于2009年，是中国物联网产业“元年”的见证者。从早期聚焦RFID、传感器等感知层技术的专业展，逐步升级为覆盖“感知-网络-平台-应用”全产业链的标杆盛会，更是目前全球最大的物联网全产业发展的“风向标”。 汇聚逾千家展商，吸引超 10 万人次专业观众，深度聚焦工业制造、智慧城市、智慧物流、智慧零售等二十多个应用领域，其衍联动的同期AI与机器人行业展——AGIC深圳国际通用人工智能产业博览会聚焦AI核心能力、AI+场景应用、具智能、仿生智能等核心内容，致力于向世界输出中国人工智能产业解决方案。IOTE+AGIC的结合进步完善物联网+人工智能的AIoT生态链。构建出“数据感知 - 智能决策 - 场景落地” 的完整AIoT生态闭环。 作为首批商务局展览业重点单位及“粤贸全国”重点活动目录入选展会，IOTE国际物联网展不仅是全球物联网技术交流的核心枢纽，更是中国向世界输出AIoT产业解决方案、通过“展+会+生态”的创新模式，IOTE国际物联网展深度整合物联网与人工智能资源，既助力中国物联网企业“出海”拓展全球市场，也为国际前沿技术“入华”搭建落地桥梁，为行业参与者提供从技术研发到市场拓展的全链路支持。这种生态化布局持续推动智能制造、智慧城市、智慧生活等领域的跨代升级，进一步巩固了其在全球物联网领域的标杆地位。 IOTE 2026 第二十五届国际物联网展·深圳站 随着人工智能（AI）与物联网（IoT）的深度融合，AIoT正成为驱动全球创新与产业升级的核心力量。上届展会汇聚1001家企业、吸引逾9万专业观众之后，IOTE 2026深圳国际物联网展+AGIC 2026通用人工智能展将于2026年8月26-28日在深圳国际会展中心盛大举行。本届展会将进步扩容，全覆盖AI芯片、模型、智慧城市、工业物联网、智能物流、智能家居、机器、智能硬件、嵌式技术、工业物联网与电子纸等全产业链，继续联动AGIC人工智能展与ISVE智慧商显展，打造AIoT生态的全球舞台。我们诚挚邀请全球科技企业、行业机构与专业人士共聚深圳，共探AIoT未来，共创数智时代新机遇。 举办时间：2026年8月26日-28日 举办地点：深圳国际会展中心（宝安新馆） 展览面积：80,000 平方米 参展企业：1000+ 家 专业观众：100,000+ 人次（含 70+ 国家/地区 6000+ 海外观众） 核心特色： 全产业链覆盖：完整呈现物联网感知层（RFID、传感器）、网络层（通信模组、低功耗广域网）、平台层（大数据、云计算、边缘计算）、应用层（工业、物流、智慧城市等）全链条技术与解决方案。 AIoT 生态联动：同期联动 AGIC 深圳通用人工智能大会（聚焦大模型、具身智能、机器人）与 ISVE 智慧显示展（聚焦智慧商显、交互界面），构建“感知（IoT）+ 决策（AI）+ 交互（Display）”的完整技术闭环。 全球影响力：中国对外输出 AIoT 产业解决方案的核心名片，吸引全球 70+ 国家采购商，通过跨境对接会、国际论坛推动技术出海与产业合作。 场景化落地：深度覆盖工业物联网、智慧物流、智慧城市、智慧零售、智能家居、低空经济等 20+ 应用领域，展示技术从“实验室”到“真实场景”的规模化落地实践 核心价值： 技术风向标：发布新一代无源物联网芯片、AI 大模型、具身智能系统等全球新品，引领 AIoT 技术趋势。 商业枢纽：为物联网企业提供产品展示、技术交流、商务洽谈的一站式平台，往届 70%+ 展商现场达成合作意向。 生态共建：联合 50+ 国际行业协会与产业联盟，举办 40+ 场专业论坛（如 AGIC 大会、边缘计算产业生态大会），推动 AIoT 产业标准化与可持续发展 推荐场景：适合物联网技术从业者、AI 开发者、智能制造企业、智慧城市解决方案商、投资机构及跨境贸易商参与。 二、组织架构 主办单位：深圳市物联网产业协会 承办单位：深圳市物联传媒有限公司、深圳市易信物联网络有限公司 支持单位：电子纸产业联盟、上海市物联网行业协会、河南省物联网行业协会、重庆市物联网产业协会、福建省物联网行业协会、山东省物联网协会、贵州省物联网发展促进会、江西省物联网行业协会、中关村物联网产业联盟、陕西物联网产业联盟、杭州市物联网行业协会、珠海市物联网行业协会、厦门市物联网行业协会、宁波市物联网智能技术应用协会、青岛市物联网协会、成都物联网产业发展联盟、苏州市物联网协会、合肥市物联网行业协会、无锡市物联网产业协会、阜阳市物联网协会、香港物联网商会、台湾物联网协会（排名不分先后） 三、展会亮点 （一）AIoT产业覆盖全面 完整呈现感知层（RFID、智能传感器、电子纸、视觉物联、AIoT 智能模组等）、网络传输层（5G、NB-IoT、UWB、WiFi、北斗 / GPS等）、平台层（云计算、大数据、边缘计算、AI 大模型、生成式 AI（AIGC）、MaaS（模型即服务）、AI 开发框架等）、应用层（工业物联网、智能家居、智慧零售、智慧物流、低空经济、具身智能、智慧安防等）及物联网配套产品与服务，新增 AI 算力芯片、AI玩具、智慧商显、鸿蒙生态、国产信创等新兴技术与应用，实现从 AI 算力芯片到行业应用的全链条展示，构建更完善的行业生态。 （二）新兴创新扩张生态融合 全面呈现具身智能、人形机器人、AIGC 应用、无源物联网、星闪通信等前沿科技在真实场景中的落地实践，同步拓展电子纸、AI 玩具、嵌入式技术、工业物联网、智慧商显与开源生态等多样化板块，覆盖政府、企业及消费端核心需求，提供可复制、可推广的完整解决方案，持续拓展产业融合边界，促进技术创新与产业升级。 聚焦通用 AI、低空经济、无源物联网、企业数字化等全球新兴需求，通过应用场景还原、典型案例分享与供需对接等形式，释放潜在商业机会，助力企业抢占市场先机，共建行业新生态。 （三）国际化程度高，全球生态联结 展会吸引全球70+国家和地区的专业买家参与，往届汇聚5723位海外观众，覆盖国际科技巨头、创新初创企业及行业研究机构，直观印证全球对 AIoT 技术的旺盛需求，成为企业拓展国际市场、链接全球客户的核心平台； 联合50+国际行业协会与产业联盟，现场举办高端论坛、国际标准发布、白皮书解读、战略签约及权威颁奖等重磅活动，构建 “技术 - 市场 - 本土 - 全球” 的完整生态互联体系，推动 AIoT 产业健康可持续发展； 同时设立国际展团与跨境采购交流区，通过组织国际论坛、技术研讨会和商务配对活动，为全球参与者提供了解行业动态、展示前沿技术、促进国际交流合作、探索跨境商机的核心窗口，强化与欧洲、东南亚、北美市场的双向链接。 （四）权威成果发布且引领产业风向。 展会将发布 “IOT 金奖”等权威榜单，往届同步首发《中国物联网产业创新白皮书》《深圳市人形机器人传感器产业专利导航报告》及《中国RFID无源物联网产业白皮书》系列行业标准，彰显强大的行业凝聚力与号召力，为参与企业搭建品牌与市场影响力双重提升的优质平台；同时聚焦 AIoT 前沿技术与创新应用，设立 “全球新品发布” 环节，联合顶尖科技企业、科研机构及创新团队，集中发布人工智能大模型、新一代无源物联网芯片、低空通信模块、具身智能系统、星闪商用产品等重磅成果，打造亚洲乃至全球最具影响力的 AIoT 创新发布平台，引领产业技术发展方向。 （五）40+场同期会议，15+位院士云集，产学研智汇赋能产业升级 展会同期打造 IOTE 物联网会议并联动 AGIC 通用人工智能大会双核心论坛矩阵，规划 40+场专业会议，汇聚 15+国内外院士，及政府领导、业界权威专家、AIoT 赛道头部企业代表、行业协会负责人、海内外行业同仁等产学研全产业链嘉宾；论坛议题全面覆盖 AIoT 出海、人形机器人、具身智能、大模型、AIGC、AI 玩具、AI + 智能制造、无源物联、星闪、Wi-Fi、LoRa、边缘计算、AI 算力、电子纸、车联网、低空经济、AI + 大健康等产业链热门技术与应用领域，打造兼具专业性、前沿性与实用性的行业思想盛宴，以全维度智识交流赋能 AIoT 产业创新发展。 四、展区布局 本次展会落地深圳国际会展中心9、10、11、12号馆，各展馆定位清晰，覆盖物联网全产业链核心领域，参观动线便捷： 9号馆：无源物联网、RFID、智能卡、数据采集终端、智能制造、物流仓储解决方案 10号馆：工业物联网、智能传感、物联网通信、精准定位、嵌入式方案、测试仪器、电池 11号馆：智慧商业/文旅、智慧物流、零售、电子纸主题区、出行/低空、能源/水利、建筑/园区/市政、教育/办公、家具/硬件、医疗养康、应急/港口/矿石、AI玩具、海外买家对接区 12号馆：AI芯片、大模型、视觉物联、边缘计算、具身智能、机器人、AI+智能硬件、AI各类应用 五、发展历程 2009年：首届展会举办，展览面积4500㎡，参展商101 家，开启物联网产业专业展会历程。 2016年：展览面积达28000㎡，参展商453 家，观众流量87426 人次，规模持续扩大。 2019年：观众流量突破145577 人次，展览面积70500㎡，参展商916 家，成为行业重要交流平台。 2022年：克服疫情影响，展览面积70000㎡，参展商906家，观众流量106069 人次。 2025年：深圳站展会面积80000平方米，1001家展商参展，专业观众总数超118358人次，43场专业论坛吸引15名院士、526名嘉宾演讲，行业影响力进一步提升。 五、参观常见问题 本次展会对专业观众免费开放，无需购票。观众可通过官网线上预登记（ 开放时间：8月26-27日9:00-17:00，8月28日9:00-14:30； 团体预约：可联系组委会办理团体入场，享受快速通道服务 同期论坛：同期大部分论坛可免费旁听，部分高端/闭门论坛需提前预约； 人群限制：展会为专业to B展，不建议18周岁以下未成年人入场 六、交通指南 地铁：地铁20号线/12号线 至【国展站】，C1/C2 出口直达展馆 打车/网约车：目的地设为【深圳国际会展中心（南登录大厅）】 自驾：导航至【深圳国际会展中心P1停车场】 追加内容 本文作者可以追加内容哦 ! 举报 郑重声明： 用户在社区发表的所有信息将由本网站记录保存，仅代表作者个人观点，与本网站立场无关，不对您构成任何投资建议，据此操作风险自担。 请勿相信代客理财、免费荐股和炒股培训等宣传内容，远离非法证券活动。请勿添加发言用户的手机号码、公众号、微博、微信及QQ等信息，谨防上当受骗！ IOTE国际物联网展 关注 更多文章 投资组合 -- 总收益 20日收益 日收益 -- -- -- 最新操作 - - - 历史收益率走势(%) Chart 自选股 代码 名称 最新价 涨跌幅 查看更多 浪客视频 - 郑重声明：东方财富网发布此信息的目的在于传播更多信息，与本站立场无关。东方财富网不保证该信息（包括但不限于文字、视频、音频、数据及图表）全部或者部分内容的准确性、真实性、完整性、有效性、及时性、原创性等。相关信息并未经过本网站证实，不对您构成任何投资建议，据此操作，风险自担。 东方财富 扫一扫下载APP 东方财富产品 东方财富免费版 东方财富Level-2 东方财富策略版 妙想投研助理 Choice金融终端 证券交易 东方财富证券开户 东方财富在线交易 东方财富证券交易 关注东方财富 东方财富网微博 东方财富网微信 意见与建议 天天基金 扫一扫下载APP 基金交易 基金开户 基金交易 活期宝 基金产品 稳健理财 关注天天基金 天天基金网微博 天天基金网微信 东方财富期货 扫一扫下载APP 期货交易 期货手机开户 期货电脑开户 期货官方网站 信息网络传播视听节目许可证：0908328号 经营证券期货业务许可证编号：913101046312860336 违法和不良信息举报:021-61278686 举报邮箱： jubao@eastmoney.com 沪ICP证:沪B2-20070217 网站备案号:沪ICP备05006054号-11 沪公网安备 31010402000120号 版权所有:东方财富网 意见与建议:4000300059/952500 关于我们 可持续发展 广告服务 供应商平台 联系我们 诚聘英才 法律声明 隐私保护 征稿启事 友情链接'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+      - original_title: '虚拟电厂聚合：让红区分布式光伏成为可调资源'
+        topic: '行业数字化与物联网应用'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/3a4e51c3735c00d696a87689a'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/3a4e51c3735c00d696a87689a'
+          domain: 'www.infoq.cn'
+          content_title: '虚拟电厂聚合：让红区分布式光伏成为可调资源'
+          content_summary: '2026年，绿、黄、红三色分区管理体系已全面覆盖分布式光伏项目，红区作为光伏装机密度高、反向负载率超标、逆流风险突出的核心管控区域，大量分布式光伏（户用、工商业小型项目）面临“限电运行、并网受阻、出力浪费”的困境——要么被强制降低出力，要么因逆'
+          content_text: '2026年，绿、黄、红三色分区管理体系已全面覆盖分布式光伏项目，红区作为光伏装机密度高、反向负载率超标、逆流风险突出的核心管控区域，大量分布式光伏（户用、工商业小型项目）面临“限电运行、并网受阻、出力浪费”的困境——要么被强制降低出力，要么因逆流风险被暂停并网，前期投入的设备沦为“闲置资产”，成为光伏业主的心头之患。
+破解红区分布式光伏困局的关键，早已不是单一的设备改造，而是依托虚拟电厂聚合技术，将分散的红区光伏资源“聚沙成塔”，通过智能化调度与协同管控，把原本“被动受限”的红区光伏，转化为电网可调度、可调控的柔性可调资源，既破解逆流难题、满足红区合规要求，又能解锁额外收益，让红区光伏从“负担”变成“资产”。
+本文结合2026年福建、山东新政红利、国家发改委指导意见及全国多地实操案例，详细拆解虚拟电厂如何聚合红区分布式光伏，以及落地全流程、核心技术与收益逻辑，帮你读懂红区光伏“变废为宝”的关键路径。
+一、红区分布式光伏的核心困局：分散无序，难成合力
+红区分布式光伏的痛点，本质是“分散性”与“不可控性”，与电网承载需求形成突出矛盾，最终导致“限电常态化、收益打折扣”，具体体现在3个方面：
+❌ 分散布局，调控难度大
+红区分布式光伏多为分散布局（户用光伏、工商业小型屋顶项目），单户/单项目装机规模小（10kW-100kW），但整体聚合规模大，且分布零散、管理无序。电网无法对单个分散项目进行精准调控，只能采取“一刀切”的刚性限电措施，即便部分项目负荷匹配度高，也无法充分释放出力，造成绿电浪费，部分红区项目限电率高达30%以上，投资回收期延长1-2年。
+❌ 不可调控，逆流风险突出
+多数红区分布式光伏缺乏有效的调控手段，光伏出力完全依赖光照条件，无法根据电网负荷变化灵活调整——白天光照充足时，光伏出力激增，远超本地消纳能力，富余电力反送电网，触发红区管控；夜间无出力时，又无法补充电网负荷，形成“峰时逆流、谷时缺位”的尴尬，这也是红区光伏被限电的核心原因。
+❌ 单体弱小，无法参与市场收益
+红区分布式光伏单体规模小，无法单独参与电力现货市场、辅助服务市场，只能被动接受电网管控，无法享受调峰、调频等辅助服务收益。即便加装四可装置，也因单体调控能力有限，难以实现合规与收益的双重突破，始终处于“被动整改”的困境。
+二、核心逻辑：虚拟电厂聚合，让红区光伏“从分散到可调”
+虚拟电厂并非实际存在的电厂，而是依托现代信息通信、系统集成控制等技术，聚合分布式电源、可调节负荷、储能等各类分散资源，作为新型经营主体协同参与电力系统优化和电力市场交易的电力运行组织模式。其聚合红区分布式光伏的核心逻辑，就是“化零为整、协同调控”——以虚拟电厂平台为核心，整合红区分散光伏资源，搭配四可装置与储能设备，实现“数据互通、智能调度、柔性调控”，让分散的红区光伏成为电网可调度、可调控的可调资源，破解红区管控困局。
+✅ 三大核心价值：不止合规，更能解锁收益
+虚拟电厂聚合红区分布式光伏，不仅能解决红区限电、逆流难题，更能实现“合规+收益”双提升，核心价值体现在3点：
+1. 破解逆流，实现红区合规并网
+虚拟电厂通过AI调度技术，实时采集红区各分布式光伏的出力数据、本地负荷数据，结合电网承载能力，动态调控各光伏项目的出力，避免富余电力反送电网，将反向负载率控制在电网规定阈值内，帮助红区光伏项目满足合规要求，解除限电、并网限制，实现稳定并网发电。截至2026年2月，全国虚拟电厂可调节能力已突破1600万千瓦，相当于16座百万千瓦级大型火电厂的顶峰出力，能有效吸纳红区光伏富余电力，破解逆流难题。
+2. 协同调控，成为电网可调资源
+虚拟电厂将分散的红区光伏资源聚合后，形成规模化的可调能力，可响应电网调峰、调频、备用等需求——电网负荷高峰时，调度红区光伏满发，补充电网供电；电网负荷低谷时，调控光伏降出力或联动储能存储富余电力，为电网减负，真正实现“红区光伏为电网所用”，从“被动受限”转向“主动赋能”。依托AI调度技术，虚拟电厂可实现秒级响应，负荷预测误差控制在5%以内，大幅提升调控精度与效率。
+3. 聚合入市，解锁多元收益渠道
+2026年福建、山东新政破冰，明确虚拟电厂的市场主体身份，打通绿电交易、辅助服务市场通道，允许虚拟电厂聚合分散资源参与电力市场交易，解锁峰谷套利、调峰补偿等多元收益。红区分布式光伏通过虚拟电厂聚合，可作为一个整体参与电力现货市场、辅助服务市场，获取额外收益，让原本“闲置浪费”的绿电，转化为实实在在的利润，缩短投资回收期。
+三、实操路径：虚拟电厂聚合红区分布式光伏全流程
+虚拟电厂聚合红区分布式光伏，核心是“资源筛选→聚合管控→电网协同→收益分配”，无需大规模改造现有光伏系统，依托现有四可装置与通信技术，即可实现快速落地，具体流程如下，适配户用、工商业小型红区光伏项目：
+Step 1：资源筛选，精准锁定可聚合红区光伏
+虚拟电厂运营商先对红区分布式光伏进行全面排查，筛选符合聚合条件的项目，重点关注3点：
+1. 合规基础：项目已加装四可装置（可观、可测、可调、可控），具备基本的监测与调控能力，数据可支持DL/T 698.45国网标准协议，可实时上传运行数据，这是聚合的核心前提，也是四可能力的延伸与扩展；
+2. 出力稳定性：优先筛选光伏板运行状态良好、出力波动相对平稳的项目，避免因单个项目出力波动过大，影响整体聚合调控效果；
+3. 地理集中性：优先聚合同一台区、同一区域的红区光伏项目，降低通信改造成本，提升调度响应效率，符合虚拟电厂“就近聚合、协同调控”的原则，电网条件允许时也可跨节点聚合资源。
+Step 2：搭建聚合平台，实现数据与指令协同
+虚拟电厂运营商搭建智能化聚合平台，核心是实现“红区光伏-四可装置-虚拟电厂-电网”的全链条数据互通与指令联动，重点做好2点：
+1. 数据互通：将筛选后的红区光伏四可装置，接入虚拟电厂聚合平台，实现光伏出力、电压、电流、负荷变化等关键数据的实时采集与上传，同时对接电网调度平台，同步获取电网调度指令与承载能力数据，打破信息壁垒，形成区域级全景监控视图；
+2. 指令联动：聚合平台内置AI调度系统，采用时空图神经网络（ST-GNN），可根据电网需求、负荷变化，自动生成调控指令，通过四可装置传递至各红区光伏项目，实现“平台调度-装置响应-光伏调控”的秒级联动，调节周期可根据精度要求设定为秒级，确保调控精准高效。
+Step 3：协同调控，实现红区光伏可调可控
+虚拟电厂聚合平台根据电网负荷变化、红区管控要求，对聚合后的红区光伏资源进行柔性调控，核心实现3种调控模式，贴合红区光伏特点：
+1. 削峰调控：白天光伏出力高峰、本地负荷较低时，平台调度红区光伏项目降低出力，或联动储能设备存储富余电力，避免电力反送电网，将反向负载率控制在合规范围内，破解红区逆流痛点，替代传统刚性限电模式，最大化保留光伏收益；
+2. 填谷调控：电网负荷高峰、光伏出力不足时，平台调度红区光伏项目满发，补充电网供电，同时调用储能设备释放电力，实现“光伏+储能”协同，提升电网供电稳定性，发挥可调资源价值；
+3. 应急调控：当电网出现电压波动、负荷失衡等紧急情况时，平台快速响应电网调度指令，调度红区光伏项目调整出力，保障电网安全运行，同时获取应急辅助服务收益，契合国家发改委对虚拟电厂应急调控的要求。
+Step 4：电网协同与验收，解锁市场收益
+1. 电网协同：虚拟电厂聚合平台与电网调度系统实现深度协同，实时反馈红区光伏调控数据，配合电网开展红区整改验收，确保聚合后的光伏项目符合红区管控要求，顺利解除限电、并网限制，按规定接入电力调度自动化系统，参与电力市场交易与需求响应；
+2. 市场入市：验收合格后，虚拟电厂以整体身份参与电力现货市场、辅助服务市场，获取峰谷套利、调峰补偿、绿电交易等收益，同时将收益按各光伏项目的出力贡献进行分配，实现“运营商+光伏业主”双赢，福建、山东等地已明确虚拟电厂可直接参与中长期交易、现货交易与绿电交易，简化交易流程、降低交易成本；
+3. 长效运维：建立“虚拟电厂平台-四可装置-光伏业主”三方运维机制，定期校准四可装置精度，排查光伏项目运行故障，优化调控参数，确保聚合系统稳定运行，避免再次触发红区管控，同时根据电网调度要求与市场变化，调整聚合策略，提升收益水平。
+四、实战案例：红区光伏聚合后，从“限电”到“可调”，收益翻倍
+结合全国多地虚拟电厂聚合红区光伏的实操案例，用真实数据验证聚合价值，可直接借鉴：
+案例1：广东佛山红区户用光伏聚合项目
+项目背景：佛山某红区台区，聚合200户户用光伏项目，总装机规模2MW，此前因分散无序、逆流风险突出，被电网限电运行，平均出力利用率仅65%，业主收益大幅受损。2026年依托虚拟电厂聚合技术，搭建聚合平台，联动四可装置与储能设备，实现协同调控，契合广东虚拟电厂市场化发展趋势，以发电类虚拟电厂身份参与现货市场交易。
+聚合效果：① 合规达标：通过柔性调控，反向负载率控制在75%以内，顺利通过红区整改验收，解除限电限制，出力利用率提升至92%；② 收益提升：参与电网调峰辅助服务，每月额外获取调峰补偿约3万元，同时通过峰谷套利，每户业主每月多收益约200元，整体投资回收期缩短1.5年；③ 电网赋能：高峰时段可为电网补充0.8MW电力，低谷时段联动储能存储富余电力，成为电网可靠的可调资源，获得当地电网企业技术支持与政策扶持。
+案例2：山东某红区工商业小型光伏聚合项目
+项目背景：山东某红区工业园区，聚合15家小型工商业光伏项目，总装机规模3.5MW，此前因逆流问题被强制限电30%，每月损失电费约8万元。借助2026年山东“3.5新政”红利，采用虚拟电厂聚合模式，接入聚合平台，实现与电网协同管控，享受分布式储能谷时充电免输配电费优惠，降低运营成本。
+聚合效果：① 彻底解决逆流问题，实现全额并网发电，每月减少损失8万元；② 参与电力现货市场与绿电交易，每年额外获取收益约12万元，投资回收期从5年缩短至3.5年，契合山东虚拟电厂规模化发展导向；③ 成为电网可调资源，响应电网调峰指令，获得电网企业优先调度权，提升项目稳定性，设备故障率下降60%。
+五、政策红利：2026年，虚拟电厂聚合红区光伏迎来黄金期
+2026年，国家及地方政策持续发力，为虚拟电厂聚合红区分布式光伏提供了有力支撑，核心红利集中在3点，进一步降低落地门槛、提升收益空间：
+1. 国家层面：明确发展目标，完善支持机制
+根据国家发改委《关于加快推进虚拟电厂发展的指导意见》，到2027年全国虚拟电厂调节能力将达2000万千瓦以上，2030年突破5000万千瓦，明确鼓励虚拟电厂聚合分布式光伏等分散资源，完善接入调用机制与市场参与机制，开放辅助服务市场，公平设定申报价格上限，保障虚拟电厂调节能力可靠性，为红区光伏聚合提供政策遵循。
+2. 地方层面：新政破冰，打通市场化通道
+福建、山东率先出台新政，破解虚拟电厂“身份不明确、交易无通道、成本难分摊”的痛点：福建明确虚拟电厂的市场主体身份，解锁绿电交易全通道，简化交易流程；山东减免分布式储能输配电费，鼓励虚拟电厂聚合资源入市，拓宽收益渠道，为红区光伏聚合提供了可复制的实践经验，推动虚拟电厂从“试点探索”进入“规模化运营”新阶段
+以上是由虚拟电厂/绿电直连管理系统厂家广东科锐捷分享，欢迎您阅读、点赞。'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+          - query: '红区分布式光伏 可调资源'
+            query_type: 'keyword'
+            url: 'https://www.ncsti.gov.cn/kjdt/kjrd/202604/t20260414_243782.html'
+            domain: 'www.ncsti.gov.cn'
+            result_title: '构建“绿电+智算+智造”新生态'
+            published_at: '2026-04-14'
+            content_title: '构建“绿电+智算+智造”新生态'
+            content_summary: '国际科技创新中心'
+            content_text: '构建“绿电+智算+智造”新生态 | EN | 首页 科技动态 活动日历 通知公告 新闻聚焦 科技热点 两区建设 专题报道 三城一区 中关村科学城 怀柔科学城 未来科学城 北京经济技术开发区 顺义区 中关村示范区 东城园 西城园 朝阳园 海淀园 丰台园 石景山园 门头沟园 房山园 通州园 顺义园 昌平园 大兴园 亦庄园 怀柔园 平谷园 密云园 延庆园 政策法规 政策文件 政策解读 法律法规 法律法规解读 一图读懂 科创服务 项目申报 网上办事 科创资源 科创指数 创新地图 奖项 会客厅 互动交流 我要建议 我要查信 在线调查 首页 科技动态 活动日历 通知公告 新闻聚焦 科技热点 两区建设 专题报道 三城一区 中关村科学城 怀柔科学城 未来科学城 北京经济技术开发区 顺义区 中关村示范区 东城园 西城园 朝阳园 海淀园 丰台园 石景山园 门头沟园 房山园 通州园 顺义园 昌平园 大兴亦庄园 怀柔园 平谷园 密云园 延庆园 政策法规 政策文件 政策解读 法律法规 法律法规解读 一图读懂 科创服务 项目申报 网上办事 科创资源 科创指数 创新地图 奖项 会客厅 互动交流 我要建议 我要查信 在线调查 请选择主题皮肤 科技蓝 点击预览 繁荣红 点击预览 丰收金 点击预览 生命绿 点击预览 提示 尊敬的用户，您好！ 欢迎访问国际科技创新中心网络服务平台。为了保障您的账户安全并提供更加便捷的服务，平台已启用北京市统一身份认证平台进行登录验证。 请使用您的北京市统一身份认证账号和密码登录本平台，如果您在登录过程中遇到任何问题，请及时与我们联系，联系电话：010-64850580，13581953095。 感谢您的理解与支持！ 个人登录 法人登录 您现在的位置： 首页 > 科技动态 > 科技热点 构建“绿电+智算+智造”新生态 发布时间：2026-04-14 信息来源：科技日报 字体： 大 中 小 打印 分享到微信朋友圈 × 用微信“扫一扫”，点击右上角分享按钮， 即可将网页分享给您的微信好友或朋友圈。 发布时间：2026-04-14 信息来源：科技日报 4月13日，在江苏省太仓市大数据产业园，智算中心、分布式光伏和储能系统构成一个虚拟电厂：白天光伏优先供电，傍晚储能及时补充，算力中心从“刚性用电大户”变为“可调节的智慧伙伴”，绿电消纳率持续攀升，智能算力加速制造转型…… 今年的政府工作报告首次将“算电协同”写入其中，明确提出实施超大规模智算集群、算电协同等新基建工程。立足数字经济与新能源消纳，江苏将算电协同与先进制造深度融合，破解“高算力需求”与“新能源波动”的核心矛盾，让算力成为智能制造的“核心动力”，让绿电成为算力发展的“底色支撑”。 算力支撑 智造有底 设好参数，按键启动，设备高效运转，钢水翻涌似舞……在南京钢铁集团有限公司，传统的炼钢已转型智能制造，从铁水注入到铸坯成型，各环节均在大模型计算下稳步推进。 2025年6月，南京钢铁集团有限公司与华为联合发布钢铁行业首个专业领域“元冶·钢铁大模型”架构，一举打通四大业务界面，快速落地20个人工智能（AI）应用场景。 “以前生产看订单、看季节、看班次，现在系统能根据订单优先级和实时电价等自动优化排产——电价低的时候，往往也是绿电充足的时候，产线就这样跟着绿电的节奏走。”南京钢铁集团有限公司负责人陈兵说。 在江苏，算力正加速成为重要生产力——综合算力指数全国第二，仅次于北京。“江苏先进制造业密集，工业生产推理算力需求场景丰富，为算力中心提供了广阔的本地化应用空间。”国网江苏省电力有限公司经济技术研究院电力需求预测高级专家史静说，南京、无锡、苏州已入选国家首批“毫秒用算”城市。 算力产业的蓬勃脉动，清晰投射在用电上。今年1月至2月，江苏信息传输、软件和信息技术服务业用电量达34.6亿千瓦时，同比增长超29%，增速领跑全行业。 中国科学院工业人工智能研究所专家张修红表示，算电协同被写入政府工作报告并纳入新基建工程，标志着算力与电力的融合发展从行业自主探索升级为国家战略统筹布局，确立了算电双向赋能的发展导向，这既有效破解高密度智算集群的高耗能发展瓶颈，夯实算力产业可持续发展基础，又推动智算中心作为可调负荷参与电网调度，提升清洁能源消纳水平、助力“双碳”目标落地。 破解算电协同核心难题 3月23日，国家数据局局长刘烈宏在中国发展高层论坛上再次强调，国家枢纽节点新建数据中心，绿电消费占比必须超过80%。 算力需求汹涌，数据中心这个“电老虎”正迎来绿色革命。要让数据中心大规模使用绿电，必须直面一个难题：风电、光伏“看天吃饭”，时有时无。 对此，国网江苏电力有限公司给出的答案是：以算力为基座，构建新型电网运行控制系统。 走进江苏电力调度控制中心，巨大的屏幕上，跳动的数据、流动的曲线共同构成实时“电网画像”。每小时数据采集达78000多条，较过去扩大24.5倍。 “过去靠经验，现在靠算力。”国网江苏电力调度控制中心调度运行处处长仇晨光介绍，依托数字孪生、人工智能等技术，新能源渐入可观测、可调度、可消纳的智慧管理新阶段。 作为国网系统首个现场部署光明电力大模型的省级公司，国网江苏电力算力规模达10亿亿次/秒。AI全面融入电网“毛细血管”——超前推演、预判风险、自动生成预案，推动电网从“事后应对”迈向“事前预防”。 江苏制造业发达、算力强大、绿电资源丰富，有条件先试先行。为此，江苏探索让虚拟电厂、微电网与现货交易机制形成合力，把新能源波动理顺。每天，江苏有68万电力现货客户，根据每15分钟更新的动态电价，科学决策生产计划。 算电协同是涉及政府、企业、科研机构多方协同的生态共建。目前，江苏省已出台算力基础设施发展专项规划，统筹算力中心布局与电力基础设施配套、绿电政策衔接；紫金山实验室的新一代传输技术研发、中国科学院工业人工智能研究所的算力调度算法创新，推动算电协同技术快速落地。 相关人物 243782 构建“绿电+智算+智造”新生态 15 科技热点 科技热点 科技日报 科技日报 2026-04-14 网站声明 关于我们 联系我们 北京国际科技创新中心 微信公众号 中国政府网及国务院部门网站 市级政府部门网站 各区政府网站 新闻媒体网站 中国政府网 外交部 国防部 国家发展和改革委员会 教育部 科学技术部 工业和信息化部 国家民族事务委员会 公安部 国家安全部 民政部 司法部 财政部 人力资源和社会保障部 自然资源部 生态环境部 住房和城乡建设部 交通运输部 水利部 农业农村部 商务部 文化和旅游部 国家卫生健康委员会 退役军人事务部 应急管理部 人民银行 审计署 国家语言文字工作委员会 国家外国专家局 国家航天局 国家原子能机构 国家海洋局 国家核安全局 国务院国有资产监督管理委员会 海关总署 国家税务总局 国家市场监督管理总局 国家广播电视总局 国家体育总局 国家统计局 国家国际发展合作署 国家医疗保障局 国务院参事室 国家机关事务管理局 国家认证认可监督管理委员会 国家标准化管理委员会 国家新闻出版署（国家版权局） 国家宗教事务局 国务院港澳事务办公室 国务院研究室 国务院侨务办公室 国务院台湾事务办公室 国家互联网信息办公室 国务院新闻办公室 新华通讯社 中国社会科学院 中国工程院 国务院发展研究中心 中央广播电视总台 中国气象局 中国银行保险监督管理委员会 中国证券监督管理委员会 国家行政学院 国家信访局 国家粮食和物资储备局 国家能源局 国家国防科技工业局 国家烟草专卖局 国家移民管理局 国家林业和草原局 国家铁路局 中国民用航空局 国家邮政局 国家文物局 国家中医药管理局 国家外汇管理局 国家药品监督管理局 国家知识产权局 出入境管理局 国家公园管理局 国家公务员局 国家档案局 国家保密局 国家密码管理局 市政府办公厅 市发展改革委 市教委 市科委、中关村管委会 市经济和信息化局 市民族宗教委 市公安局 市民政局 市司法局 市财政局 市人力资源社会保障局 市规划自然资源委 市政务服务和数据管理局 市生态环境局 市住房城乡建设委 市城市管理委 市交通委 市水务局 市农业农村局 市商务局 市文化和旅游局 市卫生健康委 市退役军人事务局 市应急管理局 市市场监管局 市审计局 市政府外办 市国资委 市广电局 市文物局 市体育局 市统计局 市园林绿化局 市地方金融监管局 市国动办 市信访办 市知识产权局 市医保局 东城区 西城区 朝阳区 海淀区 丰台区 石景山区 门头沟区 房山区 通州区 顺义区 昌平区 大兴区 怀柔区 平谷区 密云区 延庆区 新华网 人民网 央视国际 中央人民广播电台 中国日报 中国国际广播电台 光明网 经济日报 京报网 北京电视台 北京人民广播电台 千龙网 主办：北京推进科技创新中心建设办公室 承办： 北京市科学技术委员会、中关村科技园区管理委员会 北京市委宣传部 北京市经济和信息化局 北京市政务服务和数据管理局 政府网站标识码：1100000251 京公网安备11040202500067号 京ICP备05060936号-2 活动 日历 移动 端 我要 建议 我要 分享 分享到微信朋友圈 × 用微信“扫一扫”，点击右上角分享按钮， 即可将网页分享给您的微信好友或朋友圈。 返回 顶部'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''
+      - original_title: '2026年工业洗衣进入数据化阶段：RFID如何解决布草管理全流程难题？'
+        topic: '行业数字化与物联网应用'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/5be8bd05e1cc6b26eec1712d2'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/5be8bd05e1cc6b26eec1712d2'
+          domain: 'www.infoq.cn'
+          content_title: '2026年工业洗衣进入数据化阶段：RFID如何解决布草管理全流程难题？'
+          content_summary: '随着工业洗衣市场规模持续扩大，布草管理从“人工经验”走向“数据驱动”。通过RFID技术对每一件布草进行全流程追踪，洗涤企业在交接、复核、分发等关键环节实现自动识别与精准管理，大幅降低差错率并提升运营效率。'
+          content_text: '摘要
+随着工业洗衣市场规模持续扩大，布草管理从“人工经验”走向“数据驱动”。通过RFID技术对每一件布草进行全流程追踪，洗涤企业在交接、复核、分发等关键环节实现自动识别与精准管理，大幅降低差错率并提升运营效率。
+根据财富商业洞察3月发布的工业洗衣市场报告显示，2025年，全球工业洗衣市场规模达到29.5亿美元，预计到2034年将增长至61.2亿美元，复合增长率为8.80%。其中，亚太地区占比44.10%，约13亿美元，是当前增长最集中的区域。
+市场在扩大，但行业的运行方式并没有同步升级。
+医院、酒店、食品加工、制造企业，对布草洁净度和周转效率的要求不断提高，布草流转频率越来越高。与此同时，大量洗涤厂仍然依赖人工点数、纸质记录来完成收发与对账。
+量一旦上来，问题就会集中出现：
+数量对不上、交接容易出错、复核耗时长、分发混乱、布草使用周期无法追踪。这些问题不只是影响效率，更直接影响客户体验和运营成本。
+在这样的背景下，RFID开始进入工业洗衣的核心管理环节。
+一、工业洗衣的核心难点
+从实际运营来看，洗涤本身已经相对成熟，真正影响效率的，是布草在各个环节中的流转管理。
+尤其集中在几个关键节点：
+· 酒店/医院与洗涤厂之间的交接，依赖人工清点，容易产生差异
+· 入厂复核需要逐件确认，效率低且容易漏检
+· 分拣与出货依赖人工经验，错发、混发时有发生
+· 布草使用次数与损耗无法统计，难以做到成本控制
+这些问题的共同点在于：缺少连续、准确的数据记录。
+二、斯科信息RFID管理方案
+针对上述问题，斯科信息基于RFID技术，构建了一套面向工业洗衣场景的全流程管理方案。
+通过在布草中植入RFID洗衣标签，并结合手持终端、RFID隧道机、RFID通道机等设备，实现从交接到出货的全流程自动识别与数据追溯。
+① RFID洗衣标签：布草全生命周期管理基础
+每一件布草在投入使用前植入RFID洗衣标签，相当于拥有唯一“电子身份”。
+标签具备以下特点：
+· 支持高温水洗、烘干及熨烫环境
+· 可承受数百次洗涤循环
+· 稳定识读，不影响布草使用
+系统通过标签记录布草的流转信息、洗涤次数及使用状态，实现从投入到报废的全过程管理。
+② 交接环节：RFID盘点设备实现快速核对
+斯科CK-B3L 手持终端
+斯科CK-DP13C RFID收发台
+在酒店、医院与洗涤厂之间的交接过程中，通过RFID手持终端或RFID收发台对整批布草进行快速统计。
+· 自动读取袋内布草数量
+· 与系统数据实时比对
+· 生成电子交接记录
+无需人工逐件清点，避免“少件”“错账”等问题。
+交接数据实时同步，责任清晰，减少沟通成本。
+③ 入厂复核：RFID隧道机实现批量识别
+布草进入洗涤厂后，需要进行数量确认与分类处理。
+斯科CK-TP2A RFID隧道机
+通过RFID隧道机，布草在通过设备时即可完成批量识别：
+· 整批布草自动读取，无需逐件扫描
+· 快速生成入库清单并与系统核对
+· 自动识别异常（缺失、混入等）
+设备采用多天线设计，即使布草堆叠或潮湿状态下，仍能保持稳定识读。
+这一环节大幅减少人工参与，同时提升复核准确率。
+④ 洗后复核与分拣：数据驱动作业流程
+布草完成洗涤后，再次通过部署在自动化流水线上的RFID识别专机进行复核，确保数量一致。
+斯科CK-TP3 RFID识别专机
+⑤ 出货分发：RFID通道机实现自动盘点
+斯科CK-TP5A RFID通道机
+在出库与配送环节，RFID通道机用于整批布草的快速盘点。
+· 推车经过通道即可完成识别
+· 自动核对出库清单
+· 防止错发、漏发
+同时记录出库时间与操作信息，形成完整数据链路。
+三、从人工到系统的蜕变化管理升级
+通过RFID系统的应用，工业洗衣的关键环节发生了明显变化：
+系统后台可与洗涤厂ERP或客户系统对接，实现数据同步与实时对账。
+四、结语：工业洗衣正在进入可追溯时代
+市场规模的增长，正在推动工业洗衣从粗放运营走向精细化管理。
+当布草数量达到一定规模后，管理能力开始决定企业的效率与服务质量。
+RFID的价值，不只是提升识别速度，而是建立一套可持续运行的数据体系。
+斯科信息通过RFID技术，将布草从批量物资转变为可管理资产，让每一次流转都有记录，让每一个环节都可追溯。
+这不仅解决了当前的管理问题，也为工业洗衣的进一步规模化发展提供了基础支撑。
+如果你的业务正面临布草管理与洗涤流程升级需求，欢迎联系斯科信息，获取更贴合实际场景的RFID解决方案。'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+  - topic: '开发工具与低代码/智能化开发'
+    items:
+      - original_title: '三体协创：码道智能生成、MaaS大模型与鸿蒙云手机的融合开发实践'
+        topic: '开发工具与低代码/智能化开发'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/ed0d6e757a9502766cfe4c855'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/ed0d6e757a9502766cfe4c855'
+          domain: 'www.infoq.cn'
+          content_title: '三体协创：码道智能生成、MaaS大模型与鸿蒙云手机的融合开发实践'
+          content_summary: '本案例依托华为云码道的智能代码生成能力，实现鸿蒙原生应用的快速构建。开发者通过DevEco Studio进行代码开发后，可借助DevEco Testing工具远程连接鸿蒙云手机，实现端云协同的智能化开发调试闭环。'
+          content_text: '最新案例动态，请查阅三体协创：码道智能生成、MaaS大模型与鸿蒙云手机的融合开发实践小伙伴们快来进行实操吧！
+一、概述
+1.1 案例介绍
+本案例依托华为云码道的智能代码生成能力，实现鸿蒙原生应用的快速构建。开发者通过DevEco Studio进行代码开发后，可借助DevEco Testing工具远程连接鸿蒙云手机，实现端云协同的智能化开发调试闭环。
+案例技术选型：
+华为云码道（CodeArts）代码智能体：一个理解项目需求，懂得编码之道，善用百器的实干派AI研发专家，开启你的编码自动驾驶模式。本案例中作为核心开发工具，通过智能体模式快速构建鸿蒙原生应用代码。
+华为云MaaS平台：华为云提供的MaaS模型即服务平台集成的DeepSeek-V3.2先进大语言模型。具备强大的自然语言理解和生成能力，支持多轮对话、知识推理、文本生成等AI能力。本案例中作为鸿蒙原生应用的推理引擎，负责生成智能回复。
+鸿蒙云手机：基于华为鸿蒙操作系统（HarmonyOS）的云端虚拟化手机服务，通过云计算技术将手机功能迁移至云端，为用户提供跨终端、高性能的移动体验。本案例使用鸿蒙云手机调试运行鸿蒙原生应用。
+1.2 适用对象
+企业
+个人开发者
+高校学生
+1.3 案例时间
+本案例总时长预计60分钟。
+1.4 案例流程
+说明：
+开发者下载安装华为云码道AI IDE、DevEco Studio和DevEco Testing并创建项目；
+基于华为云码道接入MaaS大模型，自动生成鸿蒙原生智能应用代码；
+用户登录开发者空间，创建并远程连接鸿蒙云手机；
+使用鸿蒙云手机调试运行鸿蒙原生智能应用。
+1.5 资源总览
+本案例预计花费0或1元。
+二、基础环境与资源准备
+2.1 AI IDE华为云码道安装部署
+参考案例《AI IDE华为云码道（CodeArts）代码智能体安装部署》完成华为云码道（CodeArts）代码智能体Windows版AI IDE安装部署。
+注意：模型切换为GLM-4.7-ArkTS-SPARK。
+2.2 领取华为云MaaS平台大模型Tokens福利（任选其一）
+方式一：登录华为开发者空间，参考案例《华为开发者空间 - ModelArts Studio大模型通用代金券领取使用指导》中的“二、 开通MaaS平台大模型”章节内容领取代金券，获取到模型的API地址、模型名称和API Key。
+方式二：登录华为开发者空间，参考案例《华为云MaaS平台大模型Tokens领取使用指导》中的“二、 领取MaaS平台大模型Tokens”章节内容，领取MaaS平台DeepSeek V3系列大模型Tokens代金券，购买ModelArts Studio DeepSeek Tokens套餐包，开通模型服务，最后获取到模型的API地址、模型名称和API Key。
+注意：记录API Key、API地址以及模型名称留作后面步骤使用。
+2.3 获取AK/SK及工具下载
+获取访问秘钥：
+AK是Access Key（访问密钥）的缩写, 用于标识用户身份的唯一ID, 通常公开传输;SK是Secret Key（秘密密钥）的缩写，用于生成请求签名的保密密钥，仅用户和服务端持有。其核心功能是通过对称加密机制验证请求发送者的合法性，防止未授权访问。
+开发者配置AK/SK，等同于在CLI中进行身份信息认证，从而可以在cli端对鸿蒙云手机进行操作。可以参考获取AK/SK文档。
+工具下载：
+下载：DevEco Testing
+DevEco Testing 提供一站式的应用测试服务平台。为开发者提供稳定性、性能、应用基础质量等专项测试服务，覆盖应用测试全周期，助力打造高品质应用。
+下载与安装：DevEco Studio
+DevEco Studio 是 HarmonyOS 应用及服务的集成开发环境（IDE），提供了一站式的开发平台，包括代码编辑、编译构建、代码调试、性能调优、模拟器、应用测试等能力。
+三、远程连接鸿蒙云手机
+3.1 申请公测
+注意：鸿蒙云手机目前处于公测中，按照以下步骤参与公测，在线开发与调试鸿蒙应用。
+登录华为开发者空间，点击鸿蒙云手机，选择职业，输入使用的业务场景，参与公测。
+公测申请将在1~3个工作日内审核完成。
+3.2 创建并连接鸿蒙云手机
+参考案例《华为开发者空间-鸿蒙云手机操作指导手册（Windows）》中的“三、鸿蒙云手机操作指导”的内容，完成“1. 创建鸿蒙云手机 ~ 4. DevEco Studio连接云手机”章节步骤。
+四、鸿蒙原生应用代码实践
+4.1 创建并运行鸿蒙项目
+若首次打开DevEco Studio，请单击Create Project创建工程。如果已经打开了一个工程，请在菜单栏选择File > New > Create Project来创建一个新工程。
+选择Application应用开发（本文以应用开发为例，Atomic Service对应为元服务开发），选择模板Empty Ability，单击Next进行下一步配置。
+进入配置工程界面，项目名称ChatAssistant，Compatible SDK表示兼容的最低API Version，此处以选择5.0.5(17)为例，其他参数保持默认设置即可。
+单击Finish，工具会自动生成示例代码和相关资源，等待工程创建完成。点击右上角运行按钮，运行鸿蒙程序。
+打开DevEco Testing，选择【标准】模式，鸿蒙应用代码已经运行在鸿蒙云手机上了。
+4.2 华为云码道鸿蒙项目实践
+使用华为云码道，打开已创建鸿蒙项目ChatAssistant所在文件夹。
+第一轮交互：聊天页面基本功能开发
+华为云码道对话框中，输入以下提示词：
+作为鸿蒙应用开发专家，请完成聊天页面开发，要求如下： 1、在当前项目目录下完成应用开发； 2、界面美观，布局合理； 3、使用List组件实现消息列表； 4、消息列表底部有输入框和发送按钮组件； 5、点击发送按钮后，输入的消息和回复的消息实时显示在消息列表中； 6、发送的消息显示在左边，回复的消息显示在右边。
+点击发送按钮，几分钟后，华为云码道通过任务规划，完成了聊天页面基本功能开发。
+注意：
+当发生文件变更时，我们点击全部接受。
+如果生成的代码出现报错，可将具体错误信息发送给码道，码道会协助排查和解决。如果代码布局不符合预期，码道也可帮助调整样式和排版。
+完成基本聊天页面开发。
+第二轮交互：添加网络权限
+华为云码道对话框中，输入以下提示词：
+添加网络请求权限
+华为云码道帮助我们在module.json5文件中添加了网络请求权限。
+第三轮交互：集成MaaS API，实现智能回复
+华为云码道对话框中，输入以下提示词：
+输入问题时，调用MaaS API，实时获取模型返回数据。 API_URL: string = ''YOUR_API_URL''; MODEL_NAME: string = ''YOUR_MODEL_NAME''; API_KEY: string = ''Bearer YOUR_API_KEY'';
+注意：
+YOUR_API_URL：替换成步骤“2.2 领取华为云MaaS平台大模型Tokens福利”中获取的API地址。
+YOUR_MODEL_NAME：替换成步骤“2.2 领取华为云MaaS平台大模型Tokens福利”中获取的模型名称。
+YOUR_API_KEY：替换成步骤“2.2 领取华为云MaaS平台大模型Tokens福利”中获取的API Key。
+点击发送按钮，几分钟后，华为云码道通过任务规划，完成了智能回复功能开发。
+注意：如果生成的代码出现报错，可将具体错误信息发送给码道，码道会协助排查和解决。如果代码布局不符合预期，码道也可帮助调整样式和排版。
+集成了DeepSeek大语言模型的智能回复的能力。
+在本项目中，我们全程未手写一行代码，仅通过华为云码道（CodeArts）代码智能体，以对话形式描述需求，即自动生成了可直接运行的鸿蒙应用。
+由于项目代码由Agent自动生成，每次交互生成的代码及运行结果可能存在差异。开发者可根据具体需求，逐步调整Prompt与智能体进行交互微调，直至生成符合预期的代码。如需获得与案例完全一致的运行效果，建议下载源码至本地环境运行。
+注意：请替换ChatAssistant/entry/src/main/ets/pages/Index.ets文件中配置的常量。
+const API_URL: string = ''YOUR_API_URL''; const MODEL_NAME: string = ''YOUR_MODEL_NAME''; const API_KEY: string = ''Bearer YOUR_API_KEY'';
+YOUR_API_URL：替换成步骤“2.2 领取华为云MaaS平台大模型Tokens福利”中获取的API地址。
+YOUR_MODEL_NAME：替换成步骤“2.2 领取华为云MaaS平台大模型Tokens福利”中获取的模型名称。
+YOUR_API_KEY：替换成步骤“2.2 领取华为云MaaS平台大模型Tokens福利”中获取的API Key。
+至此，三体协创：码道智能生成、MaaS大模型与鸿蒙云手机的融合开发实践的案例已全部完成。
+五、反馈改进建议
+如您在案例实操过程中遇到问题或有改进建议，可以到论坛帖评论区反馈即可，我们会及时响应处理，谢谢！'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+      - original_title: '主流低代码平台深度对比，“源码级”路线走得通？'
+        topic: '开发工具与低代码/智能化开发'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/9e31b8226c79eb80ac9b0a1d2'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/9e31b8226c79eb80ac9b0a1d2'
+          domain: 'www.infoq.cn'
+          content_title: '主流低代码平台深度对比，“源码级”路线走得通？'
+          content_summary: '今天想跟大家聊一聊低代码，这几年它火得一塌糊涂，但真正用明白的人，其实没那么多。'
+          content_text: '今天想跟大家聊一聊低代码，这几年它火得一塌糊涂，但真正用明白的人，其实没那么多。
+先交代一下背景。我搞了十来年软件开发，从最早的SSH写到Spring Boot，从外包作坊干到自研产品，算是亲眼看着“低代码”从一个小众玩具长成现在的资本宠儿。以前我不太敢碰这个话题，因为两边的声音都太极端：有人觉得低代码就是高级Excel，做不了正经系统；也有人把它吹成银弹，好像招几个业务员拖拖拽拽就能替代整个研发部。
+直到我陆续接触了中交建、招商银行、吉利汽车这些体量的项目，发现他们内部居然在用低代码/快速开发平台跑核心业务流程，交付周期从半年压到一个月，我才开始认真琢磨：这东西到底行在哪儿、坑在哪儿。
+前几天看到一条融资新闻：一家叫Emergent的AI低代码平台，拿了7000万美金B轮融资，软银愿景基金都跟投了。上线七个月，累计融资一亿美金。说实话，看到这个消息我第一反应不是“低代码又火了”，而是——这波浪潮已经过了概念炒作期，资本开始押注具体的技术路线了。
+既然躲不过，不如今天摊开来聊透。文章有点长，但我会从一个老开发的角度，把低代码的底层逻辑、真实价值、国内外主流产品以及选型时的坑，一五一十说清楚。不管你是企业负责人、IT负责人，还是正在选型的开发人员，相信看完会有自己的判断。
+一、资本为什么突然疯狂押注低代码？
+很多人不理解：低代码不是新东西，十多年前就有表单工具、工作流引擎，为什么这两年融资一轮接一轮？其实资本的逻辑很简单——不追“新”，追“确定性”。
+低代码这一波的确定性，来自三个齿轮的咬合：技术成熟度、市场需求缺口、政策导向。
+先说技术。早年低代码就是可视化拖拽，生成一堆烂代码，稍微改点需求就得重做。现在不一样了，AI原生的能力开始渗透进去。像Emergent那种，你打一段话描述要什么应用，它就能帮你生成代码、拆解执行步骤，准确率还凑合。Gartner给过一个数：AI加持下低代码开发效率能提3到5倍，非技术人员能搞定八成的基础开发。这个效率提升不是概念，是真金白银的产出。
+再说市场。数字化转型喊了这么多年，企业发现一个死结：业务需求像潮水一样涌过来，IT团队永远排期排不过来。一个简单的审批流程，业务部门等三个月才能上线，黄花菜都凉了。IDC预测2023到2028年低代码市场年复合增长率37.6%，背后就是这个“产能缺口”在驱动。企业不是想赶时髦，是真的缺人。
+最后是政策。信创国产化这两年不再是可选项，而是硬指标。国企、金融、军工这些行业，采购低代码平台时第一条就问：能不能跑在麒麟系统上？数据库支不支持达梦、人大金仓？全链路信创适配能力直接决定能不能中标。这种政策驱动的刚需，给资本吃了一颗定心丸。
+所以Emergent的融资不是孤例。当一个工具能同时解决效率痛点、踩中技术风口、又符合政策方向，资本不投才奇怪。
+二、低代码到底能给企业带来什么？
+聊完资本，说点实在的。低代码不是帮你省几个人力成本那么简单，它的核心价值是重构企业数字化的能力底座。我见过三个维度的变化，最有说服力。
+第一，把业务和IT之间那堵墙拆了。
+传统模式下，业务人员脑子里有想法，但不会写代码；IT人员会写代码，但不懂业务细节。两边来回沟通，需求文档写了几十页，做出来还是不对。好的低代码平台能让业务人员直接参与搭建——拖拖表单、配配流程、写写规则，原型就出来了。IT人员只需要在关键复杂逻辑上介入。
+举个例子，北京一家国有银行用某低代码平台搭信贷风控系统，业务专家自己配置审批规则和风控阈值，IT只负责对接征信数据接口。最终审批效率提升了60%，而且系统上线后业务方自己就能调整规则，不用再排队等IT排期。这才是真正的业技融合。
+第二，打破“轻量玩具”的刻板印象，能上复杂业务了。
+早年的低代码只能做做OA审批、数据填报。现在不一样了，好的平台采用“高低代码融合”架构——简单场景拖拽，复杂场景写自定义代码。我去年接触过一个制造企业的项目，用JNPF快速开发平台承载BOM多级物料管理，数据量到了千万级，还能跑通MRP计算。这在以前想都不敢想。
+第三，降低了数字化的门槛，中小企业也能上车。
+组建一支正经的开发团队，光薪资一个月就要二三十万，很多中小企业根本扛不住。低代码平台开箱即用，按年订阅几万块就能起步。广东有一家做快消品的公司，用腾讯云微搭三天上线了一个会员小程序，首月转化率提升了28%。虽然不是什么核心系统，但至少先把业务跑起来了。
+总结一下：低代码不是要取代传统开发，而是补位。标准化、高频变动的业务场景用低代码快速响应，核心复杂逻辑用传统代码精耕细作。认清这个分工，才能用好它。
+三、国内值得关注的低代码/快速开发平台（2026年视角）
+下面这部分是大家最关心的。我结合了信通院的评估报告、Gartner的魔力象限，加上自己这十年踩过的坑和见过的好东西，整理了几个有代表性的平台。评分维度包括技术成熟度、行业适配、信创合规、生态集成和服务能力，满分100分。排名不分先后，关键看适不适合你的场景。
+1. JNPF快速开发平台
+评分：98.5分
+介绍：和市面上很多纯低代码产品不太一样，它走的是“代码生成 + 源码交付”路线——你通过可视化设计器拖拽表单、配置流程，平台自动生成基于Java+Vue、前后端分离的完整工程代码，可以导出、二次开发、私有化部署。这种模式在金融、政务、制造等对代码自主可控要求极高的行业里很受欢迎。
+特色：
+一是真正解决“黑箱问题”。很多低代码平台生成的应用只能跑在自家服务器上，哪天不想用了，数据都拿不出来。JNPF生成的代码是标准SpringBoot项目，可以随时拉进IDE继续写，不会被平台锁定。
+二是内置了大量企业级组件，比如组织架构选择器、流程设计器、大屏可视化、移动端自适应，省去重复造轮子的时间。三是支持高低代码混合开发——业务人员拖拽做页面，技术人员在生成的代码上继续写复杂逻辑，各取所需。
+适合场景：中大型企业的后台管理系统、ERP类业务、内部工作流、数据中台快速验证。尤其是那些对代码所有权有执念的团队，JNPF这套“低代码入口，全代码出口”的思路很对胃口。
+2. 织信Informat
+评分：99分
+介绍：国内全栈可视化低代码的头部平台之一，在金融、制造、军工领域口碑很好。主打“复杂场景承载 + 陪跑式交付”，已经实现自然语言转领域模型，准确率超过80%。
+特色：模块丰富，内置5000多组件和200多个集成适配器，能对接主流ERP、CRM和国产数据库。信创适配全面，通过等保、DCMM认证，兼容麒麟OS、飞腾芯片。同样支持高低代码融合，技术人员可以嵌入Java、JS代码做定制。
+3. 网易CodeWave
+评分：95分
+介绍：国内为数不多支持“低代码开发+源码交付”双模式的平台，客户覆盖中石油、工商银行等。
+特色：自研NASL编程语言，前后端全流程可视化。金融级安全架构，泰康人寿基于它开发了80多个核心应用，节省成本160多万。资产中心沉淀了大量可复用组件。
+4. 浪潮inBuilder
+评分：94.5分
+介绍：依托浪潮在政务、制造领域的积累，以UBML建模语言为核心，属于垂直领域深度解决方案。
+特色：天然适配信创生态，可以直接生成适配国产软硬件的应用代码。政务审批场景表现突出，某省会城市工程审批系统上线后，审批周期从15天压缩到48小时。预置MQTT连接器和IoT监控模板，覆盖不少智能工厂场景。
+5. 华为云AppCube
+评分：94分
+介绍：云原生低代码平台，深度联动华为云Stack和鸿蒙系统，强调高并发、高可靠。
+特色：支持小程序、H5、PC、鸿蒙原生应用一体化开发。内置IoT引擎，某汽车厂商用它开发智能产线监控系统，故障预警准确率达到92%。信创合规认证齐全，适合工业制造和政务领域。
+6. 腾讯云微搭WeDa
+评分：93分
+介绍：深度绑定微信生态，适合电商、社交类应用的快速搭建。
+特色：小程序、公众号、视频号全链路支持，从创建到上架只需三步。自带微信支付、担保交易能力。2025年升级了AI组件库，能智能生成营销页面。适合初创企业和中小型电商。
+7. 用友YonBuilder
+评分：92.5分
+介绍：与用友ERP深度绑定，专为集团企业ERP二次开发设计，服务了超过10万家用友ERP客户。
+特色：与用友U9 Cloud等ERP系统适配度高达98%，财务数据无缝流转。支持可视化配置和Java定制开发灵活切换，2025年升级的Agent平台2.0可以用AI对话配置财务模块。适合已经使用用友ERP的集团企业。
+8. 简道云
+评分：91.5分
+介绍：帆软旗下轻量级平台，以“表单驱动+数据洞察”为核心，适合部门级轻量应用。
+特色：操作门槛极低，业务人员一小时培训就能上手。表单支持200多种字段类型，搭配拖拽式仪表盘，从数据采集到分析形成闭环。某连锁品牌用它搭建门店巡检系统，问题整改率提升40%。但不适合复杂业务逻辑。
+四、国外主流平台简评
+国外低代码起步早，在AI原生、全球化生态方面有优势，适合有海外业务或追求前沿技术的企业。
+Mendix：企业级标杆，模型驱动+全生命周期管理。适合大型企业复杂应用，但定价高，本地化适配弱。
+OutSystems：以开发速度著称，可视化拖拽效率极高。信创适配为零，不适合国内政企客户。
+Microsoft Power Apps：深度集成Office 365、Azure，适合已经使用微软生态的中小企业。复杂逻辑承载能力有限。
+Appian：BPM+低代码融合，擅长复杂流程自动化。学习成本高，价格昂贵。
+Emergent：AI原生先驱，自然语言驱动开发。融资火爆，适合快速验证想法，但核心系统承载能力有待观察。
+五、低代码选型四个原则
+选型翻车的案例我见过太多了。有的企业被厂商忽悠着买了一堆AI功能，结果连信创合规都过不了；有的中小企业选了个超级复杂的开源平台，最后没人会用，烂在服务器里。选型没有标准答案，但有基本原则可循。
+原则一：先明确场景，再选平台
+这是最核心的一条。不同场景对平台的诉求完全不同：
+大型企业核心系统、信创项目：优先选具备信创全栈适配、源码可控、复杂场景承载能力的平台，比如JNPF、织信、普元。务必做POC测试，验证并发性能和扩展性。
+中小企业轻量应用、协同办公：选简道云、微搭、CodeWave，侧重易用性和性价比，按年订阅更灵活。
+电商、社交类应用：优先选微搭（微信生态）或Power Apps（微软生态），依托生态原生能力快速上线。
+出海企业：选ZOHO Creator或Mendix，关注多语言支持和全球合规。
+原则二：技术兼容性不是小事
+对国企、金融、军工等关键行业，信创适配是硬门槛。必须确认平台是否通过等保、DCMM认证，是否兼容指定的国产芯片（飞腾、鲲鹏）、操作系统（麒麟、统信）、数据库（达梦、人大金仓）。否则开发完了通不过验收，哭都来不及。
+对所有企业，都要关注平台的扩展性。优先选支持代码导出、API开放、第三方集成能力强的平台。JNPF这类能导出完整源码的，在这一点上优势明显——你永远不知道哪天业务扩张需要换平台，能拿回代码所有权就是最大的底气。
+原则三：生态和服务往往决定成败
+低代码项目的成功，七分靠平台，三分靠服务。尤其对于技术团队薄弱的企业，厂商有没有完善的培训体系、技术支持响应快不快、社区活跃度高不高，直接影响能不能用起来。
+国内平台在本地化服务上普遍优于国外平台，这也是很多企业宁愿选国内产品的原因。JNPF这类老牌厂商通常有陪跑式服务，从部署到上线全程支持，对甲方来说省心不少。
+原则四：POC测试是唯一的照妖镜
+厂商宣传得天花乱坠，不如自己动手搭一遍。选型时一定要求试用，组建“业务+IT”联合小组做POC测试：
+模拟核心业务流程，看开发效率到底多快
+压测高并发场景，看系统会不会崩
+尝试对接现有系统，看API适配性如何
+业务人员评估好不好用，IT人员评估稳不稳定、能不能扩展。两边都满意了，再拍板。
+写在最后
+低代码也好，快速开发平台也好，本质都是一件事：让数字化回归业务本身。把开发能力交还给最懂业务的人，让技术真正服务于业务，而不是反过来被技术绑架。
+2026年，AI原生、信创适配、高低代码融合会是主旋律。无论是国内还是国外平台，都在往更智能、更开放、更易用的方向迭代。对企业来说，与其被各种融资新闻带节奏，不如踏踏实实梳理自己的需求，做一两个POC对比，选那个最合脚的平台。
+如果你正在选型，或者已经在用某个平台遇到了具体问题，欢迎在评论区聊聊。我虽然不是所有平台都深度用过，但踩过的坑还算多，能给你一些参考。'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+      - original_title: 'Zed 终端新技能'
+        topic: '开发工具与低代码/智能化开发'
+        channel: '首页'
+        original_url: 'https://www.infoq.cn/article/2a1de1e00f6aac88e3e6cd063'
+        original_published_at: '2026-04-14'
+        original_content:
+          url: 'https://www.infoq.cn/article/2a1de1e00f6aac88e3e6cd063'
+          domain: 'www.infoq.cn'
+          content_title: 'Zed 终端新技能'
+          content_summary: '推荐阅读'
+          content_text: '推荐阅读
+Zed IDE官宣新功能：比 VS Code 优雅多了！
+Zed IDE 发布全新新特性：确实比 VS Code 猛啊！
+VS Code 王座动摇？Zed IDE 背靠 亚马逊 正在悄悄"偷家"
+最新我用AI开发了自己的第一个博客网站：https://golangai.site ，可前往阅读公众号的文章。
+Zed 新版本 终端支持拖拽到编辑区后，Cmd+N新建终端会智能检测焦点：若聚焦中心终端标签，新终端就近开成标签页；否则回底部面板。零配置、符合直觉，开箱即享流畅工作流！✨
+🤔 以前的"智障"体验
+想象这个工作流：
+你把底部终端面板的标签拖到编辑器中心，方便边写代码边看输出
+想再开一个终端？自信按下Cmd+N...
+💥 结果新终端又跑回底部面板了！
+内心 OS："我只是想开个新终端，不是玩终端版''找你妹''啊！"🙃
+✨ 现在：智能跟焦，如影随形
+新版本修复了这个痛点：terminal: New Terminal命令现在会检查当前焦点
+🎬 效果对比
+💡核心原则：不打扰原有习惯，只在"明显需要"时智能切换！
+⌨️ 3 步上手新姿势
+拖终端：把底部终端标签拖到编辑器中心区域
+点聚焦：点击中心终端标签确保它被选中
+按Cmd+N：✨ 新终端乖乖在旁边诞生！
+拖动终端到tab
+使用快捷键ctrl n 创建新的终端tab
+💭 个人锐评：小改动，大智慧
+这个功能背后体现的是 Zed 对工作流连续性的尊重：
+✅上下文感知：编辑器能"猜"你想在哪开新终端，而不是死板执行命令
+✅零配置升级：不用改任何 settings.json，更新即用
+✅兼容老用户：不聚焦中心终端时，行为完全不变，老手无感过渡
+🎯我的建议：如果你习惯"终端随代码走"的工作流，建议把终端标签拖到中心区常驻，Cmd+N效率直接拉满！
+VSCode 终端支持拖拽到编辑区，但Ctrl+Shift+\`` 新建终端默认回底部面板，需手动配置terminal.integrated.defaultLocation` 才能改默认位置，且焦点感知逻辑不统一，灵活性高但开箱体验略逊，适合爱折腾配置的用户。🔧
+灵魂提问：你更喜欢终端在底部"乖乖待着"，还是拖到中心"随叫随到"？🤔
+评论区聊聊你的终端布局哲学！👇'
+          content_source: 'source_adapter'
+          fetch_status: 'success'
+          fetch_error: ''
+        selected_contents:
+          - query: 'Zed 新技能'
+            query_type: 'keyword'
+            url: 'https://news.pchome.com.tw/science/sunmedia/20260412/index-77593798990082329005.html'
+            domain: 'news.pchome.com.tw'
+            result_title: 'AI助攻職場效率 員工倚賴智慧工具完成日常任務 - 科技新聞 - PChome Online 新聞'
+            published_at: '2026-04-11'
+            content_title: 'AI助攻職場效率 員工倚賴智慧工具完成日常任務 - 科技新聞 - PChome Online 新聞'
+            content_summary: '圖／本報AI製圖（示意圖）商傳媒｜葉安庭／綜合外電報導隨著人工智慧（AI）技術日益普及，全球職場正經歷顯著轉型。現今員工已開始廣泛運用AI工具處理日常查詢、排程等輕量級任務，這不僅有效提升了工作效'
+            content_text: 'AI助攻職場效率 員工倚賴智慧工具完成日常任務 - 科技新聞 - PChome Online 新聞 股市 PChome 合作媒體 說明 (登入) 首頁 專題 政治 社會 財經 科技 國際 職場 運勢 星座 健康 娛樂 體育 生活 上班族 消費 旅遊 雜誌 汽車 政府 大陸 快訊 LVMH首季銷售減6% 中東戰爭衝擊業績 李貞秀遭民眾黨「4大理由」開除 他解析背後邏輯 陳歐珀涉貪遭判16年 北院指貪圖不法利益敗壞官箴 致電楊渡說明健康狀況 馬英九：只是年紀大會健忘 # 農民曆 # 今日運勢 # 北檢案件追蹤 空氣品質 今日運勢 樂透開獎 農曆 丙午年二月廿七 宜: 祭祀 忌: 祈福,拜神求子 更多 射手座 工作運 更多 【幸運色】 象牙 【小人】 射手 2026-04-13 樂透彩中獎號碼 更多 3星彩 0 7 9 4星彩 1 4 6 9 115年 01~02月 統一發票中獎號碼 詳情 2026-04-14 空氣品質指標 更多 臺北市士林 良好 AQI : 47 PM2.5 : 11 臺北市古亭 良好 AQI : 49 PM2.5 : 11 熱門 地震速報!今日各地災情 新車 2025年式新車搶先看 HOT 人氣新聞 人氣科技新聞 越南富國島南部度假新美學，解鎖三家夢幻經典酒店 臺大醫院小兒部120週年演講暨臺大兒童醫院「健康台灣深耕論壇」盛大登場 共探兒童醫療新境界與未來發展 全台瘋媽祖繞境！長途步行、睡眠不足⋯醫點名「這些人」恐藏身心問題 大學生車禍斷腿血流不止才知罹患血友病 2026世界血友病日 診斷是關懷的第一步 精準麻醉新趨勢！心臟手術有機會縮短插管時間 醫揭「快速恢復關鍵」 台灣動作障礙學會響應世界巴金森氏症日 畫筆揮灑新篇章，點亮巴金森希望之路 癌末、慢性病人「嚴重便祕」恐需手動解便！醫揭「這類止痛藥」是元凶 丟不準、接不住？專家：2-5歲球感可反應出未來學習力 2026 桃園北橫賞螢季登場 跟著賞螢地圖追螢光「趣」！ 和平島「阿拉寶灣」秘境限時開放 ！名字有「X」免費看！ 冬蟲夏草是蟲還是草？冬蟲夏草怎麼吃？盤點功效、營養價值及禁忌 白沙屯粉紅超跑啟程！「移動急診室」進駐讓香燈腳更安心 台北凱撒串聯地球日與母親節，推出永續療癒雙主題假期！「這樣」有機會獲免費雙人自助下午茶！ 飲食到空氣「微塑膠」無所不在！專家揭可能暴露途徑 兒童更應留意風險 巨人花不只有蜀葵，「龍舌蘭」也是一員 龍舌蘭介紹，邀您「巨」焦台北動物園龍舌蘭花開！ NBA附加賽組合出爐 勇士強碰快艇、熱火激戰黃蜂 伊朗2025年處決至少1639人 創1989年以來新高 宏道基金會頒千萬獎金 李洋建議直接捐公益團體 諾貝爾化學獎得主瓦謝爾教授主講「嶺南大學論壇」 分享自身經歷 數發部推無人機高空基地台 拚10月秀技術成果 重修舊好？Anthropic證實與川普政府接洽 就最強模型Mythos展開對話 微軟祕密研發類「OpenClaw」功能 還不用連上雲端！ 雷射一照太空船就會動？石墨烯「無燃料推進」曝光 驚見顛覆級可能性 史丹佛大學報告：僅10%美國人對AI感到興奮！更擔心「電費與裁員」 800年前日本夜空紅光之謎有解？古詩與樹木年輪揭示可能極端太陽活動 AI需求爆發撐盤 台積電Q1獲利拚連四季創新高、年增上看50% 能源危機反撲AI紅利 西亞戰事拖累中國出口降溫 微軟Copilot整合開源AI代理 納德拉力推全天候自主運作轉型 Google Finance導入AI全球上線 強化使用者互動與金融數據分析 Springboards推Flint AI模型 助行銷創意擺脫重複 生成多變選項 建通拚轉型升級 汽車零配件展秀特殊銅材多元應用 AI時代顛覆管理學 琴坂將廣教授剖析經營四大新趨勢 AI驅動品牌治理新典範 拜耳導入智慧工具確保行銷一致性 聯想 Legion 電競手機重返市場 主打 AI 應用與遊戲生態系 台灣Reallusion混合AI戰略出爐 2026年願景聚焦虛擬人與動畫革新 美國職場AI應用現兩極化現象 蓋洛普民調：半數員工仍不願使用 Meta AI眼鏡傳將內建臉部辨識 隱私權倡議團體聯合示警 日本巨頭揮軍「實體AI」：軟銀本田集結打造兆參數模型 瞄準AI兆元商機 頂尖投資人聚焦藍籌股策略 億萬富翁看好AI成長股 馬斯克預言人形機器人市場達250兆美元 NEW 最新 新聞 最新影音新聞 建通拚轉型升級 汽車零配件展秀特殊銅材多元應用 微軟Copilot整合開源AI代理 納德拉力推全天候自主運作轉型 Google Finance導入AI全球上線 強化使用者互動與金融數據分析 Springboards推Flint AI模型 助行銷創意擺脫重複 生成多變選項 聯想 Legion 電競手機重返市場 主打 AI 應用與遊戲生態系 AI時代顛覆管理學 琴坂將廣教授剖析經營四大新趨勢 神經科學 AI 新創 Engramme 尋求億元募資 目標打造人腦級記憶模型 史丹佛大學報告：僅10%美國人對AI感到興奮！更擔心「電費與裁員」 台灣Reallusion混合AI戰略出爐 2026年願景聚焦虛擬人與動畫革新 800年前日本夜空紅光之謎有解？古詩與樹木年輪揭示可能極端太陽活動 美國職場AI應用現兩極化現象 蓋洛普民調：半數員工仍不願使用 AI驅動品牌治理新典範 拜耳導入智慧工具確保行銷一致性 AI需求爆發撐盤 台積電Q1獲利拚連四季創新高、年增上看50% 能源危機反撲AI紅利 西亞戰事拖累中國出口降溫 重修舊好？Anthropic證實與川普政府接洽 就最強模型Mythos展開對話 億萬富翁看好AI成長股 馬斯克預言人形機器人市場達250兆美元 Meta AI眼鏡傳將內建臉部辨識 隱私權倡議團體聯合示警 日本巨頭揮軍「實體AI」：軟銀本田集結打造兆參數模型 微軟祕密研發類「OpenClaw」功能 還不用連上雲端！ 瞄準AI兆元商機 頂尖投資人聚焦藍籌股策略 《魔靈召喚》12週年上車囉！召喚書大爆送，五星魔靈任你選！ 影／雲林老農相繼確診攝護腺癌 彰基新式影像導引切片提升早期發現率 中央總預算拖逾229天 民進黨籲韓國瑜展現領導力速審 【有影】六都第二大卻托育倒數第二 江和樹批台中托育體系「結構性失靈」 影／張老師1980愛的迴響公益行動巡迴展 台中市府惠中樓開展 影／老農相繼確診攝護腺癌 彰基新式影像導引切片提升早期發現率 《生命之詩：4K數位修復版》15年後重返大銀幕 一代影后尹靜姬最終告別 許甫批寵物用藥新制跟印度移工一個模式：先衝再說、出包暫緩 謝佳見看《人生海海》誤認魏雋展是大馬人！憶童年「茅坑慘案」讚電影超真實 影音/玩聲音聽世界+太平山林鐵行旅 開始報名囉 影／田尾鐵皮成衣廠發生火警 濃煙直竄天際、鐵皮燒到變形塌陷 引印度移工惹議？最新數據：連署破萬聲量爆衝 網最怕「這件事」 影／鹿港福德祠捐資源回收車 強化清潔隊垃圾清運戰力 【有影】拒絕巴金森氏症斷電折磨！「穩定血藥濃度」才是重拾活動力關鍵 不演了！從「假訊息」到年底入台 充斥遮掩與治理失能的荒謬劇 10年不接戲因劇本太像？朱孝天開嗆 吳鎮宇當場打臉 周杰倫總點擊數超過3327萬次！最新MV當牛仔 邀昆凌叔叔入鏡 《AI有(宥)溫度》攜手資深媒體人黃瑩與吳宥忠 以廣播對談切入AI應用、風險與生活實戰成市場關注焦點 【有片】右轉釀禍！龜山小客車突「螃蟹切」男騎士慘遭擊落 《明日方舟：終末地》全新版本『春曉時』將於4月17日上線 新聞 科技 職場生存指南 2026-04-12 04:06:29 新聞來源 : 商傳媒 回應 AI助攻職場效率 員工倚賴智慧工具完成日常任務 圖／本報AI製圖（示意圖） 商傳媒 ｜葉安庭／綜合外電報導 隨著人工智慧（AI）技術日益普及，全球職場正經歷顯著轉型。現今員工已開始廣泛運用AI工具處理日常查詢、排程等輕量級任務，這不僅有效提升了工作效率，也讓企業能以更精簡的團隊維持既有產能。 分析指出，AI更可能重塑既有職務內容，而非全面淘汰整個專業領域。這是因為AI目前仍缺乏完成完整工作角色所需的複雜推理能力與社交智慧。預計各行各業中約有25%的工作任務最終可透過自動化工具來完成。這意味著員工將能善用AI處理重複性或數據密集型的工作，進而將重心轉移至高階決策。 在白領專業領域，行政支援、法律研究與財務分析等職務面臨最高的AI自動化衝擊。AI能以比人類更快的速度草擬文件、審閱合約並處理龐大數據集。相對地，體力勞動與服務導向職位，例如建築、醫療照護與維護工作，由於涉及身體靈活性與現實環境導航能力，目前較不受AI技術的影響。 工業領域也正迎來一波「AI增強型操作員」的崛起。營運技術（OT）團隊面臨經驗豐富的專業人員退休離職，導致勞動力與技能短缺，影響營運表現。過去十年來的數位轉型與價格實惠的感測裝置，雖然讓工廠數據量大幅增長，但將原始、非結構化數據轉化為可行洞察的能力卻未能跟上。邊緣智慧（Edge Intelligence）與工業人工智慧（Industrial AI）等新興技術，正協助彌補勞動力變化與技術進步之間的落差，推動更高價值的決策。如同Emerson’s Machine Automation Business工程暨新產品開發副總裁Amy Schantz所言，邊緣智慧與工業AI正重新定義工作模式，自動化例行任務、簡化複雜決策，並實現跨職能、預應式營運，進而提升現代工業工作者的角色。 為應對這股趨勢，企業積極投資AI，以應對勞動力短缺與營運成本上升的挑戰。市場對「AI素養」的需求也隨之攀升，企業尋求能有效運用生成式工具並驗證其產出的員工。未來的就業市場將高度仰賴工作者與數位系統協作的能力，但同時，初階職位的薪資可能面臨停滯。因此，教育機構被敦促更新課程，加強培養批判性思考、倫理道德與人際溝通等人類獨有的技能。儘管AI日益普及，人為因素在品質控管與客戶關係維護上，仍扮演著不可或缺的關鍵角色。 新聞關鍵字： AI 、 職場 、 intel 、 Mac 、 MERS 、 人工智慧 、 人際 、 代工 、 大數據 、 投資 記者：商傳媒 更多科技新聞 » 職場心法生存指南 在職場生存，就要掌握職場心法！提升領導力、人際關係、心理健康、職場英文，全面提升你的職場競爭力與職場生存技能。 延伸閱讀 基隆信二停車場招商 投資額至少1.2億元 (中央社2026-04-14 12:52:59) 勞動部高分署屏東就業中心4/17九如徵才 25企業釋出295職缺 (台灣好報2026-04-14 12:43:05) 外資大舉掃貨逾5萬張！台化今股價再度大漲 (今日新聞2026-04-14 12:35:38) CRIF：信驊穎崴領軍 台灣中型集團資產總額2.8兆創高 (中央社2026-04-14 12:25:35) 中國10項涉台措施 陳其邁：政府協商才有利 (中央社2026-04-14 12:22:29) 走過65年不只談金融 富邦以信任、科技與行動創造更多可能 (中央社2026-04-14 12:05:03) 凱基證券「即時美股」推出英文介面 深化跨境服務及國際化投資體驗 (中央社2026-04-14 11:54:05) 台新投信獲傑出基金金鑽獎「永續公益獎」 (中央社2026-04-14 11:53:49) 台新Richart 10週年生日快樂！ (中央社2026-04-14 11:45:55) 永信控股啟動員工持股信託 攜元大銀行共創永續未來 (中央社2026-04-14 11:40:16) 最新科技新聞 建通拚轉型升級 汽車零配件展秀特殊銅材多元應用 (中央商情 2026-04-14 12:48:41) 微軟Copilot整合開源AI代理 納德拉力推全天候自主運作轉型 (商傳媒 2026-04-14 12:23:51) Google Finance導入AI全球上線 強化使用者互動與金融數據分析 (商傳媒 2026-04-14 12:10:17) Springboards推Flint AI模型 助行銷創意擺脫重複 生成多變選項 (商傳媒 2026-04-14 12:01:12) 聯想 Legion 電競手機重返市場 主打 AI 應用與遊戲生態系 (商傳媒 2026-04-14 11:49:06) AI時代顛覆管理學 琴坂將廣教授剖析經營四大新趨勢 (商傳媒 2026-04-14 11:46:36) 神經科學 AI 新創 Engramme 尋求億元募資 目標打造人腦級記憶模型 (商傳媒 2026-04-14 11:46:18) 史丹佛大學報告：僅10%美國人對AI感到興奮！更擔心「電費與裁員」 (科技島 2026-04-14 11:14:43) 台灣Reallusion混合AI戰略出爐 2026年願景聚焦虛擬人與動畫革新 (商傳媒 2026-04-14 10:53:04) 800年前日本夜空紅光之謎有解？古詩與樹木年輪揭示可能極端太陽活動 (科技島 2026-04-14 10:51:19) 美國職場AI應用現兩極化現象 蓋洛普民調：半數員工仍不願使用 (商傳媒 2026-04-14 10:50:37) AI驅動品牌治理新典範 拜耳導入智慧工具確保行銷一致性 (商傳媒 2026-04-14 10:45:10) AI需求爆發撐盤 台積電Q1獲利拚連四季創新高、年增上看50% (科技島 2026-04-14 10:39:09) 能源危機反撲AI紅利 西亞戰事拖累中國出口降溫 (科技島 2026-04-14 10:28:37) 重修舊好？Anthropic證實與川普政府接洽 就最強模型Mythos展開對話 (科技島 2026-04-14 10:19:54) 億萬富翁看好AI成長股 馬斯克預言人形機器人市場達250兆美元 (商傳媒 2026-04-14 10:11:35) Meta AI眼鏡傳將內建臉部辨識 隱私權倡議團體聯合示警 (商傳媒 2026-04-14 10:08:26) 日本巨頭揮軍「實體AI」：軟銀本田集結打造兆參數模型 (商傳媒 2026-04-14 09:58:37) 微軟祕密研發類「OpenClaw」功能 還不用連上雲端！ (科技島 2026-04-14 09:58:30) 瞄準AI兆元商機 頂尖投資人聚焦藍籌股策略 (商傳媒 2026-04-14 09:50:54) 人氣科技新聞 重修舊好？Anthropic證實與川普政府接洽 就最強模型Mythos展開對話 (科技島) 微軟祕密研發類「OpenClaw」功能 還不用連上雲端！ (科技島) 雷射一照太空船就會動？石墨烯「無燃料推進」曝光 驚見顛覆級可能性 (科技島) 史丹佛大學報告：僅10%美國人對AI感到興奮！更擔心「電費與裁員」 (科技島) 800年前日本夜空紅光之謎有解？古詩與樹木年輪揭示可能極端太陽活動 (科技島) AI需求爆發撐盤 台積電Q1獲利拚連四季創新高、年增上看50% (科技島) 能源危機反撲AI紅利 西亞戰事拖累中國出口降溫 (科技島) 微軟Copilot整合開源AI代理 納德拉力推全天候自主運作轉型 (商傳媒) Google Finance導入AI全球上線 強化使用者互動與金融數據分析 (商傳媒) Springboards推Flint AI模型 助行銷創意擺脫重複 生成多變選項 (商傳媒) 建通拚轉型升級 汽車零配件展秀特殊銅材多元應用 (中央商情) AI時代顛覆管理學 琴坂將廣教授剖析經營四大新趨勢 (商傳媒) AI驅動品牌治理新典範 拜耳導入智慧工具確保行銷一致性 (商傳媒) 聯想 Legion 電競手機重返市場 主打 AI 應用與遊戲生態系 (商傳媒) 台灣Reallusion混合AI戰略出爐 2026年願景聚焦虛擬人與動畫革新 (商傳媒) 美國職場AI應用現兩極化現象 蓋洛普民調：半數員工仍不願使用 (商傳媒) Meta AI眼鏡傳將內建臉部辨識 隱私權倡議團體聯合示警 (商傳媒) 日本巨頭揮軍「實體AI」：軟銀本田集結打造兆參數模型 (商傳媒) 瞄準AI兆元商機 頂尖投資人聚焦藍籌股策略 (商傳媒) 億萬富翁看好AI成長股 馬斯克預言人形機器人市場達250兆美元 (商傳媒) 神經科學 AI 新創 Engramme 尋求億元募資 目標打造人腦級記憶模型 (商傳媒) 阿里巴巴揭曉「開心馬」AI模型幕後推手 技術登頂推升股價 (商傳媒) 獨立創業家善用AI意念編程 打造客製工具取代昂貴軟體服務 (商傳媒) 全球首座核廢永久處置場 芬蘭安克羅即將試營運 (中央社) Anthropic AI模型Mythos引恐慌 科技巨頭與美政府急商AI安全 (商傳媒) Meta 打造 AI 祖克柏分身 逾七萬員工將與虛擬CEO互動 (商傳媒) 北市產業局攜手U-Power打造高效電動汽車充電站 數位產業園區大同承德站啟用 (享新聞 ) MiniMax發布M2.7頂尖AI代理模型 商業授權悄然生變 (商傳媒) AI助Anthropic偵測軟體漏洞 專家：網路攻擊恐更複雜 (商傳媒) CoreWeave與Meta簽210億美元大單 攜手Anthropic鞏固AI基礎設施領先 (商傳媒) 海能風電再隨白沙屯媽祖進香 綠能結合信仰傳遞平安 (樂聯網) Google 揭 AI 強化日本資安策略：惡意程式偵測率飆升三倍 (商傳媒) 新加坡推飲料瓶罐押金制 回收退新幣1角盼提高參與 (中央社) 別再重複餵資料！Google整合筆記與AI Gemini能記住你的一切 (科技島) 賠償金不要了？馬斯克撤回1340億美金 改開出「這項條件」讓OpenAI氣炸 (科技島) 響應世界地球日！配客嘉攜手近 30 家電商品牌推「循環風格節」 (威傳媒) 創新「消費賺流量」模式 遠傳推出青春同行588大流量5G上網服務 (匯流新聞網) 譴責光纖到府業者疑涉不實廣告誤導消費者 CBIT呼籲加強服務才是正道 (匯流新聞網) AI資料中心用電暴增！美國綠色政策開倒車 空污風險再升高 (科技島) 中東戰事推升油價 電動車需求升溫、二手市場同步爆發 (科技島) OpenAI龍頭地位搖搖欲墜！直擊HumanX大會 「Claude狂熱」席捲會場 (科技島) 看懂科技新聞必備術語！從AGI到蒸餾 熱門關鍵字一次看懂（上） (科技島) 馬斯克xAI發電廠布局爭議擴大 環團興訟要求撤銷許可 (科技島) 不吃早餐無助減肥！時間營養學解密 這兩餐早點吃有助變瘦 (科技島) Anthropic與五角大廈爭AI定位 陷供應鏈風險爭議 (商傳媒) 川普政策、中國崛起夾擊 歐洲製藥霸主地位不保 (科技島) Anthropic新型AI「Mythos」 揭萬種資安漏洞引發業界震盪 (商傳媒) 深耕海外市場！OpenAI宣布啟用倫敦永久辦公室 規模翻倍擴張 (科技島) AI衝擊下印度IT業加速轉型 併購新技術搶攻市場 (商傳媒) 阿斯特捷利康加速AI業務轉型 瞄準2030日本50項藥證 (商傳媒) 高枕未必無憂！枕頭過高恐釀眼壓升高 青光眼患者當心 (科技島) Anthropic這款「秘密AI」揪出數千個漏洞！英美政府緊急找銀行想應對方案 (科技島) 健康樂活 共好同行 前鎮河畔盛大舉辦五一健走活動 (商傳媒) 新竹竹北冷氣清潔 專業家電細清讓居家生活擺脫灰塵、黴菌困擾 (商傳媒) 數發部推無人機高空基地台 拚10月秀技術成果 (中央商情) 馬斯克布局先進封裝 SpaceX德州新廠年底前拚投產 (科技島) 中國晶片產業將被鎖喉？美國擬對中封殺深紫外光設備 (科技島) ChatGPT輔助學習效率更高？實測學生不靠AI「分數狠甩11分」 (科技島) Meta挫咧等！蘋果4款AI眼鏡樣式流出 庫克同款、還有絕美海洋藍 (科技島) OpenAI推100美元中階訂閱方案 鎖定高用量程式開發市場 (商傳媒) 日月光加碼千億投資高雄！估創逾2000個就業機會 串聯設備與材料供應鏈 (科技島) 亞馬遜AI晶片規模直逼超微、輝達！ CEO喊「熱到不行」 (科技島) 日企組國家隊！軟銀、NEC、Honda、Sony合資成立AI公司 力抗美中霸權 (科技島) 海撈記憶體狂潮！三星只靠DRAM就賺贏科技巨頭 (科技島) 中國開發AI機器人 完成逾2.2萬公里危險環境巡檢 (商傳媒) FormFactor積極搶攻AI與量子測試市場 供應鏈壓力緩解助營運 (商傳媒) 對決Meta！Snap攜高通推AI眼鏡 搶攻穿戴式終端市場 (科技島) 個人電腦也能運行頂級AI！開源模型Qwopus實現類Claude Opus推理能力 (商傳媒) 日本巨頭聯手成立AI公司 軟銀領軍抗衡美中技術主導 (商傳媒) 半世紀對望！「地球落下」現身 再掀1968年經典「地球升起」記憶 (科技島) UNLV報告揭博弈產業AI治理缺口 八成業者用生成式AI卻無管理計畫 (商傳媒) NASA阿提米絲計畫進入新階段 Artemis 3起邁向重返月球與長期駐留 (科技島) 【王智立專欄】投資新思維：問對問題 (Knowing新聞) 搶AI人才不手軟！Meta薪資大公開：軟體工程師年薪可突破千萬 (科技島) AI取代九成員工一年後：印度電商Dukaan營運成效驚艷市場 (商傳媒) 全球首位AI店主上線 舊金山精品店Luna營運揭AI潛在挑戰 (商傳媒) 印度中小學教育改革 2026學年起 AI 與運算思維納入課程 (商傳媒) 美出版商控Google AI摘要侵權 稱流量銳減損及營收 (商傳媒) 日本機械產業迎景氣復甦 國防、物理AI成焦點 (商傳媒) 【張瑞雄專欄】AI的良知誰說了算？ (Knowing新聞) Nvidia斥資50億美元入股Intel 兩大晶片巨擘聯手推進AI基礎建設 (商傳媒) Hut 8 受惠AI資料中心擴張與加密貨幣復甦，股價動能強勁 (商傳媒) AI輔助撰碼納入Linux核心 人類開發者仍是責任最終歸屬 (商傳媒) 加密貨幣預售市場轉向AI基礎設施 高實用性專案AlphaPepe受關注 (商傳媒) 五人團隊撐過低潮與現實壓力 拾曉遊戲用作品證明堅持價值 (樂聯網) Anthropic強大AI模型具潛在風險 英美監管機構急會商金融維安 (商傳媒) Anthropic AI模型揭數千漏洞 英美監管緊急會商金融資安威脅 (商傳媒) Meta強化社群平台AI購物工具 重塑電商與品牌行銷模式 (商傳媒) 以Startup Island TAIWAN推向國際舞台 矽谷新創基地助力AI (享新聞 ) Apple推出iOS更新強化資安 AI模型助揪漏洞 WhatsApp深度整合CarPlay (商傳媒) 蘋果 Safari 將整合 AI 搜尋功能 高層揭示潛在對手重塑市場 (商傳媒) 美國最新調查：逾兩成勞工工作遭AI接管 (商傳媒) AI 不只聊天！Applied Intuition 估值 150 億美元 領航智慧實體世界應用 (商傳媒) 微軟精簡AI介面：Windows 11多款應用移除Copilot按鈕 (商傳媒) Meta發表新一代AI模型Muse Spark 獲華爾街分析師高度盛讚股價飆漲 (商傳媒) 明知AI會出錯 為何8成人類還是選擇相信？一文告訴你什麼是「認知投降」 (科技島) 印度升學窄門僅1%錄取率 學界籲教育改革應對AI挑戰 (商傳媒) 特斯拉全自動輔助駕駛獲荷蘭首肯 歐洲監管迎自駕技術新里程 (商傳媒) 遊戲大廠Take-Two裁撤AI團隊 執行長稱AI缺乏人類創意 (商傳媒) 打鼾疲倦恐是警訊！醫揭睡眠呼吸中止症嚴重後果 唱歌有助改善 (科技島) 阿提米絲2號完成繞月壯舉 太空人籲地球團結共生 (中央社) 比亞迪海外訂單爆發！年度銷售目標上修至150萬輛 (科技島) 代理式AI解放創作者業務重擔 無需團隊效率倍增 (商傳媒) Zed編碼環境引領協作新趨勢 AI加速軟體開發流程 (商傳媒) 微軟發布AI治理工具 股價估值與動能受考驗 (商傳媒) AI自主學習框架問世 導入人類回饋加速智慧代理應用 (商傳媒) AI助社群內容爆紅效率增 故事影片圖像創作全面進化 (商傳媒) NFL球隊引進AI評估選秀新秀 彌補傳統球探盲點 (商傳媒) AI修圖利器對決：BeautyPlus與Adobe Express功能剖析與創作者選用指南 (商傳媒) Alarm.com 藉 AI 強化安防技術 分析師評估股價遭低估 (商傳媒) AI生成程式碼潛藏資安危機 客戶資料外洩凸顯技術監管急迫性 (商傳媒) AI時代銷售轉型：客戶成功須創收 人際互動成外展業務核心 (商傳媒) AI桌面助理「Accomplish」獲攝影師青睞 提升檔案管理效率 (商傳媒) Claude Code生態系關鍵轉型：CLI整合取代MCP成主流 (商傳媒) AI程式碼生成促企業效率躍升 工程師面臨審核壓力與資安挑戰 (商傳媒) IBM專家警示AI技術債風險 企業導入應重數據品質與模型治理 (商傳媒) AI恐成駭客「超級武器」 資安專家示警「漏洞末日」 (商傳媒) 美陸軍AI聊天機器人「勝利者」問世 烏伊衝突資料助訓練 (商傳媒) Generalist AI發表GEN-1模型 機器人任務成功率達99% (商傳媒) AI 外掛生成工具 Plugin Pal 問世 加速 WordPress 開發效率 (商傳媒) Character AI 2026 年用戶達 2000 萬 廣告與內容篩選惹議 (商傳媒) AI生成民調取代真人回覆 學者警告恐惡化資訊生態 (商傳媒) 美最高法院裁定AI創作作品無版權 業者憂智慧財產權受衝擊 (商傳媒) 中國UBTech祭1800萬美元年薪搶AI人才 人形機器人市場戰火升溫 (商傳媒) AI模型為「保護同類」竟說謊欺騙 專家示警自主行為風險 (商傳媒) Anthropic新AI模型恐釀網路災難 美政府與科技巨頭急商國安對策 (商傳媒) AI招聘光環受考驗 美國就業成長溫和科技業疲軟 (商傳媒) 三星Galaxy Watch 7藍牙AI版上市 40mm優惠價194.95美元 (商傳媒) DeepSeek V4模型四月下旬登場 兆級參數採用華為晶片 (商傳媒) OpenAI發布ChatGPT Pro 強化開發者AI編程能力 (商傳媒) Meta 擲 210 億美元與 CoreWeave 結盟 確保 AI 算力搶攻未來市場 (商傳媒) OpenAI Codex 無須 API 操作 Adobe AI自主駕馭專業軟體受矚 (商傳媒) Google Gemma 4強攻手機AI市場 端側運行強化用戶隱私 (商傳媒) OpenAI推百美元中階方案 瞄準開發者與進階用戶需求 (商傳媒) Google AI Studio登場簡化開發流程 Gemini Pro驅動「直覺編碼」躍進 (商傳媒) 微軟AI戰略面臨關鍵一役：自研模型拚股價反彈 (商傳媒) 看影片成本增加！YouTube Premium 3年內二度漲價 用戶哀號：越來越貴 (周刊王) LINE照片過期打不開怎麼辦？ 內行曝「1招破解」網實測驚：真的有用 (周刊王) 澳洲3月銷量創新高 比亞迪再超車特斯拉 (科技島) AI聊天機器人潛藏隱私風險 用戶應慎防八大類個資外洩 (商傳媒) Reddit社群經營結合AI可見度：專家揭秘品牌增長與營收新策略 (商傳媒) AI發展過快恐操縱行為 Maple AI執行長示警「比人更懂人」 (商傳媒) AI模型訓練策略新進展 RLSD兼顧穩定與效率 (商傳媒) AI成ADHD患者新興生產力工具 助克服執行功能挑戰 (商傳媒) 哈佛商學院MBA課程全面導入AI教學 強化未來商業領袖實戰能力 (商傳媒) BigBear.ai擁抱生成式AI平台 面臨市場挑戰與執行風險 (商傳媒) AI 發展新走向：Ranjan Roy 析影片 AI 退燒 OpenAI 轉型大型模型、SaaS 搶攻整合商機 (商傳媒) 網飛拓拉丁美洲市場 結合AI工具強化投資者敘事 (商傳媒) VSCO報告：攝影師AI應用現況調查 逾八成已採用仍憂創作自主 (商傳媒) 人工智慧驅動全球能源需求驟增 資料中心耗電量十年內恐倍增 (商傳媒) AI助攻加密貨幣研究 Pieverse與RootData結盟提升決策效率 (商傳媒) 微軟高層：AI 助理未來軟體授權應比照員工計費 (商傳媒) 阿提米絲2號通過重返考驗 川普賀凱旋：下一步火星 (中央社) 「零信任」延伸AI代理防線 Anthropic、Nvidia推新架構抗風險 (商傳媒) Anthropic封鎖OpenClaw創辦人 AI API定價爭議浮現生態系裂痕 (商傳媒) 沃爾瑪深化AI應用：攜手Google Gemini 優化購物、助推美國製造 (商傳媒) 思科傳2.5億美元併購Astrix Security 強化AI代理安全 (商傳媒) Tillman Holloway：比特幣將成小型企業儲蓄首選 AI浪潮衝擊市場與職場生態 (商傳媒) AI語音生成工具掀熱潮 簡化內容創作開拓行銷新局 (商傳媒) AI工具助副業年收破七位數 企業家揭無技術門檻心法 (商傳媒) Z世代員工憂AI搶飯碗 逾兩成企業員工蓄意破壞AI導入策略 (商傳媒) 蓋洛普：Z世代對AI態度轉趨審慎 憂心風險超越熱情 (商傳媒) 美國警方廣用AI助偵查 破案加速卻伴隨倫理爭議 (商傳媒) Anthropic 揭秘 Claude AI 代理工具哲學 強調「漸進式揭露」 (商傳媒) 英國超市薪資爭議：通膨壓力下被捨棄的「真實生活工資」 (草根影響力新視野) 川普召集金融巨頭研討AI威脅 防範Anthropic模型駭客衝擊 (商傳媒) Anthropic新AI模型Mythos引發資安疑慮 美財長與聯準會警告銀行業 (商傳媒) 阿提米絲2號太空人重返地球 完成歷史性繞月任務 (中央社) 中市府建構AI分層培力架構 強化各級主管數位治理能力 (享新聞 ) AI寫作太死板？資深達人教你下對指令：剪除常用廢話、注入真實人格 (科技島) 智冠設AI發展中心 布局生成式AI擴大營運動能 (中央商情) 4/10-4/13台北電器空調影音3C大展 展場限定商品下殺49折起 冰箱+洗衣機萬元有找 (威傳媒) 伊朗稱荷莫茲海峽布雷 法研發無人掃雷艇助探測清理 (中央社) 穩懋通過辦理私募案 總額不超過4000萬股 (中央商情) 一冠一亞＋聯合國邀請 建中生王金程憑機器人、AI實力躍上國際舞台 (匯流新聞網) 奇美家電登場2026電器展 法老祕寶降臨 滿額抽好禮「Mini QLED 天天送」 AI影音與節能科技全面升級 (威傳媒) 《錨點降臨 Re：Code》一週年登場！3大戰員、多重福利活動全面開啟 (威傳媒) 安圖斯布局亞太AI市場 推動「印度製造」在地化策略 (中央商情) 和碩3大產品線同步成長 3月營收月增23% (中央商情) 購買碳權兼防野火 摩根大通攜手新創公司 (中央社) Anthropic評估自研AI晶片 應對算力短缺與競爭壓力 (科技島) 聖暉、朋億營收歷年最旺3月 銳澤第1季創同期新高 (中央商情) 研究揭大腦會欺騙味覺 告訴你「飲料含糖」評價竟變高 (科技島) 南韓地方共商AI發展策略 區域合作模式可為台灣借鑑 (商傳媒) 安兔兔破350萬分、雙晶片架構 iQOO 15R強攻台灣電競手機市場 (商傳媒) 比亞迪、特斯拉雙強格局鬆動 電動車新勢力快速崛起 (科技島) 引領產業邁入全新AI時代 TVBS攜手DTA舉行AI新聞分享 (匯流新聞網) 翹腳傷膝又傷背？長輩錯了！專家打破迷思「關鍵在這一點」 (科技島) 大便卡關好痛苦？哈佛醫授3關鍵告別便秘「1姿勢更順暢」 (科技島) 正旭鋁模－專業鋁模板公司推薦 工程效率與成本優化專家 (商傳媒) 特斯拉傳重啟平價電動車布局 開發全新小型SUV、售價有望低於Model 3 (科技島) AI投資熱潮捲土重來 科技巨頭加碼數千億美元搶奪算力 (商傳媒) Z世代對AI情緒複雜：興奮減、憤怒增，憂心就業衝擊與學習困難 (商傳媒) Kuva Space延攬Routila任董事長 鞏固歐洲AI太空情報市場 (商傳媒) Rork獲1500萬美元種子輪融資 AI平台革新行動App開發 (商傳媒) 英特爾、Google擴大合作 抓緊反攻契機押注AI CPU市場 (科技島) 讓 AI 長出手腳！國家智慧機器人研究中心今揭牌，5 大關鍵佈局一次看 (Knowing新聞) 70人德國AI新創擊敗矽谷巨頭 Black Forest Labs轉戰實體AI市場 (商傳媒) Aurascape募得5千萬美元注資 強攻企業AI應用安全市場 (商傳媒) 行動版 電腦版 分類新聞 最新 政治 社會 財經 科技 娛樂 體育 生活 國際 健康 寵物 情商 星座 職場 流行 新聞人物 政治 社會 娛樂 體育 科技 國際 財經 新聞專題 精選專題 星座 算命 農民曆 擇日 對獎 樂透 統一發票 氣象 今日天氣 一週天氣 旅遊天氣 國際天氣 天氣圖 警特報 影音新聞 政治 社會 財經 科技 娛樂 體育 生活 國際 健康 消費 旅遊 其他 新聞照片 政治 社會 財經 科技 娛樂 生活 國際 健康 消費 旅遊 大陸 其他 雜誌 總覽 政治 投資 管理 消費 好生活 藝文 公益 愛地球 關鍵字 最新關鍵字'
+            content_source: 'html_fallback'
+            fetch_status: 'success'
+            fetch_error: ''

@@ -1,0 +1,1552 @@
+{
+  "step": "step_2",
+  "report_date": "2026-04-17",
+  "input_path": "E:\\AI\\touzifenxi\\skills\\websearch\\output\\reports\\kr36_report\\kr36_search_202604171152\\kr36_step_1_analysis_20260417.csv",
+  "output_path": "E:\\AI\\touzifenxi\\skills\\websearch\\output\\reports\\kr36_report\\kr36_search_202604171152\\kr36_step_2_search_checklist_20260417.yaml",
+  "generated_at": "2026-04-17T11:54:41+08:00",
+  "updated_at": "2026-04-17T11:55:36+08:00",
+  "status_summary": {
+    "total": 73,
+    "pending": 0,
+    "success": 73,
+    "error": 0,
+    "parse_error": 0,
+    "postprocess_error": 0,
+    "aborted": 0
+  },
+  "entries": [
+    {
+      "entry_id": "article::AI大模型与产品更新::AI可以自审代码了，Opus 4.7出手解决“屎山”",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "首页最新文章",
+        "original_title": "AI可以自审代码了，Opus 4.7出手解决“屎山”",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770168317358593"
+      },
+      "result": {
+        "keywords": [
+          "Opus 4.7 自审代码 屎山"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::Canva可画正式发布Canva AI 2.0",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "快讯",
+        "original_title": "Canva可画正式发布Canva AI 2.0",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770327661363971"
+      },
+      "result": {
+        "keywords": [
+          "Canva AI 2.0 发布"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::Claude Opus 4.7深夜炸场，胜任更长任务、自主检查，视觉能力拉满",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "首页最新文章",
+        "original_title": "Claude Opus 4.7深夜炸场，胜任更长任务、自主检查，视觉能力拉满",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770041238979336"
+      },
+      "result": {
+        "keywords": [
+          "Claude Opus 4.7 长任务 视觉能力"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::Claude Opus 4.7连夜突袭：或将抢走全球7亿打工人饭碗",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "首页最新文章",
+        "original_title": "Claude Opus 4.7连夜突袭：或将抢走全球7亿打工人饭碗",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770103465607685"
+      },
+      "result": {
+        "keywords": [
+          "Claude Opus 4.7 就业影响"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::刚刚，Claude Opus 4.7突然发布：不是最强，但奥特曼又得失眠",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "首页最新文章",
+        "original_title": "刚刚，Claude Opus 4.7突然发布：不是最强，但奥特曼又得失眠",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770089953509894"
+      },
+      "result": {
+        "keywords": [
+          "Claude Opus 4.7 发布 奥特曼"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::华为推出伴随式AI解决方案",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "快讯",
+        "original_title": "华为推出伴随式AI解决方案",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770277733745414"
+      },
+      "result": {
+        "keywords": [
+          "华为 伴随式 AI 解决方案"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::协创数据在天津成立词元智算科技公司，含AI业务",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "快讯",
+        "original_title": "协创数据在天津成立词元智算科技公司，含AI业务",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770311960658441"
+      },
+      "result": {
+        "keywords": [
+          "协创数据 词元智算 AI 公司"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::史诗级进化，OpenAI上线Mac版“超级龙虾”：Codex进化成赛博同事",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "首页最新文章",
+        "original_title": "史诗级进化，OpenAI上线Mac版“超级龙虾”：Codex进化成赛博同事",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770202199323136"
+      },
+      "result": {
+        "keywords": [
+          "OpenAI Mac 版 超级龙虾 Codex"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::大厂资深程序员，“未来码农的优势可能是比AI更便宜”",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "首页最新文章",
+        "original_title": "大厂资深程序员，“未来码农的优势可能是比AI更便宜”",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770190481015301"
+      },
+      "result": {
+        "keywords": [
+          "大厂程序员 AI 替代 成本"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::最高涨463%，算力全面涨价后，老板开始考核“谁用的Token最少”⋯⋯",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "首页最新文章",
+        "original_title": "最高涨463%，算力全面涨价后，老板开始考核“谁用的Token最少”⋯⋯",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770237271572998"
+      },
+      "result": {
+        "keywords": [
+          "算力涨价 Token 成本考核"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::红杉资本据悉筹集70亿美元押注AI浪潮，新领导层首次募资",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "快讯",
+        "original_title": "红杉资本据悉筹集70亿美元押注AI浪潮，新领导层首次募资",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770199017227013"
+      },
+      "result": {
+        "keywords": [
+          "红杉资本 70亿美元 AI 募资"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::阿里开源千问3.6系列中等尺寸模型",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "快讯",
+        "original_title": "阿里开源千问3.6系列中等尺寸模型",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770357608219395"
+      },
+      "result": {
+        "keywords": [
+          "阿里 千问3.6 开源模型"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI大模型与产品更新::飞猪AI开放平台上线",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:03+08:00",
+      "request_context": {
+        "topic": "AI大模型与产品更新",
+        "channel": "快讯",
+        "original_title": "飞猪AI开放平台上线",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770301663953669"
+      },
+      "result": {
+        "keywords": [
+          "飞猪 AI 开放平台"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::2026年你真正该专注的事，其余全是噪音",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "首页最新文章",
+        "original_title": "2026年你真正该专注的事，其余全是噪音",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3731492566827009"
+      },
+      "result": {
+        "keywords": [
+          "2026年 专注 趋势"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::4平米的经济型酒店，真的赚钱吗？",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "首页最新文章",
+        "original_title": "4平米的经济型酒店，真的赚钱吗？",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770227506950657"
+      },
+      "result": {
+        "keywords": [
+          "4平米的经济型酒店 真的赚钱吗"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::东吴证券：技术革新、规模量产、国产替代共同驱动环卫无人设备降本逻辑",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "东吴证券：技术革新、规模量产、国产替代共同驱动环卫无人设备降本逻辑",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770192259285504"
+      },
+      "result": {
+        "keywords": [
+          "环卫无人设备 降本 驱动"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::中信建投：继续看好锂电设备与固态电池板块配置价值",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "中信建投：继续看好锂电设备与固态电池板块配置价值",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770191805055497"
+      },
+      "result": {
+        "keywords": [
+          "锂电设备 固态电池 配置价值"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::中金财富期货：预计短期钢材期价反弹空间受限，维持承压运行",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "中金财富期货：预计短期钢材期价反弹空间受限，维持承压运行",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770233567920643"
+      },
+      "result": {
+        "keywords": [
+          "钢材期货 价格 承压"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::全球最大船用风力旋筒助推系统今日发布",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "全球最大船用风力旋筒助推系统今日发布",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770221240140544"
+      },
+      "result": {
+        "keywords": [
+          "船用风力旋筒 系统 发布"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::具身智能领域首个国际标准成功立项",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "具身智能领域首个国际标准成功立项",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770264480498440"
+      },
+      "result": {
+        "keywords": [
+          "具身智能 国际标准 立项"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::北大医学博士：80%猝死的人，平时看起来都很正常",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "首页最新文章",
+        "original_title": "北大医学博士：80%猝死的人，平时看起来都很正常",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770156143493892"
+      },
+      "result": {
+        "keywords": [
+          "猝死 健康预警"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::协创数据：供需缺口格局在3年—5年内难以改变，存储行业缺货状态将持续",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "协创数据：供需缺口格局在3年—5年内难以改变，存储行业缺货状态将持续",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770187556061705"
+      },
+      "result": {
+        "keywords": [
+          "存储行业 缺货 供需缺口"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::告别野蛮生长，信用卡发行按下减速键",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "告别野蛮生长，信用卡发行按下减速键",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770190967652867"
+      },
+      "result": {
+        "keywords": [
+          "信用卡 发行 减速"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::广汽本田型格部分版本停产，涉手动挡车型",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "广汽本田型格部分版本停产，涉手动挡车型",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770345723429634"
+      },
+      "result": {
+        "keywords": [
+          "广汽本田型格 停产 手动挡"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::我国核电总装机容量达到1.25亿千瓦，居全球第一",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "我国核电总装机容量达到1.25亿千瓦，居全球第一",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770217785590530"
+      },
+      "result": {
+        "keywords": [
+          "核电 装机容量 全球第一"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::本田据悉将暂停部分在华燃油车厂的运营",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "本田据悉将暂停部分在华燃油车厂的运营",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770257834885890"
+      },
+      "result": {
+        "keywords": [
+          "本田 燃油车厂 暂停 运营"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::机器人租赁平台擎天租官宣出海动作，首批业务落地13国",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "机器人租赁平台擎天租官宣出海动作，首批业务落地13国",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770370408841984"
+      },
+      "result": {
+        "keywords": [
+          "擎天租 出海 13国"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::武汉长江存储一季度收入已超200亿元，正进行“史诗级扩产”",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "武汉长江存储一季度收入已超200亿元，正进行“史诗级扩产”",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770303536825092"
+      },
+      "result": {
+        "keywords": [
+          "长江存储 收入 扩产"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::特斯拉据悉禁止Model S/X签名版一年内转售，违者罚款5万美元并列入黑名单",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "特斯拉据悉禁止Model S/X签名版一年内转售，违者罚款5万美元并列入黑名单",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770200219812610"
+      },
+      "result": {
+        "keywords": [
+          "特斯拉 Model S/X 转售 限制"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::生意社：尿素供应短缺影响持续，需关注产能恢复",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "生意社：尿素供应短缺影响持续，需关注产能恢复",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770328807522817"
+      },
+      "result": {
+        "keywords": [
+          "尿素 供应短缺 产能"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::生意社：短期预计丙二醇市场将继续维持高位窄幅震荡格局",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "生意社：短期预计丙二醇市场将继续维持高位窄幅震荡格局",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770326472983042"
+      },
+      "result": {
+        "keywords": [
+          "丙二醇 价格 震荡"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::索尼与本田将继续在移动出行领域展开合作",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "索尼与本田将继续在移动出行领域展开合作",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770309009687302"
+      },
+      "result": {
+        "keywords": [
+          "索尼 本田 移动出行 合作"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::药品定价新政赋能创新，海外授权加速行业双轮驱动",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "药品定价新政赋能创新，海外授权加速行业双轮驱动",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770184553874183"
+      },
+      "result": {
+        "keywords": [
+          "药品定价 新政 海外授权"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::产业技术与行业趋势::雷军：小米未来几年不会做十万元以内车型",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:33+08:00",
+      "request_context": {
+        "topic": "产业技术与行业趋势",
+        "channel": "快讯",
+        "original_title": "雷军：小米未来几年不会做十万元以内车型",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770315863048966"
+      },
+      "result": {
+        "keywords": [
+          "雷军 小米未来几年不会做十万元以内车型"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::4月17日人民币对美元中间价调贬6个基点",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "4月17日人民币对美元中间价调贬6个基点",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770233100731137"
+      },
+      "result": {
+        "keywords": [
+          "人民币对美元中间价调贬"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::一线房价，全面转涨",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "首页最新文章",
+        "original_title": "一线房价，全面转涨",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770276970480390"
+      },
+      "result": {
+        "keywords": [
+          "一线房价 全面转涨"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::发改委：加快有序投放8000亿元新型政策性金融工具资金",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "发改委：加快有序投放8000亿元新型政策性金融工具资金",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770330904101377"
+      },
+      "result": {
+        "keywords": [
+          "新型政策性金融工具资金投放"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::发改委：着力扩大国内有效需求，将制定2026年—2030年扩大内需战略实施方案",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "发改委：着力扩大国内有效需求，将制定2026年—2030年扩大内需战略实施方案",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770293600273159"
+      },
+      "result": {
+        "keywords": [
+          "扩大内需战略实施方案"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::发改委：要加快形成低空关键装备谱系，带动上下游配套产业",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "发改委：要加快形成低空关键装备谱系，带动上下游配套产业",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770336543506953"
+      },
+      "result": {
+        "keywords": [
+          "低空关键装备谱系"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::发改委：要深入实施“十五五”规划纲要，加快推进109项重大工程项目实施",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "发改委：要深入实施“十五五”规划纲要，加快推进109项重大工程项目实施",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770289334206979"
+      },
+      "result": {
+        "keywords": [
+          "十五五规划重大工程项目"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::发改委：预计到2030年非化石能源供应规模将比2025年显著增长",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "发改委：预计到2030年非化石能源供应规模将比2025年显著增长",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770311608009473"
+      },
+      "result": {
+        "keywords": [
+          "发改委 预计到2030年非化石能源供应规模将比2025年显著增长"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::国家发展改革委和交通运输部正在牵头编制《现代综合交通运输体系发展“十五五”规划》",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "国家发展改革委和交通运输部正在牵头编制《现代综合交通运输体系发展“十五五”规划》",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770371366076935"
+      },
+      "result": {
+        "keywords": [
+          "国家发展改革委和交通运输部正在牵头编制《现代综合交通运输体系发展“十五五”规划》"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::国家发展改革委：一季度投资、消费、价格等指标明显改善",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "国家发展改革委：一季度投资、消费、价格等指标明显改善",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770325521892099"
+      },
+      "result": {
+        "keywords": [
+          "国家发展改革委 一季度投资、消费、价格等指标明显改善"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::国家发改委：今年将重点在“人工智能+”基础设施等领域，开展一系列扩大有效投资行动",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "国家发改委：今年将重点在“人工智能+”基础设施等领域，开展一系列扩大有效投资行动",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770348485558787"
+      },
+      "result": {
+        "keywords": [
+          "人工智能+基础设施投资"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::国家统计局：一季度金融业产值同比增长6.5%",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "国家统计局：一季度金融业产值同比增长6.5%",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770251002725120"
+      },
+      "result": {
+        "keywords": [
+          "国家统计局 一季度金融业产值同比增长6.5%"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::广东：《支持中山在参与粤港澳大湾区建设中加快高质量发展的意见》正式发布",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "广东：《支持中山在参与粤港澳大湾区建设中加快高质量发展的意见》正式发布",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770281992930048"
+      },
+      "result": {
+        "keywords": [
+          "中山 粤港澳大湾区高质量发展"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::引入储架发行制度，创业板精准适配创新企业融资需求",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "引入储架发行制度，创业板精准适配创新企业融资需求",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770185746137865"
+      },
+      "result": {
+        "keywords": [
+          "引入储架发行制度 创业板精准适配创新企业融资需求"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::潘功胜：中国人民银行将实施好适度宽松的货币政策",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "潘功胜：中国人民银行将实施好适度宽松的货币政策",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770324081459977"
+      },
+      "result": {
+        "keywords": [
+          "潘功胜 适度宽松货币政策"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::宏观经济与政策动向::美国货币市场基金规模缩水1758.1亿美元",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:36+08:00",
+      "request_context": {
+        "topic": "宏观经济与政策动向",
+        "channel": "快讯",
+        "original_title": "美国货币市场基金规模缩水1758.1亿美元",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770210624225797"
+      },
+      "result": {
+        "keywords": [
+          "美国货币市场基金规模缩水"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::7只游戏股年内获融资资金加仓超1亿元",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "7只游戏股年内获融资资金加仓超1亿元",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770192634069767"
+      },
+      "result": {
+        "keywords": [
+          "游戏股 融资 加仓"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::8点1氪丨全季大连某酒店账号公开多名客人特殊订单备注；金立手机创始人被曝在印尼卖家具；雷军将连播15小时测试新SU7续航",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "首页最新文章",
+        "original_title": "8点1氪丨全季大连某酒店账号公开多名客人特殊订单备注；金立手机创始人被曝在印尼卖家具；雷军将连播15小时测试新SU7续航",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3770155029398018"
+      },
+      "result": {
+        "keywords": [
+          "雷军 SU7 续航测试"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::A股三大指数午间休盘涨跌不一，源杰科技股价超越茅台成A股新“股王”",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "A股三大指数午间休盘涨跌不一，源杰科技股价超越茅台成A股新“股王”",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770364089500419"
+      },
+      "result": {
+        "keywords": [
+          "源杰科技 股价 超越茅台"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::A股三大指数开盘涨跌不一，贵州茅台跌超4%",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "A股三大指数开盘涨跌不一，贵州茅台跌超4%",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770241282621959"
+      },
+      "result": {
+        "keywords": [
+          "A股开盘 贵州茅台 下跌"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::B站发布2025年度ESG报告：日活用户达1.12亿",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "B站发布2025年度ESG报告：日活用户达1.12亿",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770244386259716"
+      },
+      "result": {
+        "keywords": [
+          "B站 ESG报告 日活"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::“龙虾出行”完成近亿元天使轮融资",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "“龙虾出行”完成近亿元天使轮融资",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770269152264705"
+      },
+      "result": {
+        "keywords": [
+          "龙虾出行 天使轮 融资"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::两市融资余额增加107.35亿元",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "两市融资余额增加107.35亿元",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770207224972035"
+      },
+      "result": {
+        "keywords": [
+          "两市 融资余额 增加"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::丸红旗下公司斥资2.04亿欧元收购Factor Energy 85%股份",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "丸红旗下公司斥资2.04亿欧元收购Factor Energy 85%股份",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770296559813124"
+      },
+      "result": {
+        "keywords": [
+          "丸红 收购 Factor Energy"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::光线传媒在北京成立文化娱乐公司",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "光线传媒在北京成立文化娱乐公司",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770339723411971"
+      },
+      "result": {
+        "keywords": [
+          "光线传媒 成立 文化娱乐公司"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::创业板指涨超1%，继续刷新近11年新高",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "创业板指涨超1%，继续刷新近11年新高",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770265544426246"
+      },
+      "result": {
+        "keywords": [
+          "创业板指 刷新 新高"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::半日主力资金加仓电子板块，抛售医药生物板块",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "半日主力资金加仓电子板块，抛售医药生物板块",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770383419785987"
+      },
+      "result": {
+        "keywords": [
+          "主力资金 电子板块 加仓"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::大立光第一季度营收155.4亿元台币，同比增长6.6%",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "大立光第一季度营收155.4亿元台币，同比增长6.6%",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770224393552385"
+      },
+      "result": {
+        "keywords": [
+          "大立光 Q1 营收"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::恒指开盘跌0.69%，恒生科技指数跌0.72%",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "恒指开盘跌0.69%，恒生科技指数跌0.72%",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770237769909000"
+      },
+      "result": {
+        "keywords": [
+          "恒指 恒生科技指数 开盘下跌"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::方一天离任万家基金董事长",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "方一天离任万家基金董事长",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770203326759685"
+      },
+      "result": {
+        "keywords": [
+          "方一天 离任 万家基金"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::智元发布358宏图计划，目标2030年实现1000亿+营收",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "智元发布358宏图计划，目标2030年实现1000亿+营收",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770382527037952"
+      },
+      "result": {
+        "keywords": [
+          "智元 358宏图计划"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::智元邓泰华：智元2025年度营收达10.5亿元",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "智元邓泰华：智元2025年度营收达10.5亿元",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770300667724545"
+      },
+      "result": {
+        "keywords": [
+          "智元 2025年 营收"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::最前线｜大疆发布 Pocket 4 并预告双摄版本，起售价下调500元",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "首页最新文章",
+        "original_title": "最前线｜大疆发布 Pocket 4 并预告双摄版本，起售价下调500元",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/p/3769604011885316"
+      },
+      "result": {
+        "keywords": [
+          "大疆 Pocket 4 发布"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::有赞登陆港交所主板",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "有赞登陆港交所主板",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770285217825288"
+      },
+      "result": {
+        "keywords": [
+          "有赞 港交所 上市"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::源杰科技股价超越茅台，成A股新“股王”",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "源杰科技股价超越茅台，成A股新“股王”",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770259964510729"
+      },
+      "result": {
+        "keywords": [
+          "源杰科技 股王"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::王腾今日宜休在深圳成立科技新公司",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "王腾今日宜休在深圳成立科技新公司",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770320643637765"
+      },
+      "result": {
+        "keywords": [
+          "王腾 成立 科技公司"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::瑞幸将上线瓶装咖啡，售价6-7元",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "瑞幸将上线瓶装咖啡，售价6-7元",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770290783060738"
+      },
+      "result": {
+        "keywords": [
+          "瑞幸 瓶装咖啡 上线"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::近八成A股上市民企去年实现盈利",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "近八成A股上市民企去年实现盈利",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770183430816265"
+      },
+      "result": {
+        "keywords": [
+          "A股上市民企 盈利"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::远景动力据悉考虑通过香港IPO筹资至多20亿美元",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "远景动力据悉考虑通过香港IPO筹资至多20亿美元",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770376783725314"
+      },
+      "result": {
+        "keywords": [
+          "远景动力 香港IPO"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::资本市场与公司动态::高盛两名亚洲资深银行家据悉将离职",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-17T11:55:14+08:00",
+      "request_context": {
+        "topic": "资本市场与公司动态",
+        "channel": "快讯",
+        "original_title": "高盛两名亚洲资深银行家据悉将离职",
+        "original_published_at": "2026-04-17",
+        "original_url": "https://36kr.com/newsflashes/3770209363608069"
+      },
+      "result": {
+        "keywords": [
+          "高盛 亚洲 银行家 离职"
+        ]
+      },
+      "error": {}
+    }
+  ]
+}

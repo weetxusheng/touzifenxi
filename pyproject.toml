@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-touzifenxi = "touzifenxi.cli:main"
+touzifenxi = "utils.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -35,28 +35,26 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src", "skills/websearch/src"]
+pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 
 [tool.ruff]
 target-version = "py39"
 line-length = 120
-src = ["src", "tests", "skills/websearch/src"]
+src = ["src"]
 include = [
   "pyproject.toml",
   "src/**/*.py",
-  "tests/**/*.py",
-  "skills/**/*.py",
 ]
 extend-exclude = [
   ".venv",
   "alembic",
   "build",
-  "data",
   "reports",
   "src/touzifenxi.egg-info",
   "state",
+  "output",
 ]
 
 [tool.ruff.lint]

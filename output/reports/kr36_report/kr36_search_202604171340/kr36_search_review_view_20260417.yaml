@@ -1,0 +1,576 @@
+report_date: '2026-04-17'
+input_path: 'E:\AI\touzifenxi\skills\websearch\output\reports\kr36_report\kr36_search_202604171340\kr36_step_2_search_checklist_20260417.yaml'
+categories:
+  - topic: 'AI大模型技术与应用进展'
+    items:
+      - original_title: 'Claude Opus 4.7连夜突袭：或将抢走全球7亿打工人饭碗'
+        original_url: 'https://36kr.com/p/3770103465607685'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '史诗级进化，OpenAI上线Mac版“超级龙虾”：Codex进化成赛博同事'
+        original_url: 'https://36kr.com/p/3770202199323136'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '刚刚，Claude Opus 4.7突然发布：不是最强，但奥特曼又得失眠'
+        original_url: 'https://36kr.com/p/3770089953509894'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'Claude Opus 4.7深夜炸场，胜任更长任务、自主检查，视觉能力拉满'
+        original_url: 'https://36kr.com/p/3770041238979336'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'AI可以自审代码了，Opus 4.7出手解决“屎山”'
+        original_url: 'https://36kr.com/p/3770168317358593'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '最高涨463%，算力全面涨价后，老板开始考核“谁用的Token最少”⋯⋯'
+        original_url: 'https://36kr.com/p/3770237271572998'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'Kimi的问题不在对手，而在起点'
+        original_url: 'https://36kr.com/p/3770372392010499'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'Gemini桌面客户端终于上线：直接读取屏幕上下文，帮你解读一切'
+        original_url: 'https://36kr.com/p/3770104217944581'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '老黄可能开始焦虑了'
+        original_url: 'https://36kr.com/p/3769588013330945'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '大厂资深程序员，“未来码农的优势可能是比AI更便宜”'
+        original_url: 'https://36kr.com/p/3770190481015301'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'Claude Opus 4.7炸场，6美元造《我的世界》，临门AGI前强调安全，打工人却更慌了'
+        original_url: 'https://36kr.com/p/3770121995911944'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '智能体时代 AI 选择指南'
+        original_url: 'https://36kr.com/p/3734928327655687'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'AI大模型吞噬软件路径推演'
+        original_url: 'https://36kr.com/p/3770148992582152'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '通义千问关联公司增资至2亿元'
+        original_url: 'https://36kr.com/newsflashes/3770417832346116'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '阿里开源千问3.6系列中等尺寸模型'
+        original_url: 'https://36kr.com/newsflashes/3770357608219395'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'Canva可画正式发布Canva AI 2.0'
+        original_url: 'https://36kr.com/newsflashes/3770327661363971'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '协创数据在天津成立词元智算科技公司，含AI业务'
+        original_url: 'https://36kr.com/newsflashes/3770311960658441'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '飞猪AI开放平台上线'
+        original_url: 'https://36kr.com/newsflashes/3770301663953669'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '华为推出伴随式AI解决方案'
+        original_url: 'https://36kr.com/newsflashes/3770277733745414'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '具身智能领域首个国际标准成功立项'
+        original_url: 'https://36kr.com/newsflashes/3770264480498440'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: '产业动态与公司战略'
+    items:
+      - original_title: '8点1氪丨全季大连某酒店账号公开多名客人特殊订单备注；金立手机创始人被曝在印尼卖家具；雷军将连播15小时测试新SU7续航'
+        original_url: 'https://36kr.com/p/3770155029398018'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '最前线｜大疆发布 Pocket 4 并预告双摄版本，起售价下调500元'
+        original_url: 'https://36kr.com/p/3769604011885316'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '北大医学博士：80%猝死的人，平时看起来都很正常'
+        original_url: 'https://36kr.com/p/3770156143493892'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '2026年你真正该专注的事，其余全是噪音'
+        original_url: 'https://36kr.com/p/3731492566827009'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '4平米的经济型酒店，真的赚钱吗？'
+        original_url: 'https://36kr.com/p/3770227506950657'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '海底捞最有号召力的女人，又回来了'
+        original_url: 'https://36kr.com/p/3770160924869120'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '零跑D19正式上市'
+        original_url: 'https://36kr.com/newsflashes/3770477774799360'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '金螳螂：与越南Sun Group签署的备忘录中不涉及任何具体项目及具体金额'
+        original_url: 'https://36kr.com/newsflashes/3770469160043268'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '爱立信第一季度销售净额493.3亿瑞典克朗，不及预期'
+        original_url: 'https://36kr.com/newsflashes/3770457512788483'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '长鑫存储、长江存储现“先款排产”'
+        original_url: 'https://36kr.com/newsflashes/3770451858965251'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '迪拜启用全球首个综合空中出租车起降场'
+        original_url: 'https://36kr.com/newsflashes/3770413052871169'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '淡水河谷一季度铁矿石总产量6970万吨，同比增长3%'
+        original_url: 'https://36kr.com/newsflashes/3770412303221506'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '苹果31年元老、营销副总裁斯坦·吴宣布退休'
+        original_url: 'https://36kr.com/newsflashes/3770411543331331'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '智元发布358宏图计划，目标2030年实现1000亿+营收'
+        original_url: 'https://36kr.com/newsflashes/3770382527037952'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '机器人租赁平台擎天租官宣出海动作，首批业务落地13国'
+        original_url: 'https://36kr.com/newsflashes/3770370408841984'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '广汽本田型格部分版本停产，涉手动挡车型'
+        original_url: 'https://36kr.com/newsflashes/3770345723429634'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '光线传媒在北京成立文化娱乐公司'
+        original_url: 'https://36kr.com/newsflashes/3770339723411971'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '生意社：尿素供应短缺影响持续，需关注产能恢复'
+        original_url: 'https://36kr.com/newsflashes/3770328807522817'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '生意社：短期预计丙二醇市场将继续维持高位窄幅震荡格局'
+        original_url: 'https://36kr.com/newsflashes/3770326472983042'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '王腾今日宜休在深圳成立科技新公司'
+        original_url: 'https://36kr.com/newsflashes/3770320643637765'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '雷军：小米未来几年不会做十万元以内车型'
+        original_url: 'https://36kr.com/newsflashes/3770315863048966'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '索尼与本田将继续在移动出行领域展开合作'
+        original_url: 'https://36kr.com/newsflashes/3770309009687302'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '武汉长江存储一季度收入已超200亿元，正进行“史诗级扩产”'
+        original_url: 'https://36kr.com/newsflashes/3770303536825092'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '智元邓泰华：智元2025年度营收达10.5亿元'
+        original_url: 'https://36kr.com/newsflashes/3770300667724545'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '瑞幸将上线瓶装咖啡，售价6-7元'
+        original_url: 'https://36kr.com/newsflashes/3770290783060738'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '本田据悉将暂停部分在华燃油车厂的运营'
+        original_url: 'https://36kr.com/newsflashes/3770257834885890'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'B站发布2025年度ESG报告：日活用户达1.12亿'
+        original_url: 'https://36kr.com/newsflashes/3770244386259716'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: '宏观经济与政策动态'
+    items:
+      - original_title: '一线房价，全面转涨'
+        original_url: 'https://36kr.com/p/3770276970480390'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '德意志银行预计美联储将在2026年维持利率不变'
+        original_url: 'https://36kr.com/newsflashes/3770489993052929'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '长沙经开区先进制造产业基金注册成立'
+        original_url: 'https://36kr.com/newsflashes/3770397781246727'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '广州：培育智能建造产业集群，推动建筑机器人、自动化施工机械创新应用'
+        original_url: 'https://36kr.com/newsflashes/3770397190226436'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '国家发展改革委：今年上半年一批国家级专项规划将陆续出台'
+        original_url: 'https://36kr.com/newsflashes/3770394996474629'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '国家发展改革委和交通运输部正在牵头编制《现代综合交通运输体系发展“十五五”规划》'
+        original_url: 'https://36kr.com/newsflashes/3770371366076935'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '国家发改委：今年将重点在“人工智能+”基础设施等领域，开展一系列扩大有效投资行动'
+        original_url: 'https://36kr.com/newsflashes/3770348485558787'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '发改委：要加快形成低空关键装备谱系，带动上下游配套产业'
+        original_url: 'https://36kr.com/newsflashes/3770336543506953'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '发改委：加快有序投放8000亿元新型政策性金融工具资金'
+        original_url: 'https://36kr.com/newsflashes/3770330904101377'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '国家发展改革委：一季度投资、消费、价格等指标明显改善'
+        original_url: 'https://36kr.com/newsflashes/3770325521892099'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '潘功胜：中国人民银行将实施好适度宽松的货币政策'
+        original_url: 'https://36kr.com/newsflashes/3770324081459977'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '发改委：预计到2030年非化石能源供应规模将比2025年显著增长'
+        original_url: 'https://36kr.com/newsflashes/3770311608009473'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '发改委：着力扩大国内有效需求，将制定2026年—2030年扩大内需战略实施方案'
+        original_url: 'https://36kr.com/newsflashes/3770293600273159'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '发改委：要深入实施“十五五”规划纲要，加快推进109项重大工程项目实施'
+        original_url: 'https://36kr.com/newsflashes/3770289334206979'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '广东：《支持中山在参与粤港澳大湾区建设中加快高质量发展的意见》正式发布'
+        original_url: 'https://36kr.com/newsflashes/3770281992930048'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '国家统计局：一季度金融业产值同比增长6.5%'
+        original_url: 'https://36kr.com/newsflashes/3770251002725120'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: '金融市场与投融资'
+    items:
+      - original_title: '优步斥资2.7亿欧元增持Delivery Hero股份'
+        original_url: 'https://36kr.com/newsflashes/3770485623702279'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '南向资金净买入额达60亿港元'
+        original_url: 'https://36kr.com/newsflashes/3770466618835462'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '“加速进化”完成近10亿元融资'
+        original_url: 'https://36kr.com/newsflashes/3770428884812297'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '现货白银日内涨超1%'
+        original_url: 'https://36kr.com/newsflashes/3770436976001801'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '“行云”完成Pre-A及Pre-A+多轮融资'
+        original_url: 'https://36kr.com/newsflashes/3770425502532358'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '南京江北新区科技投资集团增资至约31.1亿元'
+        original_url: 'https://36kr.com/newsflashes/3770395424850696'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '恒指午间休盘跌1.32%，恒生科技指数跌1.66%'
+        original_url: 'https://36kr.com/newsflashes/3770393672811267'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '半日主力资金加仓电子板块，抛售医药生物板块'
+        original_url: 'https://36kr.com/newsflashes/3770383419785987'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '远景动力据悉考虑通过香港IPO筹资至多20亿美元'
+        original_url: 'https://36kr.com/newsflashes/3770376783725314'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'A股三大指数午间休盘涨跌不一，源杰科技股价超越茅台成A股新“股王”'
+        original_url: 'https://36kr.com/newsflashes/3770364089500419'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '丸红旗下公司斥资2.04亿欧元收购Factor Energy 85%股份'
+        original_url: 'https://36kr.com/newsflashes/3770296559813124'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '有赞登陆港交所主板'
+        original_url: 'https://36kr.com/newsflashes/3770285217825288'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '“龙虾出行”完成近亿元天使轮融资'
+        original_url: 'https://36kr.com/newsflashes/3770269152264705'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '创业板指涨超1%，继续刷新近11年新高'
+        original_url: 'https://36kr.com/newsflashes/3770265544426246'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '源杰科技股价超越茅台，成A股新“股王”'
+        original_url: 'https://36kr.com/newsflashes/3770259964510729'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'A股三大指数开盘涨跌不一，贵州茅台跌超4%'
+        original_url: 'https://36kr.com/newsflashes/3770241282621959'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '恒指开盘跌0.69%，恒生科技指数跌0.72%'
+        original_url: 'https://36kr.com/newsflashes/3770237769909000'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+summary:
+  strong: 0
+  weak: 0
+  drop: 0
+  pending: 0

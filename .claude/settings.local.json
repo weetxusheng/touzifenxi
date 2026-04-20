@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp -r skills/websearch/src/c114 src/c114)",
+      "Bash(cp -r skills/websearch/src/infoq src/infoq)",
+      "Bash(cp -r skills/websearch/config config)",
+      "Bash(cp -r skills/websearch/prompts prompts)",
+      "Bash(cp -r skills/websearch/agents agents)",
+      "Bash(xargs wc *)",
+      "Bash(cp -r /e/AI/touzifenxi/skills/websearch/src/infoq /e/AI/touzifenxi/src/infoq)",
+      "Bash(echo \"Moved infoq: $?\")",
+      "Bash(cp -r /e/AI/touzifenxi/skills/websearch/prompts /e/AI/touzifenxi/src/c114/prompts)",
+      "Bash(echo \"Moved prompts: $?\")",
+      "Bash(cp -r /e/AI/touzifenxi/skills/websearch/config /e/AI/touzifenxi/config)",
+      "Bash(echo \"Deleted skills/: $?\")",
+      "Bash(echo \"Deleted data/: $?\")",
+      "Bash(echo \"Created utils and tools dirs: $?\")",
+      "Bash(cp -r /e/AI/touzifenxi/src/touzifenxi/* /e/AI/touzifenxi/src/utils/)",
+      "Bash(echo \"Copied touzifenxi to utils: $?\")",
+      "Bash(echo \"Created tools/email.py: $?\")",
+      "Bash(echo \"Created tools/__init__.py: $?\")",
+      "Bash(echo \"Moved c114_automation to tools/: $?\")",
+      "Bash(git -C E:/AI/touzifenxi status --short)",
+      "Bash(cp skills/websearch/prompts/* src/c114/prompts/)",
+      "Bash(cp -r skills/websearch/output output)",
+      "Bash(sed -i 's|from touzifenxi\\\\.settings import AppPaths|from utils.tools.settings import AppPaths|g' src/c114/commands/analysis.py src/c114/commands/content.py src/c114/commands/hot_topics.py src/c114/commands/run.py src/c114/commands/search.py src/c114/pipeline.py src/c114/pipeline_steps.py)",
+      "Bash(sed -i 's|from touzifenxi\\\\.briefing\\\\.materialize import build_step1_csv_rows|from utils.tools.briefing import build_step1_csv_rows|g' src/c114/c114_hot_topics.py)",
+      "Bash(sed -i 's|from touzifenxi\\\\.content_sources\\\\.c114 import C114SourceAdapter|from c114.source_adapter import C114SourceAdapter|g' src/c114/c114_hot_topics.py)",
+      "Bash(sed -i 's|from touzifenxi\\\\.briefing\\\\.materialize import write_step1_csv|from utils.tools.briefing import write_step1_csv|g' src/infoq/cli.py)",
+      "Bash(sed -i 's|from touzifenxi\\\\.content_sources\\\\.infoq import InfoQSourceAdapter|from infoq.source_adapter import InfoQSourceAdapter|g' src/infoq/cli.py)",
+      "Bash(cp -r src/c114/llm src/utils/tools/llm)",
+      "Bash(mkdir -p src/utils/tools/runtime)",
+      "Bash(cp src/c114/runtime/checkpoint.py src/utils/tools/runtime/checkpoint.py)",
+      "Bash(touch src/utils/tools/llm/__init__.py src/utils/tools/runtime/__init__.py)",
+      "Bash(python -c ' *)",
+      "Bash(cp -r src/c114/analysis src/utils/tools/analysis)",
+      "Bash(cp -r src/c114/steps src/utils/tools/steps)"
+    ]
+  }
+}
