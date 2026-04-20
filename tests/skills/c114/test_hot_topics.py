@@ -74,6 +74,17 @@ class ParseAnchorDateTests(unittest.TestCase):
             str(parse_anchor_date("中国移动原董事长杨杰出任世界数据组织秘书长3/31", fallback_year=2026)), "2026-03-31"
         )
 
+    def test_parses_triple_slash_without_treating_day_as_month(self) -> None:
+        # Regression: `20/04/2026` must not match `20/04` as month=20.
+        self.assertEqual(
+            str(parse_anchor_date("标题前缀20/04/2026 12:00", fallback_year=2026)),
+            "2026-04-20",
+        )
+        self.assertEqual(
+            str(parse_anchor_date("04/16/2026 公告", fallback_year=2026)),
+            "2026-04-16",
+        )
+
 
 class ExtractArticleMetadataTests(unittest.TestCase):
     def test_extracts_title_keywords_summary_and_publish_date(self) -> None:

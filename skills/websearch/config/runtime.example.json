@@ -13,6 +13,12 @@
       "_comment": "InfoQ 当前使用首页新列表接口 get_new_list；listing_size 会传给接口的 size 字段，默认 12。",
       "listing": "new_list",
       "listing_size": 12
+    },
+    "kr36": {
+      "_comment": "36Kr T 日抓取入口。channels 可选：home/newsflashes/web_news/web_recommend/ccs/ai。",
+      "channels": ["home", "newsflashes", "web_news", "web_recommend", "ccs", "ai"],
+      "candidate_limit": 60,
+      "timeout": 25
     }
   },
   "execution": {
