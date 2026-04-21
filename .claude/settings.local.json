@@ -34,7 +34,16 @@
       "Bash(touch src/utils/tools/llm/__init__.py src/utils/tools/runtime/__init__.py)",
       "Bash(python -c ' *)",
       "Bash(cp -r src/c114/analysis src/utils/tools/analysis)",
-      "Bash(cp -r src/c114/steps src/utils/tools/steps)"
+      "Bash(cp -r src/c114/steps src/utils/tools/steps)",
+      "Bash(dir /s /b \"E:\\\\AI\\\\touzifenxi\\\\src\\\\kr36\\\\*.py\")",
+      "Bash(python -c \"import os; [print\\(os.path.join\\(r,f\\)\\) for r,d,fs in os.walk\\('src/kr36'\\) for f in fs if f.endswith\\('.py'\\)]\")",
+      "Bash(python -c \"import os; dirs = os.listdir\\('output/reports/kr36_report'\\); print\\(sorted\\(dirs\\)[-3:]\\)\")",
+      "Bash(python -c \"import os; files = os.listdir\\('output/reports/kr36_report/kr36_search_202604202002'\\); print\\(files\\)\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\('E:/AI/touzifenxi/config/runtime.local.json'\\)\\); [print\\(k,'=',repr\\(v\\)[:20]\\) for k,v in d.items\\(\\) if 'key' not in k.lower\\(\\) and 'secret' not in k.lower\\(\\) and 'password' not in k.lower\\(\\)]\")",
+      "Bash(python -c \"import json; d=json.load\\(open\\('E:/AI/touzifenxi/config/runtime.local.json'\\)\\); providers=d.get\\('llm_providers',[]\\); [print\\(p.get\\('provider'\\), 'api_key len:', len\\(str\\(p.get\\('api_key',''\\)\\)\\), 'has_newline:', chr\\(10\\) in str\\(p.get\\('api_key',''\\)\\)\\) for p in providers]\")",
+      "Bash(python -u -c ' *)",
+      "Bash(cmd /c \"scripts\\\\kr36\\\\run_kr36_daily_brief_no_email_windows.bat\")",
+      "Bash(echo \"BAT_PID=$!\")"
     ]
   }
 }

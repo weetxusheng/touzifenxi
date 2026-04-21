@@ -139,7 +139,12 @@ def add_execution_mode_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def resolve_c114_date_range(args: argparse.Namespace, *, default_to_today: bool = False) -> list[date]:
+def resolve_c114_date_range(
+    args: argparse.Namespace,
+    *,
+    default_to_today: bool = False,
+    default_days_ago: int = 0,
+) -> list[date]:
     """把单日或区间参数统一展开成具体日期列表。"""
 
     single_date = getattr(args, "date", None)
@@ -157,10 +162,20 @@ def resolve_c114_date_range(args: argparse.Namespace, *, default_to_today: bool 
         total_days = (end - start).days + 1
         return [start + timedelta(days=offset) for offset in range(total_days)]
     if single_date:
-        return [date.fromisoformat(single_date)]
+        return [_parse_single_date_or_time(single_date)]
     if default_to_today:
-        return [datetime.now().date()]
+        offset = max(0, int(default_days_ago))
+        return [datetime.now().date() - timedelta(days=offset)]
     raise ValueError("必须提供 --date，或者同时提供 --start-date 和 --end-date。")
+
+
+def _parse_single_date_or_time(value: str) -> date:
+    """解析单日参数：支持 YYYY-MM-DD；若仅传 HH:MM 则按当天处理。"""
+
+    normalized = str(value or "").strip()
+    if re.fullmatch(r"\d{1,2}:\d{2}", normalized):
+        return datetime.now().date()
+    return date.fromisoformat(normalized)
 
 
 def create_c114_range_day_directories(
@@ -357,7 +372,12 @@ def build_parser() -> argparse.ArgumentParser:
     c114_run_parser = subparsers.add_parser("run", help="Run the full pipeline for a selected source.")
     add_c114_date_arguments(c114_run_parser, default_to_today=True)
     add_execution_mode_argument(c114_run_parser)
-    c114_run_parser.add_argument("--source", default="c114", choices=["c114", "infoq"], help="站点来源：默认 c114，也支持 infoq。")
+    c114_run_parser.add_argument(
+        "--source",
+        default="c114",
+        choices=["c114", "infoq", "36kr"],
+        help="站点来源：默认 c114，也支持 infoq、36kr。",
+    )
     c114_run_parser.add_argument(
         "--channels",
         nargs="+",
@@ -376,6 +396,11 @@ def build_parser() -> argparse.ArgumentParser:
     c114_run_parser.add_argument("--per-query-limit", type=int, default=5)
     c114_run_parser.add_argument("--per-article-limit", type=int, default=None)
     c114_run_parser.add_argument("--extract-limit", type=int, default=5)
+    c114_run_parser.add_argument(
+        "--external-search",
+        action="store_true",
+        help="仅 36kr 生效：启用 step3 外部搜索；默认关闭并跳过 step3 外搜。",
+    )
 
     c114_direct_run_parser = subparsers.add_parser("c114-run", help="Run the full c114 pipeline directly.")
     add_c114_date_arguments(c114_direct_run_parser, default_to_today=True)

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ChinaWealth Scraper"
+  short_description: "Scrape encrypted ChinaWealth listings."
+  default_prompt: "Use $chinawealth-scraper to fetch ChinaWealth product listings into CSV and troubleshoot API or captcha failures."

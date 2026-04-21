@@ -11,7 +11,7 @@ from utils.tools.settings import AppPaths
 def handle_hot_topics_command(args: argparse.Namespace, *, paths: AppPaths, facade: Any) -> None:
     """执行 step 0 热点抓取。"""
 
-    target_dates = facade.resolve_c114_date_range(args, default_to_today=True)
+    target_dates = facade.resolve_c114_date_range(args, default_to_today=True, default_days_ago=1)
     for target_date in target_dates:
         reports = facade.collect_daily_report(
             report_date=target_date,

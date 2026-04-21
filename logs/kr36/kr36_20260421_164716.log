@@ -1,0 +1,33 @@
+[kr36] 2026-04-21 16:47:16 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=E:\AI\touzifenxi
+[kr36] PYTHON_BIN=E:\AI\touzifenxi\.venv\Scripts\python.exe
+[kr36] TIMEOUT=50s
+[kr36] LOG_FILE=E:\AI\touzifenxi\logs\kr36\kr36_20260421_164716.log
+[kr36] running: "E:\AI\touzifenxi\.venv\Scripts\python.exe" scripts\websearch.py run --source 36kr --timeout 50
+2026-04-21 16:47:17 [kr36] listing_begin report_date=2026-04-21 rounds_total=13 candidate_limit=120
+2026-04-21 16:47:17 [kr36] round_start round=1/13 stage=topics url=https://36kr.com/topics/
+2026-04-21 16:47:17 [kr36] 进入专题页，数据 0 条，累计 0 条
+2026-04-21 16:47:17 [kr36] fetch_start url=https://36kr.com/topics/
+2026-04-21 16:47:18 [kr36] fetch_ok method=curl url=https://36kr.com/topics/ html_length=73732
+2026-04-21 16:47:18 [kr36] round_end round=1/13 stage=topics fetched=22 total_refs=22 elapsed_ms=586
+2026-04-21 16:47:18 [kr36] 完成专题页，数据 22 条，累计 22 条
+2026-04-21 16:47:18 [kr36] round_next round=2/13 stage=activity
+2026-04-21 16:47:18 [kr36] round_start round=2/13 stage=activity url=https://36kr.com/activity
+2026-04-21 16:47:18 [kr36] 进入活动页，数据 0 条，累计 22 条
+2026-04-21 16:47:18 [kr36] throttle_wait url=https://36kr.com/activity wait_ms=19542 global_wait_ms=19542 same_url_wait_ms=0
+2026-04-21 16:47:38 [kr36] fetch_start url=https://36kr.com/activity
+2026-04-21 16:47:38 [kr36] fetch_ok method=curl url=https://36kr.com/activity html_length=61716
+2026-04-21 16:47:38 [kr36] round_end round=2/13 stage=activity fetched=8 total_refs=30 elapsed_ms=20172
+2026-04-21 16:47:38 [kr36] 完成活动页，数据 8 条，累计 30 条
+2026-04-21 16:47:38 [kr36] round_next round=3/13 stage=search
+2026-04-21 16:47:38 [kr36] round_start round=3/13 stage=search category=36氪独家 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-21 16:47:38 [kr36] 进入搜索页(36氪独家)，数据 0 条，累计 30 条
+2026-04-21 16:47:38 [kr36] throttle_wait url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 wait_ms=29331 global_wait_ms=29331 same_url_wait_ms=0
+2026-04-21 16:48:08 [kr36] fetch_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-21 16:48:08 [kr36] fetch_ok method=curl url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=45899
+2026-04-21 16:48:08 [kr36] round_end round=3/13 stage=search category=36氪独家 fetched=0 total_refs=30 elapsed_ms=29865
+2026-04-21 16:48:08 [kr36] 完成搜索页(36氪独家)，数据 0 条，累计 30 条
+2026-04-21 16:48:08 [kr36] round_next round=4/13 stage=search_or_channel
+2026-04-21 16:48:08 [kr36] round_start round=4/13 stage=search category=深氪 url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA
+2026-04-21 16:48:08 [kr36] 进入搜索页(深氪)，数据 0 条，累计 30 条
+2026-04-21 16:48:08 [kr36] throttle_wait url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA wait_ms=24165 global_wait_ms=24165 same_url_wait_ms=0

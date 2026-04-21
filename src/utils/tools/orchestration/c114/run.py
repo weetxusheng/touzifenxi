@@ -16,6 +16,23 @@ from c114.pipeline import run_daily_pipeline
 def handle_run_command(args: argparse.Namespace, *, paths: AppPaths, facade: Any) -> None:
     """处理 `run` 命令，并按 source 选择后续流程。"""
 
+    if getattr(args, "source", "c114") == "36kr":
+        from kr36.cli import run_with_args as run_kr36_with_args
+
+        target_dates = facade.resolve_c114_date_range(args, default_to_today=True)
+        run_kr36_with_args(
+            argparse.Namespace(
+                command="run",
+                date=target_dates[0].isoformat(),
+                provider=getattr(args, "provider", "auto"),
+                per_query_limit=getattr(args, "per_query_limit", 5),
+                per_article_limit=getattr(args, "per_article_limit", None),
+                extract_limit=getattr(args, "extract_limit", 5),
+                external_search=bool(getattr(args, "external_search", False)),
+            )
+        )
+        return
+
     if getattr(args, "source", "c114") == "infoq":
         from infoq.cli import run_with_args as run_infoq_with_args
 

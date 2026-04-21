@@ -64,7 +64,10 @@ def render_brief_markdown(payload: ContentAnalysisInput) -> str:
         for item in category.items:
             if not item.original_url.strip():
                 continue
-            lines.append(format_brief_link_line(item.original_title, item.original_published_at, item.original_url))
+            lines.append(format_brief_link_line(
+                item.original_title, item.original_published_at, item.original_url,
+                include_date="/topics/" not in item.original_url,
+            ))
         lines.extend(["", "### 补充地址", ""])
         if category.items and any(item.selected_contents for item in category.items):
             for item in category.items:
@@ -132,7 +135,10 @@ def render_generated_brief_markdown(
         for item in category.items:
             if not item.original_url.strip():
                 continue
-            lines.append(format_brief_link_line(item.original_title, item.original_published_at, item.original_url))
+            lines.append(format_brief_link_line(
+                item.original_title, item.original_published_at, item.original_url,
+                include_date="/topics/" not in item.original_url,
+            ))
         lines.extend(["", "### 补充地址", ""])
         supplement_count = 0
         for item in category.items:

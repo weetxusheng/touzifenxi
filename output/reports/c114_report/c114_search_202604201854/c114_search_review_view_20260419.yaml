@@ -1,0 +1,38 @@
+report_date: '2026-04-19'
+input_path: 'E:\AI\touzifenxi\output\reports\c114_report\c114_search_202604201854\c114_step_2_search_checklist_20260419.yaml'
+categories:
+  - topic: '数字产业政策与生态'
+    items:
+      - original_title: '欧盟授予四家公司1.8亿欧元 通过云服务加强数字主权'
+        original_url: 'https://www.c114.com.cn/news/116/a1308719.html'
+        review_groups:
+          strong:
+          weak:
+          drop:
+            - title: '欧盟化工巨头联手“阻击”：要求欧盟调查中企英国收购案|欧盟_新浪财经_新浪网'
+              url: 'https://finance.sina.com.cn/roll/2026-04-19/doc-inhuzxax9149243.shtml'
+              reason: '补充链接主题与原文无关，内容完全跑偏'
+              value_type: '跑偏结果'
+          pending:
+  - topic: 'ICT人才培养与产教协同'
+    items:
+      - original_title: '杨超斌：华为ICT大赛十年新起点，为数字产业锻造实战型人才'
+        original_url: 'https://www.c114.com.cn/news/126/a1308717.html'
+        review_groups:
+          strong:
+            - title: '华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战- DoNews'
+              url: 'https://www.donews.com/news/detail/4/6517888.html'
+              reason: '报道同一事件，提供详细数据如参赛人数、高校覆盖数、奖项数等具体事实'
+              value_type: '新增事实'
+            - title: '华为将通过昇腾开源生态开发者计划发布超200项算子任务|华为_新浪财经_新浪网'
+              url: 'https://finance.sina.com.cn/roll/2026-04-19/doc-inhvackv9037408.shtml'
+              reason: '报道同一事件，新增昇腾开源生态开发者计划及算子任务等具体产业合作细节'
+              value_type: '新增事实'
+          weak:
+          drop:
+          pending:
+summary:
+  strong: 2
+  weak: 0
+  drop: 1
+  pending: 0

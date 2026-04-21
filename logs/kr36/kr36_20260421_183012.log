@@ -1,0 +1,153 @@
+[kr36] 2026-04-21 18:30:12 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=E:\AI\touzifenxi
+[kr36] PYTHON_BIN=E:\AI\touzifenxi\.venv\Scripts\python.exe
+[kr36] TIMEOUT=30s
+[kr36] LOG_FILE=E:\AI\touzifenxi\logs\kr36\kr36_20260421_183012.log
+[kr36] running: "E:\AI\touzifenxi\.venv\Scripts\python.exe" scripts\websearch.py run --source 36kr --timeout 30
+2026-04-21 18:30:15 [kr36] listing_begin report_date=2026-04-21 rounds_total=13 candidate_limit=120
+2026-04-21 18:30:15 [kr36] round_start round=1/13 stage=topics url=https://36kr.com/topics/
+2026-04-21 18:30:15 [kr36] 进入专题页，数据 0 条，累计 0 条
+2026-04-21 18:30:15 [kr36] fetch_start url=https://36kr.com/topics/
+2026-04-21 18:30:19 [kr36] fetch_ok method=curl url=https://36kr.com/topics/ html_length=73618
+2026-04-21 18:30:19 [kr36] round_end round=1/13 stage=topics fetched=22 total_refs=22 elapsed_ms=3745
+2026-04-21 18:30:19 [kr36] 完成专题页，数据 22 条，累计 22 条
+2026-04-21 18:30:19 [kr36] round_next round=2/13 stage=activity
+2026-04-21 18:30:19 [kr36] round_start round=2/13 stage=activity url=https://36kr.com/activity
+2026-04-21 18:30:19 [kr36] 进入活动页，数据 0 条，累计 22 条
+2026-04-21 18:30:19 [kr36] throttle_wait url=https://36kr.com/activity wait_ms=16028 global_wait_ms=16028 same_url_wait_ms=0
+2026-04-21 18:30:35 [kr36] fetch_start url=https://36kr.com/activity
+2026-04-21 18:30:36 [kr36] risk_entered method=curl url=https://36kr.com/activity html_length=1460 has_verification_command=true
+2026-04-21 18:30:36 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/activity
+2026-04-21 18:30:39 [kr36] risk_verification_invoking_command url=https://36kr.com/activity
+2026-04-21 18:30:39 [kr36] verification_command_start url=https://36kr.com/activity playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:30:52 [kr36] verification_command_end url=https://36kr.com/activity return_code=3 ok=false
+2026-04-21 18:30:52 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/activity verify_ok=false
+2026-04-21 18:30:52 [kr36] verification_command_start url=https://36kr.com/activity playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:31:13 [kr36] verification_command_end url=https://36kr.com/activity return_code=3 ok=false
+2026-04-21 18:31:13 [kr36] round_end round=2/13 stage=activity fetched=0 total_refs=22 elapsed_ms=53925
+2026-04-21 18:31:13 [kr36] 完成活动页，数据 0 条，累计 22 条
+2026-04-21 18:31:13 [kr36] round_next round=3/13 stage=search
+2026-04-21 18:31:13 [kr36] round_start round=3/13 stage=search category=36氪独家 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-21 18:31:13 [kr36] 进入搜索页(36氪独家)，数据 0 条，累计 22 条
+2026-04-21 18:31:13 [kr36] fetch_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-21 18:31:14 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=1460 has_verification_command=true
+2026-04-21 18:31:14 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-21 18:31:17 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-21 18:31:17 [kr36] verification_command_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:31:24 [kr36] verification_command_end url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 return_code=3 ok=false
+2026-04-21 18:31:24 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 verify_ok=false
+2026-04-21 18:31:24 [kr36] verification_command_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:31:41 [kr36] verification_command_end url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 return_code=3 ok=false
+2026-04-21 18:31:41 [kr36] round_end round=3/13 stage=search category=36氪独家 fetched=0 total_refs=22 elapsed_ms=28256
+2026-04-21 18:31:41 [kr36] 完成搜索页(36氪独家)，数据 0 条，累计 22 条
+2026-04-21 18:31:41 [kr36] round_next round=4/13 stage=search_or_channel
+2026-04-21 18:31:41 [kr36] round_start round=4/13 stage=search category=深氪 url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA
+2026-04-21 18:31:41 [kr36] 进入搜索页(深氪)，数据 0 条，累计 22 条
+2026-04-21 18:31:41 [kr36] throttle_wait url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA wait_ms=265 global_wait_ms=265 same_url_wait_ms=0
+2026-04-21 18:31:41 [kr36] fetch_start url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA
+2026-04-21 18:31:44 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA html_length=1460 has_verification_command=true
+2026-04-21 18:31:44 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA
+2026-04-21 18:31:47 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA
+2026-04-21 18:31:47 [kr36] verification_command_start url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:31:53 [kr36] verification_command_end url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA return_code=3 ok=false
+2026-04-21 18:31:53 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA verify_ok=false
+2026-04-21 18:31:53 [kr36] verification_command_start url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:32:11 [kr36] verification_command_end url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA return_code=3 ok=false
+2026-04-21 18:32:11 [kr36] round_end round=4/13 stage=search category=深氪 fetched=0 total_refs=22 elapsed_ms=30463
+2026-04-21 18:32:11 [kr36] 完成搜索页(深氪)，数据 0 条，累计 22 条
+2026-04-21 18:32:11 [kr36] round_next round=5/13 stage=search_or_channel
+2026-04-21 18:32:11 [kr36] round_start round=5/13 stage=search category=后浪白皮书 url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6
+2026-04-21 18:32:11 [kr36] 进入搜索页(后浪白皮书)，数据 0 条，累计 22 条
+2026-04-21 18:32:11 [kr36] fetch_start url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6
+2026-04-21 18:32:13 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 html_length=1460 has_verification_command=true
+2026-04-21 18:32:13 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6
+2026-04-21 18:32:16 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6
+2026-04-21 18:32:16 [kr36] verification_command_start url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:32:23 [kr36] verification_command_end url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 return_code=3 ok=false
+2026-04-21 18:32:23 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 verify_ok=false
+2026-04-21 18:32:23 [kr36] verification_command_start url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:32:52 [kr36] verification_command_end url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 return_code=3 ok=false
+2026-04-21 18:32:52 [kr36] round_end round=5/13 stage=search category=后浪白皮书 fetched=0 total_refs=22 elapsed_ms=40404
+2026-04-21 18:32:52 [kr36] 完成搜索页(后浪白皮书)，数据 0 条，累计 22 条
+2026-04-21 18:32:52 [kr36] round_next round=6/13 stage=search_or_channel
+2026-04-21 18:32:52 [kr36] round_start round=6/13 stage=search category=行业日报 url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5
+2026-04-21 18:32:52 [kr36] 进入搜索页(行业日报)，数据 0 条，累计 22 条
+2026-04-21 18:32:52 [kr36] fetch_start url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5
+2026-04-21 18:32:54 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 html_length=1460 has_verification_command=true
+2026-04-21 18:32:54 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5
+2026-04-21 18:32:57 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5
+2026-04-21 18:32:57 [kr36] verification_command_start url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:33:06 [kr36] verification_command_end url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 return_code=3 ok=false
+2026-04-21 18:33:06 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 verify_ok=false
+2026-04-21 18:33:06 [kr36] verification_command_start url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:33:27 [kr36] verification_command_end url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 return_code=3 ok=false
+2026-04-21 18:33:27 [kr36] round_end round=6/13 stage=search category=行业日报 fetched=0 total_refs=22 elapsed_ms=35072
+2026-04-21 18:33:27 [kr36] 完成搜索页(行业日报)，数据 0 条，累计 22 条
+2026-04-21 18:33:27 [kr36] round_next round=7/13 stage=search_or_channel
+2026-04-21 18:33:27 [kr36] round_start round=7/13 stage=search category=Long China 50 url=https://36kr.com/search/articles/Long%20China%2050
+2026-04-21 18:33:27 [kr36] 进入搜索页(Long China 50)，数据 0 条，累计 22 条
+2026-04-21 18:33:27 [kr36] fetch_start url=https://36kr.com/search/articles/Long%20China%2050
+2026-04-21 18:33:29 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/Long%20China%2050 html_length=1460 has_verification_command=true
+2026-04-21 18:33:29 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/Long%20China%2050
+2026-04-21 18:33:32 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/Long%20China%2050
+2026-04-21 18:33:32 [kr36] verification_command_start url=https://36kr.com/search/articles/Long%20China%2050 playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:33:38 [kr36] verification_command_end url=https://36kr.com/search/articles/Long%20China%2050 return_code=3 ok=false
+2026-04-21 18:33:38 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/Long%20China%2050 verify_ok=false
+2026-04-21 18:33:38 [kr36] verification_command_start url=https://36kr.com/search/articles/Long%20China%2050 playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:33:55 [kr36] verification_command_end url=https://36kr.com/search/articles/Long%20China%2050 return_code=3 ok=false
+2026-04-21 18:33:55 [kr36] round_end round=7/13 stage=search category=Long China 50 fetched=0 total_refs=22 elapsed_ms=27772
+2026-04-21 18:33:55 [kr36] 完成搜索页(Long China 50)，数据 0 条，累计 22 条
+2026-04-21 18:33:55 [kr36] round_next round=8/13 stage=search_or_channel
+2026-04-21 18:33:55 [kr36] round_start round=8/13 stage=search category=投资派 url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE
+2026-04-21 18:33:55 [kr36] 进入搜索页(投资派)，数据 0 条，累计 22 条
+2026-04-21 18:33:55 [kr36] fetch_start url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE
+2026-04-21 18:33:56 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE html_length=1460 has_verification_command=true
+2026-04-21 18:33:56 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE
+2026-04-21 18:33:59 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE
+2026-04-21 18:33:59 [kr36] verification_command_start url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:34:06 [kr36] verification_command_end url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE return_code=3 ok=false
+2026-04-21 18:34:06 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE verify_ok=false
+2026-04-21 18:34:06 [kr36] verification_command_start url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:34:22 [kr36] verification_command_end url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE return_code=3 ok=false
+2026-04-21 18:34:22 [kr36] round_end round=8/13 stage=search category=投资派 fetched=0 total_refs=22 elapsed_ms=27803
+2026-04-21 18:34:22 [kr36] 完成搜索页(投资派)，数据 0 条，累计 22 条
+2026-04-21 18:34:22 [kr36] round_next round=9/13 stage=search_or_channel
+2026-04-21 18:34:22 [kr36] round_start round=9/13 stage=search category=新青年观察 url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F
+2026-04-21 18:34:22 [kr36] 进入搜索页(新青年观察)，数据 0 条，累计 22 条
+2026-04-21 18:34:22 [kr36] fetch_start url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F
+2026-04-21 18:34:24 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=1460 has_verification_command=true
+2026-04-21 18:34:24 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F
+2026-04-21 18:34:27 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F
+2026-04-21 18:34:27 [kr36] verification_command_start url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:34:37 [kr36] verification_command_end url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F return_code=3 ok=false
+2026-04-21 18:34:37 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F verify_ok=false
+2026-04-21 18:34:37 [kr36] verification_command_start url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:34:57 [kr36] verification_command_end url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F return_code=3 ok=false
+2026-04-21 18:34:57 [kr36] round_end round=9/13 stage=search category=新青年观察 fetched=0 total_refs=22 elapsed_ms=34072
+2026-04-21 18:34:57 [kr36] 完成搜索页(新青年观察)，数据 0 条，累计 22 条
+2026-04-21 18:34:57 [kr36] round_next round=10/13 stage=search_or_channel
+2026-04-21 18:34:57 [kr36] round_start round=10/13 stage=search category=KRLab url=https://36kr.com/search/articles/KRLab
+2026-04-21 18:34:57 [kr36] 进入搜索页(KRLab)，数据 0 条，累计 22 条
+2026-04-21 18:34:57 [kr36] fetch_start url=https://36kr.com/search/articles/KRLab
+2026-04-21 18:34:58 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/KRLab html_length=1460 has_verification_command=true
+2026-04-21 18:34:58 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/KRLab
+2026-04-21 18:35:01 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/KRLab
+2026-04-21 18:35:01 [kr36] verification_command_start url=https://36kr.com/search/articles/KRLab playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:35:08 [kr36] verification_command_end url=https://36kr.com/search/articles/KRLab return_code=3 ok=false
+2026-04-21 18:35:08 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/KRLab verify_ok=false
+2026-04-21 18:35:08 [kr36] verification_command_start url=https://36kr.com/search/articles/KRLab playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+2026-04-21 18:35:27 [kr36] verification_command_end url=https://36kr.com/search/articles/KRLab return_code=3 ok=false
+2026-04-21 18:35:27 [kr36] round_end round=10/13 stage=search category=KRLab fetched=0 total_refs=22 elapsed_ms=30531
+2026-04-21 18:35:27 [kr36] 完成搜索页(KRLab)，数据 0 条，累计 22 条
+2026-04-21 18:35:27 [kr36] round_next round=11/13 stage=search_or_channel
+2026-04-21 18:35:27 [kr36] round_start round=11/13 stage=search category=数智前瞻 url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB
+2026-04-21 18:35:27 [kr36] 进入搜索页(数智前瞻)，数据 0 条，累计 22 条
+2026-04-21 18:35:27 [kr36] fetch_start url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB
+2026-04-21 18:35:29 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB html_length=1460 has_verification_command=true
+2026-04-21 18:35:29 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB
+2026-04-21 18:35:32 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB
+2026-04-21 18:35:32 [kr36] verification_command_start url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB playwright_mode=headless auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py', '--headless']
+2026-04-21 18:35:39 [kr36] verification_command_end url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB return_code=3 ok=false
+2026-04-21 18:35:39 [kr36] risk_verification_agent_browser_retry url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB verify_ok=false
+2026-04-21 18:35:39 [kr36] verification_command_start url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB playwright_mode=agent-browser auto_solver_argv=['E:\\AI\\touzifenxi\\.venv\\Scripts\\python.exe', 'E:\\AI\\touzifenxi\\scripts\\kr36_risk_slider_solver.py']
+[kr36]  finished with exit code 1073807364.

@@ -1,0 +1,206 @@
+report_date: '2026-04-19'
+provider: 'auto'
+input_path: 'E:\AI\touzifenxi\output\reports\c114_report\c114_search_202604201854\c114_step_2_search_checklist_20260419.yaml'
+review_prompt_path: 'E:\AI\touzifenxi\src\c114\prompts\search-review-agent.md'
+review_instructions:
+  - 'skill 内置模型会读取 review_prompt_path 指向的提示词文件。'
+  - '仅对 selected_results 下各条结果生成 ai_review 字段。'
+  - '必须逐条填写所有 selected_results；不得留空、不得跳过、不得只填一部分。'
+  - 'ai_review.status 固定填写 reviewed。'
+  - 'ai_review.keep_level 只能填写 strong、weak、drop 三档。'
+  - '不得改写原标题、原链接、搜索结果元数据。'
+generated_at: '2026-04-20T18:55:57'
+categories:
+  - topic: '数字产业政策与生态'
+    items:
+      - original_title: '欧盟授予四家公司1.8亿欧元 通过云服务加强数字主权'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/116/a1308719.html'
+        original_published_at: '2026-04-19'
+        queries:
+          - query: '欧盟授予四家公司1.8亿欧元 通过云服务加强数字主权'
+            query_type: 'title'
+            provider: 'tavily'
+            results:
+              - query: '欧盟授予四家公司1.8亿欧元 通过云服务加强数字主权'
+                query_type: 'title'
+                result_title: '欧盟化工巨头联手“阻击”：要求欧盟调查中企英国收购案|欧盟_新浪财经_新浪网'
+                url: 'https://finance.sina.com.cn/roll/2026-04-19/doc-inhuzxax9149243.shtml'
+                domain: 'finance.sina.com.cn'
+                published_at: '2026-04-19'
+                snippet: '# 欧盟化工巨头联手“阻击”：要求欧盟调查中企英国收购案. 据欧洲新闻网4月18日报道，有消息人士透露，一个由来自美国、捷克、斯洛文尼亚等企业组成的投诉联盟希望欧盟委员会对中企龙佰集团的收购案展开调查，因为他们害怕龙佰将对他们构成竞争压力。这个联盟合计占欧盟钛白粉（也称二氧化钛）产量的约90%。. 据悉，钛白粉是一种白色无机颜料，广泛用于涂料、塑料、造纸、油墨、化纤等行业，在各种应用中提供优异的白度、遮盖和耐候性，也是一种用于绿色能源和航空航天的重要战略化工产品。. 这些在欧盟境内生产钛白粉的生产商，已于去年12月向欧盟委员会提交投诉，指控龙佰存在所谓“不公平补贴”行为。他们还声称，龙佰收购英国工厂，是为了规避“反倾销税”。. 英国化工厂Venator UK 资料图英国化工厂Venator UK 资料图. 公开资料显示，去年10月，龙佰集团公告称，公司下属子公司佰利联欧洲计划以支付现金的方'
+                score: 0.0019
+                is_official: false
+                source_tier: 'normal'
+                extract_status: 'not_requested'
+                extract_text: ''
+                matched_terms:
+          - query: '欧盟 1.8亿欧元 云服务 数字主权'
+            query_type: 'keyword'
+            provider: 'tavily'
+            results:
+        search_results:
+          - query: '欧盟授予四家公司1.8亿欧元 通过云服务加强数字主权'
+            query_type: 'title'
+            result_title: '欧盟化工巨头联手“阻击”：要求欧盟调查中企英国收购案|欧盟_新浪财经_新浪网'
+            url: 'https://finance.sina.com.cn/roll/2026-04-19/doc-inhuzxax9149243.shtml'
+            domain: 'finance.sina.com.cn'
+            published_at: '2026-04-19'
+            snippet: '# 欧盟化工巨头联手“阻击”：要求欧盟调查中企英国收购案. 据欧洲新闻网4月18日报道，有消息人士透露，一个由来自美国、捷克、斯洛文尼亚等企业组成的投诉联盟希望欧盟委员会对中企龙佰集团的收购案展开调查，因为他们害怕龙佰将对他们构成竞争压力。这个联盟合计占欧盟钛白粉（也称二氧化钛）产量的约90%。. 据悉，钛白粉是一种白色无机颜料，广泛用于涂料、塑料、造纸、油墨、化纤等行业，在各种应用中提供优异的白度、遮盖和耐候性，也是一种用于绿色能源和航空航天的重要战略化工产品。. 这些在欧盟境内生产钛白粉的生产商，已于去年12月向欧盟委员会提交投诉，指控龙佰存在所谓“不公平补贴”行为。他们还声称，龙佰收购英国工厂，是为了规避“反倾销税”。. 英国化工厂Venator UK 资料图英国化工厂Venator UK 资料图. 公开资料显示，去年10月，龙佰集团公告称，公司下属子公司佰利联欧洲计划以支付现金的方'
+            score: 0.0019
+            is_official: false
+            source_tier: 'normal'
+            extract_status: 'not_requested'
+            extract_text: ''
+            matched_terms:
+        selected_results:
+          - query: '欧盟授予四家公司1.8亿欧元 通过云服务加强数字主权'
+            query_type: 'title'
+            result_title: '欧盟化工巨头联手“阻击”：要求欧盟调查中企英国收购案|欧盟_新浪财经_新浪网'
+            url: 'https://finance.sina.com.cn/roll/2026-04-19/doc-inhuzxax9149243.shtml'
+            domain: 'finance.sina.com.cn'
+            published_at: '2026-04-19'
+            snippet: '# 欧盟化工巨头联手“阻击”：要求欧盟调查中企英国收购案. 据欧洲新闻网4月18日报道，有消息人士透露，一个由来自美国、捷克、斯洛文尼亚等企业组成的投诉联盟希望欧盟委员会对中企龙佰集团的收购案展开调查，因为他们害怕龙佰将对他们构成竞争压力。这个联盟合计占欧盟钛白粉（也称二氧化钛）产量的约90%。. 据悉，钛白粉是一种白色无机颜料，广泛用于涂料、塑料、造纸、油墨、化纤等行业，在各种应用中提供优异的白度、遮盖和耐候性，也是一种用于绿色能源和航空航天的重要战略化工产品。. 这些在欧盟境内生产钛白粉的生产商，已于去年12月向欧盟委员会提交投诉，指控龙佰存在所谓“不公平补贴”行为。他们还声称，龙佰收购英国工厂，是为了规避“反倾销税”。. 英国化工厂Venator UK 资料图英国化工厂Venator UK 资料图. 公开资料显示，去年10月，龙佰集团公告称，公司下属子公司佰利联欧洲计划以支付现金的方'
+            score: 0.0019
+            is_official: false
+            source_tier: 'normal'
+            extract_status: 'success'
+            extract_text: '![](//beacon.sina.com.cn/a.gif?noScript) ![](//i.sso.sina.com.cn/images/login/thumb_default.png) ![](//n.sinaimg.cn/finance/c30320b4/20190809/cj_sinafinance_app2x.png) # 欧盟化工巨头联手“阻击”：要求欧盟调查中企英国收购案 【文/观察者网 齐倩】 因担忧无法与中国企业竞争，欧盟厂商竟联合一起搞事情，试图干涉中企收购英国工厂。 据欧洲新闻网4月18日报道，有消息人士透露，一个由来自美国、捷克、斯洛文尼亚等企业组成的投诉联盟希望欧盟委员会对中企[龙佰集团](https://finance.sina.com.cn/realstock/company/sz002601/nc.shtml)的收购案展开调查，因为他们害怕龙佰将对他们构成竞争压力。这个联盟合计占欧盟钛白粉（也称二氧化钛）产量的约90%。 据悉，钛白粉是一种白色无机颜料，广泛用于涂料、塑料、造纸、油墨、化纤等行业，在各种应用中提供优异的白度、遮盖和耐候性，也是一种用于绿色能源和航空航天的重要战略化工产品。 这些在欧盟境内生产钛白粉的生产商，已于去年12月向欧盟委员会提交投诉，指控龙佰存在所谓“不公平补贴”行为。他们还声称，龙佰收购英国工厂，是为了规避“反倾销税”。 此前，欧盟委员会在2025年1月决定对龙佰集团征收“反倾销关税”。 根据欧盟和英国的贸易协定，中企收购英国生产工厂后，其产品可以免税出口到欧洲市场。 ![英国化工厂Venator UK 资料图](//n.sinaimg.cn/sinakd20260419s/250/w640h410/20260419/0755-2980d4d398ca5a57018efa90bd49764e.jpg)英国化工厂Venator UK 资料图 公开资料显示，去年10月，龙佰集团公告称，公司下属子公司佰利联欧洲计划以支付现金的方式，收购英国工厂Venator UK持有的与钛白粉业务相关的资产，交易对价为6990万美元，佰利联欧洲需承担的增值税、印花税等税费预计约1419万美元，本次收购的资金来源于自有资金或自筹资金。 Venator UK位于英格兰东北部的格里瑟姆。英国政府目前正审查这笔交易，预计将于5月作出决定。 欧洲新闻网提到，欧盟2022年通过的“外国补贴条例”允许委员会调查非欧盟企业，以评估他们是否因“扭曲性的外国补贴”而在欧盟进行收购或参与公共采购。该工具最初就是针对中国设计的，但迄今尚未在欧盟以外适用。 报道指出，如果欧盟委员会根据此条例启动调查，这将开创先例，并向全球发出强烈信号。 上述欧盟厂商嘴上冠冕堂皇，但本质就是为了“不公平竞争”，担忧无法承受来自中国竞争对手日益激烈的竞争压力。代表欧盟化工行业的欧洲化工理事会（Cefic）表示，自2022年以来，欧盟已损失约9%的生产能力，导致2万个直接就业岗位流失。 近年来，欧方鼓噪对华经济竞争，持续推进对华“去风险”，以维护“经济安全”“公平竞争”等为名，出台了一系列保护主义措施，在芯片、5G、电动汽车等许多中欧本可开展互利共赢合作的领域人为设限，对中国企业采取歧视性、限制性措施，扰乱全球产供链健康稳定运行。 欧盟不断动用政治工具，干涉企业运营。去年11月，欧盟中国商会发布《中国企业在欧盟发展报告》，指出中国企业对欧营商环境整体评分已经连续第6年下滑。 报告指出，81%的受访企业认为，当前营商环境“不确定性增高”；90%的受访企业表示，欧盟“去风险”政策和经济安全战略损害业务运营和市场信心；超四成中企表示曾遭受差异化待遇。“不确定性”成为当前在欧中企运营的“最大梗阻”。 “我们注意到这份报告，也注意到中国企业对在欧运营持续承压感到担忧。”外交部发言人林剑说。 林剑强调，有关做法不仅无助于提高欧方自身产业竞争力，还对外释放了欧盟市场开放程度不断倒退的消极信号，影响了中国企业赴欧投资信心，最终只会损害欧方自身利益。 本文系观察者网独家稿件，未经授权，不得转载。 ![](//n.sinaimg.cn/finance/cece9e13/20240627/655959900_20240627.png) ![](//n.sinaimg.cn/finance/transform/260/w880h180/20180326/zi4T-fysqfnf9377213.png) ## VIP课程推荐 ## APP专享直播 ## 热门推荐 ![新浪财经公众号](//n.sinaimg.cn/finance/72219a70/20180103/_thumb_23666.png "新浪财经公众号") 24小时滚动播报最新的财经资讯和视频，更多粉丝福利扫描二维码关注（sinafinance） ## [股市直播](http://live.finance.sina.com.cn) ## [7X24小时](http://live.sina.com.cn/zt/f/v/finance/globalnews1) ![杨伟民](https://n.sinaimg.cn/zhuanlan/transform/170/w85h85/20221230/f01f-b20f33f6583ea1f69aefeedf1b86f051.jpg) ![董明珠还能为格力奋战多久？|《至少一个小时》](//n.sinaimg.cn/finance/transform/525/w300h225/20201030/ecb0-kcaeqzy3436531.jpg) ![梁建章：中国人口衰竭的速度前所未有](//n.sinaimg.cn/finance/transform/525/w300h225/20201030/75b9-kcaeqzy3438114.jpg) ![冷友斌回应网友质疑：说价格高 对飞鹤不公平！](//n.sinaimg.cn/finance/transform/525/w300h225/20201030/c485-kcaeqzy3442305.jpg) ![王中军：我喜欢比较“江湖”一点的人](//n.sinaimg.cn/finance/transform/525/w300h225/20201030/a563-kcaeqzy3444360.jpg) [新浪财经意见反馈留言板](http://news.sina.com.cn/feedback/post.html) [新浪简介](http://ir.sina.com.cn/index.shtml)|[广告服务](http://emarketing.sina.com.cn/)|[About Sina](http://corp.sina.com.cn/eng/) [联系我们](http://www.sina.com.cn/contactus.html)|[招聘信息](http://corp.sina.com.cn/chn/sina_job.html)|[通行证注册](https://login.sina.com.cn/signup/signup.php) [产品答疑](http://help.sina.com.cn/)|[网站律师](http://www.sina.com.cn/intro/lawfirm.shtml)|[SINA English](http://english.sina.com) Copyright © 1996-2026 SINA Corporation All Rights Reserved 新浪公司 [版权所有](http://www.sina.com.cn/intro/copyright.shtml)'
+            matched_terms:
+            ai_review:
+              status: 'reviewed'
+              keep_level: 'drop'
+              reason: '补充链接主题与原文无关，内容完全跑偏'
+              relevance_note: '原文是关于欧盟资助云服务以加强数字主权，而补充链接是关于化工行业收购案的反垄断调查'
+              value_type: '跑偏结果'
+  - topic: 'ICT人才培养与产教协同'
+    items:
+      - original_title: '杨超斌：华为ICT大赛十年新起点，为数字产业锻造实战型人才'
+        channel: '首页'
+        original_url: 'https://www.c114.com.cn/news/126/a1308717.html'
+        original_published_at: '2026-04-19'
+        queries:
+          - query: '杨超斌：华为ICT大赛十年新起点，为数字产业锻造实战型人才'
+            query_type: 'title'
+            provider: 'tavily'
+            results:
+          - query: '华为ICT大赛 实战型人才'
+            query_type: 'keyword'
+            provider: 'tavily'
+            results:
+              - query: '华为ICT大赛 实战型人才'
+                query_type: 'keyword'
+                result_title: '华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战- DoNews'
+                url: 'https://www.donews.com/news/detail/4/6517888.html'
+                domain: 'www.donews.com'
+                published_at: '2026-04-19'
+                snippet: '汽车 文娱 体育 专栏 直播 专题. 首页 快讯 商业 消费 游戏 3C 家电 汽车 文娱 体育 专栏 直播 专题 APP. DoNews > 公司新闻 > 华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战. 推荐 2026-04-19 10:51:02. 第十届华为ICT大赛中国总决赛于4月19日在华中科技大学落幕，华为常务董事、ICT BG CEO杨超斌出席闭幕式并致辞。本届大赛历时9个月，覆盖全国1400所高校，累计16万名选手报名，1430名选手组成475支队伍晋级总决赛，在六大赛道共产生319个奖项。. 杨超斌指出，人才是数字时代的核心引擎，产教协同是培育人才的关键路径。自2013年启动ICT学院项目以来，华为已与全球2000多所高校合作，累计培养超百万实战型ICT人才。合作模式涵盖课训、赛训及会实训，践行开放共赢生态理念。. 本届赛事技术内容紧贴产业前沿。挑战赛设置'
+                score: 0.8174
+                is_official: false
+                source_tier: 'normal'
+                extract_status: 'not_requested'
+                extract_text: ''
+                matched_terms:
+                  - '杨超斌'
+                  - '华为'
+                  - 'ICT'
+                  - '大赛'
+              - query: '华为ICT大赛 实战型人才'
+                query_type: 'keyword'
+                result_title: '华为将通过昇腾开源生态开发者计划发布超200项算子任务|华为_新浪财经_新浪网'
+                url: 'https://finance.sina.com.cn/roll/2026-04-19/doc-inhvackv9037408.shtml'
+                domain: 'finance.sina.com.cn'
+                published_at: '2026-04-19'
+                snippet: '# 华为将通过昇腾开源生态开发者计划发布超200项算子任务. 上证报中国证券网讯（记者 荆淮侨）华为常务董事、ICT BG CEO杨超斌4月19日在武汉表示，今年，华为将通过昇腾开源生态开发者计划发布200余项算子任务，并面向高校学生选拔超2000名优秀开发者并提供实习岗位。. 当天，第十届华为ICT大赛中国总决赛在武汉落幕。杨超斌在会上表示，自2013年启动ICT学院项目以来，华为与全球2000多所高校建立合作，累计培养超百万实战型ICT人才。华为将持续搭建创新实践平台，推动高校培养方向与产业需求对接，助力更多ICT青年成长为技术骨干。. 据介绍，本届大赛中国总决赛由华中科技大学与华为联合主办，重点设置了基于国产化算力平台的赛道，将模型迁移、算子开发等产业急需的“工程化”能力作为考核重点，解决“国产算力硬件已具备支撑大模型的能力，但软件生态与高校工程化培养相对滞后”的痛点。. 在开源推理'
+                score: 0.7670
+                is_official: false
+                source_tier: 'normal'
+                extract_status: 'not_requested'
+                extract_text: ''
+                matched_terms:
+                  - '杨超斌'
+                  - '华为'
+                  - 'ICT'
+                  - '大赛'
+        search_results:
+          - query: '华为ICT大赛 实战型人才'
+            query_type: 'keyword'
+            result_title: '华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战- DoNews'
+            url: 'https://www.donews.com/news/detail/4/6517888.html'
+            domain: 'www.donews.com'
+            published_at: '2026-04-19'
+            snippet: '汽车 文娱 体育 专栏 直播 专题. 首页 快讯 商业 消费 游戏 3C 家电 汽车 文娱 体育 专栏 直播 专题 APP. DoNews > 公司新闻 > 华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战. 推荐 2026-04-19 10:51:02. 第十届华为ICT大赛中国总决赛于4月19日在华中科技大学落幕，华为常务董事、ICT BG CEO杨超斌出席闭幕式并致辞。本届大赛历时9个月，覆盖全国1400所高校，累计16万名选手报名，1430名选手组成475支队伍晋级总决赛，在六大赛道共产生319个奖项。. 杨超斌指出，人才是数字时代的核心引擎，产教协同是培育人才的关键路径。自2013年启动ICT学院项目以来，华为已与全球2000多所高校合作，累计培养超百万实战型ICT人才。合作模式涵盖课训、赛训及会实训，践行开放共赢生态理念。. 本届赛事技术内容紧贴产业前沿。挑战赛设置'
+            score: 0.8174
+            is_official: false
+            source_tier: 'normal'
+            extract_status: 'not_requested'
+            extract_text: ''
+            matched_terms:
+              - '杨超斌'
+              - '华为'
+              - 'ICT'
+              - '大赛'
+          - query: '华为ICT大赛 实战型人才'
+            query_type: 'keyword'
+            result_title: '华为将通过昇腾开源生态开发者计划发布超200项算子任务|华为_新浪财经_新浪网'
+            url: 'https://finance.sina.com.cn/roll/2026-04-19/doc-inhvackv9037408.shtml'
+            domain: 'finance.sina.com.cn'
+            published_at: '2026-04-19'
+            snippet: '# 华为将通过昇腾开源生态开发者计划发布超200项算子任务. 上证报中国证券网讯（记者 荆淮侨）华为常务董事、ICT BG CEO杨超斌4月19日在武汉表示，今年，华为将通过昇腾开源生态开发者计划发布200余项算子任务，并面向高校学生选拔超2000名优秀开发者并提供实习岗位。. 当天，第十届华为ICT大赛中国总决赛在武汉落幕。杨超斌在会上表示，自2013年启动ICT学院项目以来，华为与全球2000多所高校建立合作，累计培养超百万实战型ICT人才。华为将持续搭建创新实践平台，推动高校培养方向与产业需求对接，助力更多ICT青年成长为技术骨干。. 据介绍，本届大赛中国总决赛由华中科技大学与华为联合主办，重点设置了基于国产化算力平台的赛道，将模型迁移、算子开发等产业急需的“工程化”能力作为考核重点，解决“国产算力硬件已具备支撑大模型的能力，但软件生态与高校工程化培养相对滞后”的痛点。. 在开源推理'
+            score: 0.7670
+            is_official: false
+            source_tier: 'normal'
+            extract_status: 'not_requested'
+            extract_text: ''
+            matched_terms:
+              - '杨超斌'
+              - '华为'
+              - 'ICT'
+              - '大赛'
+        selected_results:
+          - query: '华为ICT大赛 实战型人才'
+            query_type: 'keyword'
+            result_title: '华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战- DoNews'
+            url: 'https://www.donews.com/news/detail/4/6517888.html'
+            domain: 'www.donews.com'
+            published_at: '2026-04-19'
+            snippet: '汽车 文娱 体育 专栏 直播 专题. 首页 快讯 商业 消费 游戏 3C 家电 汽车 文娱 体育 专栏 直播 专题 APP. DoNews > 公司新闻 > 华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战. 推荐 2026-04-19 10:51:02. 第十届华为ICT大赛中国总决赛于4月19日在华中科技大学落幕，华为常务董事、ICT BG CEO杨超斌出席闭幕式并致辞。本届大赛历时9个月，覆盖全国1400所高校，累计16万名选手报名，1430名选手组成475支队伍晋级总决赛，在六大赛道共产生319个奖项。. 杨超斌指出，人才是数字时代的核心引擎，产教协同是培育人才的关键路径。自2013年启动ICT学院项目以来，华为已与全球2000多所高校合作，累计培养超百万实战型ICT人才。合作模式涵盖课训、赛训及会实训，践行开放共赢生态理念。. 本届赛事技术内容紧贴产业前沿。挑战赛设置'
+            score: 0.8174
+            is_official: false
+            source_tier: 'normal'
+            extract_status: 'success'
+            extract_text: '[![logo](https://img6.donews.com/static/v3/images/full-logo.png)](https://www.donews.com) [![logo](https://img6.donews.com/static/v3/images/small-logo.png)](https://www.donews.com) [![](https://www.donews.com/static/v3/icon-font/consumer.svg)](https://www.donews.com/consumer/index) [汽车](https://www.donews.com/automobile/index) [文娱](https://www.donews.com/recreation/index) [![](https://www.donews.com/static/v3/icon-font/sport.svg) 体育](https://www.donews.com/sport/index) [专栏](https://www.donews.com/idonews/index) [直播](https://www.donews.com/live/index) [专题](https://www.donews.com/special/index) APP ![](https://www.donews.com/static/v2/images/code.png) [![logo](https://img6.donews.com/static/v3/images/full-logo.png)](https://www.donews.com) ![user](https://img6.donews.com/static/v3/images/user-avatar.png) [首页](https://www.donews.com) [快讯](https://www.donews.com/newsflash/index) [商业](https://www.donews.com/company/index) [![](https://www.donews.com/static/v3/icon-font/consumer.svg) 消费](https://www.donews.com/consumer/index) [游戏](https://www.donews.com/ent/index) [3C](https://www.donews.com/digital/index) [家电](https://www.donews.com/digitalhome/index) [汽车](https://www.donews.com/automobile/index) [文娱](https://www.donews.com/recreation/index) [![](https://www.donews.com/static/v3/icon-font/sport.svg) 体育](https://www.donews.com/sport/index) [专栏](https://www.donews.com/idonews/index) [直播](https://www.donews.com/live/index) [专题](https://www.donews.com/special/index) [APP](https://www.donews.com/app.html) [DoNews](https://www.donews.com) > 公司新闻 > [华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战](https://www.donews.com/news/detail/4/6517888.html) ![](https://img6.donews.com/img/2023/03/08/img_pic_571678243954.png) ![](https://img6.donews.com/img/2025/04/07/img_pic_73167824404612.png) ![](https://img6.donews.com/img/2025/04/07/img_pic_93167824404012.png) ![](https://img6.donews.com/img/2023/03/21/img_pic_931679381346.jpg) ![](https://img6.donews.com/img/2024/08/05/img_pic_341722839675.gif) 华为ICT大赛十年收官：16万人参赛，聚焦AI与算子优化实战 推荐 2026-04-19 10:51:02 分享到 第十届华为ICT大赛中国总决赛于4月19日在华中科技大学落幕，华为常务董事、ICT BG CEO杨超斌出席闭幕式并致辞。本届大赛历时9个月，覆盖全国1400所高校，累计16万名选手报名，1430名选手组成475支队伍晋级总决赛，在六大赛道共产生319个奖项。 杨超斌指出，人才是数字时代的核心引擎，产教协同是培育人才的关键路径。自2013年启动ICT学院项目以来，华为已与全球2000多所高校合作，累计培养超百万实战型ICT人才。合作模式涵盖课训、赛训及会实训，践行开放共赢生态理念。 本届赛事技术内容紧贴产业前沿。挑战赛设置4道算子优化赛题，共收到120余个优化方案；开源推理大模型赛题中，浙江大学与上海交通大学团队通过高效并行优化实现性能提升30%；创新赛环节，选手依托华为开源模型引擎及AI工具链，在模型精度仅损失1%前提下，将端到端推理速度提升6倍。 华为将高端AI人才培养置于战略核心，联合高校共建鲲鹏昇腾科教创新孵化中心，探索课程共建、科教引导与项目化实践新模式。杨超斌以‘张雪机车’为例，强调扎根热爱、执着钻研的极客精神是新时代青年开发者的重要品质。 面向2026年，华为将通过昇腾开源生态开发者计划发布200余项算子任务，面向高校招募学子，选拔2000多名优秀开发者并提供实习岗位。华为将持续搭建创新实践平台，推动高校培养方向与产业需求精准对接，助力ICT青年成长为技术骨干。 大赛秉持‘不为胜负所限，只为突破而来’的精神。华为以十年ICT大赛为新起点，携手高校培育有理想、有技术、有担当的青年人才，服务我国数字产业高质量发展。 免责声明：本文内容由开放的智能模型自动生成，仅供参考。 最新文章 [![高德ABot-World登顶四项权威评测，全球唯一在物理合规性、动作可控性、零样本泛化均达第一的世界模型](https://img6.donews.com/img/2026/04/19/img_pic_561776571544.jpeg) 商业 高德ABot-World登顶四项权威评测，全球唯一在物理合规性、动作可控性、零样本泛化均达第一的世界模型 高德发布全球首款开放环境全自主具身机器人“途途”及ABot全栈技术体系，突破实验室到真实场景瓶颈，在多项权威评测中斩获SOTA。 杨亮 1小时前](https://www.donews.com/news/detail/1/6517919.html) [![魏建军对话平遥：探寻契约精神之源，以信义底色筑牢中国智造根基](https://img6.donews.com/img/2026/04/19/img_pic_221776571471.png) 汽车 魏建军对话平遥：探寻契约精神之源，以信义底色筑牢中国智造根基 长城汽车致敬平遥商道，以契约精神为内核，践行‘说到做到’的实业本分，推动中国汽车高质量出海与全球共生。 杨亮 1小时前](https://www.donews.com/news/detail/7/6517917.html) [![消息称初创企业Cursor即将完成20亿美元融资，估值达500亿美元](https://img6.donews.com/img/2026/04/19/img_pic_1776557071.png) 商业 消息称初创企业Cursor即将完成20亿美元融资，估值达500亿美元 AI编程初创Cursor拟融资超20亿美元，估值达500亿美元；年化营收预计2026年底破60亿美元，已实现企业端正毛利率。 杨亮 5小时前](https://www.donews.com/news/detail/1/6517810.html) [![消息称 DeepSeek 正寻求首轮外部融资，估值超百亿美元](https://img6.donews.com/img/2025/01/30/img_pic_1738243971.jpg?x-oss-process=image/resize,w_1000) 商业 消息称 DeepSeek 正寻求首轮外部融资，估值超百亿美元 DeepSeek拟以超100亿美元估值融资至少3亿美元，首次引入外部资本，用于模型研发、人才引进及全球扩张。 杨亮 17小时前](https://www.donews.com/news/detail/1/6517680.html) [![长城哈弗猛龙PLUS开启预售：售价18.98~21.58万元](https://img6.donews.com/img/2026/04/18/img_pic_1776514894.png) 汽车 长城哈弗猛龙PLUS开启预售：售价18.98~21.58万元 哈弗猛龙PLUS今晚开启预'
+            matched_terms:
+              - '杨超斌'
+              - '华为'
+              - 'ICT'
+              - '大赛'
+            ai_review:
+              status: 'reviewed'
+              keep_level: 'strong'
+              reason: '报道同一事件，提供详细数据如参赛人数、高校覆盖数、奖项数等具体事实'
+              relevance_note: '与原文主题完全一致，是对华为ICT大赛十年成果及产教协同理念的详细报道'
+              value_type: '新增事实'
+          - query: '华为ICT大赛 实战型人才'
+            query_type: 'keyword'
+            result_title: '华为将通过昇腾开源生态开发者计划发布超200项算子任务|华为_新浪财经_新浪网'
+            url: 'https://finance.sina.com.cn/roll/2026-04-19/doc-inhvackv9037408.shtml'
+            domain: 'finance.sina.com.cn'
+            published_at: '2026-04-19'
+            snippet: '# 华为将通过昇腾开源生态开发者计划发布超200项算子任务. 上证报中国证券网讯（记者 荆淮侨）华为常务董事、ICT BG CEO杨超斌4月19日在武汉表示，今年，华为将通过昇腾开源生态开发者计划发布200余项算子任务，并面向高校学生选拔超2000名优秀开发者并提供实习岗位。. 当天，第十届华为ICT大赛中国总决赛在武汉落幕。杨超斌在会上表示，自2013年启动ICT学院项目以来，华为与全球2000多所高校建立合作，累计培养超百万实战型ICT人才。华为将持续搭建创新实践平台，推动高校培养方向与产业需求对接，助力更多ICT青年成长为技术骨干。. 据介绍，本届大赛中国总决赛由华中科技大学与华为联合主办，重点设置了基于国产化算力平台的赛道，将模型迁移、算子开发等产业急需的“工程化”能力作为考核重点，解决“国产算力硬件已具备支撑大模型的能力，但软件生态与高校工程化培养相对滞后”的痛点。. 在开源推理'
+            score: 0.7670
+            is_official: false
+            source_tier: 'normal'
+            extract_status: 'success'
+            extract_text: '![](//beacon.sina.com.cn/a.gif?noScript) ![](//i.sso.sina.com.cn/images/login/thumb_default.png) ![](//n.sinaimg.cn/finance/c30320b4/20190809/cj_sinafinance_app2x.png) # 华为将通过昇腾开源生态开发者计划发布超200项算子任务 来源：上海证券报·中国证券网 上证报中国证券网讯（记者 荆淮侨）华为常务董事、ICT BG CEO杨超斌4月19日在武汉表示，今年，华为将通过昇腾开源生态开发者计划发布200余项算子任务，并面向高校学生选拔超2000名优秀开发者并提供实习岗位。 当天，第十届华为ICT大赛中国总决赛在武汉落幕。杨超斌在会上表示，自2013年启动ICT学院项目以来，华为与全球2000多所高校建立合作，累计培养超百万实战型ICT人才。华为将持续搭建创新实践平台，推动高校培养方向与产业需求对接，助力更多ICT青年成长为技术骨干。 据介绍，本届大赛中国总决赛由华中科技大学与华为联合主办，重点设置了基于国产化算力平台的赛道，将模型迁移、算子开发等产业急需的“工程化”能力作为考核重点，解决“国产算力硬件已具备支撑大模型的能力，但软件生态与高校工程化培养相对滞后”的痛点。 在开源推理大模型赛题中，浙江大学、上海交通大学团队通过高效并行优化实现性能提升30%。创新赛环节，选手依托华为开源模型引擎及AI工具链，在模型精度仅损失1%的前提下，将端到端推理速度提升6倍。赛事主办方表示，相关成果也验证了“以赛促学”模式在解决真实工程问题上的价值。 ![](//n.sinaimg.cn/finance/cece9e13/20240627/655959900_20240627.png) ![](//n.sinaimg.cn/finance/transform/260/w880h180/20180326/zi4T-fysqfnf9377213.png) ## VIP课程推荐 ## APP专享直播 ## 热门推荐 ![新浪财经公众号](//n.sinaimg.cn/finance/72219a70/20180103/_thumb_23666.png "新浪财经公众号") 24小时滚动播报最新的财经资讯和视频，更多粉丝福利扫描二维码关注（sinafinance） ## [股市直播](http://live.finance.sina.com.cn) ## [7X24小时](http://live.sina.com.cn/zt/f/v/finance/globalnews1) ![杨伟民](https://n.sinaimg.cn/zhuanlan/transform/170/w85h85/20221230/f01f-b20f33f6583ea1f69aefeedf1b86f051.jpg) ![董明珠还能为格力奋战多久？|《至少一个小时》](//n.sinaimg.cn/finance/transform/525/w300h225/20201030/ecb0-kcaeqzy3436531.jpg) ![梁建章：中国人口衰竭的速度前所未有](//n.sinaimg.cn/finance/transform/525/w300h225/20201030/75b9-kcaeqzy3438114.jpg) ![冷友斌回应网友质疑：说价格高 对飞鹤不公平！](//n.sinaimg.cn/finance/transform/525/w300h225/20201030/c485-kcaeqzy3442305.jpg) ![王中军：我喜欢比较“江湖”一点的人](//n.sinaimg.cn/finance/transform/525/w300h225/20201030/a563-kcaeqzy3444360.jpg) [新浪财经意见反馈留言板](http://news.sina.com.cn/feedback/post.html) [新浪简介](http://ir.sina.com.cn/index.shtml)|[广告服务](http://emarketing.sina.com.cn/)|[About Sina](http://corp.sina.com.cn/eng/) [联系我们](http://www.sina.com.cn/contactus.html)|[招聘信息](http://corp.sina.com.cn/chn/sina_job.html)|[通行证注册](https://login.sina.com.cn/signup/signup.php) [产品答疑](http://help.sina.com.cn/)|[网站律师](http://www.sina.com.cn/intro/lawfirm.shtml)|[SINA English](http://english.sina.com) Copyright © 1996-2026 SINA Corporation All Rights Reserved 新浪公司 [版权所有](http://www.sina.com.cn/intro/copyright.shtml)'
+            matched_terms:
+              - '杨超斌'
+              - '华为'
+              - 'ICT'
+              - '大赛'
+            ai_review:
+              status: 'reviewed'
+              keep_level: 'strong'
+              reason: '报道同一事件，新增昇腾开源生态开发者计划及算子任务等具体产业合作细节'
+              relevance_note: '与原文主题高度相关，补充了大赛在国产算力平台、算子开发等工程化能力培养方面的具体举措'
+              value_type: '新增事实'

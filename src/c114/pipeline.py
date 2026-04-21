@@ -17,7 +17,8 @@ def run_daily_pipeline(args: argparse.Namespace, *, paths: AppPaths, facade: Any
     """执行 `run --source c114` 的完整日报流程。"""
 
     def _resolve_dates(cli_args: argparse.Namespace) -> list[object]:
-        return facade.resolve_c114_date_range(cli_args, default_to_today=True)
+        # 默认获取t-1
+        return facade.resolve_c114_date_range(cli_args, default_to_today=True, default_days_ago=1)
 
     def _run_controller_for_day(target_date: object, day_dir: object, runtime_config: object) -> None:
         run_c114_controller_daily_pipeline(

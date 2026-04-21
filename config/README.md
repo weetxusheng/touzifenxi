@@ -217,3 +217,20 @@
   - 输出目录模式
   - `skill`：默认写入 skill 自带 `output/`
   - `project`：写入当前项目共享目录
+
+## 36Kr 风控兜底说明
+
+- `sources.kr36.request_interval_min_ms / request_interval_max_ms`
+  - 控制 36Kr 抓取请求的全局最小间隔区间
+  - 建议保持在 50 到 90 秒之间，不要压得太低
+- `sources.kr36.risk_retry_count / risk_retry_wait_ms`
+  - 命中风控页后的 HTTP 重试次数和重试前等待时间
+  - 先走保守重试，再决定是否打开浏览器
+- `sources.kr36.browser_fallback_enabled`
+  - `true` 时，`curl` 连续拿到验证码/风控页后会打开可见浏览器
+  - 该流程不会自动破解验证码，只会等待人工完成验证
+- `sources.kr36.browser_verification_timeout_ms / browser_verification_poll_ms`
+  - 浏览器兜底阶段的总等待时间和轮询页面恢复的频率
+- `sources.kr36.persist_browser_cookies`
+  - 人工验证成功后，把浏览器上下文里的 36Kr Cookie 回写到 `config/kr36_cookies.json`
+  - 后续 `curl` 请求会复用这些 Cookie，减少重复触发风控
