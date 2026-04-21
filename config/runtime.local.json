@@ -13,6 +13,33 @@
       "_comment": "InfoQ 当前使用首页新列表接口。",
       "listing": "new_list",
       "listing_size": 12
+    },
+    "kr36": {
+      "_comment": "36Kr 使用 search/articles 子项抓取；不走 web_news 与资讯子级页面。",
+      "channel_urls": [],
+      "candidate_limit": 120,
+      "info_per_category_limit": 5,
+      "search_listing_enabled": true,
+      "request_interval_min_ms": 60000,
+      "request_interval_max_ms": 120000,
+      "risk_retry_count": 3,
+      "retry_on_risk_enabled": false,
+      "risk_retry_wait_ms": 3000,
+      "http_only_mode": true,
+      "risk_verification_auto_solver": false,
+      "risk_verification_agent_browser_retry": false,
+      "search_listing_playwright_enabled": false,
+      "deferred_retry_attempts": 3,
+      "deferred_retry_min_interval_ms": 90000,
+      "deferred_retry_max_interval_ms": 180000,
+      "deferred_retry_backoff_step_ms": 60000,
+      "deferred_retry_wait_jitter_ms": 8000,
+      "risk_cooldown_after_block_ms": 180000,
+      "risk_cooldown_jitter_ms": 8000,
+      "deferred_retry_skip_blocked_ratio_percent": 85,
+      "risk_verification_command": "",
+      "risk_verification_wait_ms": 3000,
+      "browser_fallback_enabled": false
     }
   },
   "execution": {

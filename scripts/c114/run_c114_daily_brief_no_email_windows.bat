@@ -1,6 +1,10 @@
 @echo off
 setlocal
 
+set "SOURCE=%~1"
+if "%SOURCE%"=="" set "SOURCE=c114"
+set "LOG_TAG=%SOURCE%"
+
 rem Repo root = scripts/c114 -> two levels up from this file.
 for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
 set "LOG_FILE=%PROJECT_ROOT%\log.txt"
@@ -15,24 +19,24 @@ if not defined PYTHON_BIN (
 
 cd /d "%PROJECT_ROOT%"
 set "PYTHONPATH=src"
-echo [C114] %date% %time% starting daily brief run (no email)...
-echo [C114] PROJECT_ROOT=%PROJECT_ROOT%
-echo [C114] PYTHON_BIN=%PYTHON_BIN%
-> "%LOG_FILE%" echo [C114] %date% %time% starting daily brief run (no email)...
->> "%LOG_FILE%" echo [C114] PROJECT_ROOT=%PROJECT_ROOT%
->> "%LOG_FILE%" echo [C114] PYTHON_BIN=%PYTHON_BIN%
+echo [%LOG_TAG%] %date% %time% starting daily brief run (no email)...
+echo [%LOG_TAG%] PROJECT_ROOT=%PROJECT_ROOT%
+echo [%LOG_TAG%] PYTHON_BIN=%PYTHON_BIN%
+> "%LOG_FILE%" echo [%LOG_TAG%] %date% %time% starting daily brief run (no email)...
+>> "%LOG_FILE%" echo [%LOG_TAG%] PROJECT_ROOT=%PROJECT_ROOT%
+>> "%LOG_FILE%" echo [%LOG_TAG%] PYTHON_BIN=%PYTHON_BIN%
 
 "%PYTHON_BIN%" --version >nul 2>&1
 if errorlevel 1 (
-  echo [C114] ERROR: Python not runnable. Set PYTHON_BIN or add python to PATH.
-  >> "%LOG_FILE%" echo [C114] ERROR: Python not runnable. Set PYTHON_BIN or add python to PATH.
+  echo [%LOG_TAG%] ERROR: Python not runnable. Set PYTHON_BIN or add python to PATH.
+  >> "%LOG_FILE%" echo [%LOG_TAG%] ERROR: Python not runnable. Set PYTHON_BIN or add python to PATH.
   endlocal & exit /b 2
 )
 
-"%PYTHON_BIN%" -c "import touzifenxi; from zoneinfo import ZoneInfo; ZoneInfo('Asia/Shanghai')" >nul 2>&1
+"%PYTHON_BIN%" -c "import c114.cli" >nul 2>&1
 if errorlevel 1 (
-  echo [C114] ERROR: Python env missing project/tzdata dependency. Run: pip install -e . && pip install tzdata
-  >> "%LOG_FILE%" echo [C114] ERROR: Python env missing project/tzdata dependency. Run: pip install -e . ^&^& pip install tzdata
+  echo [%LOG_TAG%] ERROR: Python env missing runtime dependency. Run: pip install -e .
+  >> "%LOG_FILE%" echo [%LOG_TAG%] ERROR: Python env missing runtime dependency. Run: pip install -e .
   endlocal & exit /b 3
 )
 
@@ -42,11 +46,11 @@ if exist "%PROJECT_ROOT%\.env" (
   )
 )
 
-"%PYTHON_BIN%" -m touzifenxi.cli run-c114-daily-brief --no-email
+"%PYTHON_BIN%" scripts\websearch.py run --source %SOURCE% --timeout 90
 set "EXIT_CODE=%ERRORLEVEL%"
 
-echo [C114] %date% %time% finished with exit code %EXIT_CODE%.
-echo [C114] detail log: %LOG_FILE%
->> "%LOG_FILE%" echo [C114] %date% %time% finished with exit code %EXIT_CODE%.
+echo [%LOG_TAG%] %date% %time% finished with exit code %EXIT_CODE%.
+echo [%LOG_TAG%] detail log: %LOG_FILE%
+>> "%LOG_FILE%" echo [%LOG_TAG%] %date% %time% finished with exit code %EXIT_CODE%.
 
 endlocal & exit /b %EXIT_CODE%

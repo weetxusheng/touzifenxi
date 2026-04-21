@@ -24,11 +24,15 @@ def infer_brief_title(input_path: Path) -> str:
     name = input_path.name.lower()
     if name.startswith("infoq_"):
         return "InfoQ 主题简报"
+    if name.startswith("kr36_") or name.startswith("36kr_"):
+        return "36Kr 主题简报"
     return "C114 主题简报"
 
 
-def format_brief_link_line(title: str, published_at: str, url: str) -> str:
-    """把 step 6 链接行统一格式化为标题、日期、链接。"""
+def format_brief_link_line(title: str, published_at: str, url: str, *, include_date: bool = True) -> str:
+    """把 step 6 链接行统一格式化为标题、日期、链接。专题（/topics/）默认不含日期。"""
 
+    if not include_date:
+        return f"- {title} | {url}"
     normalized_date = (published_at or "").strip() or "日期未知"
     return f"- {title} | {normalized_date} | {url}"

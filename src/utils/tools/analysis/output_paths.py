@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from pathlib import Path
 
 from utils.tools.runtime.checkpoint import StepCheckpointStore, checkpoint_path_for_step
 from c114.runtime.settings import AppPaths, resolve_override_path
@@ -60,6 +61,7 @@ def write_analysis_outputs(
     auto_fill_keywords: bool = True,
     checkpoint_prefix: str = "c114",
     keyword_count: int = 1,
+    keyword_prompt_path: Path | None = None,
 ) -> list[SearchChecklistItem]:
     """Persist the analysis CSV and, when available, the step 2 checklist YAML."""
 
@@ -94,13 +96,23 @@ def write_analysis_outputs(
     if auto_fill_keywords:
         if llm_client is None:
             raise RuntimeError("未配置 llm.api_key，无法自动生成 step 2 搜索关键词。")
-        checklist_items = autofill_search_checklist_items(
-            checklist_items,
-            analyses,
-            llm_client,
-            keyword_count=keyword_count,
-            checkpoint_store=checkpoint_store,
-        )
+        if keyword_prompt_path is None:
+            checklist_items = autofill_search_checklist_items(
+                checklist_items,
+                analyses,
+                llm_client,
+                keyword_count=keyword_count,
+                checkpoint_store=checkpoint_store,
+            )
+        else:
+            checklist_items = autofill_search_checklist_items(
+                checklist_items,
+                analyses,
+                llm_client,
+                prompt_path=keyword_prompt_path,
+                keyword_count=keyword_count,
+                checkpoint_store=checkpoint_store,
+            )
     else:
         for item in checklist_items:
             if checkpoint_store.get_entry(build_step2_checkpoint_entry_id(item)) is None:

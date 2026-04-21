@@ -381,6 +381,13 @@ def _build_source_runtime_configs(config: dict[str, Any]) -> dict[str, dict[str,
             "listing": "new_list",
             "listing_size": 12,
         },
+        "kr36": {
+            "candidate_limit": 120,
+            "channel_urls": [
+                "https://36kr.com/topics/",
+                "https://36kr.com/activity/",
+            ],
+        },
     }
     sources_root = _read_nested_value(config, "sources", default={})
     if not isinstance(sources_root, dict):
@@ -400,6 +407,17 @@ def _build_source_runtime_configs(config: dict[str, Any]) -> dict[str, dict[str,
             default=12,
         )
         merged["infoq"].setdefault("listing", "new_list")
+    if "kr36" in merged:
+        merged["kr36"]["candidate_limit"] = _positive_int_value(
+            merged["kr36"].get("candidate_limit"),
+            default=120,
+        )
+        urls = merged["kr36"].get("channel_urls")
+        if not isinstance(urls, list) or not urls:
+            merged["kr36"]["channel_urls"] = [
+                "https://36kr.com/topics/",
+                "https://36kr.com/activity/",
+            ]
     return merged
 
 
