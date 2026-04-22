@@ -43,7 +43,13 @@
       "Bash(python -c \"import json; d=json.load\\(open\\('E:/AI/touzifenxi/config/runtime.local.json'\\)\\); providers=d.get\\('llm_providers',[]\\); [print\\(p.get\\('provider'\\), 'api_key len:', len\\(str\\(p.get\\('api_key',''\\)\\)\\), 'has_newline:', chr\\(10\\) in str\\(p.get\\('api_key',''\\)\\)\\) for p in providers]\")",
       "Bash(python -u -c ' *)",
       "Bash(cmd /c \"scripts\\\\kr36\\\\run_kr36_daily_brief_no_email_windows.bat\")",
-      "Bash(echo \"BAT_PID=$!\")"
+      "Bash(echo \"BAT_PID=$!\")",
+      "Bash(.venv/Scripts/python.exe -m touzifenxi.cli send-c114-latest-brief-email --help)",
+      "Bash(PYTHONPATH=src .venv/Scripts/python.exe -m touzifenxi.cli send-c114-latest-brief-email --help)",
+      "Bash(PYTHONPATH=src .venv/Scripts/python.exe -m c114.cli --help)",
+      "Bash(xargs grep *)",
+      "Bash(PYTHONPATH=src .venv/Scripts/python.exe src/utils/cli.py send-c114-latest-brief-email --help)",
+      "Bash(PYTHONPATH=src .venv/Scripts/python.exe -m utils.cli send-c114-latest-brief-email --help)"
     ]
   }
 }

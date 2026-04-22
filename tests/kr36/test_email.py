@@ -5,7 +5,7 @@ from kr36.email import _render_activity_source_item, render_kr36_brief_email
 
 
 def test_kr36_email_renders_homepage_sections_without_tabs(tmp_path) -> None:
-    step6_path = tmp_path / "kr36_step_6_brief_20260421.md"
+    step6_path = tmp_path / "kr36_step4_brief_20260421.md"
     markdown_text = """# 36Kr 主题简报（2026-04-21）
 
 ## 运行摘要

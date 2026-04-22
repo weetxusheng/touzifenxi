@@ -7,7 +7,6 @@ import os
 import random
 import re
 import subprocess
-import sys
 import time
 from datetime import date
 from datetime import datetime
@@ -23,7 +22,6 @@ from utils.tools.content_models import RawArticleDetail, RawArticleRef, Standard
 KR36_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 KR36_COOKIES_FILE = KR36_PROJECT_ROOT / "config" / "kr36_cookies.json"
 KR36_DEBUG_LOG_FILE = KR36_PROJECT_ROOT / "log.txt"
-KR36_SLIDER_SOLVER_SCRIPT = KR36_PROJECT_ROOT / "scripts" / "kr36_risk_slider_solver.py"
 
 KR36_ROOT = "https://36kr.com"
 KR36_DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
@@ -50,12 +48,20 @@ KR36_SEARCH_CATEGORY_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("数智前瞻", "数智前瞻"),
 )
 KR36_LINK_RE = re.compile(
-    r'<a[^>]+href="(?P<href>/p/\d+|https?://36kr\.com/p/\d+)"[^>]*>(?P<title>.*?)</a>',
+    r'<a[^>]+href="(?P<href>(?:/p/\d+(?:\?[^"]*)?)|(?:https?://(?:www\.)?36kr\.com/p/\d+(?:\?[^"]*)?))"[^>]*>(?P<title>.*?)</a>',
     re.IGNORECASE | re.DOTALL,
 )
 # 搜索页 CSR 渲染后，标题多在 p.title-wrapper > a（与纯 <a href=/p/> 并存）
 KR36_SEARCH_TITLE_LINK_RE = re.compile(
-    r'<p[^>]+class="[^"]*\btitle-wrapper\b[^"]*"[^>]*>\s*<a[^>]+href="(?P<href>/p/\d+)"[^>]*>(?P<title>.*?)</a>',
+    r'<p[^>]+class="[^"]*\btitle-wrapper\b[^"]*"[^>]*>\s*<a[^>]+href="(?P<href>(?:/p/\d+(?:\?[^"]*)?)|(?:https?://(?:www\.)?36kr\.com/p/\d+(?:\?[^"]*)?))"[^>]*>(?P<title>.*?)</a>',
+    re.IGNORECASE | re.DOTALL,
+)
+KR36_SEARCH_ARTICLE_ITEM_RE = re.compile(
+    r'<li[^>]+class="[^"]*\bsearch-result-list-item-article\b[^"]*"[^>]*>(?P<content>.*?)</li>',
+    re.IGNORECASE | re.DOTALL,
+)
+KR36_ANCHOR_WITH_HREF_RE = re.compile(
+    r'<a[^>]+href="(?P<href>[^"#]+)"[^>]*>(?P<title>.*?)</a>',
     re.IGNORECASE | re.DOTALL,
 )
 KR36_TOPIC_LINK_RE = re.compile(
@@ -129,6 +135,68 @@ def _normalize_kr36_risk_verification_playwright_mode(raw: object) -> str:
     return "headless"
 
 
+def _find_windows_chrome_executable() -> str:
+    candidates = (
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    )
+    for exe in candidates:
+        if os.path.exists(exe):
+            return exe
+    return ""
+
+
+def _open_external_windows_chrome_incognito(url: str) -> bool:
+    chrome_exe = _find_windows_chrome_executable()
+    if not chrome_exe:
+        return False
+    try:
+        subprocess.Popen([chrome_exe, "--incognito", url])
+        return True
+    except Exception:
+        return False
+
+
+def _kr36_slider_drag(page: object, sx: float, sy: float, drag_px: float) -> None:
+    """Human-like mouse drag from (sx,sy) by drag_px pixels rightward."""
+    page.mouse.move(sx, sy)
+    time.sleep(random.uniform(0.40, 0.70))
+    page.mouse.down()
+    time.sleep(random.uniform(0.20, 0.40))
+    steps = random.randint(40, 55)
+    for i in range(1, steps + 1):
+        t = i / steps
+        ease = t * t * (3.0 - 2.0 * t)  # smooth-step
+        page.mouse.move(
+            sx + drag_px * ease + random.uniform(-0.5, 0.5),
+            sy + random.uniform(-0.8, 0.8),
+        )
+        time.sleep(random.uniform(0.018, 0.035))  # slower so the drag is visible
+    time.sleep(random.uniform(0.15, 0.30))
+    page.mouse.up()
+    time.sleep(random.uniform(1.0, 1.8))
+
+
+def _kr36_try_solve_slider_captcha(page: object) -> bool:
+    """
+    Detect and solve 36kr slider-puzzle captcha.
+    Delegates to src.kr36.slider_captcha.solve_slider_captcha which uses
+    TM_CCOEFF_NORMED + alpha-mask template matching for precise hole location.
+    Returns True if a drag attempt was made.
+    """
+    try:
+        from .slider_captcha import solve_slider_captcha
+        result = solve_slider_captcha(page)
+        _append_kr36_debug_log(
+            f"[kr36] slider_captcha_solve_result attempted={str(result).lower()}"
+        )
+        return result
+    except Exception as exc:
+        _append_kr36_debug_log(f"[kr36] slider_captcha_solve_error err={exc}")
+        print(f"[kr36] slider_captcha_solve_error: {exc}")
+        return False
+
+
 class Kr36SourceAdapter(ContentSourceAdapter):
     """36Kr 抓取入口，默认聚焦资讯/专题/活动页并排除快讯。"""
 
@@ -179,6 +247,10 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             default=1200,
         )
         self.risk_verification_command = str(self._source_config.get("risk_verification_command") or "").strip()
+        self.risk_incognito_cookie_refresh_enabled = _bool_config(
+            self._source_config.get("risk_incognito_cookie_refresh_enabled"),
+            default=False,
+        )
         self.http_only_mode = _bool_config(
             self._source_config.get("http_only_mode"),
             default=True,
@@ -312,12 +384,8 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             min(100, int(self.deferred_retry_skip_blocked_ratio_percent)),
         )
         if self.http_only_mode:
-            self.risk_verification_command = ""
-            self.risk_verification_auto_solver = False
-            self.risk_verification_agent_browser_retry = False
             self.retry_on_risk_enabled = False
             self.browser_fallback_enabled = False
-            self.search_listing_playwright_enabled = False
         self._last_request_at = 0.0
         self._last_request_by_url: dict[str, float] = {}
         self._last_risk_detected_at = 0.0
@@ -464,6 +532,21 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     f"stage=search category={category} status=ok "
                     f"fetched={len(refs) - before_count} total_refs={len(refs)} elapsed_ms={int((time.time() - started_at) * 1000)}"
                 )
+                fetched_count = len(refs) - before_count
+                if fetched_count <= 0 and html:
+                    _append_kr36_debug_log(
+                        f"[kr36] search_zero_result category={category} html_length={len(html)} "
+                        f"has_list_main={str('kr-search-result-list-main' in html).lower()} "
+                        f"has_search_item={str('search-result-list-item-article' in html).lower()} "
+                        f"has_p_link={str('/p/' in html).lower()} "
+                        f"risk_like={str(_looks_like_captcha_or_block(html)).lower()}"
+                    )
+                    print(
+                        f"[kr36] search_zero_result category={category} html_length={len(html)} "
+                        f"has_list_main={str('kr-search-result-list-main' in html).lower()} "
+                        f"has_search_item={str('search-result-list-item-article' in html).lower()} "
+                        f"risk_like={str(_looks_like_captcha_or_block(html)).lower()}"
+                    )
                 _append_kr36_stage_log(
                     action="完成",
                     stage_name=f"搜索页({category})",
@@ -738,6 +821,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             "risk_retry_wait_ms": 1200,
             "http_only_mode": True,
             "risk_verification_command": "",
+            "risk_incognito_cookie_refresh_enabled": False,
             "risk_verification_auto_solver": False,
             "risk_verification_wait_ms": 3000,  # 进入风控后、执行 verification 命令前的等待（毫秒）
             "risk_verification_playwright_mode": "headless",
@@ -755,7 +839,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             "browser_verification_timeout_ms": 180000,
             "browser_verification_poll_ms": 2000,
             "persist_browser_cookies": True,
-            "search_listing_playwright_enabled": False,
+            "search_listing_playwright_enabled": True,
             "search_playwright_pre_stagger_min_ms": 1500,
             "search_playwright_pre_stagger_max_ms": 4500,
             "search_playwright_max_attempts": 2,
@@ -771,13 +855,12 @@ class Kr36SourceAdapter(ContentSourceAdapter):
 
     def _fetch_text(self, url: str) -> str:
         """
-        默认仅 HTTP 抓取；命中风控时若配置了 risk_verification_command，或启用
-        risk_verification_auto_solver（默认）且存在 scripts/kr36_risk_slider_solver.py，
-        则先等待 risk_verification_wait_ms 再执行内置易盾滑块（Playwright + OpenCV，默认无头），随后再 curl；
-        若主模式为 headless 且仍不可用，且 risk_verification_agent_browser_retry 为真，则同一脚本以
-        agent-browser（有头 Chromium，仍自动拖滑块）再试一次。
+        默认仅 HTTP 抓取；
+        命中风控时优先执行两种恢复方式之一：
+        1) `risk_verification_command`（外部命令，通常用于刷新 Cookie）
+        2) `risk_incognito_cookie_refresh_enabled=true`（内置可见浏览器无痕刷新 Cookie）
 
-        search/articles：在无头列表抓取仍异常（风控小页等）时，同样走上述滑块子进程后再无头重试。
+        刷新成功后会立即复用新 Cookie 对同一 URL 进行重试。
         """
         self._wait_before_next_request(url)
         _append_kr36_debug_log(f"[kr36] fetch_start url={url}")
@@ -812,13 +895,17 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             has_cmd = self._has_risk_verification_action()
             _append_kr36_debug_log(
                 f"[kr36] risk_entered method=curl url={url} html_length={len(html or '')} "
-                f"has_verification_command={str(has_cmd).lower()}"
+                f"has_cookie_refresh_action={str(has_cmd).lower()}"
+            )
+            print(
+                f"[kr36] risk_detected url={url} html_length={len(html or '')} "
+                f"has_cookie_refresh_action={str(has_cmd).lower()}"
             )
             if has_cmd:
                 wait_ms = max(0, int(self.risk_verification_wait_ms))
                 print(
                     f"[kr36] 已进入风控页面：{url}\n"
-                    f"[kr36] {wait_ms / 1000:.1f}s 后启动自动验证（自定义命令或内置易盾滑块）。"
+                    f"[kr36] {wait_ms / 1000:.1f}s 后启动无痕 Cookie 刷新（或执行自定义命令）。"
                 )
                 _append_kr36_debug_log(
                     f"[kr36] risk_verification_delay_before_command wait_ms={wait_ms} url={url}"
@@ -833,35 +920,17 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     html = self._curl_text(url)
                     if _is_usable_html(html):
                         _append_kr36_debug_log(
-                            f"[kr36] fetch_ok method=verification_command url={url} html_length={len(html)}"
+                            f"[kr36] fetch_ok method=risk_cookie_refresh url={url} html_length={len(html)}"
                         )
                         return html
-                if self._should_retry_builtin_solver_agent_browser():
-                    print(
-                        "[kr36] 首次自动滑块未恢复可用页面，切换 agent-browser（可见 Chromium，仍由脚本自动拖动）重试…"
-                    )
-                    _append_kr36_debug_log(
-                        f"[kr36] risk_verification_agent_browser_retry url={url} verify_ok={str(verify_ok).lower()}"
-                    )
-                    verify_ok2 = self._run_risk_verification(url, playwright_mode="agent-browser")
-                    if verify_ok2:
-                        self._human_pause(self.human_min_pause_ms, self.human_max_pause_ms)
-                        self._wait_before_next_request(url)
-                        html = self._curl_text(url)
-                        if _is_usable_html(html):
-                            _append_kr36_debug_log(
-                                f"[kr36] fetch_ok method=verification_agent_browser url={url} "
-                                f"html_length={len(html)}"
-                            )
-                            return html
             else:
-                _append_kr36_debug_log(f"[kr36] risk_detected method=curl url={url} no_auto_verify_command=1")
+                _append_kr36_debug_log(f"[kr36] risk_detected method=curl url={url} no_cookie_refresh_action=1")
                 if self.http_only_mode and not self.retry_on_risk_enabled:
                     print(f"[kr36] 命中风控页，已记录并将在首轮结束后重试：{url}")
                     return html
                 print(
-                    "[kr36] 检测到风控页面，且未配置自动验证（risk_verification_command / "
-                    "risk_verification_auto_solver + scripts/kr36_risk_slider_solver.py）。"
+                    "[kr36] 检测到风控页面，且未配置自动刷新 Cookie（risk_verification_command / "
+                    "risk_incognito_cookie_refresh_enabled）。"
                     f"请配置后重试：{url}"
                 )
             if not self.retry_on_risk_enabled:
@@ -941,25 +1010,20 @@ class Kr36SourceAdapter(ContentSourceAdapter):
     def _has_risk_verification_action(self) -> bool:
         if str(self.risk_verification_command or "").strip():
             return True
-        return bool(self.risk_verification_auto_solver and KR36_SLIDER_SOLVER_SCRIPT.is_file())
+        return bool(self.risk_incognito_cookie_refresh_enabled)
 
     def _should_retry_builtin_solver_agent_browser(self) -> bool:
-        """无头内置滑块已跑过仍失败时，是否再用同一脚本以 agent-browser（有头）自动重试。"""
-        if not self.risk_verification_agent_browser_retry:
-            return False
-        if str(self.risk_verification_command or "").strip():
-            return False
-        if not (self.risk_verification_auto_solver and KR36_SLIDER_SOLVER_SCRIPT.is_file()):
-            return False
-        return self.risk_verification_playwright_mode == "headless"
+        """保留历史接口，当前风控恢复策略不再走二次滑块重试。"""
+        return False
 
     def _run_risk_verification(self, url: str, *, playwright_mode: str | None = None) -> bool:
+        _ = playwright_mode
         env = os.environ.copy()
         env["KR36_RISK_URL"] = url
         command = str(self.risk_verification_command or "").strip()
         if command:
             _append_kr36_debug_log(f"[kr36] verification_command_start url={url} command={command}")
-            print(f"[kr36] 正在执行风控验证命令：{command}")
+            print(f"[kr36] 正在执行 Cookie 刷新命令：{command}")
             try:
                 completed = subprocess.run(
                     command,
@@ -969,48 +1033,168 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 )
             except Exception as error:
                 _append_kr36_debug_log(f"[kr36] verification_command_error url={url} error={error}")
-                print(f"[kr36] 风控验证命令异常：{error}")
-                return False
-        elif self.risk_verification_auto_solver and KR36_SLIDER_SOLVER_SCRIPT.is_file():
-            mode = playwright_mode or self.risk_verification_playwright_mode
-            argv = [sys.executable, str(KR36_SLIDER_SOLVER_SCRIPT)]
-            if mode == "headless":
-                argv.append("--headless")
-            label = (
-                "Playwright 无头 + OpenCV 自动拖动"
-                if mode == "headless"
-                else "agent-browser（有头 Chromium + OpenCV 自动拖动）"
-            )
-            _append_kr36_debug_log(
-                f"[kr36] verification_command_start url={url} playwright_mode={mode} auto_solver_argv={argv!r}"
-            )
-            print(f"[kr36] 正在执行内置易盾滑块验证（{label}）：{' '.join(argv)}")
-            try:
-                completed = subprocess.run(argv, check=False, env=env)
-            except Exception as error:
-                _append_kr36_debug_log(f"[kr36] verification_command_error url={url} error={error}")
-                print(f"[kr36] 风控验证命令异常：{error}")
+                print(f"[kr36] Cookie 刷新命令异常：{error}")
                 return False
         else:
-            return False
+            return self._run_incognito_cookie_refresh(url)
         ok = completed.returncode == 0
         _append_kr36_debug_log(
             f"[kr36] verification_command_end url={url} return_code={completed.returncode} ok={str(ok).lower()}"
         )
         if not ok:
-            if completed.returncode == 3:
-                print(
-                    "[kr36] 内置滑块脚本判定：当前页不是可自动完成的易盾拼图，或仍为拦截页（exit=3）。"
-                )
-            else:
-                print(
-                    f"[kr36] 风控验证失败（exit={completed.returncode}）。"
-                    "请确认已安装 opencv-python-headless、playwright 且已执行 playwright install chromium。"
-                )
+            print(f"[kr36] Cookie 刷新命令执行失败（exit={completed.returncode}）。")
         return ok
 
-    def _visible_playwright_fetch_until_deadline(self, url: str, *, event_tag: str) -> str:
-        """本机可见 Chromium：轮询直到 HTML 可用或超时；按配置写回 cookies。"""
+    def _run_incognito_cookie_refresh(self, url: str) -> bool:
+        if not self.risk_incognito_cookie_refresh_enabled:
+            return False
+        before = load_kr36_cookies()
+        before_sv = before.get("s_v_web_id", "")
+        before_sensors = before.get("sensorsdata2015jssdkcross", "")
+        print(f"[kr36] risk_cookie_refresh before s_v_web_id={before_sv}")
+        print(f"[kr36] risk_cookie_refresh before sensorsdata2015jssdkcross={before_sensors}")
+        previous_persist_flag = self.persist_browser_cookies
+        self.persist_browser_cookies = True
+        try:
+            html = self._visible_playwright_fetch_until_deadline(
+                url,
+                event_tag="risk_cookie_refresh",
+                incognito_mode=True,
+                load_existing_cookies=False,
+            )
+        finally:
+            self.persist_browser_cookies = previous_persist_flag
+
+        after = load_kr36_cookies()
+        after_sv = after.get("s_v_web_id", "")
+        after_sensors = after.get("sensorsdata2015jssdkcross", "")
+        changed = after != before
+        key_changed = (before_sv != after_sv) or (before_sensors != after_sensors)
+        has_required_fields = bool(after_sv and after_sensors)
+        html_usable = _is_usable_html(html)
+        ok = bool(changed or key_changed or has_required_fields or html_usable)
+        _append_kr36_debug_log(
+            f"[kr36] risk_cookie_refresh_end url={url} ok={str(ok).lower()} "
+            f"changed={str(changed).lower()} key_changed={str(key_changed).lower()} "
+            f"has_required_fields={str(has_required_fields).lower()} html_usable={str(html_usable).lower()}"
+        )
+        print(
+            f"[kr36] risk_cookie_refresh ok={str(ok).lower()} changed={str(changed).lower()} "
+            f"key_changed={str(key_changed).lower()} has_required_fields={str(has_required_fields).lower()}"
+        )
+        print(f"[kr36] risk_cookie_refresh after s_v_web_id={after_sv}")
+        print(f"[kr36] risk_cookie_refresh after sensorsdata2015jssdkcross={after_sensors}")
+        return ok
+
+    def step4_fetch_html_via_playwright_slider(self, url: str) -> str:
+        """Step4 正文链：直抓遇 36kr 风控/滑块页时，用浏览器打开并自动滑块，写回 cookie 后返回 HTML。"""
+
+        if "36kr.com" not in (url or "").lower():
+            return ""
+        try:
+            from playwright.sync_api import Error as PlaywrightError
+            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            _append_kr36_debug_log("[kr36] step4_playwright_skip reason=missing_playwright")
+            return ""
+        headless = self.risk_verification_playwright_mode == "headless"
+        timeout_ms = max(35000, int(self.browser_timeout_ms))
+        poll = max(300, int(self.browser_verification_poll_ms))
+        deadline_s = max(15.0, float(self.browser_verification_timeout_ms) / 1000.0)
+        print(f"[kr36] Step4 检测到 36kr 风控/需验证，启动 Playwright（headless={str(headless).lower()}）+ 滑块：{url}")
+        _append_kr36_debug_log(f"[kr36] step4_playwright_slider_start url={url} headless={str(headless).lower()}")
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(
+                    headless=headless,
+                    args=["--disable-blink-features=AutomationControlled"],
+                )
+                context = browser.new_context(
+                    locale="zh-CN",
+                    user_agent=KR36_DEFAULT_USER_AGENT,
+                    viewport={"width": 1440, "height": 1024},
+                    extra_http_headers={"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.5"},
+                )
+                _load_kr36_cookies_into_browser_context(context)
+                page = context.new_page()
+                page.set_default_timeout(timeout_ms)
+                page.goto(url, wait_until="load", timeout=timeout_ms)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=12000)
+                except PlaywrightTimeoutError:
+                    pass
+                page.wait_for_timeout(500)
+                end = time.time() + deadline_s
+                html = ""
+                while time.time() < end:
+                    try:
+                        html = page.content()
+                    except Exception:
+                        html = ""
+                    if _is_usable_html(html):
+                        if self.persist_browser_cookies:
+                            save_kr36_cookies(extract_kr36_cookie_values(context.cookies()))
+                        _append_kr36_debug_log(
+                            f"[kr36] step4_playwright_ok url={url} html_length={len(html)}"
+                        )
+                        context.close()
+                        browser.close()
+                        return html
+                    if _looks_like_captcha_or_block(html):
+                        solved = _kr36_try_solve_slider_captcha(page)
+                        _append_kr36_debug_log(
+                            f"[kr36] step4_slider_attempt url={url} attempted={str(solved).lower()}"
+                        )
+                        if solved:
+                            try:
+                                page.wait_for_load_state("domcontentloaded", timeout=10000)
+                            except Exception:
+                                pass
+                            page.wait_for_timeout(3000)
+                            if self.persist_browser_cookies:
+                                save_kr36_cookies(extract_kr36_cookie_values(context.cookies()))
+                            try:
+                                html = page.content()
+                            except Exception:
+                                html = ""
+                            if _is_usable_html(html):
+                                _append_kr36_debug_log(
+                                    f"[kr36] step4_playwright_after_slider url={url} html_length={len(html)}"
+                                )
+                                context.close()
+                                browser.close()
+                                return html
+                    page.wait_for_timeout(poll)
+                try:
+                    html = page.content()
+                except Exception:
+                    html = ""
+                if self.persist_browser_cookies:
+                    save_kr36_cookies(extract_kr36_cookie_values(context.cookies()))
+                context.close()
+                browser.close()
+                if _is_usable_html(html):
+                    return html
+                _append_kr36_debug_log(
+                    f"[kr36] step4_playwright_timeout url={url} html_length={len(html or '')}"
+                )
+                return ""
+        except (PlaywrightTimeoutError, PlaywrightError) as error:
+            _append_kr36_debug_log(f"[kr36] step4_playwright_error url={url} error={error}")
+        except Exception as error:
+            _append_kr36_debug_log(f"[kr36] step4_playwright_unexpected url={url} error={error}")
+        return ""
+
+    def _visible_playwright_fetch_until_deadline(
+        self,
+        url: str,
+        *,
+        event_tag: str,
+        incognito_mode: bool = False,
+        load_existing_cookies: bool = True,
+    ) -> str:
+        """本机可见浏览器：轮询直到 HTML 可用或超时；按配置写回 cookies。"""
 
         try:
             from playwright.sync_api import Error as PlaywrightError
@@ -1026,23 +1210,59 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         html = ""
         try:
             with sync_playwright() as playwright:
-                browser = playwright.chromium.launch(headless=False)
+                launch_kwargs: dict[str, object] = {
+                    "headless": False,
+                    "args": ["--disable-blink-features=AutomationControlled"],
+                }
+                if incognito_mode:
+                    launch_kwargs["args"] = [
+                        "--incognito",
+                        "--disable-blink-features=AutomationControlled",
+                    ]
+                    chrome_exe = _find_windows_chrome_executable()
+                    if chrome_exe:
+                        launch_kwargs["executable_path"] = chrome_exe
+                    else:
+                        launch_kwargs["channel"] = "chrome"
+                try:
+                    browser = playwright.chromium.launch(**launch_kwargs)
+                except Exception as launch_error:
+                    if not incognito_mode:
+                        raise
+                    opened = _open_external_windows_chrome_incognito(url)
+                    _append_kr36_debug_log(
+                        f"[kr36] {event_tag}_chrome_incognito_launch_failed url={url} error={launch_error} "
+                        f"external_incognito_opened={str(opened).lower()}"
+                    )
+                    if opened:
+                        print(f"[kr36] 已兜底打开外部 Chrome 无痕窗口，请手动完成验证：{url}")
+                    return ""
+
                 context = browser.new_context(
                     locale="zh-CN",
                     user_agent=KR36_DEFAULT_USER_AGENT,
                     viewport={"width": 1440, "height": 1024},
                 )
-                _load_kr36_cookies_into_browser_context(context)
+                if load_existing_cookies:
+                    _load_kr36_cookies_into_browser_context(context)
+                if incognito_mode:
+                    print(f"[kr36] incognito_browser_opened event={event_tag} url={url}")
                 page = context.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=self.browser_timeout_ms)
                 page.wait_for_timeout(self.browser_wait_after_load_ms)
 
                 deadline = time.time() + (self.browser_verification_timeout_ms / 1000)
                 while time.time() < deadline:
-                    html = page.content()
+                    try:
+                        html = page.content()
+                    except Exception:
+                        html = ""
                     if _is_usable_html(html):
                         page.wait_for_timeout(self.browser_wait_after_load_ms)
-                        html = page.content()
+                        try:
+                            html = page.content()
+                        except Exception:
+                            pass
                         if self.persist_browser_cookies:
                             save_kr36_cookies(extract_kr36_cookie_values(context.cookies()))
                         _append_kr36_debug_log(
@@ -1051,6 +1271,76 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                         context.close()
                         browser.close()
                         return html
+                    # 检测到拼图/滑块验证码时自动尝试拖拽
+                    if _looks_like_captcha_or_block(html):
+                        solved = _kr36_try_solve_slider_captcha(page)
+                        _append_kr36_debug_log(
+                            f"[kr36] {event_tag}_slider_solve_attempt url={url} attempted={str(solved).lower()}"
+                        )
+                        if solved:
+                            # 拖拽已发出，等 36kr 服务端校验后页面跳转完成
+                            try:
+                                page.wait_for_load_state(
+                                    "domcontentloaded", timeout=10000
+                                )
+                            except Exception:
+                                pass
+                            page.wait_for_timeout(3000)
+                            try:
+                                html = page.content()
+                            except Exception:
+                                html = ""
+
+                            # 如果仍在验证页（滑块通过但页面未跳转），导航到首页
+                            # 让 Sensors Analytics JS 初始化并写入 sensorsdata2015jssdkcross
+                            if not _is_usable_html(html):
+                                _append_kr36_debug_log(
+                                    f"[kr36] {event_tag}_slider_post_navigate url={url} reason=html_not_usable"
+                                )
+                                print(
+                                    f"[kr36] 滑块已拖拽，但页面仍为验证页；"
+                                    f"正在跳转首页以完成 cookie 初始化…"
+                                )
+                                try:
+                                    page.goto(
+                                        "https://36kr.com/",
+                                        wait_until="domcontentloaded",
+                                        timeout=20000,
+                                    )
+                                    # 等待 Sensors Analytics SDK 写入 sensorsdata2015jssdkcross
+                                    page.wait_for_timeout(5000)
+                                    html = page.content()
+                                except Exception as _nav_err:
+                                    _append_kr36_debug_log(
+                                        f"[kr36] {event_tag}_slider_post_navigate_error url={url} err={_nav_err}"
+                                    )
+
+                            if self.persist_browser_cookies:
+                                new_cookies = extract_kr36_cookie_values(
+                                    context.cookies()
+                                )
+                                save_kr36_cookies(new_cookies)
+                                _append_kr36_debug_log(
+                                    f"[kr36] {event_tag}_cookies_saved_after_slider url={url} "
+                                    f"has_sv={bool(new_cookies.get('s_v_web_id'))} "
+                                    f"has_sensors={bool(new_cookies.get('sensorsdata2015jssdkcross'))}"
+                                )
+                                print(
+                                    f"[kr36] cookie 已保存（验证码通过后）"
+                                    f" 共 {len(new_cookies)} 项："
+                                )
+                                for k, v in new_cookies.items():
+                                    print(
+                                        f"[kr36]   {k} = "
+                                        f"{v[:80]}{'...' if len(v) > 80 else ''}"
+                                    )
+                            _append_kr36_debug_log(
+                                f"[kr36] {event_tag}_slider_done url={url} "
+                                f"html_usable={str(_is_usable_html(html)).lower()}"
+                            )
+                            context.close()
+                            browser.close()
+                            return html
                     page.wait_for_timeout(self.browser_verification_poll_ms)
 
                 html = page.content()
@@ -1154,14 +1444,14 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             return enriched
         if not self._has_risk_verification_action():
             _append_kr36_debug_log(
-                f"[kr36] search_enrich_unacceptable_no_slider url={url} "
+                f"[kr36] search_enrich_unacceptable_no_cookie_refresh url={url} "
                 f"html_length={len(enriched or '')}"
             )
             return ""
-        _append_kr36_debug_log(f"[kr36] search_slider_bypass_start url={url}")
+        _append_kr36_debug_log(f"[kr36] search_cookie_refresh_start url={url}")
         print(
             "[kr36] 搜索无头页未拿到可用列表（可能为风控），"
-            f"{self.risk_verification_wait_ms / 1000:.1f}s 后执行自动滑块并重试无头抓取…"
+            f"{self.risk_verification_wait_ms / 1000:.1f}s 后执行 Cookie 刷新并重试无头抓取…"
         )
         wait_ms = max(0, int(self.risk_verification_wait_ms))
         if wait_ms > 0:
@@ -1174,28 +1464,13 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             enriched2 = self._playwright_kr36_search_listing_html(url)
             if enriched2 and _kr36_search_playwright_body_acceptable(enriched2):
                 _append_kr36_debug_log(
-                    f"[kr36] search_slider_bypass_ok url={url} html_length={len(enriched2)}"
+                    f"[kr36] search_cookie_refresh_ok url={url} html_length={len(enriched2)}"
                 )
                 return enriched2
         else:
-            _append_kr36_debug_log(f"[kr36] search_slider_bypass_solver_failed url={url}")
-        if self._should_retry_builtin_solver_agent_browser():
-            print(
-                "[kr36] 搜索列表在自动滑块后仍异常，切换 agent-browser（可见 Chromium，仍由脚本自动拖动）重试…"
-            )
-            _append_kr36_debug_log(f"[kr36] search_agent_browser_retry url={url}")
-            verify_ok2 = self._run_risk_verification(url, playwright_mode="agent-browser")
-            if verify_ok2:
-                self._human_pause(self.human_min_pause_ms, self.human_max_pause_ms)
-                self._wait_before_next_request(url)
-                enriched2 = self._playwright_kr36_search_listing_html(url)
-                if enriched2 and _kr36_search_playwright_body_acceptable(enriched2):
-                    _append_kr36_debug_log(
-                        f"[kr36] search_agent_browser_ok url={url} html_length={len(enriched2)}"
-                    )
-                    return enriched2
+            _append_kr36_debug_log(f"[kr36] search_cookie_refresh_failed url={url}")
         _append_kr36_debug_log(
-            f"[kr36] search_slider_bypass_still_bad url={url} html_length={len(enriched2 or '')}"
+            f"[kr36] search_cookie_refresh_still_bad url={url} html_length={len(enriched2 or '')}"
         )
         return enriched2
 
@@ -1403,12 +1678,63 @@ def parse_search_listing_html(
     refs: list[RawArticleRef] = []
     seen_url: set[str] = set()
 
+    def normalize_search_article_href(href: str) -> str:
+        raw = str(href or "").strip()
+        if not raw:
+            return ""
+        lowered = raw.lower()
+        if lowered.startswith(("javascript:", "mailto:", "#")):
+            return ""
+        if raw.startswith("//"):
+            raw = f"https:{raw}"
+        url = raw if raw.startswith("http") else urljoin(base_url, raw)
+        url = url.split("#", 1)[0]
+        lowered_url = url.lower()
+        if "36kr.com" not in lowered_url:
+            return ""
+        if "/p/" not in lowered_url:
+            return ""
+        return url
+
+    def extract_best_anchor_from_item(item_html: str) -> tuple[str, str] | None:
+        best: tuple[int, str, str] | None = None
+        for anchor in KR36_ANCHOR_WITH_HREF_RE.finditer(item_html):
+            href = str(anchor.group("href") or "").strip()
+            anchor_html = str(anchor.group(0) or "")
+            title = clean_html_text(anchor.group("title") or "")
+            if not title:
+                title_attr = re.search(r'\btitle="([^"]+)"', anchor_html, flags=re.IGNORECASE)
+                if title_attr:
+                    title = clean_html_text(title_attr.group(1))
+            url = normalize_search_article_href(href)
+            if not url or not title:
+                continue
+
+            context = item_html[max(0, anchor.start() - 200): min(len(item_html), anchor.end() + 200)].lower()
+            score = 0
+            if "/p/" in href.lower():
+                score += 5
+            if "article-item-title" in context:
+                score += 3
+            if "title-wrapper" in context:
+                score += 2
+            if len(title) >= 8:
+                score += 1
+            if any(ad_hint in title for ad_hint in KR36_AD_HINTS):
+                score -= 3
+
+            candidate = (score, url, title)
+            if best is None or candidate[0] > best[0]:
+                best = candidate
+        if best is None:
+            return None
+        return best[1], best[2]
+
     def append_ref(href: str, title_raw: str) -> None:
-        href = str(href or "").strip()
         title = clean_html_text(title_raw or "")
-        if not href or not title:
+        url = normalize_search_article_href(href)
+        if not url or not title:
             return
-        url = href if href.startswith("http") else urljoin(base_url, href)
         if url in seen_url:
             return
         seen_url.add(url)
@@ -1426,6 +1752,16 @@ def parse_search_listing_html(
             )
         )
 
+    # 优先按用户给出的 DOM 结构解析：li.search-result-list-item-article
+    for item_match in KR36_SEARCH_ARTICLE_ITEM_RE.finditer(html):
+        item_html = str(item_match.group("content") or "")
+        extracted = extract_best_anchor_from_item(item_html)
+        if extracted is None:
+            continue
+        url, title = extracted
+        append_ref(url, title)
+
+    # 回退：历史结构正则
     for match in KR36_SEARCH_TITLE_LINK_RE.finditer(html):
         append_ref(match.group("href"), match.group("title"))
     for match in KR36_LINK_RE.finditer(html):

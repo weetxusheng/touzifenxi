@@ -1,11 +1,12 @@
 """Step 4 正文抓取编排。
 
-本模块负责读取 step 3 结果、并发抓取原文与补充链接正文，并产出 step 4 结构化结果。
+本模块负责读取 step 3 结果（或调用方预解析的等效载荷）、并发抓取原文与补充链接正文，并产出 step 4 结构化结果。
 抓取策略和 HTML 提取已经下沉到 content 包，避免 workflow 文件继续膨胀。
 """
 
 from __future__ import annotations
 
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import datetime
@@ -63,6 +64,19 @@ def _count_fetchable_records(items: list[ArticleContentPayload]) -> tuple[int, i
     return total, ok, bad
 
 
+def _count_fetch_status_breakdown(items: list[ArticleContentPayload]) -> dict[str, int]:
+    """按 original + selected 每条抓取记录的 fetch_status 统计（小写键）。"""
+
+    c: Counter[str] = Counter()
+    for article in items:
+        st = str(article.original_content.fetch_status or "unknown").strip().lower() or "unknown"
+        c[st] += 1
+        for sel in article.selected_contents:
+            st2 = str(sel.fetch_status or "unknown").strip().lower() or "unknown"
+            c[st2] += 1
+    return dict(c)
+
+
 def run_content_fetch_workflow(
     input_path: Path,
     report_date: str,
@@ -70,9 +84,22 @@ def run_content_fetch_workflow(
     aliyun_client: AliyunIQSClient | None = None,
     generated_at: str | None = None,
     checkpoint_store: StepCheckpointStore | None = None,
+    *,
+    search_input: SearchResultsInputPayload | None = None,
+    expected_article_count: int | None = None,
 ) -> ContentWorkflowPayload:
-    """Execute step 4 for one report date and return the full content payload."""
-    source = load_search_results_yaml(input_path)
+    """Execute step 4 for one report date and return the full content payload.
+
+    若提供 ``search_input``，则直接以其为正文抓取来源（如 36kr 无外部搜索时由第2步清单构造），
+    不再从 ``input_path`` 读取 YAML。``input_path`` 仍可传入占位路径以保持调用兼容。
+
+    ``expected_article_count``：若提供，则校验「顶层文章行」在抓取前后与之一致（用于 36kr
+    等「步骤1 多少条、步骤2 就多少条正文」的契约，不因去重/丢行静默变少）。
+    """
+    if search_input is not None:
+        source = search_input
+    else:
+        source = load_search_results_yaml(input_path)
     if source.report_date and source.report_date != report_date:
         raise ValueError(f"输入搜索结果日期为 {source.report_date}，与命令日期 {report_date} 不一致。")
     validate_content_fetch_inputs(source)
@@ -81,7 +108,22 @@ def run_content_fetch_workflow(
     selected_after_title_dedup = _count_selected_results_links(source)
 
     runtime_config = load_c114_runtime_config(Path(__file__).resolve().parents[4])
-    content_fetcher = fetcher or (lambda url: fetch_url_content(url, timeout=runtime_config.request_timeout_seconds))
+    if fetcher is None:
+        rconf = runtime_config
+
+        def _default_html_fetch(u: str) -> FetchResult:
+            return fetch_url_content(
+                u,
+                timeout=rconf.request_timeout_seconds,
+                max_attempts=rconf.content_fetch_url_max_attempts,
+                retry_backoff_seconds=rconf.content_fetch_url_retry_backoff_seconds,
+                retry_on_empty=rconf.content_fetch_retry_on_empty,
+                kr36_step4_risk_playwright=rconf.content_kr36_step4_risk_playwright,
+            )
+
+        content_fetcher = _default_html_fetch
+    else:
+        content_fetcher = fetcher
     content_search_client = aliyun_client if aliyun_client is not None else AliyunIQSClient.from_env()
     if content_search_client is not None:
         reset_take = getattr(content_search_client, "take_search_http_rounds", None)
@@ -92,6 +134,10 @@ def run_content_fetch_workflow(
     for category_index, category in enumerate(source.categories):
         for item_index, article in enumerate(category.items):
             flattened_articles.append((category_index, item_index, article))
+    if expected_article_count is not None and len(flattened_articles) != int(expected_article_count):
+        raise ValueError(
+            f"正文任务条数 {len(flattened_articles)} 与预期 {int(expected_article_count)} 不一致（步骤1/输入侧条数与抓取计划不一致，请检查去重或构造逻辑）。"
+        )
 
     max_workers = min(8, max(1, len(flattened_articles)))
     results_by_position: dict[tuple[int, int], ArticleContentPayload] = {}
@@ -124,25 +170,38 @@ def run_content_fetch_workflow(
         items, removed_in_topic = deduplicate_selected_contents_in_topic(items)
         removed_body_dupes += removed_in_topic
         categories.append(ContentCategoryPayload(topic=category.topic, items=items))
-    fetch_total, fetch_ok, fetch_bad = _count_fetchable_records(
-        [article for category in categories for article in category.items]
-    )
+    flat_articles = [article for category in categories for article in category.items]
+    if expected_article_count is not None and len(flat_articles) != int(expected_article_count):
+        raise RuntimeError(
+            f"正文输出条数 {len(flat_articles)} 与预期 {int(expected_article_count)} 不一致（不应在合并阶段减少文章行）。"
+        )
+    fetch_total, fetch_ok, fetch_bad = _count_fetchable_records(flat_articles)
+    status_map = _count_fetch_status_breakdown(flat_articles)
+    _succ = int(status_map.get("success", 0))
+    _empt = int(status_map.get("empty", 0))
+    _fail = int(status_map.get("failed", 0))
+    _oth = max(0, fetch_total - _succ - _empt - _fail)
     iqs_rounds = 0
     if content_search_client is not None:
         take_iqs = getattr(content_search_client, "take_search_http_rounds", None)
         iqs_rounds = int(take_iqs()) if callable(take_iqs) else 0
+    article_row_count = len(flattened_articles)
     print(
         "[C114][Step4 正文抓取] "
+        f"内容分析条目数={article_row_count}（Step3/4 中一行一条；与「抓取次数」不是同一量纲）| "
         f"入选链接(去重前)={selected_before_dedup} | "
         f"标题去重剔除={removed_title_dupes} | "
         f"入选链接(标题去重后)={selected_after_title_dedup} | "
         f"补充正文合并去重剔除={removed_body_dupes} | "
-        f"抓取条目(原文+补充)={fetch_total} | 成功={fetch_ok} | 失败={fetch_bad} | "
+        f"抓取次数合计(每条=1次原文+每条补充各1次)={fetch_total} | 成功={fetch_ok} | 失败={fetch_bad} | "
+        f"细项(success/有正文)={_succ} | 正文为空(html_fallback empty)={_empt} | 网络/HTTP失败(failed)={_fail}"
+        f"{f' | 其他状态={_oth}' if _oth else ''} | "
+        f"HTML直抓(每URL最多{runtime_config.content_fetch_url_max_attempts}次) | empty再试一次={str(runtime_config.content_fetch_retry_on_empty).lower()} | "
         f"阿里云IQS HTTP轮次={iqs_rounds}"
     )
     return ContentWorkflowPayload(
         report_date=report_date,
-        input_path=input_path,
+        input_path=source.input_path,
         generated_at=generated_at or datetime.now().isoformat(timespec="seconds"),
         categories=categories,
     )

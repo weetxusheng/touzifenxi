@@ -12,8 +12,8 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 BRIEF_PROMPT_PATH = SRC / "kr36" / "prompts" / "brief-agent.md"
-STEP_5_PREFIX = "kr36_step_5_content_analysis"
-STEP_6_PREFIX = "kr36_step_6_brief"
+STEP_3_PREFIX = "kr36_step3_analysis"
+STEP_4_PREFIX = "kr36_step4_brief"
 
 from kr36.email import render_kr36_brief_email  # noqa: E402
 from utils.tools.facades.content_analysis import generate_brief_markdown, load_content_analysis_inputs  # noqa: E402
@@ -22,44 +22,48 @@ from utils.tools.llm import StructuredChatClient  # noqa: E402
 from utils.tools.runtime.checkpoint import StepCheckpointStore, checkpoint_path_for_step  # noqa: E402
 
 
-def step_5_name(d: date) -> str:
-    return f"{STEP_5_PREFIX}_{d.strftime('%Y%m%d')}.yaml"
+def step_3_name(d: date) -> str:
+    return f"{STEP_3_PREFIX}_{d.strftime('%Y%m%d')}.yaml"
 
 
-def step_6_name(d: date) -> str:
-    return f"{STEP_6_PREFIX}_{d.strftime('%Y%m%d')}.md"
+def step_4_name(d: date) -> str:
+    return f"{STEP_4_PREFIX}_{d.strftime('%Y%m%d')}.md"
 
 
-def save_brief_preview_assets(step6_markdown_path: Path, markdown_text: str) -> tuple[Path, Path]:
+def save_brief_preview_assets(step6_markdown_path: Path, markdown_text: str) -> tuple[Path, Path, Path]:
     rendered = render_kr36_brief_email(markdown_text, step6_markdown_path)
     html_output = step6_markdown_path.with_suffix(".html")
     legacy_email_output = step6_markdown_path.with_name(f"{step6_markdown_path.stem}_email.html")
+    doc_output = step6_markdown_path.with_name(f"{step6_markdown_path.stem}_doc.html")
     text_output = step6_markdown_path.with_name(f"{step6_markdown_path.stem}_email.txt")
     html_output.write_text(rendered.html, encoding="utf-8")
     legacy_email_output.write_text(rendered.html, encoding="utf-8")
+    doc_output.write_text(rendered.html, encoding="utf-8")
     text_output.write_text(rendered.text, encoding="utf-8")
-    return html_output, text_output
+    return html_output, text_output, doc_output
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="36Kr: regenerate step 6 from step 5 YAML.")
+    parser = argparse.ArgumentParser(
+        description="36Kr: 从步骤3 分析 YAML 重跑步骤4 简报与 HTML（不重复抓取）。"
+    )
     parser.add_argument("--date", required=True, help="YYYY-MM-DD")
     parser.add_argument(
         "--run-dir",
         type=Path,
         required=True,
-        help="含 kr36_step_5_content_analysis_*.yaml 的报告目录",
+        help="含 kr36_step3_analysis_*.yaml 的报告目录",
     )
     args = parser.parse_args()
     target_date = date.fromisoformat(args.date)
     report_date_text = target_date.isoformat()
     run_dir = args.run_dir.resolve()
-    step5 = run_dir / step_5_name(target_date)
-    step6 = run_dir / step_6_name(target_date)
-    if not step5.is_file():
-        raise SystemExit(f"找不到 step5 文件: {step5}")
+    step3 = run_dir / step_3_name(target_date)
+    step4 = run_dir / step_4_name(target_date)
+    if not step3.is_file():
+        raise SystemExit(f"找不到 step3 分析文件: {step3}")
 
-    payload = load_content_analysis_inputs(step5)
+    payload = load_content_analysis_inputs(step3)
     llm = StructuredChatClient.from_runtime_config()
     llm.set_trace_log_directory(
         (run_dir / LLM_TRACE_LOG_DIR_NAME).resolve(),
@@ -67,30 +71,31 @@ def main() -> None:
         source_prefix="kr36",
         reset_files=False,
     )
-    step6_checkpoint = StepCheckpointStore.load_or_create(
+    step4_checkpoint = StepCheckpointStore.load_or_create(
         checkpoint_path=checkpoint_path_for_step(
-            output_path=step6,
-            step_name="step_6",
+            output_path=step4,
+            step_name="step_4",
             report_date=report_date_text,
             prefix="kr36",
         ),
-        step_name="step_6",
+        step_name="step_4",
         report_date=report_date_text,
-        input_path=step5,
-        output_path=step6,
+        input_path=step3,
+        output_path=step4,
     )
     brief_markdown = generate_brief_markdown(
         payload,
         llm,
         prompt_path=BRIEF_PROMPT_PATH,
-        checkpoint_store=step6_checkpoint,
+        checkpoint_store=step4_checkpoint,
     )
-    step6.write_text(brief_markdown, encoding="utf-8")
-    html_out, txt_out = save_brief_preview_assets(step6, brief_markdown)
-    print(f"Step 6 MD: {step6}")
-    print(f"Step 6 HTML: {html_out}")
-    print(f"Step 6 email HTML: {step6.with_name(step6.stem + '_email.html')}")
-    print(f"Step 6 TXT: {txt_out}")
+    step4.write_text(brief_markdown, encoding="utf-8")
+    html_out, txt_out, doc_out = save_brief_preview_assets(step4, brief_markdown)
+    print(f"Step 4 简报 MD: {step4}")
+    print(f"Step 4 HTML: {html_out}")
+    print(f"Step 4 email HTML: {step4.with_name(step4.stem + '_email.html')}")
+    print(f"Step 4 doc HTML: {doc_out}")
+    print(f"Step 4 TXT: {txt_out}")
 
 
 if __name__ == "__main__":

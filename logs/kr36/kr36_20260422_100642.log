@@ -1,0 +1,179 @@
+[kr36] 2026-04-22 10:06:42 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=E:\AI\touzifenxi
+[kr36] PYTHON_BIN=E:\AI\touzifenxi\.venv\Scripts\python.exe
+[kr36] TIMEOUT=30s
+[kr36] LOG_FILE=E:\AI\touzifenxi\logs\kr36\kr36_20260422_100642.log
+[kr36] running: "E:\AI\touzifenxi\.venv\Scripts\python.exe" scripts\websearch.py run --source 36kr --timeout 30
+2026-04-22 10:06:44 [kr36] listing_begin report_date=2026-04-22 rounds_total=11 candidate_limit=120
+2026-04-22 10:06:44 [kr36] round_start page=1 round=1/11 stage=topics url=https://36kr.com/topics/
+2026-04-22 10:06:44 [kr36] 进入专题页，数据 0 条，累计 0 条
+2026-04-22 10:06:44 [kr36] fetch_start url=https://36kr.com/topics/
+2026-04-22 10:06:44 [kr36] fetch_ok method=curl url=https://36kr.com/topics/ html_length=73732
+2026-04-22 10:06:44 [kr36] round_end page=1 round=1/11 stage=topics status=ok fetched=22 total_refs=22 elapsed_ms=665
+2026-04-22 10:06:44 [kr36] 完成专题页，数据 22 条，累计 22 条
+2026-04-22 10:06:44 [kr36] round_next round=2/11 stage=activity
+2026-04-22 10:06:44 [kr36] round_start page=2 round=2/11 stage=activity url=https://36kr.com/activity
+2026-04-22 10:06:44 [kr36] 进入活动页，数据 0 条，累计 22 条
+2026-04-22 10:06:44 [kr36] throttle_wait url=https://36kr.com/activity wait_ms=27791 global_wait_ms=27791 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:07:12 [kr36] fetch_start url=https://36kr.com/activity
+2026-04-22 10:07:13 [kr36] fetch_ok method=curl url=https://36kr.com/activity html_length=61717
+2026-04-22 10:07:13 [kr36] round_end page=2 round=2/11 stage=activity status=ok fetched=8 total_refs=30 elapsed_ms=28266
+2026-04-22 10:07:13 [kr36] 完成活动页，数据 8 条，累计 30 条
+2026-04-22 10:07:13 [kr36] round_next round=3/11 stage=search
+2026-04-22 10:07:13 [kr36] round_start page=3 round=3/11 stage=search category=36氪独家 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:07:13 [kr36] 进入搜索页(36氪独家)，数据 0 条，累计 30 条
+2026-04-22 10:07:13 [kr36] throttle_wait url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 wait_ms=36619 global_wait_ms=36619 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:07:49 [kr36] fetch_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:07:50 [kr36] search_playwright_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 timeout_ms=35000 max_attempts=2
+2026-04-22 10:08:24 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 selector=ul.kr-search-result-list-main
+2026-04-22 10:08:42 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 selector=li.search-result-list-item-article
+2026-04-22 10:08:45 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=3618
+2026-04-22 10:08:45 [kr36] search_playwright_suspicious_body attempt=1/2 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=3618 hint=risk_or_transient
+2026-04-22 10:09:18 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 selector=ul.kr-search-result-list-main
+2026-04-22 10:09:37 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 selector=li.search-result-list-item-article
+2026-04-22 10:09:40 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=3618
+2026-04-22 10:09:40 [kr36] search_playwright_suspicious_body attempt=2/2 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=3618 hint=risk_or_transient
+2026-04-22 10:09:40 [kr36] search_cookie_refresh_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:09:56 [kr36] slider_captcha_solve_result attempted=true
+2026-04-22 10:09:56 [kr36] risk_cookie_refresh_slider_solve_attempt url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 attempted=true
+2026-04-22 10:09:58 [kr36] risk_cookie_refresh_cookies_saved_after_slider url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:09:58 [kr36] risk_cookie_refresh_slider_done url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_usable=false
+2026-04-22 10:09:59 [kr36] risk_cookie_refresh_end url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 ok=true changed=true key_changed=true has_required_fields=false html_usable=false
+2026-04-22 10:09:59 [kr36] search_playwright_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 timeout_ms=35000 max_attempts=2
+2026-04-22 10:10:13 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=104086
+2026-04-22 10:10:13 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=104086
+2026-04-22 10:10:13 [kr36] search_cookie_refresh_ok url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=104086
+2026-04-22 10:10:13 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=104086
+2026-04-22 10:10:13 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=104086
+2026-04-22 10:10:13 [kr36] round_end page=3 round=3/11 stage=search category=36氪独家 status=ok fetched=5 total_refs=35 elapsed_ms=180287
+2026-04-22 10:10:13 [kr36] 完成搜索页(36氪独家)，数据 5 条，累计 35 条
+2026-04-22 10:10:13 [kr36] round_next round=4/11 stage=search_or_channel
+2026-04-22 10:10:13 [kr36] round_start page=4 round=4/11 stage=search category=深氪 url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA
+2026-04-22 10:10:13 [kr36] 进入搜索页(深氪)，数据 0 条，累计 35 条
+2026-04-22 10:10:13 [kr36] throttle_wait url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA wait_ms=15264 global_wait_ms=15264 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:10:28 [kr36] fetch_start url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA
+2026-04-22 10:10:31 [kr36] search_playwright_start url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA timeout_ms=35000 max_attempts=2
+2026-04-22 10:10:45 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA html_length=101738
+2026-04-22 10:10:45 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA html_length=101738
+2026-04-22 10:10:45 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA html_length=101738
+2026-04-22 10:10:45 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA html_length=101738
+2026-04-22 10:10:45 [kr36] round_end page=4 round=4/11 stage=search category=深氪 status=ok fetched=5 total_refs=40 elapsed_ms=31633
+2026-04-22 10:10:45 [kr36] 完成搜索页(深氪)，数据 5 条，累计 40 条
+2026-04-22 10:10:45 [kr36] round_next round=5/11 stage=search_or_channel
+2026-04-22 10:10:45 [kr36] round_start page=5 round=5/11 stage=search category=后浪白皮书 url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6
+2026-04-22 10:10:45 [kr36] 进入搜索页(后浪白皮书)，数据 0 条，累计 40 条
+2026-04-22 10:10:45 [kr36] throttle_wait url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 wait_ms=20250 global_wait_ms=20250 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:11:05 [kr36] fetch_start url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6
+2026-04-22 10:11:05 [kr36] search_playwright_start url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 timeout_ms=35000 max_attempts=2
+2026-04-22 10:11:21 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 html_length=68271
+2026-04-22 10:11:21 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 html_length=68271
+2026-04-22 10:11:21 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 html_length=68271
+2026-04-22 10:11:21 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/%E5%90%8E%E6%B5%AA%E7%99%BD%E7%9A%AE%E4%B9%A6 html_length=68271
+2026-04-22 10:11:21 [kr36] round_end page=5 round=5/11 stage=search category=后浪白皮书 status=ok fetched=3 total_refs=43 elapsed_ms=36876
+2026-04-22 10:11:21 [kr36] 完成搜索页(后浪白皮书)，数据 3 条，累计 43 条
+2026-04-22 10:11:21 [kr36] round_next round=6/11 stage=search_or_channel
+2026-04-22 10:11:21 [kr36] round_start page=6 round=6/11 stage=search category=行业日报 url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5
+2026-04-22 10:11:21 [kr36] 进入搜索页(行业日报)，数据 0 条，累计 43 条
+2026-04-22 10:11:21 [kr36] throttle_wait url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 wait_ms=17010 global_wait_ms=17010 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:11:38 [kr36] fetch_start url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5
+2026-04-22 10:11:39 [kr36] search_playwright_start url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 timeout_ms=35000 max_attempts=2
+2026-04-22 10:11:52 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 html_length=69534
+2026-04-22 10:11:52 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 html_length=69534
+2026-04-22 10:11:52 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 html_length=69534
+2026-04-22 10:11:52 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/%E8%A1%8C%E4%B8%9A%E6%97%A5%E6%8A%A5 html_length=69534
+2026-04-22 10:11:52 [kr36] round_end page=6 round=6/11 stage=search category=行业日报 status=ok fetched=4 total_refs=47 elapsed_ms=30524
+2026-04-22 10:11:52 [kr36] 完成搜索页(行业日报)，数据 4 条，累计 47 条
+2026-04-22 10:11:52 [kr36] round_next round=7/11 stage=search_or_channel
+2026-04-22 10:11:52 [kr36] round_start page=7 round=7/11 stage=search category=Long China 50 url=https://36kr.com/search/articles/Long%20China%2050
+2026-04-22 10:11:52 [kr36] 进入搜索页(Long China 50)，数据 0 条，累计 47 条
+2026-04-22 10:11:52 [kr36] throttle_wait url=https://36kr.com/search/articles/Long%20China%2050 wait_ms=20775 global_wait_ms=20775 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:12:13 [kr36] fetch_start url=https://36kr.com/search/articles/Long%20China%2050
+2026-04-22 10:12:13 [kr36] search_playwright_start url=https://36kr.com/search/articles/Long%20China%2050 timeout_ms=35000 max_attempts=2
+2026-04-22 10:12:43 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/Long%20China%2050 selector=ul.kr-search-result-list-main
+2026-04-22 10:13:01 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/Long%20China%2050 selector=li.search-result-list-item-article
+2026-04-22 10:13:04 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/Long%20China%2050 html_length=4269
+2026-04-22 10:13:04 [kr36] search_playwright_suspicious_body attempt=1/2 url=https://36kr.com/search/articles/Long%20China%2050 html_length=4269 hint=risk_or_transient
+2026-04-22 10:13:37 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/Long%20China%2050 selector=ul.kr-search-result-list-main
+2026-04-22 10:13:55 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/Long%20China%2050 selector=li.search-result-list-item-article
+2026-04-22 10:13:58 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/Long%20China%2050 html_length=4269
+2026-04-22 10:13:58 [kr36] search_playwright_suspicious_body attempt=2/2 url=https://36kr.com/search/articles/Long%20China%2050 html_length=4269 hint=risk_or_transient
+2026-04-22 10:13:58 [kr36] search_cookie_refresh_start url=https://36kr.com/search/articles/Long%20China%2050
+2026-04-22 10:14:12 [kr36] slider_captcha_solve_result attempted=true
+2026-04-22 10:14:12 [kr36] risk_cookie_refresh_slider_solve_attempt url=https://36kr.com/search/articles/Long%20China%2050 attempted=true
+2026-04-22 10:14:14 [kr36] risk_cookie_refresh_cookies_saved_after_slider url=https://36kr.com/search/articles/Long%20China%2050
+2026-04-22 10:14:14 [kr36] risk_cookie_refresh_slider_done url=https://36kr.com/search/articles/Long%20China%2050 html_usable=true
+2026-04-22 10:14:14 [kr36] risk_cookie_refresh_end url=https://36kr.com/search/articles/Long%20China%2050 ok=true changed=true key_changed=true has_required_fields=false html_usable=true
+2026-04-22 10:14:15 [kr36] search_playwright_start url=https://36kr.com/search/articles/Long%20China%2050 timeout_ms=35000 max_attempts=2
+2026-04-22 10:14:28 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/Long%20China%2050 html_length=102375
+2026-04-22 10:14:28 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/Long%20China%2050 html_length=102375
+2026-04-22 10:14:28 [kr36] search_cookie_refresh_ok url=https://36kr.com/search/articles/Long%20China%2050 html_length=102375
+2026-04-22 10:14:28 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/Long%20China%2050 html_length=102375
+2026-04-22 10:14:28 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/Long%20China%2050 html_length=102375
+2026-04-22 10:14:28 [kr36] round_end page=7 round=7/11 stage=search category=Long China 50 status=ok fetched=5 total_refs=52 elapsed_ms=156155
+2026-04-22 10:14:28 [kr36] 完成搜索页(Long China 50)，数据 5 条，累计 52 条
+2026-04-22 10:14:28 [kr36] round_next round=8/11 stage=search_or_channel
+2026-04-22 10:14:28 [kr36] round_start page=8 round=8/11 stage=search category=投资派 url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE
+2026-04-22 10:14:28 [kr36] 进入搜索页(投资派)，数据 0 条，累计 52 条
+2026-04-22 10:14:28 [kr36] throttle_wait url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE wait_ms=21128 global_wait_ms=21128 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:14:49 [kr36] fetch_start url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE
+2026-04-22 10:14:50 [kr36] search_playwright_start url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE timeout_ms=35000 max_attempts=2
+2026-04-22 10:15:03 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE html_length=100955
+2026-04-22 10:15:03 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE html_length=100955
+2026-04-22 10:15:03 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE html_length=100955
+2026-04-22 10:15:03 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/%E6%8A%95%E8%B5%84%E6%B4%BE html_length=100955
+2026-04-22 10:15:03 [kr36] round_end page=8 round=8/11 stage=search category=投资派 status=ok fetched=5 total_refs=57 elapsed_ms=35023
+2026-04-22 10:15:03 [kr36] 完成搜索页(投资派)，数据 5 条，累计 57 条
+2026-04-22 10:15:03 [kr36] round_next round=9/11 stage=search_or_channel
+2026-04-22 10:15:03 [kr36] round_start page=9 round=9/11 stage=search category=新青年观察 url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F
+2026-04-22 10:15:03 [kr36] 进入搜索页(新青年观察)，数据 0 条，累计 57 条
+2026-04-22 10:15:03 [kr36] throttle_wait url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F wait_ms=23622 global_wait_ms=23622 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:15:27 [kr36] fetch_start url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F
+2026-04-22 10:15:27 [kr36] search_playwright_start url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F timeout_ms=35000 max_attempts=2
+2026-04-22 10:16:06 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F selector=ul.kr-search-result-list-main
+2026-04-22 10:16:24 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F selector=li.search-result-list-item-article
+2026-04-22 10:16:27 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=4271
+2026-04-22 10:16:27 [kr36] search_playwright_suspicious_body attempt=1/2 url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=4271 hint=risk_or_transient
+2026-04-22 10:17:02 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F selector=ul.kr-search-result-list-main
+2026-04-22 10:17:21 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F selector=li.search-result-list-item-article
+2026-04-22 10:17:24 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=4271
+2026-04-22 10:17:24 [kr36] search_playwright_suspicious_body attempt=2/2 url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=4271 hint=risk_or_transient
+2026-04-22 10:17:24 [kr36] search_cookie_refresh_start url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F
+2026-04-22 10:17:36 [kr36] slider_captcha_solve_result attempted=true
+2026-04-22 10:17:36 [kr36] risk_cookie_refresh_slider_solve_attempt url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F attempted=true
+2026-04-22 10:17:39 [kr36] risk_cookie_refresh_cookies_saved_after_slider url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F
+2026-04-22 10:17:39 [kr36] risk_cookie_refresh_slider_done url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_usable=false
+2026-04-22 10:17:39 [kr36] risk_cookie_refresh_end url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F ok=true changed=true key_changed=true has_required_fields=false html_usable=false
+2026-04-22 10:17:39 [kr36] search_playwright_start url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F timeout_ms=35000 max_attempts=2
+2026-04-22 10:17:53 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=69620
+2026-04-22 10:17:53 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=69620
+2026-04-22 10:17:53 [kr36] search_cookie_refresh_ok url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=69620
+2026-04-22 10:17:53 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=69620
+2026-04-22 10:17:53 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/%E6%96%B0%E9%9D%92%E5%B9%B4%E8%A7%82%E5%AF%9F html_length=69620
+2026-04-22 10:17:53 [kr36] round_end page=9 round=9/11 stage=search category=新青年观察 status=ok fetched=4 total_refs=61 elapsed_ms=170122
+2026-04-22 10:17:53 [kr36] 完成搜索页(新青年观察)，数据 4 条，累计 61 条
+2026-04-22 10:17:53 [kr36] round_next round=10/11 stage=search_or_channel
+2026-04-22 10:17:53 [kr36] round_start page=10 round=10/11 stage=search category=KRLab url=https://36kr.com/search/articles/KRLab
+2026-04-22 10:17:53 [kr36] 进入搜索页(KRLab)，数据 0 条，累计 61 条
+2026-04-22 10:17:53 [kr36] throttle_wait url=https://36kr.com/search/articles/KRLab wait_ms=25028 global_wait_ms=25028 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:18:18 [kr36] fetch_start url=https://36kr.com/search/articles/KRLab
+2026-04-22 10:18:19 [kr36] search_playwright_start url=https://36kr.com/search/articles/KRLab timeout_ms=35000 max_attempts=2
+2026-04-22 10:18:46 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/KRLab selector=ul.kr-search-result-list-main
+2026-04-22 10:19:04 [kr36] search_playwright_selector_timeout url=https://36kr.com/search/articles/KRLab selector=li.search-result-list-item-article
+2026-04-22 10:19:07 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/KRLab html_length=63551
+2026-04-22 10:19:07 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/KRLab html_length=63551
+2026-04-22 10:19:07 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/KRLab html_length=63551
+2026-04-22 10:19:07 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/KRLab html_length=63551
+2026-04-22 10:19:07 [kr36] round_end page=10 round=10/11 stage=search category=KRLab status=ok fetched=1 total_refs=62 elapsed_ms=74173
+2026-04-22 10:19:07 [kr36] 完成搜索页(KRLab)，数据 1 条，累计 62 条
+2026-04-22 10:19:07 [kr36] round_next round=11/11 stage=search_or_channel
+2026-04-22 10:19:07 [kr36] round_start page=11 round=11/11 stage=search category=数智前瞻 url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB
+2026-04-22 10:19:07 [kr36] 进入搜索页(数智前瞻)，数据 0 条，累计 62 条
+2026-04-22 10:19:07 [kr36] fetch_start url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB
+2026-04-22 10:19:08 [kr36] search_playwright_start url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB timeout_ms=35000 max_attempts=2
+2026-04-22 10:19:21 [kr36] search_playwright_once_end url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB html_length=101499
+2026-04-22 10:19:21 [kr36] search_playwright_ok attempt=1 url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB html_length=101499
+2026-04-22 10:19:21 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB html_length=101499
+2026-04-22 10:19:21 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB html_length=101499
+2026-04-22 10:19:22 [kr36] round_end page=11 round=11/11 stage=search category=数智前瞻 status=ok fetched=5 total_refs=67 elapsed_ms=14042
+2026-04-22 10:19:22 [kr36] 完成搜索页(数智前瞻)，数据 5 条，累计 67 条
+2026-04-22 10:19:22 [kr36] listing_end report_date=2026-04-22 total_refs=67 stopped_by=normal_complete
