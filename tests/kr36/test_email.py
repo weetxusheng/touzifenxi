@@ -4,13 +4,15 @@ import json
 from kr36.email import _render_activity_source_item, render_kr36_brief_email
 
 
-def test_kr36_email_renders_homepage_sections_without_tabs(tmp_path) -> None:
+def test_kr36_email_renders_fixed_three_bucket_template(tmp_path) -> None:
     step6_path = tmp_path / "kr36_step4_brief_20260421.md"
     markdown_text = """# 36Kr 主题简报（2026-04-21）
 
 ## 运行摘要
 
-- 原始文章数：3
+- 专题：专题栏目的人工总述示例。
+- 活动：活动栏目的人工总述示例。
+- 资讯：资讯栏目的人工总述示例。
 
 ## 36氪编辑精选
 
@@ -41,7 +43,7 @@ def test_kr36_email_renders_homepage_sections_without_tabs(tmp_path) -> None:
 ### 源地址
 
 - 品牌文 | 2026-04-21 | https://36kr.com/p/1
-- 专题链接 | https://36kr.com/topics/1
+- 子类页 | https://36kr.com/search/articles/123
 """
     step6_path.write_text(markdown_text, encoding="utf-8")
 
@@ -66,6 +68,7 @@ def test_kr36_email_renders_homepage_sections_without_tabs(tmp_path) -> None:
                             "activity_status": "报名中",
                             "activity_time_range": "04月21日-04月22日",
                             "activity_city": "上海",
+                            "activity_theme": "AI Agent",
                             "start_label": "今天开始",
                         },
                     },
@@ -73,7 +76,7 @@ def test_kr36_email_renders_homepage_sections_without_tabs(tmp_path) -> None:
                         "source_bucket": "资讯",
                         "channel": "资讯",
                         "title": "品牌文",
-                        "url": "https://36kr.com/p/1",
+                        "url": "https://36kr.com/search/articles/123",
                         "metadata": {},
                     },
                 ]
@@ -89,42 +92,41 @@ def test_kr36_email_renders_homepage_sections_without_tabs(tmp_path) -> None:
         writer.writeheader()
         writer.writerow({"栏目": "专题", "文章链接": "https://36kr.com/topics/1"})
         writer.writerow({"栏目": "活动", "文章链接": "https://36kr.com/sign-up-activity/1"})
-        writer.writerow({"栏目": "后浪白皮书", "文章链接": "https://36kr.com/p/1"})
+        writer.writerow({"栏目": "后浪白皮书", "文章链接": "https://36kr.com/search/articles/123"})
 
     rendered = render_kr36_brief_email(markdown_text, step6_path)
 
-    assert "tab-bar" not in rendered.html
-    assert "switchTab" not in rendered.html
-    assert "原始文章数" not in rendered.html
-    assert 'topic-link-badge">专题' not in rendered.html
-    assert "topic-link-card" not in rendered.html
-    assert "topic-source-list" in rendered.html
-    assert rendered.html.index("专题判断。") < rendered.html.index('<ul class="link-list topic-source-list">')
-    topic_section_html = rendered.html[
-        rendered.html.index('id="section-topics"') : rendered.html.index('id="section-activities"')
-    ]
-    assert topic_section_html.count("源地址") == 1
-    assert "专题源地址" in topic_section_html
-    assert "专题精选" in rendered.html
-    assert "编辑精选" in rendered.html
-    assert "活动速览" in rendered.html
+    assert "<h2 class=\"section-title\">专题</h2>" in rendered.html
+    assert "<h2 class=\"section-title\">活动</h2>" in rendered.html
+    assert "<h2 class=\"section-title\">资讯</h2>" in rendered.html
+    assert "专题栏目的人工总述示例。" in rendered.html
+    assert "活动栏目的人工总述示例。" in rendered.html
+    assert "资讯栏目的人工总述示例。" in rendered.html
+
+    assert "源地址" in rendered.text
+    assert "补充地址" not in rendered.text
+    assert "编辑精选 的观点：专题判断。" not in rendered.text
+    assert "活动A 的观点：活动判断。" not in rendered.text
+    assert "1) 品牌文 的观点：资讯判断。" in rendered.text
+    assert "2) 子类页 的观点：资讯判断。" in rendered.text
+    assert "编辑精选 | https://36kr.com/topics/1" in rendered.text
+    assert "子类页 | https://36kr.com/search/articles/123" in rendered.text
+    assert "名称：活动A；时间：04月21日-04月22日；地点：上海；主题：AI Agent；倒计时：今天开始；链接：https://36kr.com/sign-up-activity/1" in rendered.text
+
+    assert "activity-card-title" in rendered.html
     assert "活动A" in rendered.html
-    activity_section_html = rendered.html[
-        rendered.html.index('id="section-activities"') : rendered.html.index('id="section-analysis"')
-    ]
-    assert "活动源地址" in activity_section_html
-    assert "活动信息直接展示" not in rendered.html
-    assert activity_section_html.index("活动判断") < activity_section_html.index("活动源地址")
-    assert "今天开始" in activity_section_html
-    assert "报名中" in activity_section_html
-    assert "活动A（2026-04-21）" not in activity_section_html
-    assert "资讯主题分析" in rendered.html
-    assert "后浪白皮书" in rendered.html
-    info_section_html = rendered.html[rendered.html.index('id="section-analysis"') :]
-    assert "源地址" not in info_section_html
-    assert "info-channel-title\">后浪白皮书" in info_section_html
-    assert "专题链接" not in info_section_html
-    assert "深氪" not in rendered.html
+    assert "时间：" in rendered.html
+    assert "地点：" in rendered.html
+    assert "主题：" in rendered.html
+    assert "倒计时：" in rendered.html
+    assert "activity-card" in rendered.html
+    assert "活动A 的观点：" not in rendered.html
+    assert "查看链接" not in rendered.html
+
+    topic_pos = rendered.text.index("\n专题\n")
+    activity_pos = rendered.text.index("\n活动\n")
+    info_pos = rendered.text.index("\n资讯\n")
+    assert topic_pos < activity_pos < info_pos
 
 
 def test_activity_source_dedupes_identical_status_and_countdown() -> None:

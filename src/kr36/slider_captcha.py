@@ -655,7 +655,7 @@ def solve_slider_captcha(page: Any, max_attempts: int = 3) -> bool:
         # ── 拖拽后截图 + DOM 检测是否通过 ────────────────────────────────
         passed = _wait_for_pass(page, btn_box, drag_px, timeout_s=4.5)
         if passed:
-            print(f"[captcha] 第 {attempt} 次验证通过 ✓")
+            print(f"[captcha] 第 {attempt} 次验证通过 OK")
             return True
 
         print(f"[captcha] 第 {attempt} 次未通过，等待 3s 后重试（验证码将刷新）…")

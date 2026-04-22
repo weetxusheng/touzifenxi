@@ -53,81 +53,83 @@ def run_stages_2_3_4(
     n_in = sum(len(c.items) for c in fetch_in.categories)
     if n_in != n1:
         raise ValueError(f"36kr: 转 SearchResults 后条数 {n_in} 与 步骤1 条数 {n1} 不一致。")
-    step2_path = run_dir / n.step2_content_name(target_date)
-    step2_cp = StepCheckpointStore.load_or_create(
-        checkpoint_path=checkpoint_path_for_step(
-            output_path=step2_path,
-            step_name="step_2",
-            report_date=report_date_text,
-            prefix="kr36",
-        ),
-        step_name="step_2",
-        report_date=report_date_text,
-        input_path=step1_csv_path,
-        output_path=step2_path,
-    )
-    content_payload = run_content_fetch_workflow(
-        step1_csv_path,
-        report_date_text,
-        checkpoint_store=step2_cp,
-        search_input=fetch_in,
-        expected_article_count=n1,
-    )
-    save_content_results(step2_path, content_payload)
-    n2 = sum(len(c.items) for c in content_payload.categories)
-    if n2 != n1:
-        raise RuntimeError(f"36kr: 步骤2 落盘条数 {n2} 与 步骤1 条数 {n1} 不一致。")
-    print(f"36Kr 步骤2（每链接原文，与步骤1 同 {n1} 条）: {step2_path}")
-    # --- 步骤 3：LLM 整合/结构化分析 + 分层问题 ---
-    step3_path = run_dir / n.step3_analysis_name(target_date)
-    step4_brief = run_dir / n.step4_brief_name(target_date)
-    layer_path = run_dir / n.layer_issues_name(target_date)
-    content_for_analysis = load_content_analysis_inputs(step2_path)
-    step3_cp = StepCheckpointStore.load_or_create(
-        checkpoint_path=checkpoint_path_for_step(
-            output_path=step3_path,
-            step_name="step_3",
-            report_date=report_date_text,
-            prefix="kr36",
-        ),
-        step_name="step_3",
-        report_date=report_date_text,
-        input_path=step2_path,
-        output_path=step3_path,
-    )
-    analysis_payload = auto_complete_content_analysis(
-        content_for_analysis,
-        llm_client,
-        prompt_path=CONTENT_ANALYSIS_PROMPT_PATH,
-        checkpoint_store=step3_cp,
-    )
-    save_content_analysis_yaml(step3_path, analysis_payload)
-    save_layer_issues_yaml(
-        layer_path,
-        report_date_text,
-        generate_layer_issues(analysis_payload, keyword_count=rc.search_keyword_count),
-    )
-    print(f"36Kr 步骤3（数据整合/分析）: {step3_path}")
-    # --- 步骤 4：导出简报与 HTML/邮件用文本 ---
+    step4_path = run_dir / n.step4_content_name(target_date)
     step4_cp = StepCheckpointStore.load_or_create(
         checkpoint_path=checkpoint_path_for_step(
-            output_path=step4_brief,
+            output_path=step4_path,
             step_name="step_4",
             report_date=report_date_text,
             prefix="kr36",
         ),
         step_name="step_4",
         report_date=report_date_text,
-        input_path=step3_path,
-        output_path=step4_brief,
+        input_path=step1_csv_path,
+        output_path=step4_path,
+    )
+    content_payload = run_content_fetch_workflow(
+        step1_csv_path,
+        report_date_text,
+        checkpoint_store=step4_cp,
+        search_input=fetch_in,
+        expected_article_count=n1,
+    )
+    save_content_results(step4_path, content_payload)
+    n2 = sum(len(c.items) for c in content_payload.categories)
+    if n2 != n1:
+        raise RuntimeError(f"36kr: 步骤4 落盘条数 {n2} 与 步骤1 条数 {n1} 不一致。")
+    print(f"36Kr 步骤4（每链接原文，与步骤1 同 {n1} 条）: {step4_path}")
+    # --- 步骤 5：LLM 整合/结构化分析 + 分层问题 ---
+    step5_path = run_dir / n.step5_analysis_name(target_date)
+    step6_brief = run_dir / n.step6_brief_name(target_date)
+    layer_path = run_dir / n.layer_issues_name(target_date)
+    content_for_analysis = load_content_analysis_inputs(step4_path)
+    step5_cp = StepCheckpointStore.load_or_create(
+        checkpoint_path=checkpoint_path_for_step(
+            output_path=step5_path,
+            step_name="step_5",
+            report_date=report_date_text,
+            prefix="kr36",
+        ),
+        step_name="step_5",
+        report_date=report_date_text,
+        input_path=step4_path,
+        output_path=step5_path,
+    )
+    analysis_payload = auto_complete_content_analysis(
+        content_for_analysis,
+        llm_client,
+        prompt_path=CONTENT_ANALYSIS_PROMPT_PATH,
+        checkpoint_store=step5_cp,
+    )
+    save_content_analysis_yaml(step5_path, analysis_payload)
+    save_layer_issues_yaml(
+        layer_path,
+        report_date_text,
+        generate_layer_issues(analysis_payload, keyword_count=rc.search_keyword_count),
+    )
+    print(f"36Kr 步骤5（数据整合/分析）: {step5_path}")
+    # --- 步骤 6：生成简报 Markdown + HTML ---
+    step6_cp = StepCheckpointStore.load_or_create(
+        checkpoint_path=checkpoint_path_for_step(
+            output_path=step6_brief,
+            step_name="step_6",
+            report_date=report_date_text,
+            prefix="kr36",
+        ),
+        step_name="step_6",
+        report_date=report_date_text,
+        input_path=step5_path,
+        output_path=step6_brief,
     )
     brief_markdown = generate_brief_markdown(
         analysis_payload,
         llm_client,
         prompt_path=BRIEF_PROMPT_PATH,
-        checkpoint_store=step4_cp,
+        checkpoint_store=step6_cp,
     )
-    step4_brief.write_text(brief_markdown, encoding="utf-8")
-    html_p, text_p, doc_p = save_brief_preview_assets(step4_brief, brief_markdown)
-    print(f"36Kr 步骤4（导出）: {step4_brief}")
-    print(f"  预览: {html_p} / {text_p} / {doc_p}")
+    step6_brief.write_text(brief_markdown, encoding="utf-8")
+    html_output, txt_output, doc_output = save_brief_preview_assets(step6_brief, brief_markdown)
+    print(f"36Kr 步骤6（简报）: {step6_brief}")
+    print(f"  HTML: {html_output}")
+    print(f"  TXT: {txt_output}")
+    print(f"  DOC HTML: {doc_output}")
