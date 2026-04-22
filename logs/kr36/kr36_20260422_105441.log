@@ -1,0 +1,52 @@
+[kr36] 2026-04-22 10:54:42 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=E:\AI\touzifenxi
+[kr36] PYTHON_BIN=E:\AI\touzifenxi\.venv\Scripts\python.exe
+[kr36] TIMEOUT=30s
+[kr36] LOG_FILE=E:\AI\touzifenxi\logs\kr36\kr36_20260422_105441.log
+[kr36] running: "E:\AI\touzifenxi\.venv\Scripts\python.exe" scripts\websearch.py run --source 36kr --timeout 30
+2026-04-22 10:54:43 [kr36] listing_begin report_date=2026-04-22 rounds_total=11 candidate_limit=120
+2026-04-22 10:54:43 [kr36] round_start page=1 round=1/11 stage=topics url=https://36kr.com/topics/
+2026-04-22 10:54:43 [kr36] 进入专题页，数据 0 条，累计 0 条
+2026-04-22 10:54:43 [kr36] fetch_start url=https://36kr.com/topics/
+2026-04-22 10:54:43 [kr36] fetch_ok method=curl url=https://36kr.com/topics/ html_length=73732
+2026-04-22 10:54:43 [kr36] round_end page=1 round=1/11 stage=topics status=ok fetched=22 total_refs=22 elapsed_ms=651
+2026-04-22 10:54:43 [kr36] 完成专题页，数据 22 条，累计 22 条
+2026-04-22 10:54:43 [kr36] round_next round=2/11 stage=activity
+2026-04-22 10:54:43 [kr36] round_start page=2 round=2/11 stage=activity url=https://36kr.com/activity
+2026-04-22 10:54:43 [kr36] 进入活动页，数据 0 条，累计 22 条
+2026-04-22 10:54:43 [kr36] throttle_wait url=https://36kr.com/activity wait_ms=22204 global_wait_ms=22204 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:55:05 [kr36] fetch_start url=https://36kr.com/activity
+2026-04-22 10:55:06 [kr36] risk_cooldown_set url=https://36kr.com/activity cooldown_ms=184948 base_ms=180000 jitter_ms=4948
+2026-04-22 10:55:06 [kr36] risk_entered method=curl url=https://36kr.com/activity html_length=1460 has_cookie_refresh_action=true
+2026-04-22 10:55:06 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/activity
+2026-04-22 10:55:09 [kr36] risk_verification_invoking_command url=https://36kr.com/activity
+2026-04-22 10:55:25 [kr36] slider_captcha_solve_result attempted=true
+2026-04-22 10:55:25 [kr36] risk_cookie_refresh_slider_solve_attempt url=https://36kr.com/activity attempted=true
+2026-04-22 10:55:27 [kr36] risk_cookie_refresh_cookies_saved_after_slider url=https://36kr.com/activity
+2026-04-22 10:55:27 [kr36] risk_cookie_refresh_slider_done url=https://36kr.com/activity html_usable=false
+2026-04-22 10:55:28 [kr36] risk_cookie_refresh_end url=https://36kr.com/activity ok=true changed=true key_changed=true has_required_fields=false html_usable=false
+2026-04-22 10:55:28 [kr36] throttle_wait url=https://36kr.com/activity wait_ms=162204 global_wait_ms=4199 same_url_wait_ms=0 risk_wait_ms=162204
+2026-04-22 10:58:11 [kr36] page_result page=2 stage=activity status=deferred_blocked url=https://36kr.com/activity fetched=0 total_refs=22
+2026-04-22 10:58:11 [kr36] round_end page=2 round=2/11 stage=activity status=ok fetched=0 total_refs=22 elapsed_ms=207666
+2026-04-22 10:58:11 [kr36] 完成活动页，数据 0 条，累计 22 条
+2026-04-22 10:58:11 [kr36] round_next round=3/11 stage=search
+2026-04-22 10:58:11 [kr36] round_start page=3 round=3/11 stage=search category=36氪独家 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:58:11 [kr36] 进入搜索页(36氪独家)，数据 0 条，累计 22 条
+2026-04-22 10:58:11 [kr36] throttle_wait url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 wait_ms=26094 global_wait_ms=26094 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-22 10:58:37 [kr36] fetch_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:58:37 [kr36] risk_cooldown_set url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 cooldown_ms=175940 base_ms=180000 jitter_ms=-4060
+2026-04-22 10:58:37 [kr36] risk_entered method=curl url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=1460 has_cookie_refresh_action=true
+2026-04-22 10:58:37 [kr36] risk_verification_delay_before_command wait_ms=3000 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:58:40 [kr36] risk_verification_invoking_command url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:58:51 [kr36] slider_captcha_solve_result attempted=true
+2026-04-22 10:58:51 [kr36] risk_cookie_refresh_slider_solve_attempt url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 attempted=true
+2026-04-22 10:58:53 [kr36] risk_cookie_refresh_cookies_saved_after_slider url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-22 10:58:53 [kr36] risk_cookie_refresh_slider_done url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_usable=false
+2026-04-22 10:58:53 [kr36] risk_cookie_refresh_end url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 ok=false changed=false key_changed=false has_required_fields=false html_usable=false
+2026-04-22 10:58:53 [kr36] page_result page=3 stage=search category=36氪独家 status=deferred_blocked url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 fetched=0 total_refs=22
+2026-04-22 10:58:53 [kr36] round_end page=3 round=3/11 stage=search category=36氪独家 status=ok fetched=0 total_refs=22 elapsed_ms=42429
+2026-04-22 10:58:53 [kr36] 完成搜索页(36氪独家)，数据 0 条，累计 22 条
+2026-04-22 10:58:53 [kr36] round_next round=4/11 stage=search_or_channel
+2026-04-22 10:58:53 [kr36] round_start page=4 round=4/11 stage=search category=深氪 url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA
+2026-04-22 10:58:53 [kr36] 进入搜索页(深氪)，数据 0 条，累计 22 条
+2026-04-22 10:58:53 [kr36] throttle_wait url=https://36kr.com/search/articles/%E6%B7%B1%E6%B0%AA wait_ms=159845 global_wait_ms=6991 same_url_wait_ms=0 risk_wait_ms=159845

@@ -91,6 +91,10 @@ class C114RuntimeConfig:
     aliyun_timeout_seconds: float
     aliyun_max_retries: int
     aliyun_retry_backoff_seconds: float
+    content_fetch_url_max_attempts: int
+    content_fetch_url_retry_backoff_seconds: float
+    content_fetch_retry_on_empty: bool
+    content_kr36_step4_risk_playwright: bool
     search_keyword_count: int
     search_recent_days: int
     search_max_external_results: int
@@ -216,6 +220,16 @@ def load_c114_runtime_config(base_path: Path | None = None) -> C114RuntimeConfig
         aliyun_max_retries=int(_read_nested_value(config, "network.aliyun_max_retries", default=2)),
         aliyun_retry_backoff_seconds=float(
             _read_nested_value(config, "network.aliyun_retry_backoff_seconds", default=0.5)
+        ),
+        content_fetch_url_max_attempts=max(
+            1, int(_read_nested_value(config, "content.fetch_url_max_attempts", default=3))
+        ),
+        content_fetch_url_retry_backoff_seconds=float(
+            _read_nested_value(config, "content.fetch_url_retry_backoff_seconds", default=1.0)
+        ),
+        content_fetch_retry_on_empty=bool(_read_nested_value(config, "content.fetch_retry_on_empty", default=False)),
+        content_kr36_step4_risk_playwright=bool(
+            _read_nested_value(config, "content.kr36_step4_risk_playwright", default=True)
         ),
         search_keyword_count=max(1, int(_read_nested_value(config, "search.keyword_count", default=1))),
         search_recent_days=int(_read_nested_value(config, "search.recent_days", default=30)),

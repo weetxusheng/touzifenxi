@@ -1,0 +1,387 @@
+{
+  "report_date": "2026-04-21",
+  "generated_at": "2026-04-22T10:55:01",
+  "channels": [
+    {
+      "channel_key": "home",
+      "channel_name": "首页",
+      "channel_url": "https://www.c114.com.cn/?c=web",
+      "article_count": 16,
+      "hot_topics": [
+        {
+          "keyword": "工信部",
+          "count": 4
+        },
+        {
+          "keyword": "中国联通",
+          "count": 2
+        },
+        {
+          "keyword": "卫星互联网",
+          "count": 1
+        },
+        {
+          "keyword": "Pre6G",
+          "count": 1
+        },
+        {
+          "keyword": "DOICT",
+          "count": 1
+        },
+        {
+          "keyword": "中国移动",
+          "count": 1
+        },
+        {
+          "keyword": "紫光国微",
+          "count": 1
+        },
+        {
+          "keyword": "工业互联网",
+          "count": 1
+        },
+        {
+          "keyword": "国产操作系统",
+          "count": 1
+        },
+        {
+          "keyword": "RISC-V",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/satellite/2514/a1308927.html",
+          "title": "专访中信科移动王震：突围卫星互联网 赋能6G价值共创",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "卫星互联网"
+          ],
+          "summary": "专访中信科移动王震：突围卫星互联网 赋能6G价值共创,C114讯 4月21日消息（岳明）本周，由未来移动通信论坛、紫金山实验室共同主办的2026全球6G技"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308922.html",
+          "title": "国内首个Pre6G试验网在南京正式投入运行",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "Pre6G"
+          ],
+          "summary": "国内首个Pre6G试验网在南京正式投入运行,C114讯 在今天召开的“2026全球6G技术与产业生态大会”上，C114获悉，国内首个Pre6G试"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308920.html",
+          "title": "中国科学院院士尤肖虎：DOICT超融合是非常有潜力的技术",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "DOICT"
+          ],
+          "summary": "中国科学院院士尤肖虎：DOICT超融合是非常有潜力的技术,C114讯 4月21日消息在今天召开的“全球6G技术与产业生态大会”上，中国科学院院士、东南大学首席"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/119/a1308917.html",
+          "title": "中国联通Q1运营数据：5G网络用户2.42亿户 联通云政企大客户数43.8万户",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "中国联通"
+          ],
+          "summary": "中国联通Q1运营数据：5G网络用户2.42亿户 联通云政企大客户数43.8万户,C114讯 4月21日消息（颜翊）今日，中国联通公布了2026年第一季度核心运营数据。连接业务方面，"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/119/a1308915.html",
+          "title": "中国联通Q1营收1028亿元：净利润49亿元 同比下降17.6%",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "中国联通"
+          ],
+          "summary": "中国联通Q1营收1028亿元：净利润49亿元 同比下降17.6%,C114讯 4月21日消息（颜翊）今日，中国联通公布了2026年首季度主要财务及经营指标，一季度，公"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/118/a1308889.html",
+          "title": "从股东结构看中国移动：产业资本入场，长线资金加仓",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "中国移动"
+          ],
+          "summary": "从股东结构看中国移动：产业资本入场，长线资金加仓,C114讯 4月21日消息（九九）中国移动昨日发布2026年第一季度财报，相较于经营数据，股东名单的"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/123/a1308877.html",
+          "title": "紫光国微2025年实现净利润14.37亿元 同比增长21.86%",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "紫光国微"
+          ],
+          "summary": "紫光国微2025年实现净利润14.37亿元 同比增长21.86%,C114讯 4月21日消息（颜翊）昨日，紫光国微发布了2025年年度报告。报告期内，公司实现营业收入"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308868.html",
+          "title": "工信部谢存：我国累计建设2.5万余个“5G+工业互联网”项目",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "工业互联网"
+          ],
+          "summary": "工信部谢存：我国累计建设2.5万余个“5G+工业互联网”项目,C114讯 4月21日消息（颜翊）今日上午，国新办举行新闻发布会介绍2026年一季度工业和信息化发展"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308866.html",
+          "title": "工信部谢存：深入整治“内卷式”竞争 持续推进国产操作系统和RISC",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "工信部",
+            "国产操作系统",
+            "RISC-V"
+          ],
+          "summary": "工信部谢存：深入整治“内卷式”竞争 持续推进国产操作系统和RISC-V架构的适配,C114讯 4月21日消息（颜翊）今日上午，国新办举行新闻发布会介绍2026年一季度工业和信息化发展"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308864.html",
+          "title": "“液冷龙头”英维克股价一字跌停 一季度净利润大跌82%",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "英维克"
+          ],
+          "summary": "“液冷龙头”英维克股价一字跌停 一季度净利润大跌82%,C114讯 4月21日消息（南山）资本市场“液冷龙头”英维克今日在A股开盘后，股价一字跌停。过去1年"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308861.html",
+          "title": "工信部谢存：全国5G基站总数已达495.8万个 将继续推动网络向“双万兆”演进",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "工信部",
+            "5G",
+            "基站"
+          ],
+          "summary": "工信部谢存：全国5G基站总数已达495.8万个 将继续推动网络向“双万兆”演进,C114讯 4月21日消息（颜翊）今日上午，国新办举行新闻发布会介绍2026年一季度工业和信息化发展"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308857.html",
+          "title": "工信部张云明：我国智能算力规模达1882 EFLOPS 将持续推动算力产业体系化高质量发展",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "工信部",
+            "智能算力"
+          ],
+          "summary": "工信部张云明：我国智能算力规模达1882 EFLOPS 将持续推动算力产业体系化高质量发展,C114讯 4月21日消息（颜翊）今日上午，国新办举行新闻发布会介绍2026年一季度工业和信息化发展"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308855.html",
+          "title": "工信部：一季度电信业务总量同比增长8.3%",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "工信部",
+            "电信业务总量"
+          ],
+          "summary": "工信部：一季度电信业务总量同比增长8.3%,C114讯 4月21日消息（颜翊）今日上午，国新办举行新闻发布会介绍2026年一季度工业和信息化发展"
+        },
+        {
+          "url": "https://www.c114.com.cn/ftth/5472/a1308853.html",
+          "title": "永鼎股份2025年净利润2.34亿元，同比增长280.43%",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "永鼎股份"
+          ],
+          "summary": "永鼎股份2025年净利润2.34亿元，同比增长280.43%,C114讯 4月21日消息（颜翊）昨日，永鼎股份发布2025年年度报告。报告期内，公司实现营业收入5"
+        },
+        {
+          "url": "https://www.c114.com.cn/quantum/5285/a1308848.html",
+          "title": "国盾量子一季度营收2300万元 净亏损1901万元",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "量子",
+            "营收",
+            "净亏损",
+            "净利润",
+            "同比增长"
+          ],
+          "summary": "国盾量子一季度营收2300万元 净亏损1901万元,C114讯 4月21日消息（云青）国盾量子昨日晚间发布了2026年一季度财报。报告显示，一季度实现营"
+        },
+        {
+          "url": "https://www.c114.com.cn/quantum/5285/a1308846.html",
+          "title": "香港启动量子智能产业联盟，国内量子公司纷纷参与",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "产业联盟",
+            "量子计算",
+            "香港城市大学",
+            "智能",
+            "物流枢纽"
+          ],
+          "summary": "香港启动量子智能产业联盟，国内量子公司纷纷参与,C114讯 4月21日消息（云青）日前，由香港城市大学发起的量子智能产业联盟于香港会议展览中心 We"
+        }
+      ]
+    },
+    {
+      "channel_key": "quantum",
+      "channel_name": "量子信息",
+      "channel_url": "https://www.c114.com.cn/quantum/",
+      "article_count": 2,
+      "hot_topics": [
+        {
+          "keyword": "量子",
+          "count": 1
+        },
+        {
+          "keyword": "营收",
+          "count": 1
+        },
+        {
+          "keyword": "净亏损",
+          "count": 1
+        },
+        {
+          "keyword": "净利润",
+          "count": 1
+        },
+        {
+          "keyword": "同比增长",
+          "count": 1
+        },
+        {
+          "keyword": "产业联盟",
+          "count": 1
+        },
+        {
+          "keyword": "量子计算",
+          "count": 1
+        },
+        {
+          "keyword": "香港城市大学",
+          "count": 1
+        },
+        {
+          "keyword": "智能",
+          "count": 1
+        },
+        {
+          "keyword": "物流枢纽",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/quantum/5285/a1308848.html",
+          "title": "国盾量子一季度营收2300万元 净亏损1901万元",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "量子",
+            "营收",
+            "净亏损",
+            "净利润",
+            "同比增长"
+          ],
+          "summary": "国盾量子一季度营收2300万元 净亏损1901万元,C114讯 4月21日消息（云青）国盾量子昨日晚间发布了2026年一季度财报。报告显示，一季度实现营"
+        },
+        {
+          "url": "https://www.c114.com.cn/quantum/5285/a1308846.html",
+          "title": "香港启动量子智能产业联盟，国内量子公司纷纷参与",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "产业联盟",
+            "量子计算",
+            "香港城市大学",
+            "智能",
+            "物流枢纽"
+          ],
+          "summary": "香港启动量子智能产业联盟，国内量子公司纷纷参与,C114讯 4月21日消息（云青）日前，由香港城市大学发起的量子智能产业联盟于香港会议展览中心 We"
+        }
+      ]
+    },
+    {
+      "channel_key": "satellite",
+      "channel_name": "卫星互联网",
+      "channel_url": "https://www.c114.com.cn/satellite/",
+      "article_count": 2,
+      "hot_topics": [
+        {
+          "keyword": "卫星互联网",
+          "count": 1
+        },
+        {
+          "keyword": "轨道辰光",
+          "count": 1
+        },
+        {
+          "keyword": "股权",
+          "count": 1
+        },
+        {
+          "keyword": "融资",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/satellite/2514/a1308927.html",
+          "title": "专访中信科移动王震：突围卫星互联网 赋能6G价值共创",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "卫星互联网"
+          ],
+          "summary": "专访中信科移动王震：突围卫星互联网 赋能6G价值共创,C114讯 4月21日消息（岳明）本周，由未来移动通信论坛、紫金山实验室共同主办的2026全球6G技"
+        },
+        {
+          "url": "https://www.c114.com.cn/satellite/2515/a1308842.html",
+          "title": "577亿元！轨道辰光完成PreA1 轮股权、债权融资",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "轨道辰光",
+            "股权",
+            "融资"
+          ],
+          "summary": "577亿元！轨道辰光完成PreA1 轮股权、债权融资,C114讯 4月21日消息 商业航天狂飙不止。近日，北京轨道辰光科技有限公司（以下简称轨道辰光）正式"
+        }
+      ]
+    },
+    {
+      "channel_key": "la",
+      "channel_name": "数智低空",
+      "channel_url": "https://www.c114.com.cn/la/",
+      "article_count": 0,
+      "hot_topics": [],
+      "articles": []
+    },
+    {
+      "channel_key": "ai",
+      "channel_name": "Cloud&AI",
+      "channel_url": "https://www.c114.com.cn/ai/",
+      "article_count": 1,
+      "hot_topics": [
+        {
+          "keyword": "chronicle",
+          "count": 1
+        },
+        {
+          "keyword": "记忆",
+          "count": 1
+        },
+        {
+          "keyword": "屏幕录制",
+          "count": 1
+        },
+        {
+          "keyword": "Codex",
+          "count": 1
+        },
+        {
+          "keyword": "OpenAI",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/ai/5339/a1308832.html",
+          "title": "OpenAI Codex 推出 Chronicle 功能：通过录制屏幕构建上下文记忆库",
+          "publish_date": "2026-04-21",
+          "keywords": [
+            "chronicle",
+            "记忆",
+            "屏幕录制",
+            "Codex",
+            "OpenAI"
+          ],
+          "summary": "OpenAI Codex 推出 Chronicle 功能：通过录制屏幕构建上下文记忆库,OpenAI 为其 Codex 应用推出了 Chronicle 功能，该功能通过屏幕录制构建记忆库，"
+        }
+      ]
+    }
+  ]
+}

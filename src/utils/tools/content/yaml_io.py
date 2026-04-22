@@ -1,6 +1,6 @@
 """Step 4 输入输出 YAML 解析与渲染。
 
-本模块负责读取 step 3 搜索结果 YAML，并把正文抓取结果渲染成 step 4 YAML。
+本模块负责读取 step 3 搜索结果 YAML（或由 SearchWorkflowPayload 转换的载荷），并把正文抓取结果渲染成 step 4 YAML。
 它不负责网络请求和抓取策略。
 """
 
@@ -16,6 +16,7 @@ from ..facades.intelligence import (
     step_4_content_name,
 )
 from c114.runtime.settings import AppPaths, resolve_override_path
+from ..search.types import SearchWorkflowPayload
 from ..search.workflow import SearchResult, escape_yaml_scalar, parse_yaml_list_item, parse_yaml_value
 from .types import (
     ContentWorkflowPayload,
@@ -25,6 +26,30 @@ from .types import (
     SearchContentCategoryInput,
     SearchResultsInputPayload,
 )
+
+
+def search_workflow_to_search_results_input(payload: SearchWorkflowPayload) -> SearchResultsInputPayload:
+    """将 step3 的 SearchWorkflowPayload 转为 step4 抓取使用的 SearchResultsInputPayload（避免再走 YAML 往返）。"""
+    categories: list[SearchContentCategoryInput] = []
+    for category in payload.categories:
+        items = [
+            SearchContentArticleInput(
+                topic=article.topic,
+                channel=article.channel,
+                original_title=article.original_title,
+                original_url=article.original_url,
+                original_published_at=article.original_published_at,
+                selected_results=list(article.selected_results),
+            )
+            for article in category.items
+        ]
+        categories.append(SearchContentCategoryInput(topic=category.topic, items=items))
+    return SearchResultsInputPayload(
+        report_date=payload.report_date,
+        input_path=payload.input_path,
+        generated_at=payload.generated_at,
+        categories=categories,
+    )
 
 
 def resolve_content_output_paths(

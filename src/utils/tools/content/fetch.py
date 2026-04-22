@@ -397,8 +397,8 @@ def match_aliyun_document(
     return None
 
 
-def fetch_url_content(url: str, timeout: float = 20.0) -> FetchResult:
-    """Fetch one page directly and extract the best-effort readable content."""
+def _fetch_url_content_single_attempt(url: str, timeout: float) -> FetchResult:
+    """单次 HTTP 抓取与正文提取；不因网络错误重试。"""
     request = Request(normalize_request_url(url), headers={"User-Agent": "Mozilla/5.0"})
     try:
         with urlopen(request, timeout=timeout) as response:
@@ -410,9 +410,16 @@ def fetch_url_content(url: str, timeout: float = 20.0) -> FetchResult:
         text = extract_content_text(url, html)
         if not summary and text:
             summary = compact_text(text, limit=200)
-        status = "success"
+        status: str = "success"
+        err: str = ""
         if not text:
             status = "empty"
+            d = (extract_domain(url) or "").lower()
+            if d.endswith("36kr.com"):
+                from kr36.source_adapter import _looks_like_captcha_or_block
+
+                if _looks_like_captcha_or_block(html):
+                    err = "kr36_risk_page"
         return FetchResult(
             url=url,
             domain=extract_domain(url),
@@ -420,7 +427,7 @@ def fetch_url_content(url: str, timeout: float = 20.0) -> FetchResult:
             content_summary=summary,
             content_text=text,
             fetch_status=status,
-            fetch_error="",
+            fetch_error=err,
             content_source="html_fallback",
         )
     except (HTTPError, URLError, socket.timeout, TimeoutError, ConnectionResetError, http.client.RemoteDisconnected) as error:
@@ -434,6 +441,146 @@ def fetch_url_content(url: str, timeout: float = 20.0) -> FetchResult:
             fetch_error=str(error),
             content_source="html_fallback",
         )
+
+
+def _failed_error_transient_for_retry(err: str) -> bool:
+    """根据 fetch_error 字符串判断是否值得对同一 URL 再试（超时、5xx、连接中断等）。"""
+
+    s = (err or "").lower()
+    if "timed out" in s or "time out" in s:
+        return True
+    if "remote end closed" in s or "connection reset" in s or "connection aborted" in s:
+        return True
+    if "errno" in s or "bad gateway" in s or "service unavailable" in s:
+        return True
+    if "http error" in s:
+        for code in ("408", "429", "500", "502", "503", "504"):
+            if code in s:
+                return True
+    if "urLError" in s or "temporary failure" in s:
+        return True
+    return False
+
+
+def _is_36kr_url(url: str) -> bool:
+    return (extract_domain(url) or "").lower().endswith("36kr.com")
+
+
+def _build_fetch_result_from_html_string(url: str, html: str) -> FetchResult:
+    title = extract_html_title(html)
+    text = extract_content_text(url, html)
+    summary = extract_html_summary(html)
+    if not summary and text:
+        summary = compact_text(text, limit=200)
+    st: str = "success" if (text or "").strip() else "empty"
+    return FetchResult(
+        url=url,
+        domain=extract_domain(url),
+        content_title=title,
+        content_summary=summary,
+        content_text=text,
+        fetch_status=st,
+        fetch_error="",
+        content_source="html_fallback",
+    )
+
+
+def _kr36_title_implies_risk_block(title: str) -> bool:
+    """从页面标题判断是否像 36kr 验证/封禁中间页（直抓无正文时补充触发浏览器旁路）。"""
+
+    t = (title or "").strip()
+    if not t:
+        return False
+    for marker in (
+        "验证",
+        "人机",
+        "请完成",
+        "请按住",
+        "访问受限",
+        "异常流量",
+        "访问异常",
+        "安全检测",
+        "拖动",
+        "滑块",
+        "极验",
+    ):
+        if marker in t:
+            return True
+    low = t.lower()
+    for marker in ("captcha", "verify", "geetest", "security check", "access denied", "unusual traffic"):
+        if marker in low:
+            return True
+    return False
+
+
+def _should_run_kr36_step4_playwright_bypass(
+    url: str,
+    last: FetchResult,
+    *,
+    kr36_step4_risk_playwright: bool,
+) -> bool:
+    """36kr 直抓「失败或疑似风控/验证页」时，交由 Playwright+滑块（见 `kr36.step4_risk`）。"""
+
+    if not kr36_step4_risk_playwright or not _is_36kr_url(url):
+        return False
+    if last.fetch_status == "failed":
+        return True
+    if last.fetch_status != "empty":
+        return False
+    err = (last.fetch_error or "").lower()
+    if "kr36_risk" in err or "kr36_risk_page" in err:
+        return True
+    if _kr36_title_implies_risk_block(last.content_title):
+        return True
+    return False
+
+
+def fetch_url_content(
+    url: str,
+    timeout: float = 20.0,
+    *,
+    max_attempts: int = 1,
+    retry_backoff_seconds: float = 1.0,
+    retry_on_empty: bool = False,
+    kr36_step4_risk_playwright: bool = False,
+) -> FetchResult:
+    """Fetch one page; 对易恢复网络错误重试；36kr 遇风控可再走 Playwright+滑块（见 kr36_step4_risk_playwright）。"""
+
+    max_attempts = max(1, int(max_attempts))
+    last = _fetch_url_content_single_attempt(url, timeout)
+    if last.fetch_status == "success":
+        return last
+    attempt = 0
+    while last.fetch_status == "failed" and _failed_error_transient_for_retry(
+        str(last.fetch_error or "")
+    ) and (attempt < max_attempts - 1):
+        attempt += 1
+        time.sleep(retry_backoff_seconds * attempt)
+        last = _fetch_url_content_single_attempt(url, timeout)
+        if last.fetch_status == "success":
+            return last
+    if last.fetch_status == "empty" and retry_on_empty:
+        time.sleep(retry_backoff_seconds)
+        second = _fetch_url_content_single_attempt(url, timeout)
+        if second.fetch_status == "success" or len((second.content_text or "").strip()) > len(
+            (last.content_text or "").strip()
+        ):
+            return second
+    if _should_run_kr36_step4_playwright_bypass(
+        url, last, kr36_step4_risk_playwright=kr36_step4_risk_playwright
+    ):
+        _title_preview = repr((last.content_title or "")[:120])
+        print(
+            f"[kr36] fetch_url_content: 直抓未获得有效正文，进入浏览器自动验证（Playwright+滑块）: "
+            f"url={url} status={last.fetch_status!r} err={last.fetch_error!r} title={_title_preview}"
+        )
+        from kr36.step4_risk import try_36kr_step4_html_after_risk
+        from kr36.source_adapter import _is_usable_html
+
+        html_pw = try_36kr_step4_html_after_risk(url)
+        if html_pw and _is_usable_html(html_pw):
+            return _build_fetch_result_from_html_string(url, html_pw)
+    return last
 
 
 def normalize_request_url(url: str) -> str:

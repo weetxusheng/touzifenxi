@@ -3,6 +3,9 @@
 This renderer keeps all content on one page instead of hiding it behind tabs.
 Raw topic and activity items come from the step-1 JSON output, while step-6
 theme analysis cards stay visible in dedicated homepage sections.
+
+与 C114 无关：C114 Step6 HTML 使用 ``utils.tools.output.email.render_c114_brief_email``，
+本模块仅用于 36kr 流水线（``render_kr36_brief_email``）。
 """
 
 from __future__ import annotations
@@ -16,7 +19,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from utils.tools.output.email import RenderedEmail, build_plain_text, normalize_block_lines, split_metric_line
+from utils.tools.output.email import (
+    RenderedEmail,
+    format_plain_text_item,
+    normalize_block_lines,
+    split_metric_line,
+)
 
 INFO_SUBCATEGORIES = (
     "36氪独家",
@@ -35,6 +43,71 @@ BUCKET_ACTIVITY = "活动"
 BUCKET_INFO = "资讯"
 FOOTER_DISCLAIMER = "本报告由系统自动生成，仅供参考，不构成投资建议。"
 PLACEHOLDER_LINK_TEXT = {"无", "暂无", "日期未知"}
+
+# 「运行摘要」中 `- 键: 值` 的键名分流：详情加粗、分栏引导、其余作为运行数据小字
+_SUMMARY_LEAD_KEYS = frozenset({"详情总结", "详情", "概览", "要点", "简报要点", "总览"})
+_SUMMARY_INTRO_TOPIC = frozenset({"专题", "专题总结"})
+_SUMMARY_INTRO_ACTIVITY = frozenset({"活动", "活动总结"})
+_SUMMARY_INTRO_INFO = frozenset({"资讯", "资讯总结", "资讯概览"})
+
+
+def _partition_summary_items(
+    summary_items: list[tuple[str, str]],
+) -> tuple[str, dict[str, str], list[tuple[str, str]]]:
+    """拆成：顶部「详情」段落、分栏引导语、其余运行数据。"""
+
+    lead_chunks: list[str] = []
+    intros: dict[str, str] = {"topic": "", "activity": "", "info": ""}
+    run_stats: list[tuple[str, str]] = []
+    for key, value in summary_items:
+        k = (key or "").strip()
+        v = (value or "").strip()
+        if not k and not v:
+            continue
+        if k in _SUMMARY_LEAD_KEYS and v:
+            lead_chunks.append(v)
+        elif k in _SUMMARY_INTRO_TOPIC and v:
+            intros["topic"] = v
+        elif k in _SUMMARY_INTRO_ACTIVITY and v:
+            intros["activity"] = v
+        elif k in _SUMMARY_INTRO_INFO and v:
+            intros["info"] = v
+        else:
+            run_stats.append((k, v))
+    lead = " ".join(lead_chunks).strip()
+    return lead, intros, run_stats
+
+
+def _kr36_build_plain_text(
+    *,
+    title: str,
+    lead: str,
+    run_stats: list[tuple[str, str]],
+    topics: list[dict[str, object]],
+) -> str:
+    """纯文本版：标题 + 详情总结 + 运行数据行 + 各主题块（与 HTML 信息层级一致）。"""
+
+    lines: list[str] = [title]
+    if str(lead or "").strip():
+        lines.extend(["", str(lead).strip()])
+    for sk, sv in run_stats:
+        if sk or sv:
+            lines.append(f"- {sk}：{sv}" if sk else f"- {sv}")
+    for topic in topics:
+        topic_title = str(topic["title"])
+        lines.extend(["", topic_title])
+        subsections = topic.get("subsections", {})
+        assert isinstance(subsections, dict)
+        for subtitle, items in subsections.items():
+            lines.append(f"{subtitle}")
+            for item in items:
+                rendered = format_plain_text_item(str(item))
+                if rendered:
+                    lines.append(rendered)
+    body = "\n".join(lines).strip()
+    if FOOTER_DISCLAIMER:
+        body = f"{body}\n\n{FOOTER_DISCLAIMER}"
+    return body
 
 
 def _derive_date_from_path(path: Path) -> str:
@@ -170,6 +243,15 @@ def _parse_brief_markdown(markdown_text: str) -> tuple[str, list[tuple[str, str]
 
     flush_subsection()
     return title, summary_items, sections
+
+
+def _title_trailing_colon(text: str) -> str:
+    t = (text or "").rstrip()
+    if not t:
+        return t
+    if t[-1] in "：:":
+        return t
+    return t + "："
 
 
 def _anchor(text: str) -> str:
@@ -434,9 +516,10 @@ def _render_section(
     if not blocks:
         return ""
 
+    title_line = _title_trailing_colon(title)
     return (
         f'<section class="analysis-card" id="{_anchor(title)}">'
-        f'<div class="analysis-head"><h3 class="analysis-title">{_html.escape(title)}</h3>{badge_row}</div>'
+        f'<div class="analysis-head"><h3 class="analysis-title">{_html.escape(title_line)}</h3>{badge_row}</div>'
         f"{''.join(blocks)}"
         "</section>"
     )
@@ -450,17 +533,29 @@ def _render_section_group(
     intro: str,
     body_html: str,
     extra_html: str = "",
+    heading_trailing_colon: bool = True,
 ) -> str:
     intro_stripped = str(intro or "").strip()
     intro_html = (
         f'<p class="section-intro">{_html.escape(intro_stripped)}</p>' if intro_stripped else ""
     )
+    colon_html = (
+        '<span class="section-title-colon" aria-hidden="true">：</span>' if heading_trailing_colon else ""
+    )
+    count_stripped = str(count_label or "").strip()
+    count_html = (
+        f'<span class="section-count">{_html.escape(count_stripped)}</span>' if count_stripped else ""
+    )
     return (
         f'<section class="home-section" id="{section_id}">'
         '<div class="section-header">'
-        f'<div><h2 class="section-title">{_html.escape(title)}</h2>{intro_html}</div>'
-        f'<span class="section-count">{_html.escape(count_label)}</span>'
+        f'<h2 class="section-title section-title-kr">'
+        f'<span class="section-title-label">{_html.escape(title)}</span>'
+        f"{colon_html}"
+        f"{count_html}"
+        "</h2>"
         "</div>"
+        f"{intro_html}"
         f"{extra_html}"
         f"{body_html}"
         "</section>"
@@ -471,6 +566,7 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
     """Render the 36Kr brief into a homepage-style HTML email."""
 
     title, summary_items, topic_sections = _parse_brief_markdown(markdown_text)
+    lead_text, section_intros, run_stats = _partition_summary_items(summary_items)
 
     raw_articles = _load_articles(step6_path) if step6_path else []
     url_channel_map = _load_url_channel_map(step6_path) if step6_path else {}
@@ -499,7 +595,7 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
 
     if topic_articles or topic_analysis_sections:
         anchor_links.append(
-            f'<a class="jump-chip" href="#section-topics">专题精选 ({len(topic_articles)})</a>'
+            f'<a class="jump-chip" href="#section-topics">专题（{len(topic_articles)} 条）</a>'
         )
         topic_links = _render_topic_source_block(topic_articles)
         topic_analysis_html = "".join(
@@ -515,16 +611,16 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
         home_sections.append(
             _render_section_group(
                 section_id="section-topics",
-                title="专题精选",
-                count_label=f"{len(topic_articles)} 条",
-                intro="",
+                title="专题",
+                count_label=f"（{len(topic_articles)} 条）",
+                intro=section_intros.get("topic", ""),
                 body_html=analysis_block + topic_links,
             )
         )
 
     if activity_articles or activity_analysis_sections:
         anchor_links.append(
-            f'<a class="jump-chip" href="#section-activities">活动速览 ({len(activity_articles)})</a>'
+            f'<a class="jump-chip" href="#section-activities">活动（{len(activity_articles)} 条）</a>'
         )
         activity_source_block = _render_activity_source_block(activity_articles)
         activity_analysis_html = "".join(
@@ -547,21 +643,24 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
         home_sections.append(
             _render_section_group(
                 section_id="section-activities",
-                title="活动速览",
-                count_label=f"{len(activity_articles)} 条",
-                intro="",
+                title="活动",
+                count_label=f"（{len(activity_articles)} 条）",
+                intro=section_intros.get("activity", ""),
                 body_html=analysis_block + activity_source_block,
             )
         )
 
     if info_analysis_sections:
         anchor_links.append(
-            f'<a class="jump-chip" href="#section-analysis">资讯主题分析 ({len(info_analysis_sections)})</a>'
+            f'<a class="jump-chip" href="#section-analysis">资讯（{len(info_analysis_sections)} 个主题）</a>'
         )
         info_nav = ""
         if present_info_channels:
             chips = "".join(f'<span class="info-chip">{_html.escape(channel)}</span>' for channel in present_info_channels)
-            info_nav = f'<div class="info-chip-row">{chips}</div>'
+            info_nav = (
+                '<p class="info-subhead">具体子栏目</p>'
+                f'<div class="info-chip-row">{chips}</div>'
+            )
         info_source_groups = _render_info_channel_source_groups(raw_articles, url_channel_map)
         info_analysis_html = "".join(
             _render_section(
@@ -575,9 +674,9 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
         home_sections.append(
             _render_section_group(
                 section_id="section-analysis",
-                title="资讯主题分析",
-                count_label=f"{len(info_analysis_sections)} 个主题",
-                intro="",
+                title="资讯",
+                count_label=f"（{len(info_analysis_sections)} 个主题）",
+                intro=section_intros.get("info", ""),
                 body_html=info_source_groups + f'<div class="analysis-stack">{info_analysis_html}</div>',
                 extra_html=info_nav,
             )
@@ -588,15 +687,40 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
             _render_section_group(
                 section_id="section-empty",
                 title="暂无内容",
-                count_label="0",
+                count_label="",
                 intro="",
                 body_html='<p class="empty-tip">请检查上游抓取结果或 step 6 产物。</p>',
+                heading_trailing_colon=False,
             )
         )
 
-    # Runtime counters stay in logs/markdown; the HTML report starts with content navigation.
-    summary_html = ""
-    stats_block = f'<div class="stats">{summary_html}</div>' if summary_html else ""
+    brief_lead_html = (
+        f'<p class="brief-lead">{_html.escape(lead_text.strip())}</p>' if str(lead_text or "").strip() else ""
+    )
+    brief_stats_html = ""
+    if run_stats:
+        stat_lis = []
+        for sk, sv in run_stats:
+            if not str(sk or "").strip() and not str(sv or "").strip():
+                continue
+            if str(sk or "").strip():
+                stat_lis.append(
+                    "<li>"
+                    f'<span class="brief-stat-key">{_html.escape(str(sk).strip())}</span>'
+                    f'<span class="brief-stat-sep">：</span>'
+                    f'<span class="brief-stat-val">{_html.escape(str(sv).strip())}</span>'
+                    "</li>"
+                )
+            else:
+                stat_lis.append(f"<li>{_html.escape(str(sv).strip())}</li>")
+        if stat_lis:
+            brief_stats_html = (
+                '<details class="brief-run-details">'
+                '<summary class="brief-run-summary">运行数据</summary>'
+                '<ul class="brief-run-stats">'
+                + "".join(stat_lis)
+                + "</ul></details>"
+            )
     jump_bar = f'<div class="jump-bar">{"".join(anchor_links)}</div>' if anchor_links else ""
 
     html_body = f"""<!DOCTYPE html>
@@ -607,83 +731,110 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
     <title>{_html.escape(title)}</title>
     <style>
       *,*::before,*::after{{box-sizing:border-box}}
-      body{{margin:0;padding:0;background:#eef2f6;color:#102235;
-        font-family:"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}}
+      /* 要点概览式：白底、衬线正文、宽行距、大标题居中（与 c114 模板无共用） */
+      body{{margin:0;padding:0;background:#fff;color:#000;
+        font-family:"Noto Serif SC","Source Han Serif SC","SimSun","STSong",serif;
+        font-size:15px;line-height:1.95;text-align:justify;}}
+      /* 与 kr36_step4_brief_*_email 一致：全宽容器、1080 上限 */
       .wrapper{{max-width:1080px;margin:0 auto;padding:24px 16px 40px;}}
-      .hero{{background:linear-gradient(180deg,#ffffff 0%,#f7fafc 100%);
-        border:1px solid rgba(16,34,53,.08);border-radius:22px;padding:28px 30px;
-        box-shadow:0 18px 42px rgba(17,34,53,.08);}}
-      .hero-title{{margin:0;font-size:26px;line-height:1.25;letter-spacing:-.02em;}}
-      .hero-divider{{width:64px;height:4px;border-radius:999px;margin-top:14px;
-        background:linear-gradient(90deg,#0f5ea8 0%,#79a9cf 100%);}}
-      .stats{{margin-top:14px;font-size:13px;line-height:1.9;color:#506172;}}
-      .stat-item{{display:inline-block;margin-right:18px;white-space:nowrap;}}
-      .jump-bar{{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}}
-      .jump-chip{{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;
-        background:#ffffff;border:1px solid #cfe0ee;color:#0f5ea8;font-size:13px;font-weight:600;
-        text-decoration:none;box-shadow:0 4px 12px rgba(15,94,168,.08);}}
-      .home-section{{margin-top:20px;background:#ffffff;border-radius:22px;padding:24px 26px;
-        border:1px solid rgba(16,34,53,.08);box-shadow:0 18px 42px rgba(17,34,53,.06);}}
-      .section-header{{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}}
-      .section-title{{margin:0;font-size:22px;letter-spacing:-.02em;}}
-      .section-intro{{margin:8px 0 0;color:#5b6b7b;font-size:14px;line-height:1.7;}}
-      .section-count{{display:inline-flex;align-items:center;justify-content:center;min-width:84px;
-        padding:8px 12px;border-radius:999px;background:#e9f2fb;color:#0f5ea8;font-size:13px;font-weight:700;}}
-      .topic-source-list{{margin-top:18px;}}
-      .topic-source-block{{margin-top:18px;padding:16px 18px;border-radius:16px;
-        background:#f8fbfd;border:1px solid #e4edf4;border-left:4px solid #79a9cf;}}
-      .topic-source-block .topic-source-list{{margin-top:0;}}
-      .topic-source-item{{background:#fbfdff;}}
-      .activity-source-item{{align-items:flex-start;flex-wrap:wrap;gap:8px 10px;}}
-      .activity-source-badges{{display:inline-flex;flex-wrap:wrap;gap:8px;align-items:center;
-        margin-top:4px;width:100%;}}
-      .activity-source-list .activity-status{{padding:4px 10px;border-radius:999px;background:#eef5fb;color:#0f5ea8;
-        font-size:11px;font-weight:700;white-space:nowrap;}}
-      .activity-countdown{{font-size:12px;color:#0f5ea8;font-weight:700;white-space:nowrap;}}
-      .info-chip-row{{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}}
-      .info-chip,.section-badge,.link-badge{{display:inline-flex;align-items:center;padding:5px 10px;
-        border-radius:999px;background:#f3f7fa;color:#476077;font-size:12px;font-weight:600;}}
-      .info-channel-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:18px;}}
-      .info-channel-card{{padding:16px 18px;border:1px solid #e4edf4;border-radius:16px;background:#fbfdff;}}
-      .info-channel-title{{margin:0 0 10px;font-size:15px;color:#102235;}}
-      .info-source-list{{display:grid;gap:4px;}}
-      .info-source-item{{display:block!important;}}
-      .info-source-date{{display:inline-block;margin-left:8px;color:#7b8a98;font-size:12px;}}
-      .analysis-stack{{display:grid;gap:16px;margin-top:18px;}}
-      .analysis-card{{border:1px solid #dbe8f2;border-radius:18px;padding:22px 24px;background:#ffffff;
-        box-shadow:0 8px 24px rgba(17,34,53,.04);}}
-      .analysis-head{{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}}
-      .analysis-title{{margin:0;font-size:20px;line-height:1.35;}}
-      .section-badges{{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;}}
-      .block{{margin-top:16px;padding-top:16px;border-top:1px solid #edf2f6;}}
-      .block:first-of-type{{margin-top:0;padding-top:0;border-top:0;}}
-      .block-title{{margin:0 0 10px;font-size:13px;color:#33516c;letter-spacing:.01em;font-weight:800;}}
-      .block-text{{margin:0;color:#314457;font-size:14px;line-height:1.9;}}
+
+      .hero{{text-align:center;padding-bottom:20px;margin-bottom:28px;
+        border-bottom:1px solid #000;}}
+      .hero-title{{margin:0;font-size:20px;font-weight:700;line-height:1.45;letter-spacing:.04em;}}
+      .brief-lead{{margin:16px 0 0;text-align:left;font-size:15px;font-weight:700;
+        line-height:1.85;color:#000;}}
+      .brief-run-details{{margin:10px 0 0;text-align:left;max-width:100%;}}
+      .brief-run-summary{{cursor:pointer;font-size:12px;color:#333;list-style:none;}}
+      .brief-run-details[open] .brief-run-summary{{margin-bottom:6px;}}
+      .brief-run-stats{{list-style:none;margin:0;padding:0 0 0 12px;
+        font-size:12px;color:#333;line-height:1.6;}}
+      .brief-run-stats li{{margin:2px 0;}}
+      .brief-stat-sep{{margin:0 0.1em;}}
+      .hero-meta{{font-size:12px;color:#333;margin-top:8px;}}
+      .jump-bar{{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+        margin-top:16px;}}
+      .jump-chip{{font-size:12px;color:#000;text-decoration:underline;padding:0 2px;}}
+      .jump-chip:hover{{color:#333;}}
+
+      .home-section{{margin-top:32px;}}
+      .section-header{{display:block;text-align:left;margin-bottom:14px;}}
+      .section-title{{margin:0;font-size:16px;font-weight:700;letter-spacing:.02em;}}
+      .section-title-kr{{display:flex;flex-wrap:wrap;align-items:baseline;gap:0;}}
+      .section-title-kr .section-title-colon{{font-weight:700;}}
+      .section-title-kr .section-count{{font-size:13px;font-weight:400;color:#333;margin:0;}}
+      .section-intro{{margin:0 0 10px;font-size:14px;color:#333;line-height:1.85;text-align:justify;}}
+      .info-subhead{{margin:0 0 6px;font-size:14px;font-weight:700;text-align:left;}}
+
+      /* 各分区下主题条目前自动编号 1）2）3）… 贴近 Word 要点体例 */
+      .home-section .analysis-stack{{counter-reset:kr36-theme;}}
+      .home-section .analysis-card{{counter-increment:kr36-theme;
+        padding:16px 0 18px;border-bottom:1px solid #c8c8c8;}}
+      .home-section .analysis-card:last-child{{border-bottom:none;}}
+      .analysis-head{{display:block;margin-bottom:8px;}}
+      .analysis-title{{margin:0;font-size:15px;font-weight:700;line-height:1.65;text-align:justify;}}
+      .home-section .analysis-title::before{{
+        content:counter(kr36-theme)"）";font-weight:700;margin-right:0.15em;}}
+      .section-badges{{display:inline-flex;flex-wrap:wrap;gap:4px;margin-top:6px;}}
+      .section-badge{{font-size:12px;font-weight:400;border:0;padding:0;color:#333;}}
+      .section-badge::before{{content:"[";}}
+      .section-badge::after{{content:"]";}}
+
+      .block{{margin-top:10px;}}
+      .block:first-of-type{{margin-top:0;}}
+      .block-title{{margin:0 0 2px;font-size:14px;font-weight:700;color:#000;}}
+      .block-text{{margin:0;font-size:15px;color:#000;line-height:1.95;text-align:justify;}}
       .indented-text{{text-indent:2em;}}
-      ul{{margin:0;padding-left:18px;}}
-      li{{margin:6px 0;color:#314457;font-size:14px;line-height:1.8;}}
+
+      ul{{margin:4px 0 6px;padding-left:1.4em;}}
+      li{{margin:3px 0;font-size:15px;color:#000;line-height:1.9;text-align:justify;}}
       .link-list{{padding-left:0;list-style:none;}}
-      .link-list li{{display:flex;align-items:flex-start;gap:8px;}}
-      .link-list a{{color:#0f5ea8;text-decoration:none;line-height:1.7;}}
-      .empty-tip{{margin:18px 0 0;color:#738394;font-size:14px;line-height:1.8;}}
-      .footer{{margin-top:28px;text-align:center;color:#738394;font-size:12px;}}
-      @media (max-width: 720px) {{
-        .wrapper{{padding:16px 12px 28px;}}
-        .hero{{padding:22px 20px;}}
-        .home-section{{padding:20px 18px;}}
-        .section-header,.analysis-head{{flex-direction:column;align-items:flex-start;}}
-        .section-badges{{justify-content:flex-start;}}
+      .link-list li{{text-align:left;}}
+      .link-list a,.link-list li a{{color:#000;text-decoration:underline;font-size:14px;}}
+      .link-badge{{font-size:12px;color:#333;margin-right:4px;}}
+
+      .topic-source-block{{margin-top:12px;padding-top:10px;}}
+      .topic-source-block .block-title{{border-top:1px solid #999;padding-top:8px;}}
+      .topic-source-list{{margin-top:4px;}}
+      .topic-source-item{{padding:1px 0;}}
+
+      .activity-source-badges{{display:inline;}}
+      .activity-source-badges::before{{content:"（";}}
+      .activity-source-badges::after{{content:"）";}}
+      .activity-status,.activity-countdown{{font-size:12px;font-weight:400;
+        color:#333;border:0;padding:0;}}
+
+      .info-chip-row{{display:flex;flex-wrap:wrap;gap:4px 10px;
+        margin:10px 0 12px;justify-content:flex-start;}}
+      .info-chip{{font-size:12px;color:#000;border:0;padding:0;}}
+      .info-chip::after{{content:"、";}}
+      .info-chip:last-child::after{{content:"";}}
+      .info-channel-grid{{
+        display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+        gap:16px 20px;margin-bottom:16px;}}
+      .info-channel-title{{margin:0 0 4px;font-size:14px;font-weight:700;}}
+      .info-source-list{{display:flex;flex-direction:column;gap:1px;}}
+      .info-source-item{{display:block!important;}}
+      .info-source-date{{font-size:12px;color:#333;margin-left:4px;}}
+
+      .stats{{font-size:12px;color:#333;margin-top:8px;}}
+      .empty-tip{{color:#333;font-size:14px;}}
+      .footer{{margin-top:40px;padding-top:12px;border-top:1px solid #000;
+        font-size:12px;color:#333;text-align:center;}}
+
+      @media (max-width:640px){{
+        .wrapper{{padding:20px 12px 32px;}}
+        .info-channel-grid{{grid-template-columns:1fr;}}
       }}
     </style>
   </head>
   <body>
     <div class="wrapper">
-      <section class="hero">
+      <header class="hero">
         <h1 class="hero-title">{_html.escape(title)}</h1>
-        <div class="hero-divider"></div>
-        {stats_block}
+        {brief_lead_html}
+        {brief_stats_html}
         {jump_bar}
-      </section>
+      </header>
       {''.join(home_sections)}
       <div class="footer">{_html.escape(FOOTER_DISCLAIMER)}</div>
     </div>
@@ -691,11 +842,10 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
 </html>
 """
 
-    plain_text = build_plain_text(
+    plain_text = _kr36_build_plain_text(
         title=title,
-        role_line="",
-        summary_items=summary_items,
+        lead=lead_text,
+        run_stats=run_stats,
         topics=topic_sections,
-        footer_disclaimer=FOOTER_DISCLAIMER,
     )
     return RenderedEmail(subject=title, text=plain_text, html=html_body)

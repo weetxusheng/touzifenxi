@@ -55,6 +55,7 @@ from ..content.yaml_io import (
     render_fetch_block,
     resolve_content_output_paths,
     save_content_results,
+    search_workflow_to_search_results_input,
 )
 from ..steps.step4_content_fetch import run_content_fetch_workflow, validate_content_fetch_inputs
 
@@ -98,6 +99,7 @@ __all__ = [
     "resolve_content_output_paths",
     "run_content_fetch_workflow",
     "save_content_results",
+    "search_workflow_to_search_results_input",
     "should_skip_selected_url",
     "strip_c114_shell_sections",
     "title_similarity",

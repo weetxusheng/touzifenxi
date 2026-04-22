@@ -5,8 +5,8 @@ rem Send email at scheduled time.
 rem Behavior: send T-1 C114 brief when task runs.
 rem Use gate 00:00 so only same-day generated T-1 file can pass.
 
-set "MAIL_TO_LIST=zx944532395@sina.com"
-set "T1_GATE_TIME=00:00"
+set "MAIL_TO_LIST=zx944532395@sina.com chenxusheng@cjhxfund.com"
+set "T1_GATE_TIME=10:54"
 
 for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
 
