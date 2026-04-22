@@ -1558,7 +1558,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         effective_cookies = cookies if cookies is not None else load_kr36_cookies()
         cookie_str = "; ".join(f"{k}={v}" for k, v in effective_cookies.items()) if effective_cookies else ""
         command = [
-            "curl", "-sS", url,
+            "curl", "-sS", "--ssl-no-revoke", url,
             "-H", f"user-agent: {KR36_DEFAULT_USER_AGENT}",
             "-H", f"referer: {KR36_ROOT}/",
             "-H", "accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

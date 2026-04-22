@@ -18,10 +18,11 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
+from utils.tools.analysis.yaml_io import load_content_analysis_inputs
 from utils.tools.output.email import (
     RenderedEmail,
-    format_plain_text_item,
     normalize_block_lines,
     split_metric_line,
 )
@@ -82,32 +83,441 @@ def _kr36_build_plain_text(
     *,
     title: str,
     lead: str,
-    run_stats: list[tuple[str, str]],
-    topics: list[dict[str, object]],
+    bucket_blocks: list[dict[str, object]],
 ) -> str:
-    """纯文本版：标题 + 详情总结 + 运行数据行 + 各主题块（与 HTML 信息层级一致）。"""
+    """纯文本版：固定三大栏目（专题/活动/资讯）+ 总述 + 编号观点 + 源地址。"""
 
     lines: list[str] = [title]
     if str(lead or "").strip():
         lines.extend(["", str(lead).strip()])
-    for sk, sv in run_stats:
-        if sk or sv:
-            lines.append(f"- {sk}：{sv}" if sk else f"- {sv}")
-    for topic in topics:
-        topic_title = str(topic["title"])
-        lines.extend(["", topic_title])
-        subsections = topic.get("subsections", {})
-        assert isinstance(subsections, dict)
-        for subtitle, items in subsections.items():
-            lines.append(f"{subtitle}")
-            for item in items:
-                rendered = format_plain_text_item(str(item))
-                if rendered:
-                    lines.append(rendered)
+    for block in bucket_blocks:
+        bucket_title = str(block.get("title") or "").strip()
+        summary = str(block.get("summary") or "").strip()
+        points = block.get("points", [])
+        if not bucket_title:
+            continue
+        lines.extend(["", bucket_title])
+        if summary:
+            lines.append(f" {summary}")
+        if bucket_title == BUCKET_INFO:
+            if isinstance(points, list) and points:
+                for index, item in enumerate(points, start=1):
+                    if not isinstance(item, tuple) or len(item) != 2:
+                        continue
+                    topic_title = str(item[0]).strip() or "待补充主题"
+                    viewpoint = str(item[1]).strip() or "暂无可提炼观点，待补充。"
+                    lines.append(f" {index}) {topic_title} 的观点：{viewpoint}")
+            else:
+                lines.append(" 1) 暂无可提炼观点：待补充。")
+        sources = block.get("sources", [])
+        lines.append(" 源地址")
+        if isinstance(sources, list) and sources:
+            for index, source in enumerate(sources, start=1):
+                if not isinstance(source, dict):
+                    continue
+                if bucket_title == BUCKET_ACTIVITY:
+                    lines.append(
+                        " "
+                        f"{index}) 名称：{str(source.get('title') or '待补充')}；"
+                        f"时间：{str(source.get('time') or '待补充')}；"
+                        f"地点：{str(source.get('city') or '待补充')}；"
+                        f"主题：{str(source.get('theme') or '待补充')}；"
+                        f"倒计时：{str(source.get('countdown') or '待补充')}；"
+                        f"链接：{str(source.get('url') or '待补充')}"
+                    )
+                else:
+                    lines.append(
+                        " "
+                        f"{index}) {str(source.get('title') or '待补充')} | "
+                        f"{str(source.get('url') or '待补充')}"
+                    )
+        else:
+            lines.append(" 1) 无")
     body = "\n".join(lines).strip()
     if FOOTER_DISCLAIMER:
         body = f"{body}\n\n{FOOTER_DISCLAIMER}"
     return body
+
+
+def _extract_subsection_items(section: dict[str, Any], subtitle: str) -> list[str]:
+    subsection_map = section.get("subsections", {})
+    if not isinstance(subsection_map, dict):
+        return []
+    raw_items = subsection_map.get(subtitle, [])
+    if not isinstance(raw_items, list):
+        return []
+    return [str(item).strip() for item in raw_items if str(item).strip()]
+
+
+def _normalize_sentence(text: str) -> str:
+    normalized = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not normalized:
+        return ""
+    if normalized[-1] not in "。！？!?":
+        normalized += "。"
+    return normalized
+
+
+def _trim_text(text: str, max_chars: int) -> str:
+    normalized = str(text or "").strip()
+    if len(normalized) <= max_chars:
+        return normalized
+    return normalized[: max_chars - 1].rstrip("，,；;。.!?！？") + "…"
+
+
+def _first_complete_sentence(text: str, max_chars: int = 140) -> str:
+    normalized = str(text or "").strip()
+    if not normalized:
+        return ""
+    matched = re.match(r"^(.+?[。！？!?])", normalized)
+    if matched:
+        sentence = matched.group(1).strip()
+        if len(sentence) <= max_chars:
+            return sentence
+    if len(normalized) <= max_chars:
+        return normalized
+    return _trim_text(normalized, max_chars)
+
+
+def _extract_section_viewpoint(section: dict[str, Any]) -> str:
+    for subtitle in ("核心判断", "增量信息", "产业/公司影响", "产品/公司影响"):
+        items = _extract_subsection_items(section, subtitle)
+        if items:
+            return _normalize_sentence(" ".join(items))
+    return "暂无明确观点，待补充。"
+
+
+def _build_bucket_summary(
+    *,
+    bucket_title: str,
+    sections: list[dict[str, Any]],
+    intro_text: str,
+    raw_article_count: int,
+    activity_sources: list[dict[str, str]] | None = None,
+) -> str:
+    intro = _normalize_sentence(intro_text)
+    if bucket_title == BUCKET_TOPIC:
+        snippets: list[str] = []
+        for section in sections:
+            sentence = _first_complete_sentence(_extract_section_viewpoint(section), 140).rstrip("。")
+            if sentence and sentence not in snippets:
+                snippets.append(sentence)
+            if len(snippets) >= 4:
+                break
+        prefix = f"今日专题共覆盖{len(sections)}个主题、共{raw_article_count}条专题来源。"
+        detail = ""
+        if snippets:
+            detail = "围绕内容信号综合来看，主要方向包括：" + "；".join(snippets) + "。"
+        if intro and detail:
+            return _normalize_sentence(f"{intro} {prefix}{detail}")
+        if intro:
+            return _normalize_sentence(f"{intro} {prefix}")
+        if detail:
+            return _normalize_sentence(prefix + detail)
+        if raw_article_count > 0:
+            return _normalize_sentence(prefix + "当前专题页面以索引型内容为主，后续可结合正文继续深化。")
+        return "今日专题暂无可用内容，待补充。"
+
+    if bucket_title == BUCKET_ACTIVITY:
+        normalized_sources = [item for item in (activity_sources or []) if isinstance(item, dict)]
+        phase_groups: dict[str, list[dict[str, str]]] = {"待开始": [], "进行中": [], "已结束": []}
+
+        def infer_phase(countdown_text: str) -> str:
+            text = str(countdown_text or "").strip()
+            if not text:
+                return "待开始"
+            if "已结束" in text or "结束" in text:
+                return "已结束"
+            if any(keyword in text for keyword in ("进行中", "报名中", "直播中", "展出中")):
+                return "进行中"
+            if any(keyword in text for keyword in ("后开始", "待开始", "即将开始", "未开始", "倒计时")):
+                return "待开始"
+            return "待开始"
+
+        for source in normalized_sources:
+            phase = infer_phase(str(source.get("countdown") or ""))
+            phase_groups[phase].append(source)
+
+        pending_count = len(phase_groups["待开始"])
+        ongoing_count = len(phase_groups["进行中"])
+        ended_count = len(phase_groups["已结束"])
+        total_count = len(normalized_sources) if normalized_sources else raw_article_count
+
+        def sample_titles(items: list[dict[str, str]], limit: int = 2) -> str:
+            titles: list[str] = []
+            for item in items:
+                title = str(item.get("title") or "").strip()
+                if title and title not in titles:
+                    titles.append(title)
+                if len(titles) >= limit:
+                    break
+            return "、".join(titles)
+
+        city_counter = Counter(
+            str(item.get("city") or "").strip()
+            for item in normalized_sources
+            if str(item.get("city") or "").strip() and str(item.get("city") or "").strip() not in {"待补充", "未知"}
+        )
+        city_hint = ""
+        if city_counter:
+            top_cities = "、".join(f"{city}({count}场)" for city, count in city_counter.most_common(3))
+            city_hint = f"地点分布上，{top_cities}活动占比更高。"
+
+        base = (
+            f"今日活动共覆盖{len(sections)}个主题，整理到{total_count}场活动。"
+            f"按状态看：待开始{pending_count}场、进行中{ongoing_count}场、已结束{ended_count}场。"
+        )
+        details: list[str] = []
+        pending_titles = sample_titles(phase_groups["待开始"])
+        ongoing_titles = sample_titles(phase_groups["进行中"])
+        ended_titles = sample_titles(phase_groups["已结束"])
+        if pending_titles:
+            details.append(f"待开始活动主要有：{pending_titles}。")
+        if ongoing_titles:
+            details.append(f"进行中活动主要有：{ongoing_titles}。")
+        if ended_titles:
+            details.append(f"已结束活动主要有：{ended_titles}。")
+        if city_hint:
+            details.append(city_hint)
+
+        detail_text = " ".join(details).strip()
+        if intro and detail_text:
+            return _normalize_sentence(f"{intro} {base}{detail_text}")
+        if intro:
+            return _normalize_sentence(f"{intro} {base}")
+        if detail_text:
+            return _normalize_sentence(base + detail_text)
+        return _normalize_sentence(base)
+
+    if intro:
+        return intro
+    if sections:
+        snippets: list[str] = []
+        for section in sections:
+            sentence = _trim_text(_extract_section_viewpoint(section), 56).rstrip("。")
+            if sentence and sentence not in snippets:
+                snippets.append(sentence)
+            if len(snippets) >= 2:
+                break
+        if snippets:
+            return f"今日{bucket_title}共覆盖{len(sections)}个主题，核心关注：{'；'.join(snippets)}。"
+        return f"今日{bucket_title}共覆盖{len(sections)}个主题。"
+    if raw_article_count > 0:
+        return f"今日{bucket_title}共抓取{raw_article_count}条原始内容，正文分析待补充。"
+    return f"今日{bucket_title}暂无可用内容，待补充。"
+
+
+def _build_bucket_points(
+    *,
+    sections: list[dict[str, Any]],
+    fallback_articles: list[dict[str, Any]],
+) -> list[tuple[str, str]]:
+    points: list[tuple[str, str]] = []
+    for section in sections:
+        topic_title = str(section.get("title") or "").strip() or "待补充主题"
+        viewpoint = _trim_text(_extract_section_viewpoint(section), 180)
+        if viewpoint:
+            points.append((topic_title, viewpoint))
+    if points:
+        return points
+    for article in fallback_articles[:5]:
+        title = str(article.get("title") or "").strip()
+        if title:
+            points.append((title, "该条目为原始抓取信息，正文分析待补充。"))
+    return points
+
+
+def _build_section_url_viewpoint_map(sections: list[dict[str, Any]]) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for section in sections:
+        viewpoint = _trim_text(_extract_section_viewpoint(section), 180)
+        if not viewpoint:
+            continue
+        for url in _extract_section_urls(section):
+            normalized = _normalize_url_for_match(url)
+            if normalized and normalized not in mapping:
+                mapping[normalized] = viewpoint
+    return mapping
+
+
+def _build_bucket_points_by_source(
+    *,
+    sources: list[dict[str, str]],
+    article_viewpoint_map: dict[str, str],
+    section_url_viewpoint_map: dict[str, str],
+) -> list[tuple[str, str]]:
+    points: list[tuple[str, str]] = []
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        title = str(source.get("title") or "").strip() or "待补充主题"
+        url = _normalize_url_for_match(str(source.get("url") or ""))
+        viewpoint = ""
+        if url:
+            viewpoint = str(article_viewpoint_map.get(url) or "").strip()
+            if not viewpoint:
+                viewpoint = str(section_url_viewpoint_map.get(url) or "").strip()
+        if not viewpoint:
+            viewpoint = "该条目正文分析待补充。"
+        points.append((title, _trim_text(_normalize_sentence(viewpoint), 180)))
+    return points
+
+
+def _parse_source_line(item: str) -> tuple[str, str, str]:
+    cleaned = str(item or "").strip()
+    if not cleaned:
+        return "", "", ""
+    matched = re.match(r"^(.+?)\s*\|\s*([^|]+?)\s*\|\s*(https?://\S+)$", cleaned)
+    if matched:
+        return matched.group(1).strip(), matched.group(2).strip(), matched.group(3).strip()
+    matched = re.match(r"^(.+?)\s*\|\s*(https?://\S+)$", cleaned)
+    if matched:
+        return matched.group(1).strip(), "", matched.group(2).strip()
+    url = _extract_url(cleaned)
+    if not url:
+        return cleaned, "", ""
+    title = cleaned.replace(url, "").strip(" |")
+    return title or url, "", url
+
+
+def _build_activity_source_entry(
+    *,
+    title: str,
+    published_at: str,
+    url: str,
+    article: dict[str, Any] | None,
+) -> dict[str, str]:
+    metadata = article.get("metadata", {}) if isinstance(article, dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    return {
+        "title": title or str((article or {}).get("title") or "活动"),
+        "time": str(metadata.get("activity_time_range") or published_at or "待补充"),
+        "city": str(metadata.get("activity_city") or "待补充"),
+        "theme": str(metadata.get("activity_theme") or "待补充"),
+        "countdown": str(metadata.get("start_label") or metadata.get("activity_status") or "待补充"),
+        "url": url,
+    }
+
+
+def _collect_bucket_sources(
+    *,
+    bucket_title: str,
+    sections: list[dict[str, Any]],
+    fallback_articles: list[dict[str, Any]],
+    url_bucket_map: dict[str, str],
+    url_article_map: dict[str, dict[str, Any]],
+) -> list[dict[str, str]]:
+    sources: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+
+    def append_entry(raw_title: str, published_at: str, url: str) -> None:
+        raw_url = str(url or "").strip()
+        normalized_url = _normalize_url_for_match(raw_url)
+        if not normalized_url or normalized_url in seen_urls:
+            return
+        detected_bucket = (
+            url_bucket_map.get(raw_url)
+            or url_bucket_map.get(normalized_url)
+            or _infer_bucket_from_url(raw_url)
+            or _infer_bucket_from_url(normalized_url)
+        )
+        if detected_bucket and detected_bucket != bucket_title:
+            return
+        article = url_article_map.get(raw_url) or url_article_map.get(normalized_url) or {}
+        if bucket_title == BUCKET_ACTIVITY:
+            entry = _build_activity_source_entry(
+                title=raw_title or str(article.get("title") or ""),
+                published_at=published_at,
+                url=raw_url,
+                article=article,
+            )
+        else:
+            entry = {
+                "title": raw_title or str(article.get("title") or normalized_url),
+                "url": raw_url,
+            }
+        sources.append(entry)
+        seen_urls.add(normalized_url)
+
+    for section in sections:
+        source_items = _extract_subsection_items(section, "源地址")
+        for item in source_items:
+            parsed_title, published_at, url = _parse_source_line(item)
+            append_entry(parsed_title, published_at, url)
+
+    for article in fallback_articles:
+        url = str(article.get("url") or "").strip()
+        if not url:
+            continue
+        append_entry(str(article.get("title") or "").strip(), str(article.get("published_at") or "").strip(), url)
+
+    return sources
+
+
+def _render_bucket_section_html(
+    *,
+    title: str,
+    summary: str,
+    points: list[tuple[str, str]],
+    sources: list[dict[str, str]],
+) -> str:
+    viewpoints_html = ""
+    if title == BUCKET_INFO:
+        items_html = "".join(
+            "<li>"
+            f'<span class="point-topic">{_html.escape(topic)} 的观点：</span>'
+            f"{_html.escape(viewpoint)}"
+            "</li>"
+            for topic, viewpoint in points
+        )
+        if not items_html:
+            items_html = "<li><span class=\"point-topic\">暂无可提炼观点：</span>待补充。</li>"
+        viewpoints_html = f'<ol class="viewpoints">{items_html}</ol>'
+
+    if title == BUCKET_ACTIVITY:
+        source_items_html = "".join(
+            "<article class=\"activity-card\">"
+            f'<h4 class="activity-card-title"><a href="{_html.escape(str(item.get("url") or "#"), quote=True)}" target="_blank" rel="noopener">{_html.escape(str(item.get("title") or "待补充"))}</a></h4>'
+            '<p class="activity-field"><span class="activity-field-label">时间：</span>'
+            f'{_html.escape(str(item.get("time") or "待补充"))}</p>'
+            '<p class="activity-field"><span class="activity-field-label">地点：</span>'
+            f'{_html.escape(str(item.get("city") or "待补充"))}</p>'
+            '<p class="activity-field"><span class="activity-field-label">主题：</span>'
+            f'{_html.escape(str(item.get("theme") or "待补充"))}</p>'
+            '<p class="activity-field"><span class="activity-field-label">倒计时：</span>'
+            f'{_html.escape(str(item.get("countdown") or "待补充"))}</p>'
+            "</article>"
+            for item in sources
+        )
+    else:
+        source_items_html = "".join(
+            "<li>"
+            f'<a href="{_html.escape(str(item.get("url") or "#"), quote=True)}" target="_blank" rel="noopener">'
+            f'{_html.escape(str(item.get("title") or "待补充"))}</a>'
+            "</li>"
+            for item in sources
+        )
+    if not source_items_html:
+        if title == BUCKET_ACTIVITY:
+            source_items_html = '<article class="activity-card activity-card-empty">无</article>'
+        else:
+            source_items_html = "<li>无</li>"
+
+    if title == BUCKET_ACTIVITY:
+        source_block_html = f'<div class="activity-cards">{source_items_html}</div>'
+    else:
+        source_block_html = f'<ol class="sources">{source_items_html}</ol>'
+
+    return (
+        '<section class="brief-section">'
+        f'<h2 class="section-title">{_html.escape(title)}</h2>'
+        f'<p class="section-summary">{_html.escape(summary)}</p>'
+        f"{viewpoints_html}"
+        '<h3 class="source-title">源地址</h3>'
+        f"{source_block_html}"
+        "</section>"
+    )
 
 
 def _derive_date_from_path(path: Path) -> str:
@@ -140,12 +550,141 @@ def _load_articles(step6_path: Path) -> list[dict[str, Any]]:
     return []
 
 
+def _normalize_url_for_match(url: str) -> str:
+    raw = str(url or "").strip()
+    if not raw:
+        return ""
+    try:
+        parts = urlsplit(raw)
+    except Exception:
+        return raw.rstrip("/")
+    path = parts.path.rstrip("/")
+    if not path:
+        path = "/"
+    normalized = urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, parts.query, ""))
+    return normalized
+
+
+def _build_step5_path_candidates(step6_path: Path) -> list[Path]:
+    stem = step6_path.stem
+    candidates: list[Path] = []
+    replacements = (
+        ("step_6_brief", "step_5_content_analysis"),
+        ("step4_brief", "step3_analysis"),
+        ("step_4_brief", "step_3_analysis"),
+    )
+    for old, new in replacements:
+        if old in stem:
+            candidates.append(step6_path.with_name(stem.replace(old, new) + ".yaml"))
+    date_token = re.search(r"(\d{8})", stem)
+    if date_token:
+        token = date_token.group(1)
+        candidates.extend(
+            [
+                step6_path.parent / f"kr36_step_5_content_analysis_{token}.yaml",
+                step6_path.parent / f"kr36_step3_analysis_{token}.yaml",
+            ]
+        )
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate.resolve()) if candidate.is_absolute() else str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(candidate)
+    return unique
+
+
+def _compose_item_viewpoint(summary: str, core_points: list[str]) -> str:
+    summary_text = str(summary or "").strip()
+    points: list[str] = []
+    for point in core_points:
+        text = str(point or "").strip()
+        if text and text not in points:
+            points.append(text)
+
+    low_signal_hints = (
+        "这是一篇",
+        "这是一条",
+        "该内容为",
+        "该页面",
+        "专题索引",
+        "导航页",
+        "属于",
+        "文章",
+        "报道",
+    )
+    is_low_signal_summary = bool(summary_text) and any(hint in summary_text for hint in low_signal_hints)
+
+    if summary_text and not is_low_signal_summary:
+        if points and points[0] not in summary_text:
+            return _normalize_sentence(f"{summary_text}；{points[0]}")
+        return _normalize_sentence(summary_text)
+
+    if points:
+        merged = "；".join(points[:2])
+        if summary_text and summary_text not in merged and not is_low_signal_summary:
+            merged = f"{summary_text}；{merged}"
+        return _normalize_sentence(merged)
+
+    if summary_text:
+        return _normalize_sentence(summary_text)
+    return ""
+
+
+def _load_article_viewpoint_map(step6_path: Path | None) -> dict[str, str]:
+    if step6_path is None:
+        return {}
+    for candidate in _build_step5_path_candidates(step6_path):
+        if not candidate.exists():
+            continue
+        try:
+            payload = load_content_analysis_inputs(candidate)
+        except Exception:
+            continue
+        viewpoints: dict[str, str] = {}
+        for category in payload.categories:
+            for item in category.items:
+                viewpoint = _compose_item_viewpoint(
+                    item.analysis.summary,
+                    list(item.analysis.core_points),
+                )
+                url = _normalize_url_for_match(item.original_url)
+                if viewpoint and url:
+                    viewpoints[url] = _trim_text(viewpoint, 180)
+                for selected in item.selected_contents:
+                    selected_url = _normalize_url_for_match(selected.url)
+                    if selected_url and selected_url not in viewpoints:
+                        selected_summary = str(selected.document.summary or "").strip()
+                        if selected_summary:
+                            viewpoints[selected_url] = _trim_text(_normalize_sentence(selected_summary), 180)
+        return viewpoints
+    return {}
+
+
+def _infer_bucket_from_url(url: str) -> str | None:
+    normalized = str(url or "").strip()
+    if not normalized:
+        return None
+    if re.search(r"^https?://(?:www\.)?36kr\.com/search/articles/", normalized):
+        return BUCKET_INFO
+    if re.search(r"^https?://(?:www\.)?36kr\.com/topics/", normalized):
+        return BUCKET_TOPIC
+    if re.search(r"^https?://(?:www\.)?36kr\.com/(?:sign-up-activity|activity)/", normalized):
+        return BUCKET_ACTIVITY
+    return None
+
+
 def _normalize_bucket(article: dict[str, Any]) -> str:
     bucket = str(article.get("source_bucket") or article.get("channel") or "").strip()
     if bucket == BUCKET_TOPIC:
         return BUCKET_TOPIC
     if bucket == BUCKET_ACTIVITY:
         return BUCKET_ACTIVITY
+    inferred = _infer_bucket_from_url(str(article.get("url") or ""))
+    if inferred:
+        return inferred
     return BUCKET_INFO
 
 
@@ -158,7 +697,11 @@ def _build_url_bucket_map(articles: list[dict[str, Any]]) -> dict[str, str]:
     for article in articles:
         url = str(article.get("url") or "").strip()
         if url:
-            mapping[url] = _normalize_bucket(article)
+            bucket = _normalize_bucket(article)
+            mapping[url] = bucket
+            normalized = _normalize_url_for_match(url)
+            if normalized:
+                mapping[normalized] = bucket
     return mapping
 
 
@@ -168,6 +711,9 @@ def _build_url_article_map(articles: list[dict[str, Any]]) -> dict[str, dict[str
         url = str(article.get("url") or "").strip()
         if url:
             mapping[url] = article
+            normalized = _normalize_url_for_match(url)
+            if normalized:
+                mapping[normalized] = article
     return mapping
 
 
@@ -280,17 +826,21 @@ def _extract_section_urls(section: dict[str, Any]) -> list[str]:
 
 
 def _classify_section_bucket(section: dict[str, Any], url_bucket_map: dict[str, str]) -> str:
+    section_urls = _extract_section_urls(section)
+    if any(_infer_bucket_from_url(url) == BUCKET_INFO for url in section_urls):
+        return BUCKET_INFO
+
     counts: Counter[str] = Counter()
-    for url in _extract_section_urls(section):
-        bucket = url_bucket_map.get(url, BUCKET_INFO)
+    for url in section_urls:
+        bucket = url_bucket_map.get(url) or _infer_bucket_from_url(url) or BUCKET_INFO
         counts[bucket] += 1
     if not counts:
         return BUCKET_INFO
-    if counts[BUCKET_INFO] > 0:
-        return BUCKET_INFO
-    if counts[BUCKET_ACTIVITY] > 0:
-        return BUCKET_ACTIVITY
-    return BUCKET_TOPIC
+    max_count = max(counts.values())
+    for bucket in (BUCKET_TOPIC, BUCKET_ACTIVITY, BUCKET_INFO):
+        if counts[bucket] == max_count:
+            return bucket
+    return BUCKET_INFO
 
 
 def _collect_present_info_channels(sections: list[dict[str, Any]], url_channel_map: dict[str, str]) -> list[str]:
@@ -563,18 +1113,18 @@ def _render_section_group(
 
 
 def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) -> RenderedEmail:
-    """Render the 36Kr brief into a homepage-style HTML email."""
+    """Render the 36Kr brief into fixed 3-column text-first email template."""
 
     title, summary_items, topic_sections = _parse_brief_markdown(markdown_text)
-    lead_text, section_intros, run_stats = _partition_summary_items(summary_items)
+    lead_text, section_intros, _run_stats = _partition_summary_items(summary_items)
 
     raw_articles = _load_articles(step6_path) if step6_path else []
-    url_channel_map = _load_url_channel_map(step6_path) if step6_path else {}
     url_bucket_map = _build_url_bucket_map(raw_articles)
     url_article_map = _build_url_article_map(raw_articles)
-
+    article_viewpoint_map = _load_article_viewpoint_map(step6_path)
     topic_articles = _filter_articles_by_bucket(raw_articles, BUCKET_TOPIC)
     activity_articles = _filter_articles_by_bucket(raw_articles, BUCKET_ACTIVITY)
+    info_articles = _filter_articles_by_bucket(raw_articles, BUCKET_INFO)
 
     topic_analysis_sections: list[dict[str, Any]] = []
     activity_analysis_sections: list[dict[str, Any]] = []
@@ -588,140 +1138,87 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
         else:
             info_analysis_sections.append(section)
 
-    present_info_channels = _collect_present_info_channels(info_analysis_sections, url_channel_map)
-
-    anchor_links: list[str] = []
-    home_sections: list[str] = []
-
-    if topic_articles or topic_analysis_sections:
-        anchor_links.append(
-            f'<a class="jump-chip" href="#section-topics">专题（{len(topic_articles)} 条）</a>'
-        )
-        topic_links = _render_topic_source_block(topic_articles)
-        topic_analysis_html = "".join(
-            _render_section(section, url_channel_map, skip_link_blocks=True) for section in topic_analysis_sections
-        )
-        analysis_block = (
-            '<div class="analysis-stack">'
-            f"{topic_analysis_html}"
-            "</div>"
-            if topic_analysis_html
-            else ""
-        )
-        home_sections.append(
-            _render_section_group(
-                section_id="section-topics",
-                title="专题",
-                count_label=f"（{len(topic_articles)} 条）",
-                intro=section_intros.get("topic", ""),
-                body_html=analysis_block + topic_links,
-            )
-        )
-
-    if activity_articles or activity_analysis_sections:
-        anchor_links.append(
-            f'<a class="jump-chip" href="#section-activities">活动（{len(activity_articles)} 条）</a>'
-        )
-        activity_source_block = _render_activity_source_block(activity_articles)
-        activity_analysis_html = "".join(
-            _render_section(
-                section,
-                url_channel_map,
-                skip_link_blocks=True,
-                url_bucket_map=url_bucket_map,
-                url_article_map=url_article_map,
-            )
-            for section in activity_analysis_sections
-        )
-        analysis_block = (
-            '<div class="analysis-stack">'
-            f"{activity_analysis_html}"
-            "</div>"
-            if activity_analysis_html
-            else ""
-        )
-        home_sections.append(
-            _render_section_group(
-                section_id="section-activities",
-                title="活动",
-                count_label=f"（{len(activity_articles)} 条）",
-                intro=section_intros.get("activity", ""),
-                body_html=analysis_block + activity_source_block,
-            )
-        )
-
-    if info_analysis_sections:
-        anchor_links.append(
-            f'<a class="jump-chip" href="#section-analysis">资讯（{len(info_analysis_sections)} 个主题）</a>'
-        )
-        info_nav = ""
-        if present_info_channels:
-            chips = "".join(f'<span class="info-chip">{_html.escape(channel)}</span>' for channel in present_info_channels)
-            info_nav = (
-                '<p class="info-subhead">具体子栏目</p>'
-                f'<div class="info-chip-row">{chips}</div>'
-            )
-        info_source_groups = _render_info_channel_source_groups(raw_articles, url_channel_map)
-        info_analysis_html = "".join(
-            _render_section(
-                section,
-                url_channel_map,
-                skip_link_blocks=True,
-                url_bucket_map=url_bucket_map,
-            )
-            for section in info_analysis_sections
-        )
-        home_sections.append(
-            _render_section_group(
-                section_id="section-analysis",
-                title="资讯",
-                count_label=f"（{len(info_analysis_sections)} 个主题）",
-                intro=section_intros.get("info", ""),
-                body_html=info_source_groups + f'<div class="analysis-stack">{info_analysis_html}</div>',
-                extra_html=info_nav,
-            )
-        )
-
-    if not home_sections:
-        home_sections.append(
-            _render_section_group(
-                section_id="section-empty",
-                title="暂无内容",
-                count_label="",
-                intro="",
-                body_html='<p class="empty-tip">请检查上游抓取结果或 step 6 产物。</p>',
-                heading_trailing_colon=False,
-            )
-        )
-
-    brief_lead_html = (
-        f'<p class="brief-lead">{_html.escape(lead_text.strip())}</p>' if str(lead_text or "").strip() else ""
+    topic_sources = _collect_bucket_sources(
+        bucket_title=BUCKET_TOPIC,
+        sections=topic_analysis_sections,
+        fallback_articles=topic_articles,
+        url_bucket_map=url_bucket_map,
+        url_article_map=url_article_map,
     )
-    brief_stats_html = ""
-    if run_stats:
-        stat_lis = []
-        for sk, sv in run_stats:
-            if not str(sk or "").strip() and not str(sv or "").strip():
-                continue
-            if str(sk or "").strip():
-                stat_lis.append(
-                    "<li>"
-                    f'<span class="brief-stat-key">{_html.escape(str(sk).strip())}</span>'
-                    f'<span class="brief-stat-sep">：</span>'
-                    f'<span class="brief-stat-val">{_html.escape(str(sv).strip())}</span>'
-                    "</li>"
-                )
-            else:
-                stat_lis.append(f"<li>{_html.escape(str(sv).strip())}</li>")
-        if stat_lis:
-            brief_stats_html = (
-                '<details class="brief-run-details">'
-                '<summary class="brief-run-summary">运行数据</summary>'
-                '<ul class="brief-run-stats">'
-                + "".join(stat_lis)
-                + "</ul></details>"
-            )
-    jump_bar = f'<div class="jump-bar">{"".join(anchor_links)}</div>' if anchor_links else ""
+    activity_sources = _collect_bucket_sources(
+        bucket_title=BUCKET_ACTIVITY,
+        sections=activity_analysis_sections,
+        fallback_articles=activity_articles,
+        url_bucket_map=url_bucket_map,
+        url_article_map=url_article_map,
+    )
+    info_sources = _collect_bucket_sources(
+        bucket_title=BUCKET_INFO,
+        sections=info_analysis_sections,
+        fallback_articles=info_articles,
+        url_bucket_map=url_bucket_map,
+        url_article_map=url_article_map,
+    )
+
+    bucket_blocks: list[dict[str, object]] = [
+        {
+            "title": BUCKET_TOPIC,
+            "summary": _build_bucket_summary(
+                bucket_title=BUCKET_TOPIC,
+                sections=topic_analysis_sections,
+                intro_text=section_intros.get("topic", ""),
+                raw_article_count=len(topic_articles),
+            ),
+            "points": _build_bucket_points_by_source(
+                sources=topic_sources,
+                article_viewpoint_map=article_viewpoint_map,
+                section_url_viewpoint_map=_build_section_url_viewpoint_map(topic_analysis_sections),
+            ),
+            "sources": topic_sources,
+        },
+        {
+            "title": BUCKET_ACTIVITY,
+            "summary": _build_bucket_summary(
+                bucket_title=BUCKET_ACTIVITY,
+                sections=activity_analysis_sections,
+                intro_text=section_intros.get("activity", ""),
+                raw_article_count=len(activity_articles),
+                activity_sources=activity_sources,
+            ),
+            "points": _build_bucket_points_by_source(
+                sources=activity_sources,
+                article_viewpoint_map=article_viewpoint_map,
+                section_url_viewpoint_map=_build_section_url_viewpoint_map(activity_analysis_sections),
+            ),
+            "sources": activity_sources,
+        },
+        {
+            "title": BUCKET_INFO,
+            "summary": _build_bucket_summary(
+                bucket_title=BUCKET_INFO,
+                sections=info_analysis_sections,
+                intro_text=section_intros.get("info", ""),
+                raw_article_count=len(info_articles),
+            ),
+            "points": _build_bucket_points_by_source(
+                sources=info_sources,
+                article_viewpoint_map=article_viewpoint_map,
+                section_url_viewpoint_map=_build_section_url_viewpoint_map(info_analysis_sections),
+            ),
+            "sources": info_sources,
+        },
+    ]
+
+    lead_html = f'<p class="lead">{_html.escape(lead_text.strip())}</p>' if lead_text.strip() else ""
+    section_html = "".join(
+        _render_bucket_section_html(
+            title=str(block["title"]),
+            summary=str(block["summary"]),
+            points=block.get("points", []) if isinstance(block.get("points", []), list) else [],
+            sources=block.get("sources", []) if isinstance(block.get("sources", []), list) else [],
+        )
+        for block in bucket_blocks
+    )
 
     html_body = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -730,112 +1227,69 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{_html.escape(title)}</title>
     <style>
-      *,*::before,*::after{{box-sizing:border-box}}
-      /* 要点概览式：白底、衬线正文、宽行距、大标题居中（与 c114 模板无共用） */
-      body{{margin:0;padding:0;background:#fff;color:#000;
-        font-family:"Noto Serif SC","Source Han Serif SC","SimSun","STSong",serif;
-        font-size:15px;line-height:1.95;text-align:justify;}}
-      /* 与 kr36_step4_brief_*_email 一致：全宽容器、1080 上限 */
-      .wrapper{{max-width:1080px;margin:0 auto;padding:24px 16px 40px;}}
-
-      .hero{{text-align:center;padding-bottom:20px;margin-bottom:28px;
-        border-bottom:1px solid #000;}}
-      .hero-title{{margin:0;font-size:20px;font-weight:700;line-height:1.45;letter-spacing:.04em;}}
-      .brief-lead{{margin:16px 0 0;text-align:left;font-size:15px;font-weight:700;
-        line-height:1.85;color:#000;}}
-      .brief-run-details{{margin:10px 0 0;text-align:left;max-width:100%;}}
-      .brief-run-summary{{cursor:pointer;font-size:12px;color:#333;list-style:none;}}
-      .brief-run-details[open] .brief-run-summary{{margin-bottom:6px;}}
-      .brief-run-stats{{list-style:none;margin:0;padding:0 0 0 12px;
-        font-size:12px;color:#333;line-height:1.6;}}
-      .brief-run-stats li{{margin:2px 0;}}
-      .brief-stat-sep{{margin:0 0.1em;}}
-      .hero-meta{{font-size:12px;color:#333;margin-top:8px;}}
-      .jump-bar{{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
-        margin-top:16px;}}
-      .jump-chip{{font-size:12px;color:#000;text-decoration:underline;padding:0 2px;}}
-      .jump-chip:hover{{color:#333;}}
-
-      .home-section{{margin-top:32px;}}
-      .section-header{{display:block;text-align:left;margin-bottom:14px;}}
-      .section-title{{margin:0;font-size:16px;font-weight:700;letter-spacing:.02em;}}
-      .section-title-kr{{display:flex;flex-wrap:wrap;align-items:baseline;gap:0;}}
-      .section-title-kr .section-title-colon{{font-weight:700;}}
-      .section-title-kr .section-count{{font-size:13px;font-weight:400;color:#333;margin:0;}}
-      .section-intro{{margin:0 0 10px;font-size:14px;color:#333;line-height:1.85;text-align:justify;}}
-      .info-subhead{{margin:0 0 6px;font-size:14px;font-weight:700;text-align:left;}}
-
-      /* 各分区下主题条目前自动编号 1）2）3）… 贴近 Word 要点体例 */
-      .home-section .analysis-stack{{counter-reset:kr36-theme;}}
-      .home-section .analysis-card{{counter-increment:kr36-theme;
-        padding:16px 0 18px;border-bottom:1px solid #c8c8c8;}}
-      .home-section .analysis-card:last-child{{border-bottom:none;}}
-      .analysis-head{{display:block;margin-bottom:8px;}}
-      .analysis-title{{margin:0;font-size:15px;font-weight:700;line-height:1.65;text-align:justify;}}
-      .home-section .analysis-title::before{{
-        content:counter(kr36-theme)"）";font-weight:700;margin-right:0.15em;}}
-      .section-badges{{display:inline-flex;flex-wrap:wrap;gap:4px;margin-top:6px;}}
-      .section-badge{{font-size:12px;font-weight:400;border:0;padding:0;color:#333;}}
-      .section-badge::before{{content:"[";}}
-      .section-badge::after{{content:"]";}}
-
-      .block{{margin-top:10px;}}
-      .block:first-of-type{{margin-top:0;}}
-      .block-title{{margin:0 0 2px;font-size:14px;font-weight:700;color:#000;}}
-      .block-text{{margin:0;font-size:15px;color:#000;line-height:1.95;text-align:justify;}}
-      .indented-text{{text-indent:2em;}}
-
-      ul{{margin:4px 0 6px;padding-left:1.4em;}}
-      li{{margin:3px 0;font-size:15px;color:#000;line-height:1.9;text-align:justify;}}
-      .link-list{{padding-left:0;list-style:none;}}
-      .link-list li{{text-align:left;}}
-      .link-list a,.link-list li a{{color:#000;text-decoration:underline;font-size:14px;}}
-      .link-badge{{font-size:12px;color:#333;margin-right:4px;}}
-
-      .topic-source-block{{margin-top:12px;padding-top:10px;}}
-      .topic-source-block .block-title{{border-top:1px solid #999;padding-top:8px;}}
-      .topic-source-list{{margin-top:4px;}}
-      .topic-source-item{{padding:1px 0;}}
-
-      .activity-source-badges{{display:inline;}}
-      .activity-source-badges::before{{content:"（";}}
-      .activity-source-badges::after{{content:"）";}}
-      .activity-status,.activity-countdown{{font-size:12px;font-weight:400;
-        color:#333;border:0;padding:0;}}
-
-      .info-chip-row{{display:flex;flex-wrap:wrap;gap:4px 10px;
-        margin:10px 0 12px;justify-content:flex-start;}}
-      .info-chip{{font-size:12px;color:#000;border:0;padding:0;}}
-      .info-chip::after{{content:"、";}}
-      .info-chip:last-child::after{{content:"";}}
-      .info-channel-grid{{
-        display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
-        gap:16px 20px;margin-bottom:16px;}}
-      .info-channel-title{{margin:0 0 4px;font-size:14px;font-weight:700;}}
-      .info-source-list{{display:flex;flex-direction:column;gap:1px;}}
-      .info-source-item{{display:block!important;}}
-      .info-source-date{{font-size:12px;color:#333;margin-left:4px;}}
-
-      .stats{{font-size:12px;color:#333;margin-top:8px;}}
-      .empty-tip{{color:#333;font-size:14px;}}
-      .footer{{margin-top:40px;padding-top:12px;border-top:1px solid #000;
-        font-size:12px;color:#333;text-align:center;}}
-
+      *,*::before,*::after{{box-sizing:border-box;}}
+      body{{
+        margin:0;
+        padding:0;
+        background:#f4f6f8;
+        color:#1f2d3d;
+        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;
+      }}
+      .wrapper{{max-width:960px;margin:0 auto;padding:28px 20px 40px;}}
+      .header{{
+        background:#ffffff;
+        color:#102235;
+        border-radius:18px;
+        padding:28px 30px;
+        box-shadow:0 10px 28px rgba(17, 34, 53, 0.06);
+        border:1px solid rgba(16, 34, 53, 0.08);
+      }}
+      .title{{margin:0;font-size:28px;line-height:1.25;letter-spacing:-0.02em;}}
+      .lead{{margin-top:10px;font-size:14px;line-height:1.8;color:#627384;}}
+      .brief-section{{
+        background:#ffffff;
+        border-radius:18px;
+        padding:24px 26px;
+        margin-top:18px;
+        box-shadow:0 10px 28px rgba(17, 34, 53, 0.06);
+        border:1px solid rgba(16, 34, 53, 0.08);
+      }}
+      .section-title{{margin:0 0 12px;font-size:21px;color:#102235;letter-spacing:-0.01em;}}
+      .section-summary{{margin:0 0 12px;font-size:14px;line-height:1.9;color:#314457;}}
+      .viewpoints{{margin:0;padding-left:18px;}}
+      .viewpoints li{{margin:8px 0;line-height:1.8;color:#314457;font-size:14px;}}
+      .viewpoints-no-index{{padding-left:0;list-style:none;}}
+      .point-topic{{font-weight:700;color:#2d4d69;}}
+      .source-title{{margin:14px 0 8px;font-size:14px;font-weight:700;color:#2d4d69;}}
+      .sources{{margin:0;padding-left:24px;}}
+      .sources li{{margin:4px 0;line-height:1.8;color:#314457;font-size:14px;word-break:break-word;}}
+      .sources a{{color:#0f5ea8;text-decoration:none;}}
+      .sources a:hover{{text-decoration:underline;}}
+      .source-label{{font-weight:700;color:#2d4d69;}}
+      .activity-cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;}}
+      .activity-card{{border:1px solid #e1e8ef;border-radius:12px;background:#f8fbfe;padding:12px;}}
+      .activity-card-title{{margin:0 0 8px;font-size:14px;line-height:1.7;color:#102235;}}
+      .activity-card-title a{{color:#0f5ea8;text-decoration:none;}}
+      .activity-card-title a:hover{{text-decoration:underline;}}
+      .activity-field{{margin:4px 0;font-size:13px;line-height:1.7;color:#314457;}}
+      .activity-field-label{{display:inline-block;min-width:48px;font-weight:700;color:#2d4d69;}}
+      .activity-card-empty{{display:flex;align-items:center;justify-content:center;min-height:64px;color:#666;}}
+      .footer{{margin-top:24px;font-size:12px;color:#7a8897;text-align:center;}}
       @media (max-width:640px){{
-        .wrapper{{padding:20px 12px 32px;}}
-        .info-channel-grid{{grid-template-columns:1fr;}}
+        .wrapper{{padding:20px 12px 28px;}}
+        .header{{padding:20px 18px;}}
+        .title{{font-size:24px;}}
+        .brief-section{{padding:18px;}}
       }}
     </style>
   </head>
   <body>
     <div class="wrapper">
-      <header class="hero">
-        <h1 class="hero-title">{_html.escape(title)}</h1>
-        {brief_lead_html}
-        {brief_stats_html}
-        {jump_bar}
+      <header class="header">
+        <h1 class="title">{_html.escape(title)}</h1>
+        {lead_html}
       </header>
-      {''.join(home_sections)}
+      {section_html}
       <div class="footer">{_html.escape(FOOTER_DISCLAIMER)}</div>
     </div>
   </body>
@@ -845,7 +1299,6 @@ def render_kr36_brief_email(markdown_text: str, step6_path: Path | None = None) 
     plain_text = _kr36_build_plain_text(
         title=title,
         lead=lead_text,
-        run_stats=run_stats,
-        topics=topic_sections,
+        bucket_blocks=bucket_blocks,
     )
     return RenderedEmail(subject=title, text=plain_text, html=html_body)

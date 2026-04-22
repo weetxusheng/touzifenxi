@@ -208,52 +208,52 @@ def raw_json_name(report_date: date) -> str:
     return f"{RAW_JSON_PREFIX}_{report_date.strftime('%Y%m%d')}.json"
 
 
-# --- 新四步：文件名以 kr36_names 为准 ---
+# --- 文件名以 kr36_names 为准（与 c114 步骤编号对齐：4=正文, 5=分析, 6=简报） ---
 
 
 def step_1_analysis_name(report_date: date) -> str:
     return kr36_names.step1_analysis_name(report_date)
 
 
-def step2_content_name(report_date: date) -> str:
-    return kr36_names.step2_content_name(report_date)
+def step_4_content_name(report_date: date) -> str:
+    return kr36_names.step4_content_name(report_date)
 
 
-def step3_analysis_name(report_date: date) -> str:
-    return kr36_names.step3_analysis_name(report_date)
+def step_5_content_analysis_name(report_date: date) -> str:
+    return kr36_names.step5_analysis_name(report_date)
 
 
-def step4_brief_name(report_date: date) -> str:
-    return kr36_names.step4_brief_name(report_date)
+def step_6_brief_name(report_date: date) -> str:
+    return kr36_names.step6_brief_name(report_date)
 
 
 def layer_issues_name(report_date: date) -> str:
     return kr36_names.layer_issues_name(report_date)
 
 
-# --- 与旧 6 步脚本的对应（同一角色，新文件名见 kr36/docs/pipeline.md） ---
+# --- 废弃别名（保留以免旧 import 在导入期崩溃） ---
+
+
+def step2_content_name(report_date: date) -> str:
+    return kr36_names.step4_content_name(report_date)
+
+
+def step3_analysis_name(report_date: date) -> str:
+    return kr36_names.step5_analysis_name(report_date)
+
+
+def step4_brief_name(report_date: date) -> str:
+    return kr36_names.step6_brief_name(report_date)
 
 
 def step_2_checklist_name(report_date: date) -> str:
-    """已废弃；新流程不生成。保留仅以免旧 import 在导入期崩溃。"""
+    """已废弃；新流程不生成。"""
     return f"{LEGACY_PREFIX_STEP2_CHECKLIST}_{report_date.strftime('%Y%m%d')}.yaml"
 
 
 def step_3_results_name(report_date: date) -> str:
-    """已废弃。保留供极少数字符串检查。"""
+    """已废弃。"""
     return f"kr36_step_3_search_results_{report_date.strftime('%Y%m%d')}.yaml"
-
-
-def step_4_content_name(report_date: date) -> str:
-    return kr36_names.step2_content_name(report_date)
-
-
-def step_5_content_analysis_name(report_date: date) -> str:
-    return kr36_names.step3_analysis_name(report_date)
-
-
-def step_6_brief_name(report_date: date) -> str:
-    return kr36_names.step4_brief_name(report_date)
 
 
 def search_trace_log_name(report_date: date) -> str:

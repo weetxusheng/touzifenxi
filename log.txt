@@ -1,4 +1,4 @@
-[c114] 2026/04/22 周三 10:54:52.18 starting daily brief run (no email)...
+[c114] 2026/04/22 周三 15:00:00.50 starting daily brief run (no email)...
 [c114] PROJECT_ROOT=E:\AI\touzifenxi
 [c114] PYTHON_BIN=E:\AI\touzifenxi\.venv\Scripts\python.exe
-[c114] 2026/04/22 周三 11:08:57.81 finished with exit code 0.
+[c114] 2026/04/22 周三 15:04:29.53 finished with exit code 1.
