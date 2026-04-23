@@ -14,6 +14,11 @@ from utils.tools.llm import StructuredLLMError
 from .links import format_brief_link_line, infer_brief_title, infer_related_step3_path
 
 
+def _payload_is_kr36_report(payload: ContentAnalysisInput) -> bool:
+    p = str(getattr(payload, "input_path", "") or "")
+    return "kr36" in p.lower()
+
+
 def render_brief_markdown(payload: ContentAnalysisInput) -> str:
     """Render the step 6 brief from the current content-analysis payload."""
     search_payload = None
@@ -56,28 +61,35 @@ def render_brief_markdown(payload: ContentAnalysisInput) -> str:
                 "### 需要继续跟踪的点",
                 "",
                 "_本段应由程序内置模型自动生成；若仍看到此提示，说明 step 6 未按正式流程执行。_",
-                "",
-                "### 源地址",
-                "",
             ]
         )
-        for item in category.items:
-            if not item.original_url.strip():
-                continue
-            lines.append(format_brief_link_line(
-                item.original_title, item.original_published_at, item.original_url,
-                include_date="/topics/" not in item.original_url,
-            ))
-        lines.extend(["", "### 补充地址", ""])
-        if category.items and any(item.selected_contents for item in category.items):
+        if not _payload_is_kr36_report(payload):
+            lines.extend(
+                [
+                    "",
+                    "### 源地址",
+                    "",
+                ]
+            )
             for item in category.items:
-                for selected in item.selected_contents:
-                    if not selected.url.strip():
-                        continue
-                    title = selected.document.title or selected.result_title or selected.url
-                    lines.append(format_brief_link_line(title, selected.published_at, selected.url))
-        else:
-            lines.append("- 无")
+                if not item.original_url.strip():
+                    continue
+                lines.append(
+                    format_brief_link_line(
+                        item.original_title, item.original_published_at, item.original_url,
+                        include_date="/topics/" not in item.original_url,
+                    )
+                )
+            lines.extend(["", "### 补充地址", ""])
+            if category.items and any(item.selected_contents for item in category.items):
+                for item in category.items:
+                    for selected in item.selected_contents:
+                        if not selected.url.strip():
+                            continue
+                        title = selected.document.title or selected.result_title or selected.url
+                        lines.append(format_brief_link_line(title, selected.published_at, selected.url))
+            else:
+                lines.append("- 无")
     return "\n".join(lines)
 
 def render_generated_brief_markdown(
@@ -131,25 +143,26 @@ def render_generated_brief_markdown(
         )
         for followup in section_text.followups:
             lines.append(f"- {followup}")
-        lines.extend(["", "### 源地址", ""])
-        for item in category.items:
-            if not item.original_url.strip():
-                continue
-            lines.append(format_brief_link_line(
-                item.original_title, item.original_published_at, item.original_url,
-                include_date="/topics/" not in item.original_url,
-            ))
-        lines.extend(["", "### 补充地址", ""])
-        supplement_count = 0
-        for item in category.items:
-            for selected in item.selected_contents:
-                if not selected.url.strip():
+        if not _payload_is_kr36_report(payload):
+            lines.extend(["", "### 源地址", ""])
+            for item in category.items:
+                if not item.original_url.strip():
                     continue
-                title = selected.document.title or selected.result_title or selected.url
-                lines.append(format_brief_link_line(title, selected.published_at, selected.url))
-                supplement_count += 1
-        if supplement_count == 0:
-            lines.append("- 无")
+                lines.append(format_brief_link_line(
+                    item.original_title, item.original_published_at, item.original_url,
+                    include_date="/topics/" not in item.original_url,
+                ))
+            lines.extend(["", "### 补充地址", ""])
+            supplement_count = 0
+            for item in category.items:
+                for selected in item.selected_contents:
+                    if not selected.url.strip():
+                        continue
+                    title = selected.document.title or selected.result_title or selected.url
+                    lines.append(format_brief_link_line(title, selected.published_at, selected.url))
+                    supplement_count += 1
+            if supplement_count == 0:
+                lines.append("- 无")
     return "\n".join(lines)
 
 def build_brief_runtime_summary(

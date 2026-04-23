@@ -1,0 +1,83 @@
+{
+  "step": "step_1_5",
+  "report_date": "2026-04-21",
+  "input_path": "E:\\AI\\touzifenxi\\output\\data\\raw\\c114_hot_topics.csv",
+  "output_path": "E:\\AI\\touzifenxi\\output\\reports\\c114_report\\c114_search_202604222215\\c114_step_1_analysis_20260421.csv",
+  "generated_at": "2026-04-22T22:15:48+08:00",
+  "updated_at": "2026-04-22T22:16:07+08:00",
+  "status_summary": {
+    "total": 1,
+    "pending": 0,
+    "success": 1,
+    "error": 0,
+    "parse_error": 0,
+    "postprocess_error": 0,
+    "aborted": 0
+  },
+  "entries": [
+    {
+      "entry_id": "batch::all_articles",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "",
+      "last_updated_at": "2026-04-22T22:16:07+08:00",
+      "request_context": {
+        "source_site": "c114",
+        "article_count": 9,
+        "titles": [
+          "专访中信科移动王震：突围卫星互联网 赋能6G价值共创",
+          "国内首个Pre6G试验网在南京正式投入运行",
+          "中国科学院院士尤肖虎：DOICT超融合是非常有潜力的技术",
+          "中国联通Q1运营数据：5G网络用户2.42亿户 联通云政企大客户数43.8万户",
+          "中国联通Q1营收1028亿元：净利润49亿元 同比下降17.6%",
+          "国盾量子一季度营收2300万元 净亏损1901万元",
+          "香港启动量子智能产业联盟，国内量子公司纷纷参与",
+          "577亿元！轨道辰光完成PreA1 轮股权、债权融资",
+          "OpenAI Codex 推出 Chronicle 功能：通过录制屏幕构建上下文记忆库"
+        ]
+      },
+      "result": {
+        "assignments": {
+          "article-1": {
+            "topic_name": "下一代通信与网络技术演进",
+            "reason": "文章探讨卫星互联网与6G价值共创，属于下一代通信技术演进范畴。"
+          },
+          "article-2": {
+            "topic_name": "下一代通信与网络技术演进",
+            "reason": "文章报道国内首个Pre6G试验网运行，是6G前驱技术的重要进展。"
+          },
+          "article-3": {
+            "topic_name": "下一代通信与网络技术演进",
+            "reason": "文章讨论DOICT超融合技术潜力，属于通信与信息技术融合的前沿方向。"
+          },
+          "article-4": {
+            "topic_name": "运营商运营数据与业绩",
+            "reason": "文章发布中国联通Q1用户及政企客户数据，属于运营商运营数据更新。"
+          },
+          "article-5": {
+            "topic_name": "运营商运营数据与业绩",
+            "reason": "文章发布中国联通Q1营收与净利润业绩，属于运营商财务业绩报告。"
+          },
+          "article-6": {
+            "topic_name": "量子信息产业发展",
+            "reason": "文章报道国盾量子一季度业绩，反映量子信息产业公司的经营状况。"
+          },
+          "article-7": {
+            "topic_name": "量子信息产业发展",
+            "reason": "文章报道香港启动量子智能产业联盟，属于量子信息产业生态建设动态。"
+          },
+          "article-8": {
+            "topic_name": "商业航天与卫星互联网投融资",
+            "reason": "文章报道轨道辰光完成大额融资，属于商业航天/卫星互联网领域的投融资事件。"
+          },
+          "article-9": {
+            "topic_name": "下一代通信与网络技术演进",
+            "reason": "文章报道OpenAI Codex推出Chronicle功能，属于AI与开发工具融"
+          }
+        }
+      },
+      "error": {}
+    }
+  ]
+}

@@ -17,7 +17,7 @@ def test_send_latest_kr36_brief_email_succeeds_with_step4_file(monkeypatch, tmp_
     step4_md = _make_step4_brief(tmp_path, "20260422")
     sent: dict[str, object] = {}
 
-    def fake_render(markdown_text: str, step6_path=None):
+    def fake_render(markdown_text: str, step6_path=None, **kwargs):
         assert "36Kr" in markdown_text
         assert step6_path == step4_md
         return RenderedEmail(subject="test-subject", text="test-text", html="<p>test</p>")

@@ -1,0 +1,75 @@
+report_date: '2026-04-21'
+prompt_path: 'E:\AI\touzifenxi\src\c114\prompts\search-keyword-agent.md'
+instructions: 'keywords 由 skill 内置模型读取 prompt_path 后自动生成；每条固定 1 组，且必须贴近原标题。'
+categories:
+  - topic: '下一代通信与网络技术演进'
+    items:
+      - original_title: '专访中信科移动王震：突围卫星互联网 赋能6G价值共创'
+        channel: '首页'
+        url: 'https://www.c114.com.cn/satellite/2514/a1308927.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '中信科移动 王震 卫星互联网 6G'
+      - original_title: '国内首个Pre6G试验网在南京正式投入运行'
+        channel: '首页'
+        url: 'https://www.c114.com.cn/news/16/a1308922.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'Pre6G 试验网 南京 投入运行'
+      - original_title: '中国科学院院士尤肖虎：DOICT超融合是非常有潜力的技术'
+        channel: '首页'
+        url: 'https://www.c114.com.cn/news/16/a1308920.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '尤肖虎 DOICT 超融合 技术潜力'
+      - original_title: 'OpenAI Codex 推出 Chronicle 功能：通过录制屏幕构建上下文记忆库'
+        channel: 'Cloud&AI'
+        url: 'https://www.c114.com.cn/ai/5339/a1308832.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'OpenAI Codex Chronicle 屏幕录制 记忆库'
+  - topic: '运营商运营数据与业绩'
+    items:
+      - original_title: '中国联通Q1运营数据：5G网络用户2.42亿户 联通云政企大客户数43.8万户'
+        channel: '首页'
+        url: 'https://www.c114.com.cn/news/119/a1308917.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '中国联通 Q1 5G用户数'
+      - original_title: '中国联通Q1营收1028亿元：净利润49亿元 同比下降17.6%'
+        channel: '首页'
+        url: 'https://www.c114.com.cn/news/119/a1308915.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '中国联通 Q1 净利润 下降'
+  - topic: '量子信息产业发展'
+    items:
+      - original_title: '国盾量子一季度营收2300万元 净亏损1901万元'
+        channel: '量子信息'
+        url: 'https://www.c114.com.cn/quantum/5285/a1308848.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '国盾量子 一季度 净亏损'
+      - original_title: '香港启动量子智能产业联盟，国内量子公司纷纷参与'
+        channel: '量子信息'
+        url: 'https://www.c114.com.cn/quantum/5285/a1308846.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '香港 量子智能产业联盟'
+  - topic: '商业航天与卫星互联网投融资'
+    items:
+      - original_title: '577亿元！轨道辰光完成PreA1 轮股权、债权融资'
+        channel: '卫星互联网'
+        url: 'https://www.c114.com.cn/satellite/2515/a1308842.html'
+        original_published_at: '2026-04-21'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '轨道辰光 PreA1轮融资'

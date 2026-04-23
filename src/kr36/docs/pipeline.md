@@ -31,3 +31,15 @@
 - `src/kr36/synthetic_workflow_from_step1.py`：用 `ArticleAnalysis` 构造与「无外搜」等价的拉取计划
 - `src/kr36/names.py`：文件名约定
 - `src/kr36/brief_assets.py`：HTML/邮件侧导出
+
+## 专题聚焦 Step 1.5（与上表「四步」并行的一条专题链）
+
+| 与四步主流程的关系 | 说明 |
+|-------------------|------|
+| 独立语义 | 从 `/topics/` 列表 → 专题详情子项（`metadata.topic_item_kind`）→ 视频子页拉 CDN/文章子页存 HTML，以及 **视频：ffmpeg 抽音 → 火山转写 `*.transcript.txt`**。实现分段见 `topic_focus_step15.py`。 |
+| **专题视频不重复拉「文章全文」** | 带 `topic_item_kind` 的 **视频** 条目，**步骤 2 不应**再对同一 `/video/{id}` 当普通文章去拉 HTML 当正文；**全文以专题目录下** `与 mp4 同名的 .transcript.txt` **（ASR）为准**（见 `docs/topic-focus-step15.md` 表格第 6 步）。 |
+| 专题文章 | 仍按 `/p/…` 子链保存或走 Step2 正文拉取。 |
+
+详表、落盘文件命名与 `volc_speech` 配置见 **`src/kr36/docs/topic-focus-step15.md`**。
+
+**专题全文索引**：同一次运行目录下另有 **`kr36_topic_fulltext_YYYYMMDD.json`**（与 `kr36_hot_topics_*.json` 同日期后缀），内为 `items[].article_id` / `content_text` / `fulltext_source`；整理或合并进分析流时**直接读该文件**，勿对专题视频 URL 重复取「文章 HTML 全文」。

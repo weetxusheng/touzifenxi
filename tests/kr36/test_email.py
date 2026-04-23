@@ -1,7 +1,13 @@
 ﻿import csv
 import json
 
-from kr36.email import _render_activity_source_item, render_kr36_brief_email
+from kr36.email import (
+    _compose_item_viewpoint,
+    _filter_kr36_visible_activities,
+    _render_activity_source_item,
+    _step5_item_has_original_text,
+    render_kr36_brief_email,
+)
 
 
 def test_kr36_email_renders_fixed_three_bucket_template(tmp_path) -> None:
@@ -111,13 +117,14 @@ def test_kr36_email_renders_fixed_three_bucket_template(tmp_path) -> None:
     assert "2) 子类页 的观点：资讯判断。" in rendered.text
     assert "编辑精选 | https://36kr.com/topics/1" in rendered.text
     assert "子类页 | https://36kr.com/search/articles/123" in rendered.text
-    assert "名称：活动A；时间：04月21日-04月22日；地点：上海；主题：AI Agent；倒计时：今天开始；链接：https://36kr.com/sign-up-activity/1" in rendered.text
+    assert "名称：活动A；时间：04月21日-04月22日；地点：上海；主题：AI Agent；状态：报名中；倒计时：今天开始；链接：https://36kr.com/sign-up-activity/1" in rendered.text
 
     assert "activity-card-title" in rendered.html
     assert "活动A" in rendered.html
     assert "时间：" in rendered.html
     assert "地点：" in rendered.html
     assert "主题：" in rendered.html
+    assert "状态：" in rendered.html
     assert "倒计时：" in rendered.html
     assert "activity-card" in rendered.html
     assert "活动A 的观点：" not in rendered.html
@@ -127,6 +134,278 @@ def test_kr36_email_renders_fixed_three_bucket_template(tmp_path) -> None:
     activity_pos = rendered.text.index("\n活动\n")
     info_pos = rendered.text.index("\n资讯\n")
     assert topic_pos < activity_pos < info_pos
+
+
+def test_kr36_email_omit_source_links_drops_url_blocks_keeps_info_viewpoints(tmp_path) -> None:
+    step6_path = tmp_path / "kr36_step6_brief_20260421.md"
+    hot_topics = tmp_path / "kr36_hot_topics_20260421.json"
+    hot_topics.write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "source_bucket": "资讯",
+                        "title": "品牌文",
+                        "url": "https://36kr.com/p/100",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    md = """# 测试
+
+## 运行摘要
+
+- 专题：a。
+- 活动：b。
+- 资讯：c。
+
+## 某资讯主题
+
+### 核心判断
+
+1）提炼观点一：看点一
+2）提炼观点二：看点二
+"""
+    step6_path.write_text(md, encoding="utf-8")
+    out = render_kr36_brief_email(md, step6_path, omit_source_links=True)
+    assert " 源地址" not in out.text
+    assert "https://36kr.com" not in out.text
+    assert " 源地址" not in out.html
+    assert "某资讯主题" in out.html
+    assert "提炼观点一" in out.html
+
+    with_links = render_kr36_brief_email(md, step6_path, omit_source_links=False)
+    assert " 源地址" in with_links.text
+    assert "https://36kr.com/p/100" in with_links.text
+
+
+def test_omit_mode_lists_step5_per_item_topic_and_summary(tmp_path) -> None:
+    """不展示链接时：若有 step5，专题/活动/资讯按条列观点，栏头为「总述 + 条数」。"""
+    step6 = tmp_path / "kr36_step6_brief_20260421.md"
+    step6.write_text(
+        "# 简报\n\n## 运行摘要\n\n- 专题：导言A。\n\n## 占位\n\n### 核心判断\n\nx\n",
+        encoding="utf-8",
+    )
+    step5 = tmp_path / "kr36_step_5_content_analysis_20260421.yaml"
+    step5.write_text(
+        """
+report_date: '2026-04-21'
+input_path: 'x'
+generated_at: 'x'
+categories:
+  - topic: '专题线一'
+    items:
+      - original_title: '子项甲'
+        topic: '专题线一'
+        channel: '专题'
+        original_url: 'https://36kr.com/video/1'
+        original_published_at: ''
+        original_content:
+          text: ''
+          title: ''
+          summary: ''
+          source: ''
+          status: success
+        selected_contents: []
+        analysis:
+          summary: '提炼标题：甲短；内容要点：甲长文观点。'
+          core_points: ['要点1']
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+      - original_title: '子项乙'
+        topic: '专题线一'
+        channel: '专题'
+        original_url: 'https://36kr.com/video/2'
+        original_published_at: ''
+        original_content:
+          text: ''
+          title: ''
+          summary: ''
+          source: ''
+          status: success
+        selected_contents: []
+        analysis:
+          summary: '乙的观点一句。'
+          core_points: []
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+""",
+        encoding="utf-8",
+    )
+    out = render_kr36_brief_email(step6.read_text(encoding="utf-8"), step6, omit_source_links=True)
+    assert "条专题子项" not in out.html
+    assert "下为逐条观点" not in out.html
+    assert "子项甲" in out.html
+    assert "子项乙" in out.html
+    assert "甲长文观点" in out.html or "提炼标题：甲短" in out.html
+
+
+def test_omit_mode_activity_drops_ended_per_step5_and_hot_topics(tmp_path) -> None:
+    """不展示链接 + step5：活动子项按 hot_topics 去掉已结束。"""
+    step6 = tmp_path / "kr36_step6_brief_20260421.md"
+    step6.write_text(
+        "# 简报\n\n## 运行摘要\n\n- 活动：导言B。\n\n## 占位\n\n### 核心判断\n\nx\n",
+        encoding="utf-8",
+    )
+    hot = tmp_path / "kr36_hot_topics_20260421.json"
+    hot.write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "source_bucket": "活动",
+                        "title": "已收场",
+                        "url": "https://36kr.com/sign-up-activity/old",
+                        "metadata": {"activity_status": "已结束", "start_label": "已结束"},
+                    },
+                    {
+                        "source_bucket": "活动",
+                        "title": "进行中活动",
+                        "url": "https://36kr.com/sign-up-activity/new",
+                        "metadata": {"activity_status": "报名中", "start_label": "今天开始"},
+                    },
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    step5 = tmp_path / "kr36_step_5_content_analysis_20260421.yaml"
+    step5.write_text(
+        """
+report_date: '2026-04-21'
+input_path: 'x'
+generated_at: 'x'
+categories:
+  - topic: '活动线'
+    items:
+      - original_title: '已收场'
+        topic: '活动线'
+        channel: '活动'
+        original_url: 'https://36kr.com/sign-up-activity/old'
+        original_published_at: ''
+        original_content:
+          text: ''
+          title: ''
+          summary: ''
+          source: ''
+          status: success
+        selected_contents: []
+        analysis:
+          summary: '旧活动观点。'
+          core_points: []
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+      - original_title: '进行中活动'
+        topic: '活动线'
+        channel: '活动'
+        original_url: 'https://36kr.com/sign-up-activity/new'
+        original_published_at: ''
+        original_content:
+          text: ''
+          title: ''
+          summary: ''
+          source: ''
+          status: success
+        selected_contents: []
+        analysis:
+          summary: '新活动观点：提炼标题：新；内容要点：可参加。'
+          core_points: []
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+""",
+        encoding="utf-8",
+    )
+    out = render_kr36_brief_email(step6.read_text(encoding="utf-8"), step6, omit_source_links=True)
+    assert "条活动子项" not in out.html
+    assert "下为逐条观点" not in out.html
+    assert "今日活动共覆盖" in out.html
+    assert "已收场" not in out.html
+    assert "进行中活动" in out.html
+    assert "今天开始" in out.html or "报名中" in out.html
+    assert "activity-viewpoint" not in out.html
+
+
+def test_filter_kr36_visible_activities_caps_eight_and_drops_ended() -> None:
+    rows: list[dict] = []
+    for i in range(9):
+        rows.append(
+            {
+                "title": f"A{i}",
+                "url": f"https://36kr.com/activity/{i}",
+                "metadata": {"activity_status": "报名中"},
+            }
+        )
+    rows.append(
+        {
+            "title": "End",
+            "url": "https://36kr.com/activity/z",
+            "metadata": {"activity_status": "已结束"},
+        }
+    )
+    vis = _filter_kr36_visible_activities(rows, max_items=8)
+    assert len(vis) == 8
+    assert all("End" not in str(x.get("title")) for x in vis)
+
+
+def test_step5_info_item_without_body_is_not_shown() -> None:
+    """无原文（text 空）的资讯在邮件逐条中不出现。"""
+    from utils.tools.analysis.models import ContentAnalysisDraft, ContentAnalysisItem, ContentDocument
+
+    with_body = ContentAnalysisItem(
+        original_title="A",
+        topic="t",
+        channel="资讯",
+        original_url="https://36kr.com/p/1",
+        original_published_at="",
+        original_content=ContentDocument(
+            "u", "d", "t", "s", "正文有字够长" * 5, "src", "success", ""
+        ),
+        selected_contents=[],
+        analysis=ContentAnalysisDraft("x", [], [], [], [], [], "", []),
+    )
+    no_body = ContentAnalysisItem(
+        original_title="B",
+        topic="t",
+        channel="资讯",
+        original_url="https://36kr.com/p/2",
+        original_published_at="",
+        original_content=ContentDocument("u2", "d2", "t2", "s2", "", "src", "empty", ""),
+        selected_contents=[],
+        analysis=ContentAnalysisDraft("y", [], [], [], [], [], "", []),
+    )
+    assert _step5_item_has_original_text(with_body) is True
+    assert _step5_item_has_original_text(no_body) is False
+
+
+def test_compose_item_viewpoint_leads_with_title_not_labels() -> None:
+    """提炼标题+内容要点 合并为「标题：正文」，不再保留前缀标签。"""
+    raw = (
+        "提炼标题：AI“同伴保全”行为挑战人类控制权；"
+        "内容要点：加州大学伯克利分校研究显示，多个模型会帮助同伴作弊。"
+    )
+    out = _compose_item_viewpoint(raw, [])
+    assert "提炼标题" not in out
+    assert "内容要点" not in out
+    assert "AI“同伴保全”行为挑战人类控制权：加州大学伯克利分校研究显示" in out.replace(" ", "")
 
 
 def test_activity_source_dedupes_identical_status_and_countdown() -> None:

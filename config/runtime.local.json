@@ -34,6 +34,23 @@
       "deferred_retry_max_interval_ms": 180000,
       "deferred_retry_backoff_step_ms": 60000,
       "deferred_retry_wait_jitter_ms": 8000,
+      "topic_deep_fetch_enabled": true,
+      "topic_focus_limit": 2,
+      "topic_focus_keywords": ["本周有大事", "36氪编辑精选"],
+      "topic_previous_week_only": true,
+      "topic_item_download_enabled": true,
+      "topic_video_download_enabled": true,
+      "topic_article_download_enabled": true,
+      "topic_download_dir": ".",
+      "volc_speech_api_key": "",
+      "volc_speech_app_key": "3012701136",
+      "volc_speech_access_key": "P9QMfx7VT1NTOb988oHOnMY57qA0Q0hl",
+      "volc_speech_uid": "",
+      "topic_video_curl_max_time_seconds": 600,
+      "topic_extract_audio_enabled": true,
+      "topic_asr_enabled": true,
+      "topic_asr_max_audio_mb": 95,
+      "topic_asr_timeout_seconds": 300,
       "risk_cooldown_after_block_ms": 180000,
       "risk_cooldown_jitter_ms": 8000,
       "deferred_retry_skip_blocked_ratio_percent": 85,
@@ -140,3 +157,4 @@
     "output_mode": "skill"
   }
 }
+
