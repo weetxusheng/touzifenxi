@@ -61,7 +61,7 @@
       "risk_retry_wait_ms": 1500,
       "risk_verification_command": "",
       "risk_incognito_cookie_refresh_enabled": false,
-      "http_only_mode": true,
+      "http_only_mode": false,
       "risk_cooldown_jitter_ms": 5000,
       "_risk_max_recovery_rounds_per_url_hint": "同一 URL 在进程内第 4 次仍触发风控时跳过无痕/step4 滑块恢复（0=不限制，默认 3）",
       "risk_max_recovery_rounds_per_url": 3,

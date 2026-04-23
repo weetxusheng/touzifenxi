@@ -7,6 +7,8 @@ from kr36.source_adapter import (
     _kr36_likely_36kr_csr_risk_listing_shell,
     _kr36_step4_post_slider_page_looks_resolved,
     _normalize_kr36_playwright_chromium_channel,
+    _kr36_listing_requires_step4_recovery,
+    _kr36_needs_playwright_slider_recovery,
     _kr36_search_html_has_risk_interstitial,
     _kr36_search_html_likely_zero_hits_message,
     _kr36_search_playwright_body_acceptable,
@@ -149,6 +151,42 @@ def test_search_playwright_body_classifies_risk_vs_real_page() -> None:
         "<ul class='kr-search-result-list-main'></ul><div>暂无相关结果</div>" + "z" * 20000
     )
     assert _kr36_search_html_likely_zero_hits_message(empty_msg) is True
+
+
+def test_kr36_listing_requires_step4_recovery_activity_and_search_shell() -> None:
+    act_url = "https://36kr.com/activity"
+    tiny = '<html><head></head><body>36kr.com app shell</body></html>'
+    assert _kr36_listing_requires_step4_recovery(act_url, tiny) is True
+    with_link = (
+        '<html><body><a href="/activity/foo/123">x</a></body></html>'
+    )
+    assert _kr36_listing_requires_step4_recovery(act_url, with_link) is False
+
+    search_url = "https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6"
+    assert _kr36_listing_requires_step4_recovery(search_url, tiny) is True
+    with_p = '<html><body><a href="/p/3770688595214857">t</a></body></html>'
+    assert _kr36_listing_requires_step4_recovery(search_url, with_p) is False
+    zero = (
+        '<html><body><div class="kr-search-result-list-main">共 0 条 暂无</div></body></html>'
+    )
+    assert _kr36_listing_requires_step4_recovery(search_url, zero) is False
+
+
+def test_kr36_needs_playwright_slider_recovery_includes_interstitial_and_listing() -> None:
+    tiny = '<html><body>36kr.com shell</body></html>'
+    article_url = "https://36kr.com/p/3770688595214857"
+    assert _kr36_listing_requires_step4_recovery(article_url, tiny) is False
+    interstitial = (
+        '<html><head></head><body><script src="TTGCaptcha/foo.js"></script>x</body></html>'
+    )
+    assert len(interstitial) < 12000
+    assert _kr36_needs_playwright_slider_recovery(article_url, interstitial) is True
+    assert _kr36_needs_playwright_slider_recovery(article_url, tiny) is False
+
+    act_url = "https://36kr.com/activity"
+    assert _kr36_needs_playwright_slider_recovery(act_url, tiny) is True
+    captcha = "<html><body>请完成验证后继续</body></html>"
+    assert _kr36_needs_playwright_slider_recovery(article_url, captcha) is True
 
 
 def test_kr36_csr_risk_listing_shell_not_ok_for_step4() -> None:

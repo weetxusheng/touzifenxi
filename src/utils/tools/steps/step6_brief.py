@@ -86,6 +86,8 @@ def auto_complete_brief_sections(
                     "请基于下面这个主题下的 step 5 分析结果，生成行业研究员简报的四个章节。"
                     "若某条条目含 topic_fulltext_excerpt（专题/视频已落盘全文或 ASR 转写），请优先据其归纳；"
                     "并在「核心判断」中对专题/视频子项用「1）核心结论：一段展开」按序编号（详见系统提示，勿用主观点/解释标签）。"
+                    "各条 JSON 中的 original_title 仅用于对齐条目，勿将标题原句或轻改写当作冒号前的核心结论；"
+                    "结论须据 topic_fulltext_excerpt（若有）以及 summary、core_points 归纳。"
                     "只返回 JSON 对象，包含：核心判断、增量信息、产业/公司影响、需要继续跟踪的点。"
                     "其中前三个字段是字符串，最后一个字段是字符串列表。\n\n"
                     f"{json.dumps(build_brief_prompt_payload(category, payload.topic_fulltext_excerpts_by_url), ensure_ascii=False, indent=2)}"

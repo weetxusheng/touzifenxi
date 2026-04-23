@@ -33,6 +33,14 @@ from utils.tools.llm import (
 )
 from utils.tools.runtime.checkpoint import StepCheckpointStore
 
+# 与 ``content-analysis-agent.md`` 一致：避免与已废弃的「提炼标题」旧格式冲突，且禁止模型用标题冒充结论句。
+KR36_STEP5_USER_HINT = (
+    "【36Kr】每条 summary 须为系统提示中的「结论句：正文段」（全角冒号分隔）；"
+    "结论句必须据 `original_content` / `topic_fulltext_excerpt` 归纳，"
+    "禁止直接使用 `original_title` 或与标题同义改写；"
+    "勿使用「提炼标题：…；内容要点：…」等旧格式。\n"
+)
+
 
 def auto_complete_content_analysis(
     payload: ContentAnalysisInput,
@@ -83,12 +91,7 @@ def _auto_complete_content_analysis_per_item(
                 cached = checkpoint_store.get_result(entry_id)
                 if isinstance(cached, dict):
                     return content_analysis_item_from_dict(cached)
-            hint36 = (
-                "【36Kr 专题子项】若 JSON 含 topic_fulltext_excerpt，summary 须为"
-                "「提炼标题：……；内容要点：……」。\n"
-                if "kr36" in str(payload.input_path).lower()
-                else ""
-            )
+            hint36 = KR36_STEP5_USER_HINT if "kr36" in str(payload.input_path).lower() else ""
             response = llm_client.complete_json(
                 system_prompt=system_prompt,
                 user_prompt=(
@@ -174,11 +177,7 @@ def _auto_complete_content_analysis_per_topic(
             current_batch = batch_category
             kr36_hint = ""
             if "kr36" in str(payload.input_path).lower():
-                kr36_hint = (
-                    "\n\n【36Kr 专题子项】若某条含 topic_fulltext_excerpt 或 kr36_topic_subitem 为 true，"
-                    "该条 summary 须为「提炼标题：……；内容要点：……」；无则按常规一条 summary 即可。"
-                    "详见系统提示。\n"
-                )
+                kr36_hint = f"\n\n{KR36_STEP5_USER_HINT}"
             batch_result = _complete_content_analysis_batch_until_success(
                 llm_client=llm_client,
                 system_prompt=system_prompt,
@@ -293,8 +292,8 @@ def build_content_analysis_prompt_payload(
 ) -> dict[str, Any]:
     """构造发给模型的 step 5 单篇文章分析输入。
 
-    若提供 ``topic_fulltext_excerpt``（36kr 专题子项全文/转写），模型应以该段为主、并配合
-    ``group_topic_name`` 做「提炼标题 / 内容要点」式 summary（见 kr36 专用 system prompt）。
+    若提供 ``topic_fulltext_excerpt``（36kr 专题子项全文/转写），模型应以该段为主、配合
+    ``group_topic_name`` 做「结论句：正文段」式 summary（见 system prompt）；结论句须归纳自该全文，勿套用文章标题。
     """
     gname = (group_topic_name or item.topic or "").strip()
     ex = (topic_fulltext_excerpt or "").strip()

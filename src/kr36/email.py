@@ -86,24 +86,29 @@ def _partition_summary_items(
 
 
 def _is_compact_viewpoint_head(head: str, body: str) -> bool:
-    """是否可将「head：body」视作短标题总起（而非正文中的普通冒号）。"""
+    """是否可将「head：body」视作结论总起（而非正文中的普通冒号）。
+
+    中文结论句常含逗号（「巴菲特持币防御，美股强势难续」「顶尖AI模型…违规操作，暴露出…」），
+    不应因此拦截；只有句末标点（。；！？等）才说明 head 本身已是一个完整句段。
+    """
     h = str(head or "").strip()
     b = str(body or "").strip()
     if not (h and b):
         return False
-    # 仅接受短标题，避免把长句中的「行为包括：」「研究显示：」误判成标题。
-    if len(h) > 48:
+    # 仅接受短结论（≤ 60 字），避免把长句段中的「如下所述：」等引导句误判为结论。
+    if len(h) > 60:
         return False
-    # 标题中若已有句读，多半是正文而非短标题。
-    if re.search(r"[，。；！？,.!?、]", h):
+    # 句末标点表明 head 本身已成完整句段，不应再作结论标题。
+    # 中文逗号（，）和顿号（、）是连接词，允许出现在结论中。
+    if re.search(r"[。；！？,.!?]", h):
         return False
-    # 避免「1）xx：...」等编号列表被识别为标题。
+    # 避免「1）xx：...」等编号列表被识别为结论。
     if re.match(r"^\d+\s*[）\)]", h):
         return False
     # 避免书名号内冒号（如《明末：渊虚之羽》）被截断。
     if "《" in h and "》" in b:
         return False
-    # 「包括/如下/例如」通常是引导后文，不应当作观点短标题。
+    # 「包括/如下/例如」通常是引导后文，不应当作结论短语。
     if re.search(r"(包括|如下|例如|如|主要有)$", h):
         return False
     return True
@@ -277,8 +282,25 @@ def _extract_subsection_items(section: dict[str, Any], subtitle: str) -> list[st
     return [str(item).strip() for item in raw_items if str(item).strip()]
 
 
+def _dedup_punctuation(text: str) -> str:
+    """消除连续重复或互相矛盾的标点，如 。； → 。，；。 → 。，。。 → 。，；； → ；。"""
+    t = str(text or "")
+    # 句末符号后紧跟分隔符 → 保留句末符号，丢掉分隔符
+    t = re.sub(r"([。！？!?])[；;，,、]+", r"\1", t)
+    # 分隔符后紧跟句末符号 → 保留句末符号，丢掉分隔符
+    t = re.sub(r"[；;，,、]+([。！？!?])", r"\1", t)
+    # 连续相同句末符号 → 保留一个
+    t = re.sub(r"([。！？!?])\1+", r"\1", t)
+    # 连续分号 → 一个
+    t = re.sub(r"[；;]{2,}", "；", t)
+    # 连续逗号/顿号 → 一个
+    t = re.sub(r"[，,、]{2,}", "，", t)
+    return t
+
+
 def _normalize_sentence(text: str) -> str:
     normalized = re.sub(r"\s+", " ", str(text or "")).strip()
+    normalized = _dedup_punctuation(normalized)
     if not normalized:
         return ""
     if normalized[-1] not in "。！？!?":
@@ -1001,7 +1023,7 @@ def _polish_step5_viewpoint_display(text: str) -> str:
     # 冒号总起式：{结论}：{展开}（首处全角「：」，无「主观点/提炼标题/解释」等标签）
     if "：" in t and "主观点" not in t and not re.match(r"^\s*主观点", t):
         _idx0 = t.find("：")
-        if 0 < _idx0 <= 100:
+        if 0 < _idx0 <= 120:
             _h0 = t[:_idx0].strip()
             _bad_label_head = _h0 in (
                 "提炼标题",
@@ -1081,7 +1103,7 @@ def _render_viewpoint_as_html(viewpoint: str) -> str:
     # 冒号总起式：{结论}：{展开}（无「主观点/解释」标签；与 step5 新 summary 一致）
     if "：" in t:
         _ci = t.find("：")
-        if 0 < _ci <= 100:
+        if 0 < _ci <= 120:
             _ch = t[:_ci].strip()
             _cb = t[_ci + 1 :].strip()
             _bad_ch = _ch in ("提炼标题", "主观点", "内容要点", "解释") or _ch.startswith(
@@ -1186,8 +1208,9 @@ def _compose_item_viewpoint(summary: str, core_points: list[str]) -> str:
                     if p_plain and p_plain not in summary_text and p not in summary_text:
                         extra_colon.append(p)
                 if extra_colon:
-                    rest2 = _rest.rstrip("。！？.!?")
-                    return f"{_lead}：{rest2}；{'；'.join(extra_colon)}。"
+                    rest2 = _rest.rstrip("。！？.!?；;")
+                    clean_extra = [p.rstrip("。！？.!?；;") for p in extra_colon]
+                    return _dedup_punctuation(f"{_lead}：{rest2}；{'；'.join(clean_extra)}。")
                 return summary_text
 
     # 旧格式：提炼标题：…；内容要点：… —— 经 _polish 去掉标签；可追加不重复的 core_points
@@ -1197,21 +1220,24 @@ def _compose_item_viewpoint(summary: str, core_points: list[str]) -> str:
             if p and p not in summary_text:
                 extra_old.append(p)
         if extra_old:
-            base = summary_text.rstrip("。！？.!?")
-            merged_old = f"{base}；{'；'.join(extra_old)}。"
+            base = summary_text.rstrip("。！？.!?；;")
+            clean_old = [p.rstrip("。！？.!?；;") for p in extra_old]
+            merged_old = _dedup_punctuation(f"{base}；{'；'.join(clean_old)}。")
         else:
             merged_old = summary_text
         return _finish(merged_old)
 
     if summary_text and not is_low_signal_summary:
         if points and points[0] not in summary_text:
-            return _finish(f"{summary_text}；{points[0]}")
+            p0 = points[0].rstrip("。！？.!?；;")
+            return _finish(_dedup_punctuation(f"{summary_text.rstrip('。！？.!?；;')}；{p0}"))
         return _finish(summary_text)
 
     if points:
-        merged = "；".join(points[:2])
+        clean_pts = [p.rstrip("。！？.!?；;") for p in points[:2]]
+        merged = "；".join(clean_pts)
         if summary_text and summary_text not in merged and not is_low_signal_summary:
-            merged = f"{summary_text}；{merged}"
+            merged = _dedup_punctuation(f"{summary_text.rstrip('。！？.!?；;')}；{merged}")
         return _finish(merged)
 
     if summary_text:
