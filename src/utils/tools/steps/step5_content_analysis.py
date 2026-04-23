@@ -83,14 +83,21 @@ def _auto_complete_content_analysis_per_item(
                 cached = checkpoint_store.get_result(entry_id)
                 if isinstance(cached, dict):
                     return content_analysis_item_from_dict(cached)
+            hint36 = (
+                "【36Kr 专题子项】若 JSON 含 topic_fulltext_excerpt，summary 须为"
+                "「提炼标题：……；内容要点：……」。\n"
+                if "kr36" in str(payload.input_path).lower()
+                else ""
+            )
             response = llm_client.complete_json(
                 system_prompt=system_prompt,
                 user_prompt=(
                     "请基于下面的原文正文和补充正文，完成 step 5 正文分析。"
                     "只返回 JSON 对象，至少包含：summary、core_points。"
                     "如果你有足够把握，也可以额外返回：new_facts、entities、signals、"
-                    "risk_or_uncertainty、why_it_matters、layer_notes。\n\n"
-                    f"{json.dumps(build_content_analysis_prompt_payload(item), ensure_ascii=False, indent=2)}"
+                    "risk_or_uncertainty、why_it_matters、layer_notes。"
+                    f"{hint36}\n"
+                    f"{json.dumps(_build_step5_item_payload_for_llm(item, category.topic, payload), ensure_ascii=False, indent=2)}"
                 ),
             )
             try:
@@ -135,6 +142,7 @@ def _auto_complete_content_analysis_per_item(
         input_path=payload.input_path,
         generated_at=payload.generated_at,
         categories=completed_categories,
+        topic_fulltext_excerpts_by_url=payload.topic_fulltext_excerpts_by_url,
     )
 
 
@@ -159,8 +167,18 @@ def _auto_complete_content_analysis_per_topic(
                 if isinstance(cached, dict):
                     completed_items.extend(content_analysis_items_from_batch_dict(cached))
                     continue
-            topic_payload = build_content_analysis_topic_prompt_payload(batch_category)
+            topic_payload = build_content_analysis_topic_prompt_payload(
+                batch_category,
+                topic_fulltext_excerpts_by_url=payload.topic_fulltext_excerpts_by_url,
+            )
             current_batch = batch_category
+            kr36_hint = ""
+            if "kr36" in str(payload.input_path).lower():
+                kr36_hint = (
+                    "\n\n【36Kr 专题子项】若某条含 topic_fulltext_excerpt 或 kr36_topic_subitem 为 true，"
+                    "该条 summary 须为「提炼标题：……；内容要点：……」；无则按常规一条 summary 即可。"
+                    "详见系统提示。\n"
+                )
             batch_result = _complete_content_analysis_batch_until_success(
                 llm_client=llm_client,
                 system_prompt=system_prompt,
@@ -171,6 +189,7 @@ def _auto_complete_content_analysis_per_topic(
                 entry_id=entry_id,
                 max_attempts=max_attempts,
                 checkpoint_store=checkpoint_store,
+                extra_user_block=kr36_hint,
             )
             if checkpoint_store is not None:
                 checkpoint_store.record_entry(
@@ -188,6 +207,7 @@ def _auto_complete_content_analysis_per_topic(
         input_path=payload.input_path,
         generated_at=payload.generated_at,
         categories=completed_categories,
+        topic_fulltext_excerpts_by_url=payload.topic_fulltext_excerpts_by_url,
     )
 
 
@@ -202,6 +222,7 @@ def _complete_content_analysis_batch_until_success(
     entry_id: str,
     max_attempts: int,
     checkpoint_store: StepCheckpointStore | None,
+    extra_user_block: str = "",
 ) -> list[ContentAnalysisItem]:
     """补齐 step 5 单个 topic batch，失败会落 checkpoint 后继续重试。
 
@@ -222,7 +243,8 @@ def _complete_content_analysis_batch_until_success(
                     '{"topic":"...","items":[{"original_title":"...","summary":"...","core_points":["..."]}]}。'
                     "items 中必须覆盖输入里的全部 original_title，且不要遗漏。"
                     "如果你有足够把握，也可以在每个 item 里额外返回：new_facts、entities、signals、"
-                    "risk_or_uncertainty、why_it_matters、layer_notes。\n\n"
+                    "risk_or_uncertainty、why_it_matters、layer_notes。"
+                    f"{extra_user_block}\n"
                     f"{json.dumps(topic_payload, ensure_ascii=False, indent=2)}"
                 ),
                 normalize_response=lambda response, batch=current_batch: normalize_content_analysis_topic_response(response, batch),
@@ -246,9 +268,37 @@ def _complete_content_analysis_batch_until_success(
     raise last_error or StructuredLLMError(f"step 5 主题 {category.topic} 分析结果补齐失败。")
 
 
-def build_content_analysis_prompt_payload(item: ContentAnalysisItem) -> dict[str, Any]:
-    """构造发给模型的 step 5 单篇文章分析输入。"""
-    return {
+def _build_step5_item_payload_for_llm(
+    item: ContentAnalysisItem,
+    group_topic: str,
+    payload: ContentAnalysisInput,
+) -> dict[str, Any]:
+    ex = lookup_step5_topic_fulltext_excerpt(
+        item.original_url, payload.topic_fulltext_excerpts_by_url
+    )
+    if ex:
+        return build_content_analysis_prompt_payload(
+            item,
+            group_topic_name=group_topic,
+            topic_fulltext_excerpt=ex,
+        )
+    return build_content_analysis_prompt_payload(item)
+
+
+def build_content_analysis_prompt_payload(
+    item: ContentAnalysisItem,
+    *,
+    group_topic_name: str | None = None,
+    topic_fulltext_excerpt: str | None = None,
+) -> dict[str, Any]:
+    """构造发给模型的 step 5 单篇文章分析输入。
+
+    若提供 ``topic_fulltext_excerpt``（36kr 专题子项全文/转写），模型应以该段为主、并配合
+    ``group_topic_name`` 做「提炼标题 / 内容要点」式 summary（见 kr36 专用 system prompt）。
+    """
+    gname = (group_topic_name or item.topic or "").strip()
+    ex = (topic_fulltext_excerpt or "").strip()
+    row: dict[str, Any] = {
         "topic": item.topic,
         "channel": item.channel,
         "original_title": item.original_title,
@@ -278,6 +328,11 @@ def build_content_analysis_prompt_payload(item: ContentAnalysisItem) -> dict[str
             for selected in item.selected_contents
         ],
     }
+    if ex:
+        row["group_topic_name"] = gname
+        row["kr36_topic_subitem"] = True
+        row["topic_fulltext_excerpt"] = prepare_step5_prompt_text(ex, source="topic_fulltext")
+    return row
 
 
 def build_step5_item_entry_id(item: ContentAnalysisItem) -> str:
@@ -362,21 +417,27 @@ def content_analysis_items_from_batch_dict(payload: dict[str, Any]) -> list[Cont
     ]
 
 
-def build_content_analysis_topic_prompt_payload(category: ContentAnalysisSection) -> dict[str, Any]:
+def build_content_analysis_topic_prompt_payload(
+    category: ContentAnalysisSection,
+    *,
+    topic_fulltext_excerpts_by_url: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """构造发给模型的 step 5 单主题批量分析输入。"""
 
     topic_items: list[dict[str, Any]] = []
     for item in category.items:
-        item_payload = build_content_analysis_prompt_payload(item)
-        topic_items.append(
-            {
-                "original_title": item.original_title,
-                "original_url": item.original_url,
-                "channel": item.channel,
-                "original_content": item_payload["original_content"],
-                "selected_contents": item_payload["selected_contents"],
-            }
+        ex = lookup_step5_topic_fulltext_excerpt(
+            item.original_url, topic_fulltext_excerpts_by_url
         )
+        if ex:
+            item_payload = build_content_analysis_prompt_payload(
+                item,
+                group_topic_name=category.topic,
+                topic_fulltext_excerpt=ex,
+            )
+        else:
+            item_payload = build_content_analysis_prompt_payload(item)
+        topic_items.append(item_payload)
     return {
         "topic": category.topic,
         "items": topic_items,
@@ -399,6 +460,28 @@ def split_content_analysis_items_for_topic(
     ]
 
 
+def lookup_step5_topic_fulltext_excerpt(
+    original_url: str,
+    topic_fulltext_excerpts_by_url: dict[str, str] | None,
+) -> str:
+    """用与 step6 一致的键规则从 ``topic_fulltext_excerpts_by_url`` 取一段全文。"""
+    if not topic_fulltext_excerpts_by_url:
+        return ""
+    u = (original_url or "").strip()
+    if not u:
+        return ""
+    n = u.rstrip("/")
+    for key in (n, u, n + "/"):
+        got = topic_fulltext_excerpts_by_url.get(key)
+        if isinstance(got, str) and got.strip():
+            return got.strip()
+    return ""
+
+
+# 专题子项转写/全文进 step5 上界（单条），避免与多篇文章同批时撑爆 token
+STEP5_TOPIC_FULLTEXT_MAX_CHARS = 100_000
+
+
 def prepare_step5_prompt_text(text: str, *, source: str) -> str:
     """按正文来源压缩 step 5 发送给模型的正文内容。"""
 
@@ -407,6 +490,13 @@ def prepare_step5_prompt_text(text: str, *, source: str) -> str:
         return ""
     if source == "html_fallback":
         return truncate_html_fallback_prompt_text(normalized)
+    if source == "topic_fulltext":
+        if len(normalized) > STEP5_TOPIC_FULLTEXT_MAX_CHARS:
+            return (
+                normalized[:STEP5_TOPIC_FULLTEXT_MAX_CHARS]
+                + "\n... [为 step5 截断，后续略]"
+            )
+        return normalized
     return normalized
 
 
@@ -512,6 +602,7 @@ def sanitize_step5_link_candidates(payload: ContentAnalysisInput) -> ContentAnal
         input_path=payload.input_path,
         generated_at=payload.generated_at,
         categories=sanitized_categories,
+        topic_fulltext_excerpts_by_url=payload.topic_fulltext_excerpts_by_url,
     )
 
 

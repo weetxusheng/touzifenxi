@@ -167,3 +167,4 @@
 2026-04-22 15:13:15 [kr36] slider_captcha_solve_result attempted=true
 2026-04-22 15:13:15 [kr36] step4_slider_attempt url=https://36kr.com/p/2199303305939075 attempted=true
 2026-04-22 15:13:18 [kr36] step4_playwright_after_slider url=https://36kr.com/p/2199303305939075 html_length=90128
+[kr36] 2026-04-22 15:27:04 finished with exit code 0.

@@ -7,12 +7,17 @@ import os
 import random
 import re
 import subprocess
+import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import date
 from datetime import datetime
+from datetime import timedelta
 from html import unescape
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 from urllib.parse import quote
 from urllib.parse import urljoin
 
@@ -22,6 +27,43 @@ from utils.tools.content_models import RawArticleDetail, RawArticleRef, Standard
 KR36_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 KR36_COOKIES_FILE = KR36_PROJECT_ROOT / "config" / "kr36_cookies.json"
 KR36_DEBUG_LOG_FILE = KR36_PROJECT_ROOT / "log.txt"
+_kr36_debug_log_path_override: Path | None = None
+
+# 同进程内、跨 Kr36SourceAdapter 实例与 step4 旁路，共享「每 URL 风控恢复」计数（上限见 risk_max_recovery_rounds_per_url）。
+_kr36_risk_recovery_lock = threading.Lock()
+_kr36_risk_recovery_rounds: dict[str, int] = {}
+# 并行 0.5 与主清单时，多实例可能同时写回 kr36_cookies.json。
+_kr36_cookies_file_lock = threading.Lock()
+
+
+def _kr36_norm_risk_url_key(url: str) -> str:
+    return (url or "").strip().rstrip("/")
+
+
+def _kr36_risk_recovery_try_begin(url: str, max_rounds: int) -> bool:
+    """
+    准备发起一次 36kr 风控相关恢复（无痕刷新 / step4 滑块等）。
+    max_rounds<=0 表示不限制；若该 URL 已在本次进程中累计达到 max_rounds 次，则返回 False 且**不**再发起恢复。
+    返回 True 时会计数 +1（本次算一次恢复尝试）。
+    """
+
+    if max_rounds <= 0:
+        return True
+    key = _kr36_norm_risk_url_key(url)
+    with _kr36_risk_recovery_lock:
+        n = _kr36_risk_recovery_rounds.get(key, 0)
+        if n >= max_rounds:
+            return False
+        _kr36_risk_recovery_rounds[key] = n + 1
+    return True
+
+
+def _kr36_risk_recovery_reset(url: str) -> None:
+    """该 URL 已成功拿到正常页时调用，清掉累计，后续可再恢复。"""
+    key = _kr36_norm_risk_url_key(url)
+    with _kr36_risk_recovery_lock:
+        _kr36_risk_recovery_rounds.pop(key, None)
+
 
 KR36_ROOT = "https://36kr.com"
 KR36_DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
@@ -126,13 +168,107 @@ KR36_ACTIVITY_THEME_RE = re.compile(
 )
 KR36_RELATIVE_TIME_RE = re.compile(r"(刚刚|\d+\s*(分钟前|小时前|天前))")
 
+KR36_TOPIC_FOCUS_KEYWORDS: tuple[str, ...] = ("本周有大事", "36氪编辑精选")
+KR36_TOPIC_SECTION_RE = re.compile(
+    r'<ul[^>]+class="[^"]*\bkr-substance-(?:post|station\d*video)\b[^"]*"[^>]*>(?P<content>.*?)</ul>',
+    re.IGNORECASE | re.DOTALL,
+)
+KR36_TOPIC_LIST_ITEM_RE = re.compile(
+    r'<li[^>]+class="[^"]*\blist-item\b[^"]*"[^>]*>(?P<content>.*?)</li>',
+    re.IGNORECASE | re.DOTALL,
+)
+KR36_TOPIC_ITEM_DATE_RE = re.compile(
+    r"(?P<date>\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}月\d{1,2}日)",
+    re.IGNORECASE,
+)
+KR36_VIDEO_FILE_LINK_RE = re.compile(
+    r"https?://[^\"'\\\s<>]+?\.(?:mp4|m3u8)(?:\?[^\"'\\\s<>]*)?",
+    re.IGNORECASE,
+)
+KR36_VIDEO_FILE_LINK_ESCAPED_RE = re.compile(
+    r"https?:\\\\/\\\\/[^\"'\\\s<>]+?\.(?:mp4|m3u8)(?:\\\\/[^\"'\\\s<>]*)?",
+    re.IGNORECASE,
+)
+# 线上同时出现 video.36krcdn.com（单数）与 videos.36krcdn.com（复数）两种主机名
+KR36_VIDEO_CDN_LINK_RE = re.compile(
+    r"https?://video(?:s)?\.36krcdn\.com/[^\s\"'<>]+",
+    re.IGNORECASE,
+)
+# video 页：不强制 src 以 http 开头，允许 // 协议相对、无引号、无 scheme 的裸域等
+KR36_VIDEO_TAG_SRC_RE = re.compile(
+    r"<video[^>]+?src\s*=\s*"
+    r'(?:"(?P<vd>[^"]*)"|' + r"'(?P<vs>[^']*)'|"
+    r"(?P<vb>[^\s>]+))",
+    re.IGNORECASE,
+)
+KR36_BARE_CDN_HOST_RE = re.compile(
+    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9.-]*\.)+[a-zA-Z]{2,}/).+"
+)
+KR36_VIDEO_ID_RE = re.compile(r"/video/(?P<id>\d+)")
+
+
+def resolve_kr36_video_detail_page_url(item_url: str) -> str:
+    """
+    专题链路第三层：必须是 PC 视频详情页，才能拿到播放器 DOM（含 <video src>）与 initialState。
+    支持 m.36kr.com/video/{id} 等入口，统一归一到 https://36kr.com/video/{id}。
+    """
+    video_id = _extract_kr36_video_id(item_url)
+    if not video_id:
+        return ""
+    return f"{KR36_ROOT}/video/{video_id}"
+
+
+def deduce_topic_item_kind_from_36kr_item_url(item_url: str) -> str:
+    """
+    与 parse_topic_detail_html 写入 metadata.topic_item_kind 的规则一致，优先看 URL 路径形态：
+    含 ``/video/`` → ``video``；含 ``/p/`` → ``article``；其它返回空（由调用方用 metadata 兜底）。
+    """
+    u = (item_url or "").lower()
+    if "/video/" in u:
+        return "video"
+    if "/p/" in u:
+        return "article"
+    return ""
+
+
+def effective_topic_item_kind_for_download(item: RawArticleRef) -> str:
+    """
+    先按 URL 判断类型，与 topic_item_kind 同规则；仅当无法从链推断时再用 metadata。
+    """
+    d = deduce_topic_item_kind_from_36kr_item_url(item.url)
+    if d:
+        return d
+    return str((item.metadata or {}).get("topic_item_kind") or "").strip().lower()
+
 
 def _normalize_kr36_risk_verification_playwright_mode(raw: object) -> str:
-    """内置滑块脚本的 Playwright 形态：headless 或 agent-browser（有头，仍由脚本自动拖滑块）。"""
-    s = str(raw or "headless").strip().lower().replace("_", "-")
+    """内置滑块脚本的 Playwright 形态：默认有头 agent-browser；可设 headless。"""
+    s = str(raw or "agent-browser").strip().lower().replace("_", "-")
     if s in ("agent-browser", "visible", "headed"):
         return "agent-browser"
     return "headless"
+
+
+def _default_kr36_playwright_chromium_channel() -> str:
+    """未配置时按平台用系统已安装的浏览器（Playwright `channel=msedge|chrome`）。"""
+    if sys.platform == "win32":
+        return "msedge"
+    if sys.platform == "darwin":
+        return "chrome"
+    return ""
+
+
+def _normalize_kr36_playwright_chromium_channel(raw: object) -> str:
+    """
+    空 / auto = 与「默认」一致（Windows 为 Edge，macOS 为 Chrome，其它为内置 Chromium）；
+    bundled / none = 显式用 Playwright 自带 Chromium。
+    """
+    s = str(raw or "").strip().lower()
+    if s in ("", "auto", "default", "system"):
+        return _default_kr36_playwright_chromium_channel()
+    if s in ("bundled", "chromium", "playwright", "none", "off"):
+        return ""
+    return str(raw or "").strip()
 
 
 def _find_windows_chrome_executable() -> str:
@@ -311,6 +447,18 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             self._source_config.get("search_listing_enabled"),
             default=True,
         )
+        self.listing_topics_only = _bool_config(
+            self._source_config.get("listing_topics_only"),
+            default=False,
+        )
+        self.listing_parallel_topic_and_main = _bool_config(
+            self._source_config.get("listing_parallel_topic_and_main"),
+            default=True,
+        )
+        self.playwright_chromium_channel = _normalize_kr36_playwright_chromium_channel(
+            self._source_config.get("playwright_chromium_channel")
+            or self._source_config.get("playwright_channel")
+        )
         self.browser_fallback_enabled = _bool_config(
             self._source_config.get("browser_fallback_enabled"),
             default=False,
@@ -375,6 +523,10 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             self._source_config.get("risk_cooldown_jitter_ms"),
             default=5000,
         )
+        self.risk_max_recovery_rounds_per_url = _positive_int_config(
+            self._source_config.get("risk_max_recovery_rounds_per_url"),
+            default=3,
+        )
         self.deferred_retry_skip_blocked_ratio_percent = _positive_int_config(
             self._source_config.get("deferred_retry_skip_blocked_ratio_percent"),
             default=85,
@@ -382,6 +534,58 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         self.deferred_retry_skip_blocked_ratio_percent = max(
             1,
             min(100, int(self.deferred_retry_skip_blocked_ratio_percent)),
+        )
+        self.topic_deep_fetch_enabled = _bool_config(
+            self._source_config.get("topic_deep_fetch_enabled"),
+            default=True,
+        )
+        self.topic_focus_limit = _positive_int_config(
+            self._source_config.get("topic_focus_limit"),
+            default=2,
+        )
+        self.topic_focus_keywords = tuple(
+            _str_list_config(
+                self._source_config.get("topic_focus_keywords"),
+                default=list(KR36_TOPIC_FOCUS_KEYWORDS),
+            )
+        )
+        self.topic_previous_week_only = _bool_config(
+            self._source_config.get("topic_previous_week_only"),
+            default=True,
+        )
+        self.topic_item_download_enabled = _bool_config(
+            self._source_config.get("topic_item_download_enabled"),
+            default=True,
+        )
+        self.topic_video_download_enabled = _bool_config(
+            self._source_config.get("topic_video_download_enabled"),
+            default=True,
+        )
+        self.topic_article_download_enabled = _bool_config(
+            self._source_config.get("topic_article_download_enabled"),
+            default=True,
+        )
+        topic_download_dir_value = str(self._source_config.get("topic_download_dir") or "").strip()
+        self.topic_download_dir = Path(topic_download_dir_value) if topic_download_dir_value else Path.cwd()
+        self.topic_video_curl_max_time_seconds = _positive_int_config(
+            self._source_config.get("topic_video_curl_max_time_seconds"),
+            default=600,
+        )
+        self.topic_extract_audio_enabled = _bool_config(
+            self._source_config.get("topic_extract_audio_enabled"),
+            default=True,
+        )
+        self.topic_asr_enabled = _bool_config(
+            self._source_config.get("topic_asr_enabled"),
+            default=True,
+        )
+        self.topic_asr_max_audio_mb = _positive_int_config(
+            self._source_config.get("topic_asr_max_audio_mb"),
+            default=95,
+        )
+        self.topic_asr_timeout_seconds = _positive_int_config(
+            self._source_config.get("topic_asr_timeout_seconds"),
+            default=300,
         )
         if self.http_only_mode:
             self.retry_on_risk_enabled = False
@@ -391,61 +595,98 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         self._last_risk_detected_at = 0.0
         self._risk_cooldown_until = 0.0
 
-    def fetch_listing(self, report_date: date) -> list[RawArticleRef]:
-        refs: list[RawArticleRef] = []
-        deferred_pages: list[dict[str, str]] = []
-        excluded_channels = {KR36_TOPICS_URL.rstrip("/"), KR36_ACTIVITY_URL.rstrip("/")}
-        effective_channel_urls = tuple(
-            url
-            for url in self.channel_urls
-            if str(url or "").strip().rstrip("/") not in excluded_channels
-        )
-        search_rounds = len(KR36_SEARCH_CATEGORY_KEYWORDS) if self.search_listing_enabled else 0
-        rounds_total = 2 + search_rounds + len(effective_channel_urls)
-        round_index = 0
-        _append_kr36_debug_log(
-            f"[kr36] listing_begin report_date={report_date.isoformat()} rounds_total={rounds_total} "
-            f"candidate_limit={self.candidate_limit}"
-        )
+    def _playwright_chromium_launch_kwargs(
+        self, *, headless: bool, incognito: bool = False
+    ) -> dict[str, object]:
+        if incognito:
+            args: list[str] = [
+                "--incognito",
+                "--disable-blink-features=AutomationControlled",
+            ]
+        else:
+            args = ["--disable-blink-features=AutomationControlled"]
+        out: dict[str, object] = {"headless": headless, "args": args}
+        ch = (self.playwright_chromium_channel or "").strip()
+        if ch:
+            out["channel"] = ch
+        return out
 
-        # 1) 专题页：全量抓取，不受日期和 candidate_limit 约束。
-        round_index += 1
+    def _playwright_launch_chromium(self, playwright: object, lkw: dict[str, object]) -> object:
+        try:
+            return playwright.chromium.launch(**lkw)  # type: ignore[no-untyped-call,union-attr]
+        except Exception as error:
+            if lkw.get("channel"):
+                lkw2 = {k: v for k, v in lkw.items() if k != "channel"}
+                _append_kr36_debug_log(
+                    f"[kr36] playwright_chromium_channel_launch_failed err={error!r} "
+                    f"channel={lkw.get('channel')!r} retry=bundled_chromium"
+                )
+                return playwright.chromium.launch(**lkw2)  # type: ignore[no-untyped-call,union-attr]
+            raise
+
+    def _run_listing_step05_topics(
+        self,
+        deferred_pages: list[dict[str, str]],
+        report_date: date,
+        *,
+        rounds_total: int,
+    ) -> list[RawArticleRef]:
+        """步骤 0.5：/topics/ 与专题详情（与主清单可并行时跑独立线程）。"""
+        round_index = 1
         started_at = time.time()
         _append_kr36_debug_log(
-            f"[kr36] round_start page={round_index} round={round_index}/{rounds_total} "
+            f"[kr36] step0.5_topic_round_start page={round_index} round={round_index}/{rounds_total} "
             f"stage=topics url={KR36_TOPICS_URL}"
         )
-        _append_kr36_stage_log(action="进入", stage_name="专题页", data_count=0, total_refs=len(refs))
+        _append_kr36_stage_log(action="进入", stage_name="专题页(0.5步)", data_count=0, total_refs=0)
         topics_html = self._fetch_text(KR36_TOPICS_URL)
+        topic_items: list[RawArticleRef] = []
         if _looks_like_captcha_or_block(topics_html):
-            deferred_pages.append({"stage": "topics", "category": "专题", "url": KR36_TOPICS_URL})
-            _append_kr36_debug_log(
-                f"[kr36] page_result page={round_index} stage=topics status=deferred_blocked "
-                f"url={KR36_TOPICS_URL} fetched=0 total_refs={len(refs)}"
+            recovered_html = self.step4_fetch_html_via_playwright_slider(KR36_TOPICS_URL)
+            if not _looks_like_captcha_or_block(recovered_html):
+                topics_html = recovered_html
+            else:
+                deferred_pages.append({"stage": "topics", "category": "专题", "url": KR36_TOPICS_URL})
+                _append_kr36_debug_log(
+                    f"[kr36] page_result page={round_index} stage=topics status=deferred_blocked "
+                    f"url={KR36_TOPICS_URL} fetched=0 total_refs=0"
+                )
+        if not _looks_like_captcha_or_block(topics_html):
+            topic_items = self._collect_topic_items_from_topics_html(
+                topics_html,
+                report_date=report_date,
+                deferred_pages=deferred_pages,
             )
-            topics_html = ""
-        topic_items = parse_topics_listing_html(
-            topics_html,
-            base_url=KR36_ROOT,
-            listing_url=KR36_TOPICS_URL,
-            report_date=report_date,
-        )
-        refs.extend(topic_items)
         _append_kr36_debug_log(
-            f"[kr36] round_end page={round_index} round={round_index}/{rounds_total} stage=topics status=ok "
-            f"fetched={len(topic_items)} total_refs={len(refs)} elapsed_ms={int((time.time() - started_at) * 1000)}"
+            f"[kr36] step0.5_topic_round_end page={round_index} round={round_index}/{rounds_total} stage=topics status=ok "
+            f"fetched={len(topic_items)} total_topic_refs={len(topic_items)} "
+            f"elapsed_ms={int((time.time() - started_at) * 1000)}"
         )
-        _append_kr36_stage_log(action="完成", stage_name="专题页", data_count=len(topic_items), total_refs=len(refs))
+        _append_kr36_stage_log(
+            action="完成", stage_name="专题页(0.5步)", data_count=len(topic_items), total_refs=len(topic_items)
+        )
+        return topic_items
+
+    def _run_listing_non_topic_stages(
+        self,
+        deferred_pages: list[dict[str, str]],
+        report_date: date,
+        rounds_total: int,
+        effective_channel_urls: tuple[str, ...],
+    ) -> tuple[list[RawArticleRef], dict[str, int], int]:
+        """步骤 1 清单主链：活动 + 搜索 + 频道（不含步骤 0.5 专题）。"""
+        refs: list[RawArticleRef] = []
+        round_index = 1
         if round_index < rounds_total:
             _append_kr36_debug_log(
-                f"[kr36] round_next round={round_index + 1}/{rounds_total} stage=activity"
+                f"[kr36] step1_listing_next round={round_index + 1}/{rounds_total} stage=activity"
             )
 
         # 2) 活动页：全量抓取，不受日期和 candidate_limit 约束。
         round_index += 1
         started_at = time.time()
         _append_kr36_debug_log(
-            f"[kr36] round_start page={round_index} round={round_index}/{rounds_total} "
+            f"[kr36] step1_main_round_start page={round_index} round={round_index}/{rounds_total} "
             f"stage=activity url={KR36_ACTIVITY_URL}"
         )
         _append_kr36_stage_log(action="进入", stage_name="活动页", data_count=0, total_refs=len(refs))
@@ -475,7 +716,6 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             )
 
         info_categories = {name for name, _ in KR36_SEARCH_CATEGORY_KEYWORDS}
-        # 3) 指定栏目：每个资讯子类独立取搜索结果前 5 篇（可通过配置关闭）。
         info_counts: dict[str, int] = {}
         info_total_count = 0
         if self.search_listing_enabled:
@@ -526,7 +766,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                             f"[kr36] listing_end report_date={report_date.isoformat()} total_refs={len(refs)} "
                             f"stopped_by=candidate_limit"
                         )
-                        return refs
+                        return refs, info_counts, info_total_count
                 _append_kr36_debug_log(
                     f"[kr36] round_end page={round_index} round={round_index}/{rounds_total} "
                     f"stage=search category={category} status=ok "
@@ -560,7 +800,6 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         else:
             _append_kr36_debug_log("[kr36] search_stage_skipped reason=search_listing_enabled_false")
 
-        # 4) 其余频道入口继续抓取。
         for channel_url in effective_channel_urls:
             round_index += 1
             started_at = time.time()
@@ -608,7 +847,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                         f"[kr36] listing_end report_date={report_date.isoformat()} total_refs={len(refs)} "
                         f"stopped_by=candidate_limit"
                     )
-                    return refs
+                    return refs, info_counts, info_total_count
             _append_kr36_debug_log(
                 f"[kr36] round_end page={round_index} round={round_index}/{rounds_total} stage=channel status=ok "
                 f"url={channel_url} fetched={len(refs) - before_count} total_refs={len(refs)} "
@@ -624,6 +863,67 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 _append_kr36_debug_log(
                     f"[kr36] round_next round={round_index + 1}/{rounds_total} stage=channel"
                 )
+        return refs, info_counts, info_total_count
+
+    def _fetch_listing_parallel(self, report_date: date) -> list[RawArticleRef]:
+        excluded_channels = {KR36_TOPICS_URL.rstrip("/"), KR36_ACTIVITY_URL.rstrip("/")}
+        effective_channel_urls = tuple(
+            url
+            for url in self.channel_urls
+            if str(url or "").strip().rstrip("/") not in excluded_channels
+        )
+        search_rounds = len(KR36_SEARCH_CATEGORY_KEYWORDS) if self.search_listing_enabled else 0
+        rounds_total = 2 + search_rounds + len(effective_channel_urls)
+        _append_kr36_debug_log(
+            f"[kr36] listing_begin report_date={report_date.isoformat()} rounds_total={rounds_total} "
+            f"candidate_limit={self.candidate_limit} parallel=true step0.5_plus_step1"
+        )
+        d_topic: list[dict[str, str]] = []
+        d_main: list[dict[str, str]] = []
+        cfg = dict(self._source_config)
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            ft = ex.submit(
+                lambda: Kr36SourceAdapter(cfg)._run_listing_step05_topics(
+                    d_topic, report_date, rounds_total=rounds_total
+                )
+            )
+            fm = ex.submit(
+                lambda: Kr36SourceAdapter(cfg)._run_listing_non_topic_stages(
+                    d_main, report_date, rounds_total, effective_channel_urls
+                )
+            )
+            topic_items = ft.result()
+            main_refs, info_counts, info_total_count = fm.result()
+        deferred_pages: list[dict[str, str]] = d_topic + d_main
+        merged = list(topic_items)
+        merged.extend(main_refs)
+        n0 = len(merged)
+        if n0 > self.candidate_limit:
+            merged = merged[: self.candidate_limit]
+            _append_kr36_debug_log(
+                f"[kr36] listing_parallel_merged_trim before={n0} after={len(merged)} limit={self.candidate_limit}"
+            )
+        return self._deferred_listing_round(
+            merged,
+            deferred_pages,
+            report_date=report_date,
+            rounds_total=rounds_total,
+            info_counts=info_counts,
+            info_total_count=info_total_count,
+        )
+
+    def _deferred_listing_round(
+        self,
+        refs: list[RawArticleRef],
+        deferred_pages: list[dict[str, str]],
+        *,
+        report_date: date,
+        rounds_total: int,
+        info_counts: dict[str, int],
+        info_total_count: int,
+    ) -> list[RawArticleRef]:
+        info_total = int(info_total_count)
+        info_categories = {name for name, _ in KR36_SEARCH_CATEGORY_KEYWORDS}
         if deferred_pages:
             blocked_ratio_percent = int((len(deferred_pages) * 100) / max(1, rounds_total))
             if blocked_ratio_percent >= self.deferred_retry_skip_blocked_ratio_percent:
@@ -676,6 +976,12 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     )
                     retry_html = self._fetch_text(retry_url)
                     if _looks_like_captcha_or_block(retry_html):
+                        if stage in {"topics", "topic_detail"}:
+                            recovered_html = self.step4_fetch_html_via_playwright_slider(retry_url)
+                            if not _looks_like_captcha_or_block(recovered_html):
+                                retry_html = recovered_html
+                                passed = True
+                                break
                         _append_kr36_debug_log(
                             f"[kr36] deferred_retry_attempt_blocked retry_page={retry_index}/{len(deferred_pages)} "
                             f"attempt={attempt}/{retry_attempts} stage={stage} category={category} url={retry_url}"
@@ -694,13 +1000,29 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 before_count = len(refs)
                 if stage == "topics":
                     refs.extend(
-                        parse_topics_listing_html(
+                        self._collect_topic_items_from_topics_html(
                             retry_html,
-                            base_url=KR36_ROOT,
-                            listing_url=retry_url,
                             report_date=report_date,
+                            deferred_pages=None,
                         )
                     )
+                elif stage == "topic_detail":
+                    topic_title = str(task.get("topic_title") or "")
+                    window_start: date | None = None
+                    window_end: date | None = None
+                    if self.topic_previous_week_only:
+                        window_start, window_end = resolve_previous_week_window(report_date)
+                    topic_items_retry = parse_topic_detail_html(
+                        retry_html,
+                        base_url=KR36_ROOT,
+                        listing_url=retry_url,
+                        report_date=report_date,
+                        topic_title=topic_title,
+                        window_start=window_start,
+                        window_end=window_end,
+                    )
+                    refs.extend(topic_items_retry)
+                    self._download_topic_items(topic_items_retry, report_date=report_date)
                 elif stage == "activity":
                     refs.extend(
                         parse_activity_listing_html(
@@ -723,8 +1045,8 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                         refs.append(item)
                         if category:
                             info_counts[category] = info_counts.get(category, 0) + 1
-                        info_total_count += 1
-                        if info_total_count >= self.candidate_limit:
+                        info_total += 1
+                        if info_total >= self.candidate_limit:
                             break
                 else:
                     for item in parse_listing_html(
@@ -752,9 +1074,9 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     f"[kr36] deferred_retry_done stage={stage} category={category} url={retry_url} "
                     f"fetched={len(refs) - before_count} total_refs={len(refs)}"
                 )
-                if len(refs) >= self.candidate_limit or info_total_count >= self.candidate_limit:
+                if len(refs) >= self.candidate_limit or info_total >= self.candidate_limit:
                     _append_kr36_debug_log(
-                        f"[kr36] deferred_retry_stopped_by_limit total_refs={len(refs)} info_total_count={info_total_count}"
+                        f"[kr36] deferred_retry_stopped_by_limit total_refs={len(refs)} info_total_count={info_total}"
                     )
                     break
             _append_kr36_debug_log(
@@ -768,8 +1090,315 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         )
         return refs
 
+    def fetch_listing(self, report_date: date) -> list[RawArticleRef]:
+        if self.listing_parallel_topic_and_main and not self.listing_topics_only:
+            return self._fetch_listing_parallel(report_date)
+        return self._fetch_listing_sequential(report_date)
+
+    def _fetch_listing_sequential(self, report_date: date) -> list[RawArticleRef]:
+        deferred_pages: list[dict[str, str]] = []
+        excluded_channels = {KR36_TOPICS_URL.rstrip("/"), KR36_ACTIVITY_URL.rstrip("/")}
+        effective_channel_urls = tuple(
+            url
+            for url in self.channel_urls
+            if str(url or "").strip().rstrip("/") not in excluded_channels
+        )
+        search_rounds = len(KR36_SEARCH_CATEGORY_KEYWORDS) if self.search_listing_enabled else 0
+        if self.listing_topics_only:
+            rounds_total = 1
+        else:
+            rounds_total = 2 + search_rounds + len(effective_channel_urls)
+        _append_kr36_debug_log(
+            f"[kr36] listing_begin report_date={report_date.isoformat()} rounds_total={rounds_total} "
+            f"candidate_limit={self.candidate_limit} parallel=false step0.5_sequential_then_step1"
+        )
+        topic_items = self._run_listing_step05_topics(
+            deferred_pages, report_date, rounds_total=rounds_total
+        )
+        if self.listing_topics_only:
+            _append_kr36_debug_log("[kr36] listing_topics_only=true 跳过活动/搜索/频道")
+            return self._deferred_listing_round(
+                list(topic_items),
+                deferred_pages,
+                report_date=report_date,
+                rounds_total=rounds_total,
+                info_counts={},
+                info_total_count=0,
+            )
+        main_refs, info_counts, info_total_count = self._run_listing_non_topic_stages(
+            deferred_pages, report_date, rounds_total, effective_channel_urls
+        )
+        merged = list(topic_items)
+        merged.extend(main_refs)
+        n0 = len(merged)
+        if n0 > self.candidate_limit:
+            merged = merged[: self.candidate_limit]
+            _append_kr36_debug_log(
+                f"[kr36] listing_sequential_merged_trim before={n0} after={len(merged)} limit={self.candidate_limit}"
+            )
+        return self._deferred_listing_round(
+            merged,
+            deferred_pages,
+            report_date=report_date,
+            rounds_total=rounds_total,
+            info_counts=info_counts,
+            info_total_count=info_total_count,
+        )
+
+    def _collect_topic_items_from_topics_html(
+        self,
+        topics_html: str,
+        *,
+        report_date: date,
+        deferred_pages: list[dict[str, str]] | None,
+    ) -> list[RawArticleRef]:
+        """① /topics/ 列表 → ② 聚焦专题详情页解析条目；③ 视频在 _download_topic_item_asset 打开 /video/{id} 再下 CDN。
+        五段语义见 ``topic_focus_step15``（Step 1.5）。"""
+        from . import topic_focus_step15 as t15
+
+        focus_topics, topic_refs = t15.step1_parse_topics_listing_and_select_focus(
+            topics_html,
+            report_date=report_date,
+            focus_keywords=self.topic_focus_keywords,
+            focus_limit=self.topic_focus_limit,
+        )
+        if not focus_topics:
+            return topic_refs[: self.topic_focus_limit]
+        if not self.topic_deep_fetch_enabled:
+            return focus_topics
+
+        window_start, window_end = t15.topic_time_window(
+            report_date, previous_week_only=self.topic_previous_week_only
+        )
+
+        collected: list[RawArticleRef] = []
+        for topic_ref in focus_topics:
+            topic_html = self._fetch_text(topic_ref.url)
+            if _looks_like_captcha_or_block(topic_html):
+                recovered_html = self.step4_fetch_html_via_playwright_slider(topic_ref.url)
+                if not _looks_like_captcha_or_block(recovered_html):
+                    topic_html = recovered_html
+                else:
+                    if deferred_pages is not None:
+                        deferred_pages.append(
+                            {
+                                "stage": "topic_detail",
+                                "category": "专题",
+                                "url": topic_ref.url,
+                                "topic_title": topic_ref.title,
+                            }
+                        )
+                    continue
+            topic_items = t15.step2_parse_topic_items_from_detail_html(
+                topic_html,
+                report_date=report_date,
+                topic_title=topic_ref.title,
+                listing_url=topic_ref.url,
+                window_start=window_start,
+                window_end=window_end,
+            )
+            collected.extend(topic_items)
+            self._download_topic_items(topic_items, report_date=report_date)
+
+        if collected:
+            return collected
+        return focus_topics
+
+    def _download_topic_items(self, items: list[RawArticleRef], *, report_date: date) -> None:
+        if not self.topic_item_download_enabled or not items:
+            return
+        for item in items:
+            item_kind = effective_topic_item_kind_for_download(item)
+            if not item_kind:
+                continue
+            if item_kind == "video" and not self.topic_video_download_enabled:
+                continue
+            if item_kind == "article" and not self.topic_article_download_enabled:
+                continue
+            try:
+                self._download_topic_item_asset(item, report_date=report_date)
+            except Exception as error:
+                _append_kr36_debug_log(
+                    f"[kr36] topic_download_error url={item.url} kind={item_kind} error={error}"
+                )
+
+    def _download_topic_item_asset(self, item: RawArticleRef, *, report_date: date) -> None:
+        metadata = item.metadata or {}
+        item_kind = effective_topic_item_kind_for_download(item)
+        topic_title = str(metadata.get("topic_title") or metadata.get("topic_url") or "topic")
+        item_date = str(metadata.get("topic_item_date") or report_date.isoformat())
+        if not item_kind:
+            return
+        raw_tag_kind = str(metadata.get("topic_item_kind") or "").strip().lower()
+        if item_kind == "video" and raw_tag_kind and raw_tag_kind != "video":
+            _append_kr36_debug_log(
+                f"[kr36] topic_item_kind_resolved url={item.url!r} "
+                f"metadata_topic_item_kind={raw_tag_kind!r} -> video (from path)"
+            )
+        elif item_kind == "article" and raw_tag_kind and raw_tag_kind not in ("article", ""):
+            _append_kr36_debug_log(
+                f"[kr36] topic_item_kind_resolved url={item.url!r} "
+                f"metadata_topic_item_kind={raw_tag_kind!r} -> article (from path)"
+            )
+
+        download_root = (self.topic_download_dir / "kr36_topic_downloads").resolve()
+        day_dir = (
+            download_root
+            / _safe_path_component(topic_title)
+            / item_date
+            / ("videos" if item_kind == "video" else "articles")
+        )
+        day_dir.mkdir(parents=True, exist_ok=True)
+        basename = _safe_filename(f"{item.title}_{item.article_id}")
+
+        # 三层：① /topics/ 列表 → ② 专题详情 → ③ https://36kr.com/video/{id} 播放页（仅在此页解析 src / initialState 并下载）
+        if item_kind == "video":
+            video_page_url = resolve_kr36_video_detail_page_url(item.url)
+            if not video_page_url:
+                _append_kr36_debug_log(f"[kr36] topic_video_skip_no_video_id listing_url={item.url!r}")
+                return
+        else:
+            video_page_url = item.url
+
+        if item_kind == "video":
+            try:
+                html = self._fetch_text(video_page_url)
+            except Exception as error:
+                _append_kr36_debug_log(
+                    f"[kr36] topic_video_initial_fetch_exception page={video_page_url!r} err={error!r}"
+                )
+                html = self._kr36_topic_video_page_recover_with_playwright(
+                    video_page_url, log_reason="initial_curl_exception"
+                )
+        else:
+            html = self._fetch_text(video_page_url)
+        if item_kind == "video" and _looks_like_captcha_or_block(html):
+            # 视频页命中风控时，先走滑块，再回到 /video/{id} 重抓真实播放页。
+            html = self._kr36_topic_video_page_recover_with_playwright(
+                video_page_url, log_reason="captcha_or_block"
+            )
+        if item_kind == "video" and html:
+            from . import topic_focus_step15 as t15
+
+            if not t15.step5_list_video_cdn_urls_from_subpage_html(html):
+                # 壳页/短页（~14k）常不含 initialState/流地址，与风控同路径再拉，避免只落 .html
+                _append_kr36_debug_log(
+                    f"[kr36] topic_video_no_cdn_in_html len={len(html)} page={video_page_url!r} "
+                    "trying_playwright_slider"
+                )
+                html = self._kr36_topic_video_page_recover_with_playwright(
+                    video_page_url, log_reason="no_cdn_in_html"
+                )
+        if not html:
+            return
+
+        if item_kind == "video":
+            from . import topic_media
+            from . import volc_speech as kr36_volc_speech
+
+            cookie_str = ""
+            effective_cookies = load_kr36_cookies()
+            if effective_cookies:
+                cookie_str = "; ".join(f"{k}={v}" for k, v in effective_cookies.items())
+
+            from . import topic_focus_step15 as t15
+
+            cdn_urls = list(t15.step5_list_video_cdn_urls_from_subpage_html(html))
+            cdn_prev = cdn_urls[0][:120] if cdn_urls else "-"
+            _append_kr36_debug_log(
+                f"[kr36] topic_video_cdn_extract count={len(cdn_urls)} "
+                f"html_len={len(html)} preview={cdn_prev!r} page={video_page_url!r}"
+            )
+
+            video_saved: Path | None = None
+            for video_url in cdn_urls:
+                ext = _guess_file_extension_from_url(video_url, default=".mp4")
+                if ".m3u8" in ext.lower() or ".m3u8" in video_url.lower():
+                    output_path = day_dir / f"{basename}.mp4"
+                else:
+                    output_path = day_dir / f"{basename}{ext}"
+                ok, dl_err = t15.step5_download_cdn_url_to_path(
+                    video_url,
+                    output_path,
+                    video_page_referer=video_page_url,
+                    cookie_header=cookie_str,
+                    user_agent=KR36_DEFAULT_USER_AGENT,
+                    curl_max_time_seconds=self.topic_video_curl_max_time_seconds,
+                )
+                if ok:
+                    video_saved = output_path
+                    _append_kr36_debug_log(
+                        f"[kr36] topic_video_download_ok cdn={video_url[:160]!r} local={video_saved}"
+                    )
+                    break
+                _append_kr36_debug_log(
+                    f"[kr36] topic_video_download_failed url={video_url} page={video_page_url} err={dl_err}"
+                )
+
+            if not video_saved:
+                _append_kr36_debug_log(
+                    f"[kr36] topic_video_fallback_html_only cdn_tried={len(cdn_urls)} "
+                    f"page={video_page_url!r} html_len={len(html)}"
+                )
+                fallback_path = day_dir / f"{basename}.html"
+                fallback_path.write_text(html, encoding="utf-8")
+                return
+
+            creds = kr36_volc_speech.resolve_volc_speech_credentials(config=self._source_config)
+            mp3_path = day_dir / f"{basename}.asr.mp3"
+            transcript_path = day_dir / f"{basename}.transcript.txt"
+            if self.topic_extract_audio_enabled and topic_media.ffmpeg_executable():
+                if not t15.step6a_extract_mp3_for_asr(video_saved, mp3_path):
+                    _append_kr36_debug_log(f"[kr36] topic_extract_audio_failed video={video_saved}")
+                elif self.topic_asr_enabled and not creds:
+                    _append_kr36_debug_log(
+                        f"[kr36] topic_asr_skip_no_credentials audio={mp3_path} "
+                        "hint=set sources.kr36 volc_speech_api_key (or app_key+access_key) in config/runtime.local.json"
+                    )
+                elif self.topic_asr_enabled and creds:
+                    max_bytes = max(1, self.topic_asr_max_audio_mb) * 1024 * 1024
+                    if mp3_path.stat().st_size > max_bytes:
+                        _append_kr36_debug_log(
+                            f"[kr36] topic_asr_skip_too_large path={mp3_path} "
+                            f"bytes={mp3_path.stat().st_size}"
+                        )
+                    else:
+                        try:
+                            code, nchars = t15.step6b_transcribe_mp3_to_transcript_files(
+                                mp3_path,
+                                transcript_path=transcript_path,
+                                asr_json_path=day_dir / f"{basename}.asr.json",
+                                video_path_for_json=video_saved,
+                                config=self._source_config,
+                                timeout_seconds=float(self.topic_asr_timeout_seconds),
+                            )
+                        except Exception as exc:
+                            _append_kr36_debug_log(
+                                f"[kr36] topic_asr_error video={video_saved} err={exc}"
+                            )
+                        else:
+                            _append_kr36_debug_log(
+                                f"[kr36] topic_asr_ok chars={nchars} transcript={transcript_path} "
+                                f"code={code} role={t15.TOPIC_ITEM_FULLTEXT_ROLE_ASR}"
+                            )
+            elif self.topic_asr_enabled and creds:
+                _append_kr36_debug_log(
+                    f"[kr36] topic_asr_skip_extract_disabled_or_no_ffmpeg video={video_saved}"
+                )
+            elif self.topic_asr_enabled and not creds and (
+                not self.topic_extract_audio_enabled or not topic_media.ffmpeg_executable()
+            ):
+                _append_kr36_debug_log(
+                    f"[kr36] topic_asr_skip_no_credentials video={video_saved} "
+                    "hint=set sources.kr36.volc_speech_api_key; need ffmpeg+extract for flash ASR"
+                )
+            return
+
+        output_path = day_dir / f"{basename}.html"
+        output_path.write_text(html, encoding="utf-8")
+
     def fetch_article(self, ref: RawArticleRef) -> RawArticleDetail:
-        # step4 会重新抓原文，这里仅保留 step1/2 所需的结构化元数据。
+        # step4 会重新抓原文；专题视频的全文在 topic_downloads 下 *.transcript.txt（见 topic-focus-step15.md），不必再对 /video/ 当文章 HTML 取全文。
         return RawArticleDetail(
             source_site=self.source_site,
             article_id=ref.article_id,
@@ -824,7 +1453,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             "risk_incognito_cookie_refresh_enabled": False,
             "risk_verification_auto_solver": False,
             "risk_verification_wait_ms": 3000,  # 进入风控后、执行 verification 命令前的等待（毫秒）
-            "risk_verification_playwright_mode": "headless",
+            "risk_verification_playwright_mode": "agent-browser",
             "risk_verification_agent_browser_retry": False,
             "request_interval_ms": 22000,
             "request_interval_jitter_ms": 3000,
@@ -834,6 +1463,9 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             "same_url_cooldown_ms": 0,
             "info_per_category_limit": 5,
             "search_listing_enabled": True,
+            "listing_topics_only": False,
+            "listing_parallel_topic_and_main": True,
+            "playwright_chromium_channel": "auto",
             "browser_fallback_enabled": False,
             "browser_fallback_headless": False,
             "browser_verification_timeout_ms": 180000,
@@ -850,7 +1482,23 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             "deferred_retry_wait_jitter_ms": 5000,
             "risk_cooldown_after_block_ms": 90000,
             "risk_cooldown_jitter_ms": 5000,
+            "risk_max_recovery_rounds_per_url": 3,
             "deferred_retry_skip_blocked_ratio_percent": 85,
+            "topic_deep_fetch_enabled": True,
+            "topic_focus_limit": 2,
+            "topic_focus_keywords": list(KR36_TOPIC_FOCUS_KEYWORDS),
+            "topic_previous_week_only": True,
+            "topic_item_download_enabled": True,
+            "topic_video_download_enabled": True,
+            "topic_article_download_enabled": True,
+            "topic_download_dir": ".",
+            "topic_video_curl_max_time_seconds": 600,
+            "topic_extract_audio_enabled": True,
+            "topic_asr_enabled": True,
+            "topic_asr_max_audio_mb": 95,
+            "topic_asr_timeout_seconds": 300,
+            "volc_speech_api_key": "",
+            "volc_speech_uid": "",
         }
 
     def _fetch_text(self, url: str) -> str:
@@ -866,6 +1514,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         _append_kr36_debug_log(f"[kr36] fetch_start url={url}")
         html = self._curl_text(url)
         if _is_usable_html(html):
+            _kr36_risk_recovery_reset(url)
             fetch_method = "curl"
             if self._should_enrich_kr36_search_with_playwright(url, html):
                 enriched = self._kr36_enrich_search_html_via_playwright_and_slider(url)
@@ -919,6 +1568,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     self._wait_before_next_request(url)
                     html = self._curl_text(url)
                     if _is_usable_html(html):
+                        _kr36_risk_recovery_reset(url)
                         _append_kr36_debug_log(
                             f"[kr36] fetch_ok method=risk_cookie_refresh url={url} html_length={len(html)}"
                         )
@@ -1018,6 +1668,15 @@ class Kr36SourceAdapter(ContentSourceAdapter):
 
     def _run_risk_verification(self, url: str, *, playwright_mode: str | None = None) -> bool:
         _ = playwright_mode
+        max_rr = int(getattr(self, "risk_max_recovery_rounds_per_url", 3) or 3)
+        if not _kr36_risk_recovery_try_begin(url, max_rr):
+            _append_kr36_debug_log(
+                f"[kr36] risk_verification_skipped_limit url={url} max_rounds={max_rr}"
+            )
+            print(
+                f"[kr36] 该 URL 风控恢复已达上限（{max_rr} 次），跳过 Cookie 验证/刷新：{url}"
+            )
+            return False
         env = os.environ.copy()
         env["KR36_RISK_URL"] = url
         command = str(self.risk_verification_command or "").strip()
@@ -1098,18 +1757,32 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         except ImportError:
             _append_kr36_debug_log("[kr36] step4_playwright_skip reason=missing_playwright")
             return ""
+        max_rr = int(getattr(self, "risk_max_recovery_rounds_per_url", 3) or 3)
+        if not _kr36_risk_recovery_try_begin(url, max_rr):
+            _append_kr36_debug_log(
+                f"[kr36] step4_playwright_skip reason=risk_recovery_limit url={url} max_rounds={max_rr}"
+            )
+            print(
+                f"[kr36] 该 URL 风控恢复已达上限（{max_rr} 次），跳过 Playwright/滑块，下一条：{url}"
+            )
+            return ""
         headless = self.risk_verification_playwright_mode == "headless"
         timeout_ms = max(35000, int(self.browser_timeout_ms))
         poll = max(300, int(self.browser_verification_poll_ms))
         deadline_s = max(15.0, float(self.browser_verification_timeout_ms) / 1000.0)
-        print(f"[kr36] Step4 检测到 36kr 风控/需验证，启动 Playwright（headless={str(headless).lower()}）+ 滑块：{url}")
-        _append_kr36_debug_log(f"[kr36] step4_playwright_slider_start url={url} headless={str(headless).lower()}")
+        ch_note = (self.playwright_chromium_channel or "bundled").strip() or "bundled"
+        print(
+            f"[kr36] Step4 风控/验证：Playwright headless={str(headless).lower()} channel={ch_note!r} url={url}"
+        )
+        _append_kr36_debug_log(
+            f"[kr36] step4_playwright_slider_start url={url} headless={str(headless).lower()} channel={ch_note!r}"
+        )
         try:
             with sync_playwright() as playwright:
-                browser = playwright.chromium.launch(
-                    headless=headless,
-                    args=["--disable-blink-features=AutomationControlled"],
+                lkw = self._playwright_chromium_launch_kwargs(
+                    headless=headless, incognito=False
                 )
+                browser = self._playwright_launch_chromium(playwright, lkw)
                 context = browser.new_context(
                     locale="zh-CN",
                     user_agent=KR36_DEFAULT_USER_AGENT,
@@ -1132,7 +1805,9 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                         html = page.content()
                     except Exception:
                         html = ""
-                    if _is_usable_html(html):
+                    if _is_usable_html(html) or _kr36_step4_post_slider_page_looks_resolved(
+                        html
+                    ):
                         if self.persist_browser_cookies:
                             save_kr36_cookies(extract_kr36_cookie_values(context.cookies()))
                         _append_kr36_debug_log(
@@ -1140,6 +1815,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                         )
                         context.close()
                         browser.close()
+                        _kr36_risk_recovery_reset(url)
                         return html
                     if _looks_like_captcha_or_block(html):
                         solved = _kr36_try_solve_slider_captcha(page)
@@ -1151,6 +1827,10 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                                 page.wait_for_load_state("domcontentloaded", timeout=10000)
                             except Exception:
                                 pass
+                            try:
+                                page.wait_for_load_state("load", timeout=15000)
+                            except Exception:
+                                pass
                             page.wait_for_timeout(3000)
                             if self.persist_browser_cookies:
                                 save_kr36_cookies(extract_kr36_cookie_values(context.cookies()))
@@ -1158,12 +1838,29 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                                 html = page.content()
                             except Exception:
                                 html = ""
-                            if _is_usable_html(html):
+                            if not (
+                                _is_usable_html(html)
+                                or _kr36_step4_post_slider_page_looks_resolved(html)
+                            ):
+                                page.wait_for_timeout(2000)
+                                try:
+                                    html = page.content()
+                                except Exception:
+                                    html = ""
+                            if _is_usable_html(html) or _kr36_step4_post_slider_page_looks_resolved(
+                                html
+                            ):
                                 _append_kr36_debug_log(
-                                    f"[kr36] step4_playwright_after_slider url={url} html_length={len(html)}"
+                                    f"[kr36] step4_playwright_after_slider url={url} "
+                                    f"html_length={len(html)}"
                                 )
+                                if self.persist_browser_cookies:
+                                    save_kr36_cookies(
+                                        extract_kr36_cookie_values(context.cookies())
+                                    )
                                 context.close()
                                 browser.close()
+                                _kr36_risk_recovery_reset(url)
                                 return html
                     page.wait_for_timeout(poll)
                 try:
@@ -1174,7 +1871,8 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     save_kr36_cookies(extract_kr36_cookie_values(context.cookies()))
                 context.close()
                 browser.close()
-                if _is_usable_html(html):
+                if _is_usable_html(html) or _kr36_step4_post_slider_page_looks_resolved(html):
+                    _kr36_risk_recovery_reset(url)
                     return html
                 _append_kr36_debug_log(
                     f"[kr36] step4_playwright_timeout url={url} html_length={len(html or '')}"
@@ -1185,6 +1883,29 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         except Exception as error:
             _append_kr36_debug_log(f"[kr36] step4_playwright_unexpected url={url} error={error}")
         return ""
+
+    def _kr36_topic_video_page_recover_with_playwright(self, video_page_url: str, *, log_reason: str) -> str:
+        """视频专题：Playwright+自动滑块后，优先用 curl 再拉（cookie 已落盘/刷新）。"""
+        _append_kr36_debug_log(
+            f"[kr36] topic_video_playwright_recover reason={log_reason} page={video_page_url!r}"
+        )
+        try:
+            solved_html = self.step4_fetch_html_via_playwright_slider(video_page_url)
+        except Exception as error:  # 防御：与 step4 内部日志互补
+            _append_kr36_debug_log(
+                f"[kr36] topic_video_playwright_slider_exception page={video_page_url!r} err={error!r}"
+            )
+            return ""
+        retried_html = ""
+        try:
+            retried_html = self._fetch_text(video_page_url)
+        except Exception as retry_error:
+            _append_kr36_debug_log(
+                f"[kr36] topic_video_post_playwright_curl_exception page={video_page_url!r} err={retry_error!r}"
+            )
+        if not _looks_like_captcha_or_block(retried_html) and retried_html:
+            return retried_html
+        return solved_html
 
     def _visible_playwright_fetch_until_deadline(
         self,
@@ -1203,35 +1924,24 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         except ImportError:
             _append_kr36_debug_log(
                 f"[kr36] {event_tag}_unavailable missing_playwright "
-                "hint='python -m playwright install chromium'"
+                "hint='python -m playwright install msedge' 或 install chrome，或设 playwright_chromium_channel=bundled + install chromium"
             )
             return ""
 
         html = ""
         try:
             with sync_playwright() as playwright:
-                launch_kwargs: dict[str, object] = {
-                    "headless": False,
-                    "args": ["--disable-blink-features=AutomationControlled"],
-                }
-                if incognito_mode:
-                    launch_kwargs["args"] = [
-                        "--incognito",
-                        "--disable-blink-features=AutomationControlled",
-                    ]
-                    chrome_exe = _find_windows_chrome_executable()
-                    if chrome_exe:
-                        launch_kwargs["executable_path"] = chrome_exe
-                    else:
-                        launch_kwargs["channel"] = "chrome"
+                launch_kwargs = self._playwright_chromium_launch_kwargs(
+                    headless=False, incognito=incognito_mode
+                )
                 try:
-                    browser = playwright.chromium.launch(**launch_kwargs)
+                    browser = self._playwright_launch_chromium(playwright, launch_kwargs)
                 except Exception as launch_error:
                     if not incognito_mode:
                         raise
                     opened = _open_external_windows_chrome_incognito(url)
                     _append_kr36_debug_log(
-                        f"[kr36] {event_tag}_chrome_incognito_launch_failed url={url} error={launch_error} "
+                        f"[kr36] {event_tag}_incognito_launch_failed url={url} error={launch_error} "
                         f"external_incognito_opened={str(opened).lower()}"
                     )
                     if opened:
@@ -1483,10 +2193,8 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             return ""
         try:
             with sync_playwright() as playwright:
-                browser = playwright.chromium.launch(
-                    headless=True,
-                    args=["--disable-blink-features=AutomationControlled"],
-                )
+                lkw = self._playwright_chromium_launch_kwargs(headless=True, incognito=False)
+                browser = self._playwright_launch_chromium(playwright, lkw)
                 context = browser.new_context(
                     locale="zh-CN",
                     user_agent=KR36_DEFAULT_USER_AGENT,
@@ -1805,6 +2513,319 @@ def parse_topics_listing_html(
     return refs
 
 
+def select_focus_topics(
+    topic_refs: list[RawArticleRef],
+    *,
+    focus_keywords: tuple[str, ...],
+    limit: int,
+) -> list[RawArticleRef]:
+    if not topic_refs:
+        return []
+    normalized_keywords = tuple(re.sub(r"\s+", "", token.lower()) for token in focus_keywords if token.strip())
+    selected: list[RawArticleRef] = []
+    seen_url: set[str] = set()
+    if normalized_keywords:
+        for ref in topic_refs:
+            compact_title = re.sub(r"\s+", "", ref.title.lower())
+            if not any(keyword in compact_title for keyword in normalized_keywords):
+                continue
+            if ref.url in seen_url:
+                continue
+            seen_url.add(ref.url)
+            selected.append(ref)
+            if len(selected) >= max(1, limit):
+                return selected
+    if selected:
+        return selected
+    return topic_refs[: max(1, limit)]
+
+
+def resolve_previous_week_window(report_date: date) -> tuple[date, date]:
+    current_week_monday = report_date - timedelta(days=report_date.weekday())
+    previous_week_monday = current_week_monday - timedelta(days=7)
+    previous_week_sunday = current_week_monday - timedelta(days=1)
+    return previous_week_monday, previous_week_sunday
+
+
+def parse_topic_detail_html(
+    html: str,
+    *,
+    base_url: str,
+    listing_url: str,
+    report_date: date,
+    topic_title: str,
+    window_start: date | None,
+    window_end: date | None,
+) -> list[RawArticleRef]:
+    refs: list[RawArticleRef] = []
+    seen_urls: set[str] = set()
+    topic_id = listing_url.rstrip("/").rsplit("/", 1)[-1]
+    for section_match in KR36_TOPIC_SECTION_RE.finditer(html):
+        section_html = str(section_match.group("content") or "")
+        for item_match in KR36_TOPIC_LIST_ITEM_RE.finditer(section_html):
+            item_html = str(item_match.group("content") or "")
+            best_url = ""
+            best_title = ""
+            best_score = -10
+            for anchor in KR36_ANCHOR_WITH_HREF_RE.finditer(item_html):
+                href = str(anchor.group("href") or "").strip()
+                if not href:
+                    continue
+                title = clean_html_text(anchor.group("title") or "")
+                normalized_url = normalize_topic_item_url(href=href, base_url=base_url)
+                if not normalized_url or not title:
+                    continue
+                lowered_url = normalized_url.lower()
+                if "/video/" not in lowered_url and "/p/" not in lowered_url:
+                    continue
+                score = 0
+                if "/video/" in lowered_url or "/p/" in lowered_url:
+                    score += 4
+                if "item-title" in anchor.group(0):
+                    score += 2
+                if len(title) >= 8:
+                    score += 1
+                if score > best_score:
+                    best_score = score
+                    best_url = normalized_url
+                    best_title = title
+            if not best_url or best_url in seen_urls:
+                continue
+            published_day = infer_topic_item_date(item_html, report_date=report_date)
+            if window_start is not None and window_end is not None:
+                if published_day is None:
+                    continue
+                if published_day < window_start or published_day > window_end:
+                    continue
+            seen_urls.add(best_url)
+            item_kind = deduce_topic_item_kind_from_36kr_item_url(best_url)
+            if not item_kind:
+                item_kind = "article"
+            item_id = best_url.rstrip("/").rsplit("/", 1)[-1].split("?", 1)[0]
+            published_at = (published_day or report_date).isoformat()
+            refs.append(
+                RawArticleRef(
+                    source_site="36kr",
+                    article_id=f"36kr:topic:{item_kind}:{item_id}",
+                    title=best_title,
+                    url=best_url,
+                    published_at=published_at,
+                    channel="专题",
+                    source_bucket="专题",
+                    summary="",
+                    metadata={
+                        "listing_url": listing_url,
+                        "topic_url": listing_url,
+                        "topic_id": topic_id,
+                        "topic_title": topic_title,
+                        "topic_item_kind": item_kind,
+                        "topic_item_date": published_at,
+                    },
+                )
+            )
+    return refs
+
+
+def normalize_topic_item_url(*, href: str, base_url: str) -> str:
+    raw = str(href or "").strip()
+    if not raw:
+        return ""
+    lowered = raw.lower()
+    if lowered.startswith(("javascript:", "mailto:", "#")):
+        return ""
+    if raw.startswith("//"):
+        raw = f"https:{raw}"
+    url = raw if raw.startswith("http") else urljoin(base_url, raw)
+    if "36kr.com" not in url.lower():
+        return ""
+    return url.split("#", 1)[0]
+
+
+def infer_topic_item_date(value: str, *, report_date: date) -> date | None:
+    plain = clean_html_text(value)
+    match = KR36_TOPIC_ITEM_DATE_RE.search(plain)
+    if not match:
+        return None
+    raw_date = str(match.group("date") or "").strip()
+    if not raw_date:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d"):
+        try:
+            return datetime.strptime(raw_date, fmt).date()
+        except ValueError:
+            continue
+    md = re.fullmatch(r"(?P<month>\d{1,2})月(?P<day>\d{1,2})日", raw_date)
+    if not md:
+        return None
+    month = int(md.group("month"))
+    day = int(md.group("day"))
+    try:
+        candidate = date(report_date.year, month, day)
+    except ValueError:
+        return None
+    if candidate > report_date + timedelta(days=2):
+        try:
+            candidate = date(report_date.year - 1, month, day)
+        except ValueError:
+            return None
+    return candidate
+
+
+def _stream_url_prefer_https(url: str) -> str:
+    """同页内统一用 https 直链（CDN 多支持 https，避免混用 http）。"""
+    s = (url or "").strip()
+    if s.startswith("http://"):
+        return "https://" + s[7:]
+    return s
+
+
+def _normalize_video_tag_src_to_https(value: str) -> str:
+    """
+    从 <video src> 抓到的原始串归一成 https 绝对地址：支持 // 协议相对、http 升级、
+    站内以 / 开头的路径、无 scheme 的 `videos.36krcdn.com/...` 等（不强制先出现 https?://）。
+    无法识别则返回空串。
+    """
+    s = unescape((value or "").strip())
+    if not s or s.lower() in ("#", "about:blank", "javascript:", "javascript:;"):
+        return ""
+    if s.startswith("https://"):
+        return s
+    if s.startswith("//") and not s.startswith("///"):
+        s = "https:" + s
+    elif s.startswith("http://"):
+        s = "https://" + s[7:]
+    elif s.startswith("/") and not s.startswith("//"):
+        s = urljoin(f"{KR36_ROOT}/", s.lstrip("/"))
+    elif KR36_BARE_CDN_HOST_RE.match(s):
+        s = "https://" + s
+    else:
+        return ""
+    if s.startswith("https://"):
+        return s
+    if s.startswith("http://"):
+        return "https://" + s[7:]
+    return ""
+
+
+def extract_video_media_url(html: str) -> str:
+    candidates = extract_video_media_urls(html)
+    return candidates[0] if candidates else ""
+
+
+def extract_video_media_urls(html: str) -> list[str]:
+    blob = html or ""
+    candidates: list[str] = []
+
+    # 第三层 /video/{id} 页：优先 <video> 的 src（格式放宽，再统一为 https）
+    for tag_match in KR36_VIDEO_TAG_SRC_RE.finditer(blob):
+        raw = (tag_match.group("vd") or tag_match.group("vs") or tag_match.group("vb") or "").strip()
+        src = _normalize_video_tag_src_to_https(raw)
+        if not src:
+            continue
+        candidates.append(_stream_url_prefer_https(src))
+
+    state_payload = _extract_window_initial_state_json(blob)
+    if state_payload:
+        try:
+            parsed = json.loads(state_payload)
+        except Exception:
+            parsed = None
+        if isinstance(parsed, dict):
+            video_detail = parsed.get("videoDetail")
+            if isinstance(video_detail, dict):
+                data = video_detail.get("data")
+                if isinstance(data, dict):
+                    # 36kr 视频详情页会在 initialState.videoDetail.data.url* 中给出可下载流地址。
+                    # 按清晰度从低到高尝试，优先较小文件以提高直链下载成功率。
+                    url_keys = [k for k in data if str(k).startswith("url")]
+                    rank = {"url": 0, "url256": 1, "url384": 2, "url720": 3, "url1080": 4}
+
+                    def _url_key_order(k: object) -> tuple[int, str]:
+                        s = str(k)
+                        return (rank.get(s, 50), s)
+
+                    for key in sorted(url_keys, key=_url_key_order):
+                        stream_url = str(data.get(key) or "").strip()
+                        if stream_url.startswith("http"):
+                            candidates.append(_stream_url_prefer_https(stream_url))
+    candidates.extend(KR36_VIDEO_CDN_LINK_RE.findall(blob))
+    candidates.extend(KR36_VIDEO_FILE_LINK_RE.findall(blob))
+    candidates.extend(match.replace("\\/", "/") for match in KR36_VIDEO_FILE_LINK_ESCAPED_RE.findall(blob))
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        normalized = _stream_url_prefer_https(str(candidate or "").strip())
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(normalized)
+    return deduped
+
+
+def _extract_window_initial_state_json(html: str) -> str:
+    """取 window.initialState= 赋值；多段时优先含 videoDetail 的脚本（视频页）。"""
+    marker = "window.initialState="
+    blob = html or ""
+    payloads: list[str] = []
+    start = 0
+    while True:
+        idx = blob.find(marker, start)
+        if idx < 0:
+            break
+        payload = blob[idx + len(marker) :]
+        end = payload.find("</script>")
+        if end >= 0:
+            payload = payload[:end]
+        payload = payload.strip()
+        if payload.endswith(";"):
+            payload = payload[:-1].rstrip()
+        if payload:
+            payloads.append(payload)
+        start = idx + len(marker)
+    if not payloads:
+        return ""
+    for payload in reversed(payloads):
+        if "videoDetail" in payload:
+            return payload
+    return payloads[-1]
+
+
+def _extract_kr36_video_id(url: str) -> str:
+    match = KR36_VIDEO_ID_RE.search(url or "")
+    if not match:
+        return ""
+    return str(match.group("id") or "").strip()
+
+
+def _guess_file_extension_from_url(url: str, *, default: str) -> str:
+    lowered = str(url or "").lower()
+    if ".m3u8" in lowered:
+        return ".m3u8"
+    if ".mp4" in lowered:
+        return ".mp4"
+    if "video_mp4" in lowered or "36krcdn.com" in lowered:
+        return ".mp4"
+    return default
+
+
+def _safe_path_component(value: str, *, fallback: str = "topic") -> str:
+    token = re.sub(r"[\\/:*?\"<>|]+", "_", str(value or "").strip())
+    token = token.strip(" .")
+    if not token:
+        token = fallback
+    return token[:80]
+
+
+def _safe_filename(value: str, *, fallback: str = "item") -> str:
+    token = re.sub(r"[\\/:*?\"<>|]+", "_", str(value or "").strip())
+    token = re.sub(r"\s+", "_", token)
+    token = token.strip("._")
+    if not token:
+        token = fallback
+    return token[:120]
+
+
 def _extract_activity_title(content: str) -> str:
     """从活动卡片内层 HTML 提取名称。"""
     m = KR36_ACTIVITY_TITLE_RE.search(content)
@@ -2051,13 +3072,14 @@ def _positive_int_config(value: Any, *, default: int) -> int:
 
 def load_kr36_cookies() -> dict[str, str]:
     """从 config/kr36_cookies.json 加载 Cookie，文件不存在时返回空字典。"""
-    if not KR36_COOKIES_FILE.exists():
-        return {}
-    try:
-        raw = json.loads(KR36_COOKIES_FILE.read_text(encoding="utf-8"))
-        return {str(k): str(v) for k, v in raw.items() if v}
-    except Exception:
-        return {}
+    with _kr36_cookies_file_lock:
+        if not KR36_COOKIES_FILE.exists():
+            return {}
+        try:
+            raw = json.loads(KR36_COOKIES_FILE.read_text(encoding="utf-8"))
+            return {str(k): str(v) for k, v in raw.items() if v}
+        except Exception:
+            return {}
 
 
 def save_kr36_cookies(cookies: dict[str, str]) -> None:
@@ -2065,11 +3087,12 @@ def save_kr36_cookies(cookies: dict[str, str]) -> None:
 
     if not cookies:
         return
-    KR36_COOKIES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    KR36_COOKIES_FILE.write_text(
-        json.dumps(cookies, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    with _kr36_cookies_file_lock:
+        KR36_COOKIES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        KR36_COOKIES_FILE.write_text(
+            json.dumps(cookies, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
 
 def extract_kr36_cookie_values(cookie_items: list[dict[str, Any]]) -> dict[str, str]:
@@ -2107,22 +3130,63 @@ def _load_kr36_cookies_into_browser_context(context: Any) -> None:
 
 
 def _looks_like_captcha_or_block(html: str) -> bool:
-    lowered = (html or "")[:4000].lower()
+    """
+    仅扫前 4k，用于快速识别风控/滑块**文案**页。
+
+    注意：不要再用英文单词 ``verify`` 或子串 ``captcha`` 单独匹配，否则
+    正文/头里 recaptcha、JSON 里的 "verify" 会长期把页面判为「仍在验证」，
+    Step4 Playwright 会空转直到 ``browser_verification_timeout_ms`` 才关浏览器。
+    """
+    sample = (html or "")[:4000]
+    lowered = sample.lower()
     if not lowered:
         return True
+    # 用中文提示与验证码 DOM 类名等较稳定片段；见 slider_captcha 中 captcha-verify-image
     risk_tokens = (
-        "captcha",
-        "verify",
+        "captcha-verify",
+        "verifycenter",
+        "人机验证",
+        "请完成验证",
+        "完成验证后继续",
+        "访问受限",
+        "异常流量",
+        "security check",
+        "\u5b8c\u6210\u9a8c\u8bc1\u540e\u7ee7\u7eed",  # 与「完成验证后继续」同义，保留
+        "\u62d6\u52a8\u5b8c\u6210\u4e0a\u65b9\u62fc\u56fe",  # 拖动完成上方拼图
+        "\u6309\u4f4f\u5de6\u8fb9\u6309\u94ae\u62d6\u52a8",  # 按住左边按钮拖动
+    )
+    return any(token in lowered for token in risk_tokens)
+
+
+def _kr36_step4_post_slider_page_looks_resolved(html: str) -> bool:
+    """
+    仅用于 step4 Playwright 滑块链：正页 <head> 里常有 verify/recaptcha 子串，若只靠
+    _is_usable_html 会长时间判失败；在「首屏已无人机提示 + 体量为正常列表/文章」时判为
+    已通过，以便尽快关浏览器。其它抓取路径仍用 _is_usable_html。
+    """
+    if not html or len(html) < 4000:
+        return False
+    top = html[:10000]
+    for needle in (
         "人机验证",
         "请完成验证",
         "访问受限",
         "异常流量",
-        "security check",
-        "\u5b8c\u6210\u9a8c\u8bc1\u540e\u7ee7\u7eed",
-        "\u62d6\u52a8\u5b8c\u6210\u4e0a\u65b9\u62fc\u56fe",
-        "\u6309\u4f4f\u5de6\u8fb9\u6309\u94ae\u62d6\u52a8",
-    )
-    return any(token in lowered for token in risk_tokens)
+        "按住左边按钮",
+        "拖动完成上方拼图",
+    ):
+        if needle in top:
+            return False
+    if "captcha-verify-image" in top:
+        return False
+    lo = html.lower()
+    if "<html" not in lo:
+        return False
+    if "36kr.com" in lo or "36氪" in top:
+        return True
+    if "kr-search-result" in lo or "search-result-list-item" in lo:
+        return True
+    return len(html) > 25000
 
 
 def _is_usable_html(html: str) -> bool:
@@ -2148,6 +3212,17 @@ def _int_list_config(value: Any, *, default: list[int]) -> list[int]:
     return result or list(default)
 
 
+def _str_list_config(value: Any, *, default: list[str]) -> list[str]:
+    if not isinstance(value, list):
+        return list(default)
+    result: list[str] = []
+    for item in value:
+        token = str(item or "").strip()
+        if token:
+            result.append(token)
+    return result or list(default)
+
+
 def _bool_config(value: Any, *, default: bool) -> bool:
     if isinstance(value, bool):
         return value
@@ -2158,6 +3233,18 @@ def _bool_config(value: Any, *, default: bool) -> bool:
         if normalized in {"0", "false", "no", "off"}:
             return False
     return default
+
+
+@contextmanager
+def kr36_debug_log_file(path: Path) -> Iterator[None]:
+    """本次抓取把 [kr36] 调试日志写入 path（如 kr36_report/.../kr36_fetch.log），结束后恢复。"""
+    global _kr36_debug_log_path_override
+    prev = _kr36_debug_log_path_override
+    _kr36_debug_log_path_override = path.resolve()
+    try:
+        yield
+    finally:
+        _kr36_debug_log_path_override = prev
 
 
 def _append_kr36_debug_log(message: str) -> None:
@@ -2192,4 +3279,7 @@ def _resolve_kr36_debug_log_file() -> Path:
     custom_log_file = os.getenv("KR36_LOG_FILE", "").strip()
     if custom_log_file:
         return Path(custom_log_file)
+    if _kr36_debug_log_path_override is not None:
+        return _kr36_debug_log_path_override
     return KR36_DEBUG_LOG_FILE
+

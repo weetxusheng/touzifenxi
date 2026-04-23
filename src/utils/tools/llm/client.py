@@ -14,7 +14,6 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .providers import LLMProviderRuntimeConfig
-from c114.runtime.config import load_c114_runtime_config
 from .parallel import compute_backoff_delay, create_provider_semaphores, normalize_provider_chain
 from .providers import (
     build_chat_payload,
@@ -176,6 +175,8 @@ class StructuredChatClient:
     @classmethod
     def from_runtime_config(cls, base_path: Path | None = None) -> "StructuredChatClient":
         """从 skill 本地配置中构造统一的大模型客户端。"""
+
+        from c114.runtime.config import load_c114_runtime_config
 
         runtime_config = load_c114_runtime_config(base_path)
         if not runtime_config.llm_providers or not runtime_config.llm_providers[0].api_key:

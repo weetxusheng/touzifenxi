@@ -89,6 +89,9 @@ class ContentAnalysisInput:
     input_path: Path
     generated_at: str
     categories: list[ContentAnalysisSection]
+    # 可选：按原文 URL 索引的专题子项全文/转写摘录（来自 36kr kr36_topic_fulltext JSON）。
+    # step5 会并入每条的 topic_fulltext_excerpt 供分析；step6 简报提示也会使用（构建时可再截断）。
+    topic_fulltext_excerpts_by_url: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)

@@ -84,9 +84,11 @@ def auto_complete_brief_sections(
                 system_prompt=system_prompt,
                 user_prompt=(
                     "请基于下面这个主题下的 step 5 分析结果，生成行业研究员简报的四个章节。"
+                    "若某条条目含 topic_fulltext_excerpt（专题/视频已落盘全文或 ASR 转写），请优先据其归纳；"
+                    "并在「核心判断」中对专题/视频子项用「1）提炼后的标题：总结的看点」按序编号（详见系统提示）。"
                     "只返回 JSON 对象，包含：核心判断、增量信息、产业/公司影响、需要继续跟踪的点。"
                     "其中前三个字段是字符串，最后一个字段是字符串列表。\n\n"
-                    f"{json.dumps(build_brief_prompt_payload(category), ensure_ascii=False, indent=2)}"
+                    f"{json.dumps(build_brief_prompt_payload(category, payload.topic_fulltext_excerpts_by_url), ensure_ascii=False, indent=2)}"
                 ),
                 normalize_response=normalize_brief_sections,
                 response_label=f"step 6 主题 {category.topic} 简报结果",
@@ -167,18 +169,39 @@ def brief_section_draft_from_dict(payload: dict[str, Any]) -> BriefSectionDraft:
         followups=[str(item) for item in payload.get("followups") or []],
     )
 
-def build_brief_prompt_payload(category: ContentAnalysisSection) -> dict[str, Any]:
+def _normalize_brief_lookup_url(url: str) -> str:
+    u = (url or "").strip()
+    if not u:
+        return ""
+    return u.rstrip("/")
+
+
+# step5 可能写入较长专题全文；简报侧单独再截断，控制 step6 token
+BRIEF_TOPIC_FULLTEXT_PROMPT_MAX_CHARS = 16_000
+
+
+def build_brief_prompt_payload(
+    category: ContentAnalysisSection, topic_fulltext_excerpts_by_url: dict[str, str] | None = None
+) -> dict[str, Any]:
     """构造发给模型的 step 6 单主题简报输入。"""
+    by_url = topic_fulltext_excerpts_by_url or {}
+    items: list[dict[str, Any]] = []
+    for item in category.items:
+        row: dict[str, Any] = {
+            "original_title": item.original_title,
+            "summary": item.analysis.summary,
+            "core_points": item.analysis.core_points[:3],
+        }
+        key = _normalize_brief_lookup_url(item.original_url)
+        if key and key in by_url:
+            blob = by_url[key]
+            if len(blob) > BRIEF_TOPIC_FULLTEXT_PROMPT_MAX_CHARS:
+                blob = blob[:BRIEF_TOPIC_FULLTEXT_PROMPT_MAX_CHARS] + "\n... [为简报截断]"
+            row["topic_fulltext_excerpt"] = blob
+        items.append(row)
     return {
         "topic": category.topic,
-        "items": [
-            {
-                "original_title": item.original_title,
-                "summary": item.analysis.summary,
-                "core_points": item.analysis.core_points[:3],
-            }
-            for item in category.items
-        ],
+        "items": items,
     }
 
 

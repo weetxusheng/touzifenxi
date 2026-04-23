@@ -26,10 +26,13 @@ from utils.tools.runtime.checkpoint import StepCheckpointStore, checkpoint_path_
 from . import names as n
 from .brief_assets import save_brief_preview_assets
 from .synthetic_workflow_from_step1 import build_synthetic_workflow_from_analyses
+from .topic_fulltext_index import enrich_content_analysis_input_with_topic_fulltext
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 CONTENT_ANALYSIS_PROMPT_PATH = PROMPTS / "content-analysis-agent.md"
 BRIEF_PROMPT_PATH = PROMPTS / "brief-agent.md"
+# step5 专题全文（含 ASR）单 URL 上界，长于默认 16k 便于分析；step6 简报在 build_brief 内会再截到 16k
+KR36_STEP5_TOPIC_FULLTEXT_MAX_CHARS = 48_000
 
 
 def run_stages_2_3_4(
@@ -83,6 +86,12 @@ def run_stages_2_3_4(
     step6_brief = run_dir / n.step6_brief_name(target_date)
     layer_path = run_dir / n.layer_issues_name(target_date)
     content_for_analysis = load_content_analysis_inputs(step4_path)
+    content_for_analysis = enrich_content_analysis_input_with_topic_fulltext(
+        content_for_analysis,
+        run_dir=run_dir,
+        report_date=target_date,
+        max_chars_per_url=KR36_STEP5_TOPIC_FULLTEXT_MAX_CHARS,
+    )
     step5_cp = StepCheckpointStore.load_or_create(
         checkpoint_path=checkpoint_path_for_step(
             output_path=step5_path,
@@ -108,7 +117,7 @@ def run_stages_2_3_4(
         generate_layer_issues(analysis_payload, keyword_count=rc.search_keyword_count),
     )
     print(f"36Kr 步骤5（数据整合/分析）: {step5_path}")
-    # --- 步骤 6：生成简报 Markdown + HTML ---
+    # --- 步骤 6：生成简报 Markdown + HTML（专题摘录已在 step5 前注入，仍保留在 payload 供 step6）---
     step6_cp = StepCheckpointStore.load_or_create(
         checkpoint_path=checkpoint_path_for_step(
             output_path=step6_brief,

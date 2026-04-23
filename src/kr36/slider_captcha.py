@@ -6,7 +6,8 @@
         - page: Playwright Page 对象（已在验证码页面）
         - max_attempts: 最多尝试次数；每次失败后等待验证码刷新再重试
         - 返回 True 表示至少发起过一次拖拽
-        - 内部会在拖拽后截图+DOM双检测是否通过，未通过则自动重试
+        - 停滑后短等待即判定：先 innerText(验证通过/成功)→轨道绿条截图→
+          扩大区截图(含提示条+可选 pytesseract)→DOM/iframe 移除 等，未过则短轮询再重试
 
 算法核心（cv2_find_hole）：
     缺口 = 把拼图块从背景扣掉后做灰色半透明填充：
@@ -19,6 +20,7 @@ from __future__ import annotations
 
 import base64
 import random
+import re
 import time
 from typing import Any
 
@@ -243,7 +245,8 @@ def _slider_drag(page: Any, sx: float, sy: float, drag_px: float) -> None:
         time.sleep(random.uniform(0.018, 0.035))
     time.sleep(random.uniform(0.15, 0.30))
     page.mouse.up()
-    time.sleep(random.uniform(1.0, 1.8))
+    # 只留极短让浏览器完成 mouseup/重绘；通过判定在 _wait_for_pass 里用「停滑即刻截图+文案」完成
+    time.sleep(random.uniform(0.12, 0.35))
 
 
 # ── 通过状态检测 ──────────────────────────────────────────────────────────────
@@ -255,7 +258,15 @@ _SLIDER_TRACK_HEIGHT = 36  # 轨道高度估计（px）
 # ByteDance 验证通过后滑块轨道的绿色近似值 (BGR in OpenCV)
 # 36kr/ByteDance 通过色约为 #52C41A 或 #00C1A7（青绿）
 _PASS_GREEN_MIN_BGR = (30, 150, 30)   # 最低 G 门限（BGR）
-_PASS_GREEN_RATIO   = 0.20            # 绿色像素占比阈值
+_PASS_GREEN_RATIO   = 0.20            # 绿色像素占比阈值（仅轨道条）
+# 停滑后扩大截图（含「验证通过」提示条）时，面积更大、阈值略低
+_PASS_GREEN_RATIO_LOOSE = 0.07
+
+# 与截图同时可用的可见文案（iframe / 主页面 innerText，非 OCR）
+_PASS_TEXT_RE = re.compile(
+    r"验证\s*通过|验证\s*成功|验证\s*已完成|校验\s*通过|安全\s*验证\s*通过",
+    re.MULTILINE,
+)
 
 # JS: 在 captcha iframe 内检测通过状态
 _JS_CAPTCHA_PASS_STATE = """
@@ -343,6 +354,124 @@ def _screenshot_shows_pass(
         return False
 
 
+def _visible_text_blob_36kr(page: Any) -> str:
+    """主 document + 各 frame 的 body.innerText，用于与『停滑后截图』同布判定验证通过。"""
+    chunks: list[str] = []
+    try:
+        t = page.evaluate("() => (document.body && document.body.innerText) || ''")
+        if isinstance(t, str) and t.strip():
+            chunks.append(t[:6000])
+    except Exception:
+        pass
+    for fr in list(page.frames)[:30]:
+        try:
+            t = fr.evaluate("() => (document.body && document.body.innerText) || ''")
+            if isinstance(t, str) and t.strip():
+                chunks.append(t[:5000])
+        except Exception:
+            pass
+    return "\n".join(chunks)[:20000]
+
+
+def _visible_text_says_captcha_passed(text: str) -> bool:
+    if not (text and text.strip()):
+        return False
+    if _PASS_TEXT_RE.search(text):
+        return True
+    return "验证" in text and ("通过" in text or "成功" in text) and "人机" not in text[:200]
+
+
+def _green_ratio_in_png_bgr(png_bytes: bytes) -> float:
+    import io
+
+    import numpy as np
+    try:
+        import cv2
+
+        arr = np.frombuffer(png_bytes, np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            return 0.0
+        b, g, r = img[:, :, 0], img[:, :, 1], img[:, :, 2]
+        green_mask = (
+            (g.astype(int) > _PASS_GREEN_MIN_BGR[1])
+            & (g.astype(int) > b.astype(int) + 30)
+            & (g.astype(int) > r.astype(int) + 30)
+        )
+        return float(green_mask.sum()) / max(1, img.shape[0] * img.shape[1])
+    except ImportError:
+        try:
+            from PIL import Image
+
+            img_pil = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+            pixels = list(img_pil.getdata())
+            n = 0
+            for rp, gp, bp in pixels:
+                if gp > _PASS_GREEN_MIN_BGR[1] and gp > bp + 30 and gp > rp + 30:
+                    n += 1
+            return n / max(1, len(pixels))
+        except Exception:
+            return 0.0
+    except Exception:
+        return 0.0
+
+
+def _try_ocr_screenshot_for_pass(png_bytes: bytes) -> bool:
+    if not png_bytes or len(png_bytes) < 200:
+        return False
+    try:
+        from PIL import Image
+        import io
+        import pytesseract
+    except Exception:
+        return False
+    try:
+        img = Image.open(io.BytesIO(png_bytes))
+        text = pytesseract.image_to_string(img, lang="chi_sim+eng")
+        t = (text or "").strip()
+        if not t:
+            return False
+        if _visible_text_says_captcha_passed(t) or _PASS_TEXT_RE.search(t):
+            print("[captcha] pass_detected: OCR(可选 pytesseract) 识别为验证通过类文案")
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _screenshot_expanded_track_area_shows_pass(
+    page: Any,
+    btn_box: dict,
+    drag_px: float,
+) -> bool:
+    """
+    滑停后立即截比轨道更「高」的矩形：含轨道下方常出现的「验证通过 / 对勾 + 青绿条」
+    提示区；用略低的绿色占比阈值 + 可选 OCR，补绿轨截图漏检的情况。
+    """
+    try:
+        ext_below = 110
+        track_x = int(btn_box["x"] - _SLIDER_TRACK_PAD_X)
+        track_y = int(btn_box["y"] - 8)
+        track_w = int(max(90.0, float(drag_px) + float(btn_box.get("width", 40)) + 24.0))
+        track_h = int(_SLIDER_TRACK_HEIGHT + ext_below)
+        clip = {
+            "x": max(0, track_x),
+            "y": max(0, track_y),
+            "width": min(880, max(20, track_w)),
+            "height": min(280, max(20, track_h)),
+        }
+        png_bytes = page.screenshot(clip=clip, type="png")
+        r = _green_ratio_in_png_bgr(png_bytes)
+        print(f"[captcha] 扩大区截图(停滑)绿色占比={r:.2%} clip_h={clip['height']}")
+        if r >= _PASS_GREEN_RATIO_LOOSE:
+            return True
+        if _try_ocr_screenshot_for_pass(png_bytes):
+            return True
+    except Exception as ex:
+        print(f"[captcha] 扩大区截图检测异常: {ex}")
+    return False
+
+
 def _wait_for_pass(
     page: Any,
     btn_box: dict,
@@ -364,9 +493,21 @@ def _wait_for_pass(
     attempt_no = 0
     while time.time() < deadline:
         attempt_no += 1
-        # ── 截图检测 ──────────────────────────────────────────────────────
+        # 1) 与「停滑后截图」同布：主页面/iframe 可见文字（不依赖 <html> 是否仍含 recaptcha 脚本等）
+        try:
+            blob = _visible_text_blob_36kr(page)
+            if _visible_text_says_captcha_passed(blob):
+                print("[captcha] pass_detected: 页面/iframe 可见 innerText 含验证通过/成功 类提示")
+                return True
+        except Exception:
+            pass
+        # 2) 原轨道条绿色（高阈值）
         if _screenshot_shows_pass(page, btn_box, drag_px):
             print("[captcha] pass_detected: 截图显示滑块轨道变绿")
+            return True
+        # 3) 停滑即时：扩大区截图（含提示条 + 略低绿占比 + 可选 pytesseract）
+        if _screenshot_expanded_track_area_shows_pass(page, btn_box, drag_px):
+            print("[captcha] pass_detected: 扩大区截图(停滑)判定为通过")
             return True
 
         # ── DOM 检测：在 captcha iframe 里查询 ───────────────────────────

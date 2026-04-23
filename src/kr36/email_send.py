@@ -88,7 +88,9 @@ def send_latest_kr36_brief_email(
             )
 
     markdown_text = brief_md_path.read_text(encoding="utf-8")
-    rendered = render_kr36_brief_email(markdown_text, brief_md_path)
+    rendered = render_kr36_brief_email(
+        markdown_text, brief_md_path, omit_source_links=True,
+    )
 
     try:
         send_email(
