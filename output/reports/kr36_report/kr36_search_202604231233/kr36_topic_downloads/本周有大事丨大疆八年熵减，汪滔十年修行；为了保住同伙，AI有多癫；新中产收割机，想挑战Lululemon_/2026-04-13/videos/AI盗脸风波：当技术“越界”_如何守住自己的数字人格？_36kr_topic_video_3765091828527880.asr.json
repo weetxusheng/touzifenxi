@@ -1,0 +1,6044 @@
+{
+  "video_path": "E:\\AI\\touzifenxi\\output\\reports\\kr36_report\\kr36_search_202604231233\\kr36_topic_downloads\\本周有大事丨大疆八年熵减，汪滔十年修行；为了保住同伙，AI有多癫；新中产收割机，想挑战Lululemon_\\2026-04-13\\videos\\AI盗脸风波：当技术“越界”_如何守住自己的数字人格？_36kr_topic_video_3765091828527880.mp4",
+  "audio_path": "E:\\AI\\touzifenxi\\output\\reports\\kr36_report\\kr36_search_202604231233\\kr36_topic_downloads\\本周有大事丨大疆八年熵减，汪滔十年修行；为了保住同伙，AI有多癫；新中产收割机，想挑战Lululemon_\\2026-04-13\\videos\\AI盗脸风波：当技术“越界”_如何守住自己的数字人格？_36kr_topic_video_3765091828527880.asr.mp3",
+  "x_api_status_code": "20000000",
+  "x_api_message": "OK",
+  "response": {
+    "audio_info": {
+      "duration": 154872
+    },
+    "result": {
+      "additions": {
+        "duration": "154872"
+      },
+      "text": "当你刷短剧时，刷到一个角色，觉得这张脸怎么这么像我？别急着惊叹大数据的精准，你的脸可能真的被偷了！这不是玩笑！最近，一位汉服博主就在短剧中看到了自己的脸。制作方未经授权，用 AI 技术盗走了她的面孔。当大家还在争论 AI 会不会取代人类时，有些人的脸已经先一步再就业了。资本疯狂涌入 AI 短剧，这背后藏着门绝佳的生意经。现在做 AI 短剧，一级成本已压制5000元以内。制作周期更是缩短至3~7天，远超传统模式的效率。用 AI 换脸节省片酬，则成了行业心照不宣的暴利密码。甚至有传言，未来男二以下的角色都可能被 AI 全面取代。如此明目张胆的偷脸乱象，平台为何集体失明？因为他们算的是另外一本账，用户停留时间加广告加载率才是核心收益。当传统短剧还在为日更发愁时，AI 短剧已经可以日产十几，完美的契合了算法对海量、新鲜、高粘性内容的渴望。而用户协议中的上传者应确保内容不侵犯第三方合法权益，平台不承担由此产生的法律责任。这道精心设计的防火墙，让平台既能享受流量盛宴，又能将侵权风险精准的外包。于是，一条心照不宣的灰色产业链悄然闭环。制作方偷脸，以极低成本量产海量内容。平台算法将高性价比内容推送用户，来换取流量与广告收入。用户在不知情中贡献了时间和注意力。在这套效率之上的系统里，三方看似共赢，直到被侵权者找上门来。今年3月，北京互联网法院对一起 AI 换脸侵权案的判决，如一盆冰水浇在了这场狂欢上。法院认定，擅自使用深度合成技术生成高度相似性的形象，就算侵权，需要到道歉并赔偿。几乎同时，各大平台开始批量下架涉嫌侵权的 AI 短剧，并对违规账号进行封禁。这场技术驱动的野性生长第一次撞上了法律的明确边界。这场风波折射出产业深层的根本矛盾，一边是侵权速生的捷径。通过攫取现成的生物特征，实现短期套利。另一边是合规原创的正道，需投入大量时间与创意，从零开始构建虚拟角色。在浮躁的快钱逻辑下，捷径一度压制了正途。司法判决定性 AI 换脸侵权，则宣告这条捷径的终点是法律的峭壁。这也凸显出数字时代的困境。我们的生物特征极易被技术剥离与滥用，但社会对数字身份的保护仍存在巨大空白。我们发布在数字世界的每一张面容，都可能面临被窃取、被标注的风险。未来应对这挑战，需要构建一个多元的治理框架。法律需明确数字人格权边界，平台要落实与其技术能力匹配的审核责任，技术上需推广数字水印、区块链等追溯工具，公众也应提升数字素养，审慎处理个人生物信息。唯有多方协同，才能既鼓励创新。要守住数字时代的人格尊严底线，确保技术进步服务于人，而非侵犯于人。",
+      "utterances": [
+        {
+          "end_time": 3290,
+          "start_time": 130,
+          "text": "当你刷短剧时，刷到一个角色，觉得这张脸怎么这么像我？",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 290,
+              "start_time": 130,
+              "text": "当"
+            },
+            {
+              "confidence": 0,
+              "end_time": 410,
+              "start_time": 290,
+              "text": "你"
+            },
+            {
+              "confidence": 0,
+              "end_time": 570,
+              "start_time": 410,
+              "text": "刷"
+            },
+            {
+              "confidence": 0,
+              "end_time": 730,
+              "start_time": 570,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 850,
+              "start_time": 730,
+              "text": "剧"
+            },
+            {
+              "confidence": 0,
+              "end_time": 1050,
+              "start_time": 850,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 1170,
+              "start_time": 1050,
+              "text": "刷"
+            },
+            {
+              "confidence": 0,
+              "end_time": 1290,
+              "start_time": 1170,
+              "text": "到"
+            },
+            {
+              "confidence": 0,
+              "end_time": 1370,
+              "start_time": 1290,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 1490,
+              "start_time": 1370,
+              "text": "个"
+            },
+            {
+              "confidence": 0,
+              "end_time": 1650,
+              "start_time": 1490,
+              "text": "角"
+            },
+            {
+              "confidence": 0,
+              "end_time": 1770,
+              "start_time": 1650,
+              "text": "色"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2010,
+              "start_time": 1890,
+              "text": "觉"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2130,
+              "start_time": 2010,
+              "text": "得"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2250,
+              "start_time": 2130,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2370,
+              "start_time": 2250,
+              "text": "张"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2570,
+              "start_time": 2370,
+              "text": "脸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2650,
+              "start_time": 2570,
+              "text": "怎"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2770,
+              "start_time": 2650,
+              "text": "么"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2810,
+              "start_time": 2770,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 2890,
+              "start_time": 2810,
+              "text": "么"
+            },
+            {
+              "confidence": 0,
+              "end_time": 3050,
+              "start_time": 2890,
+              "text": "像"
+            },
+            {
+              "confidence": 0,
+              "end_time": 3290,
+              "start_time": 3050,
+              "text": "我"
+            }
+          ]
+        },
+        {
+          "end_time": 6250,
+          "start_time": 3330,
+          "text": "别急着惊叹大数据的精准，你的脸可能真的被偷了！",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 3490,
+              "start_time": 3330,
+              "text": "别"
+            },
+            {
+              "confidence": 0,
+              "end_time": 3610,
+              "start_time": 3490,
+              "text": "急"
+            },
+            {
+              "confidence": 0,
+              "end_time": 3730,
+              "start_time": 3610,
+              "text": "着"
+            },
+            {
+              "confidence": 0,
+              "end_time": 3890,
+              "start_time": 3770,
+              "text": "惊"
+            },
+            {
+              "confidence": 0,
+              "end_time": 4050,
+              "start_time": 3890,
+              "text": "叹"
+            },
+            {
+              "confidence": 0,
+              "end_time": 4210,
+              "start_time": 4050,
+              "text": "大"
+            },
+            {
+              "confidence": 0,
+              "end_time": 4330,
+              "start_time": 4210,
+              "text": "数"
+            },
+            {
+              "confidence": 0,
+              "end_time": 4410,
+              "start_time": 4330,
+              "text": "据"
+            },
+            {
+              "confidence": 0,
+              "end_time": 4610,
+              "start_time": 4410,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 4690,
+              "start_time": 4610,
+              "text": "精"
+            },
+            {
+              "confidence": 0,
+              "end_time": 4850,
+              "start_time": 4690,
+              "text": "准"
+            },
+            {
+              "confidence": 0,
+              "end_time": 5050,
+              "start_time": 4890,
+              "text": "你"
+            },
+            {
+              "confidence": 0,
+              "end_time": 5170,
+              "start_time": 5050,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 5330,
+              "start_time": 5170,
+              "text": "脸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 5450,
+              "start_time": 5330,
+              "text": "可"
+            },
+            {
+              "confidence": 0,
+              "end_time": 5530,
+              "start_time": 5450,
+              "text": "能"
+            },
+            {
+              "confidence": 0,
+              "end_time": 5650,
+              "start_time": 5530,
+              "text": "真"
+            },
+            {
+              "confidence": 0,
+              "end_time": 5730,
+              "start_time": 5650,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 5890,
+              "start_time": 5730,
+              "text": "被"
+            },
+            {
+              "confidence": 0,
+              "end_time": 6050,
+              "start_time": 5890,
+              "text": "偷"
+            },
+            {
+              "confidence": 0,
+              "end_time": 6250,
+              "start_time": 6050,
+              "text": "了"
+            }
+          ]
+        },
+        {
+          "end_time": 6930,
+          "start_time": 6250,
+          "text": "这不是玩笑！",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 6410,
+              "start_time": 6250,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 6530,
+              "start_time": 6410,
+              "text": "不"
+            },
+            {
+              "confidence": 0,
+              "end_time": 6650,
+              "start_time": 6530,
+              "text": "是"
+            },
+            {
+              "confidence": 0,
+              "end_time": 6770,
+              "start_time": 6650,
+              "text": "玩"
+            },
+            {
+              "confidence": 0,
+              "end_time": 6930,
+              "start_time": 6770,
+              "text": "笑"
+            }
+          ]
+        },
+        {
+          "end_time": 9770,
+          "start_time": 7090,
+          "text": "最近，一位汉服博主就在短剧中看到了自己的脸。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 7250,
+              "start_time": 7090,
+              "text": "最"
+            },
+            {
+              "confidence": 0,
+              "end_time": 7370,
+              "start_time": 7250,
+              "text": "近"
+            },
+            {
+              "confidence": 0,
+              "end_time": 7570,
+              "start_time": 7410,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 7690,
+              "start_time": 7570,
+              "text": "位"
+            },
+            {
+              "confidence": 0,
+              "end_time": 7850,
+              "start_time": 7690,
+              "text": "汉"
+            },
+            {
+              "confidence": 0,
+              "end_time": 8010,
+              "start_time": 7850,
+              "text": "服"
+            },
+            {
+              "confidence": 0,
+              "end_time": 8210,
+              "start_time": 8010,
+              "text": "博"
+            },
+            {
+              "confidence": 0,
+              "end_time": 8330,
+              "start_time": 8210,
+              "text": "主"
+            },
+            {
+              "confidence": 0,
+              "end_time": 8450,
+              "start_time": 8330,
+              "text": "就"
+            },
+            {
+              "confidence": 0,
+              "end_time": 8610,
+              "start_time": 8450,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 8770,
+              "start_time": 8610,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 8890,
+              "start_time": 8770,
+              "text": "剧"
+            },
+            {
+              "confidence": 0,
+              "end_time": 9050,
+              "start_time": 8890,
+              "text": "中"
+            },
+            {
+              "confidence": 0,
+              "end_time": 9170,
+              "start_time": 9050,
+              "text": "看"
+            },
+            {
+              "confidence": 0,
+              "end_time": 9250,
+              "start_time": 9170,
+              "text": "到"
+            },
+            {
+              "confidence": 0,
+              "end_time": 9370,
+              "start_time": 9250,
+              "text": "了"
+            },
+            {
+              "confidence": 0,
+              "end_time": 9450,
+              "start_time": 9370,
+              "text": "自"
+            },
+            {
+              "confidence": 0,
+              "end_time": 9570,
+              "start_time": 9450,
+              "text": "己"
+            },
+            {
+              "confidence": 0,
+              "end_time": 9650,
+              "start_time": 9570,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 9770,
+              "start_time": 9650,
+              "text": "脸"
+            }
+          ]
+        },
+        {
+          "end_time": 12770,
+          "start_time": 9970,
+          "text": "制作方未经授权，用 AI 技术盗走了她的面孔。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 10090,
+              "start_time": 9970,
+              "text": "制"
+            },
+            {
+              "confidence": 0,
+              "end_time": 10210,
+              "start_time": 10090,
+              "text": "作"
+            },
+            {
+              "confidence": 0,
+              "end_time": 10370,
+              "start_time": 10210,
+              "text": "方"
+            },
+            {
+              "confidence": 0,
+              "end_time": 10570,
+              "start_time": 10410,
+              "text": "未"
+            },
+            {
+              "confidence": 0,
+              "end_time": 10690,
+              "start_time": 10570,
+              "text": "经"
+            },
+            {
+              "confidence": 0,
+              "end_time": 10850,
+              "start_time": 10690,
+              "text": "授"
+            },
+            {
+              "confidence": 0,
+              "end_time": 11010,
+              "start_time": 10850,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 11290,
+              "start_time": 11090,
+              "text": "用"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 11490,
+              "start_time": 11370,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 11730,
+              "start_time": 11570,
+              "text": "技"
+            },
+            {
+              "confidence": 0,
+              "end_time": 11810,
+              "start_time": 11730,
+              "text": "术"
+            },
+            {
+              "confidence": 0,
+              "end_time": 12010,
+              "start_time": 11890,
+              "text": "盗"
+            },
+            {
+              "confidence": 0,
+              "end_time": 12170,
+              "start_time": 12010,
+              "text": "走"
+            },
+            {
+              "confidence": 0,
+              "end_time": 12290,
+              "start_time": 12170,
+              "text": "了"
+            },
+            {
+              "confidence": 0,
+              "end_time": 12330,
+              "start_time": 12290,
+              "text": "她"
+            },
+            {
+              "confidence": 0,
+              "end_time": 12450,
+              "start_time": 12330,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 12610,
+              "start_time": 12450,
+              "text": "面"
+            },
+            {
+              "confidence": 0,
+              "end_time": 12770,
+              "start_time": 12650,
+              "text": "孔"
+            }
+          ]
+        },
+        {
+          "end_time": 17530,
+          "start_time": 12890,
+          "text": "当大家还在争论 AI 会不会取代人类时，有些人的脸已经先一步再就业了。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 13090,
+              "start_time": 12890,
+              "text": "当"
+            },
+            {
+              "confidence": 0,
+              "end_time": 13210,
+              "start_time": 13090,
+              "text": "大"
+            },
+            {
+              "confidence": 0,
+              "end_time": 13330,
+              "start_time": 13210,
+              "text": "家"
+            },
+            {
+              "confidence": 0,
+              "end_time": 13450,
+              "start_time": 13330,
+              "text": "还"
+            },
+            {
+              "confidence": 0,
+              "end_time": 13610,
+              "start_time": 13450,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 13770,
+              "start_time": 13610,
+              "text": "争"
+            },
+            {
+              "confidence": 0,
+              "end_time": 13930,
+              "start_time": 13770,
+              "text": "论"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 14250,
+              "start_time": 14090,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 14490,
+              "start_time": 14330,
+              "text": "会"
+            },
+            {
+              "confidence": 0,
+              "end_time": 14570,
+              "start_time": 14490,
+              "text": "不"
+            },
+            {
+              "confidence": 0,
+              "end_time": 14650,
+              "start_time": 14570,
+              "text": "会"
+            },
+            {
+              "confidence": 0,
+              "end_time": 14810,
+              "start_time": 14650,
+              "text": "取"
+            },
+            {
+              "confidence": 0,
+              "end_time": 14970,
+              "start_time": 14810,
+              "text": "代"
+            },
+            {
+              "confidence": 0,
+              "end_time": 15130,
+              "start_time": 14970,
+              "text": "人"
+            },
+            {
+              "confidence": 0,
+              "end_time": 15250,
+              "start_time": 15130,
+              "text": "类"
+            },
+            {
+              "confidence": 0,
+              "end_time": 15490,
+              "start_time": 15250,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 15730,
+              "start_time": 15570,
+              "text": "有"
+            },
+            {
+              "confidence": 0,
+              "end_time": 15810,
+              "start_time": 15730,
+              "text": "些"
+            },
+            {
+              "confidence": 0,
+              "end_time": 15930,
+              "start_time": 15810,
+              "text": "人"
+            },
+            {
+              "confidence": 0,
+              "end_time": 16050,
+              "start_time": 15930,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 16250,
+              "start_time": 16050,
+              "text": "脸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 16410,
+              "start_time": 16250,
+              "text": "已"
+            },
+            {
+              "confidence": 0,
+              "end_time": 16490,
+              "start_time": 16410,
+              "text": "经"
+            },
+            {
+              "confidence": 0,
+              "end_time": 16650,
+              "start_time": 16490,
+              "text": "先"
+            },
+            {
+              "confidence": 0,
+              "end_time": 16770,
+              "start_time": 16650,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 16850,
+              "start_time": 16770,
+              "text": "步"
+            },
+            {
+              "confidence": 0,
+              "end_time": 17050,
+              "start_time": 16890,
+              "text": "再"
+            },
+            {
+              "confidence": 0,
+              "end_time": 17210,
+              "start_time": 17050,
+              "text": "就"
+            },
+            {
+              "confidence": 0,
+              "end_time": 17330,
+              "start_time": 17210,
+              "text": "业"
+            },
+            {
+              "confidence": 0,
+              "end_time": 17530,
+              "start_time": 17330,
+              "text": "了"
+            }
+          ]
+        },
+        {
+          "end_time": 21050,
+          "start_time": 17570,
+          "text": "资本疯狂涌入 AI 短剧，这背后藏着门绝佳的生意经。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 17730,
+              "start_time": 17570,
+              "text": "资"
+            },
+            {
+              "confidence": 0,
+              "end_time": 17890,
+              "start_time": 17730,
+              "text": "本"
+            },
+            {
+              "confidence": 0,
+              "end_time": 18050,
+              "start_time": 17890,
+              "text": "疯"
+            },
+            {
+              "confidence": 0,
+              "end_time": 18170,
+              "start_time": 18050,
+              "text": "狂"
+            },
+            {
+              "confidence": 0,
+              "end_time": 18330,
+              "start_time": 18170,
+              "text": "涌"
+            },
+            {
+              "confidence": 0,
+              "end_time": 18490,
+              "start_time": 18330,
+              "text": "入"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 18690,
+              "start_time": 18570,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 18930,
+              "start_time": 18770,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 19090,
+              "start_time": 18930,
+              "text": "剧"
+            },
+            {
+              "confidence": 0,
+              "end_time": 19410,
+              "start_time": 19170,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 19530,
+              "start_time": 19410,
+              "text": "背"
+            },
+            {
+              "confidence": 0,
+              "end_time": 19690,
+              "start_time": 19530,
+              "text": "后"
+            },
+            {
+              "confidence": 0,
+              "end_time": 19930,
+              "start_time": 19770,
+              "text": "藏"
+            },
+            {
+              "confidence": 0,
+              "end_time": 20050,
+              "start_time": 19930,
+              "text": "着"
+            },
+            {
+              "confidence": 0,
+              "end_time": 20250,
+              "start_time": 20090,
+              "text": "门"
+            },
+            {
+              "confidence": 0,
+              "end_time": 20410,
+              "start_time": 20290,
+              "text": "绝"
+            },
+            {
+              "confidence": 0,
+              "end_time": 20530,
+              "start_time": 20410,
+              "text": "佳"
+            },
+            {
+              "confidence": 0,
+              "end_time": 20690,
+              "start_time": 20530,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 20810,
+              "start_time": 20690,
+              "text": "生"
+            },
+            {
+              "confidence": 0,
+              "end_time": 20890,
+              "start_time": 20810,
+              "text": "意"
+            },
+            {
+              "confidence": 0,
+              "end_time": 21050,
+              "start_time": 20970,
+              "text": "经"
+            }
+          ]
+        },
+        {
+          "end_time": 24130,
+          "start_time": 21210,
+          "text": "现在做 AI 短剧，一级成本已压制5000元以内。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 21370,
+              "start_time": 21210,
+              "text": "现"
+            },
+            {
+              "confidence": 0,
+              "end_time": 21490,
+              "start_time": 21370,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 21690,
+              "start_time": 21490,
+              "text": "做"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 21890,
+              "start_time": 21770,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 22130,
+              "start_time": 21970,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 22250,
+              "start_time": 22130,
+              "text": "剧"
+            },
+            {
+              "confidence": 0,
+              "end_time": 22450,
+              "start_time": 22370,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 22570,
+              "start_time": 22530,
+              "text": "级"
+            },
+            {
+              "confidence": 0,
+              "end_time": 22810,
+              "start_time": 22690,
+              "text": "成"
+            },
+            {
+              "confidence": 0,
+              "end_time": 22930,
+              "start_time": 22810,
+              "text": "本"
+            },
+            {
+              "confidence": 0,
+              "end_time": 23090,
+              "start_time": 22970,
+              "text": "已"
+            },
+            {
+              "confidence": 0,
+              "end_time": 23290,
+              "start_time": 23170,
+              "text": "压"
+            },
+            {
+              "confidence": 0,
+              "end_time": 23410,
+              "start_time": 23330,
+              "text": "制"
+            },
+            {
+              "confidence": 0,
+              "end_time": 23730,
+              "start_time": 23490,
+              "text": "5000"
+            },
+            {
+              "confidence": 0,
+              "end_time": 23890,
+              "start_time": 23730,
+              "text": "元"
+            },
+            {
+              "confidence": 0,
+              "end_time": 24010,
+              "start_time": 23890,
+              "text": "以"
+            },
+            {
+              "confidence": 0,
+              "end_time": 24130,
+              "start_time": 24010,
+              "text": "内"
+            }
+          ]
+        },
+        {
+          "end_time": 27710,
+          "start_time": 24350,
+          "text": "制作周期更是缩短至3~7天，远超传统模式的效率。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 24470,
+              "start_time": 24350,
+              "text": "制"
+            },
+            {
+              "confidence": 0,
+              "end_time": 24630,
+              "start_time": 24470,
+              "text": "作"
+            },
+            {
+              "confidence": 0,
+              "end_time": 24750,
+              "start_time": 24630,
+              "text": "周"
+            },
+            {
+              "confidence": 0,
+              "end_time": 24910,
+              "start_time": 24750,
+              "text": "期"
+            },
+            {
+              "confidence": 0,
+              "end_time": 25110,
+              "start_time": 24950,
+              "text": "更"
+            },
+            {
+              "confidence": 0,
+              "end_time": 25270,
+              "start_time": 25110,
+              "text": "是"
+            },
+            {
+              "confidence": 0,
+              "end_time": 25390,
+              "start_time": 25270,
+              "text": "缩"
+            },
+            {
+              "confidence": 0,
+              "end_time": 25550,
+              "start_time": 25390,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 25710,
+              "start_time": 25550,
+              "text": "至"
+            },
+            {
+              "confidence": 0,
+              "end_time": 26110,
+              "start_time": 25710,
+              "text": "3~7"
+            },
+            {
+              "confidence": 0,
+              "end_time": 26310,
+              "start_time": 26110,
+              "text": "天"
+            },
+            {
+              "confidence": 0,
+              "end_time": 26630,
+              "start_time": 26430,
+              "text": "远"
+            },
+            {
+              "confidence": 0,
+              "end_time": 26830,
+              "start_time": 26630,
+              "text": "超"
+            },
+            {
+              "confidence": 0,
+              "end_time": 26950,
+              "start_time": 26830,
+              "text": "传"
+            },
+            {
+              "confidence": 0,
+              "end_time": 27110,
+              "start_time": 26950,
+              "text": "统"
+            },
+            {
+              "confidence": 0,
+              "end_time": 27230,
+              "start_time": 27110,
+              "text": "模"
+            },
+            {
+              "confidence": 0,
+              "end_time": 27350,
+              "start_time": 27230,
+              "text": "式"
+            },
+            {
+              "confidence": 0,
+              "end_time": 27510,
+              "start_time": 27350,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 27630,
+              "start_time": 27510,
+              "text": "效"
+            },
+            {
+              "confidence": 0,
+              "end_time": 27710,
+              "start_time": 27630,
+              "text": "率"
+            }
+          ]
+        },
+        {
+          "end_time": 31230,
+          "start_time": 27790,
+          "text": "用 AI 换脸节省片酬，则成了行业心照不宣的暴利密码。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 27990,
+              "start_time": 27790,
+              "text": "用"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 28190,
+              "start_time": 28070,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 28430,
+              "start_time": 28270,
+              "text": "换"
+            },
+            {
+              "confidence": 0,
+              "end_time": 28590,
+              "start_time": 28430,
+              "text": "脸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 28750,
+              "start_time": 28630,
+              "text": "节"
+            },
+            {
+              "confidence": 0,
+              "end_time": 28910,
+              "start_time": 28750,
+              "text": "省"
+            },
+            {
+              "confidence": 0,
+              "end_time": 29070,
+              "start_time": 28950,
+              "text": "片"
+            },
+            {
+              "confidence": 0,
+              "end_time": 29190,
+              "start_time": 29150,
+              "text": "酬"
+            },
+            {
+              "confidence": 0,
+              "end_time": 29510,
+              "start_time": 29350,
+              "text": "则"
+            },
+            {
+              "confidence": 0,
+              "end_time": 29670,
+              "start_time": 29510,
+              "text": "成"
+            },
+            {
+              "confidence": 0,
+              "end_time": 29790,
+              "start_time": 29670,
+              "text": "了"
+            },
+            {
+              "confidence": 0,
+              "end_time": 29870,
+              "start_time": 29790,
+              "text": "行"
+            },
+            {
+              "confidence": 0,
+              "end_time": 29990,
+              "start_time": 29870,
+              "text": "业"
+            },
+            {
+              "confidence": 0,
+              "end_time": 30150,
+              "start_time": 29990,
+              "text": "心"
+            },
+            {
+              "confidence": 0,
+              "end_time": 30270,
+              "start_time": 30230,
+              "text": "照"
+            },
+            {
+              "confidence": 0,
+              "end_time": 30470,
+              "start_time": 30310,
+              "text": "不"
+            },
+            {
+              "confidence": 0,
+              "end_time": 30550,
+              "start_time": 30470,
+              "text": "宣"
+            },
+            {
+              "confidence": 0,
+              "end_time": 30750,
+              "start_time": 30590,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 30870,
+              "start_time": 30750,
+              "text": "暴"
+            },
+            {
+              "confidence": 0,
+              "end_time": 30950,
+              "start_time": 30870,
+              "text": "利"
+            },
+            {
+              "confidence": 0,
+              "end_time": 31150,
+              "start_time": 30990,
+              "text": "密"
+            },
+            {
+              "confidence": 0,
+              "end_time": 31230,
+              "start_time": 31150,
+              "text": "码"
+            }
+          ]
+        },
+        {
+          "end_time": 35070,
+          "start_time": 31390,
+          "text": "甚至有传言，未来男二以下的角色都可能被 AI 全面取代。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 31510,
+              "start_time": 31390,
+              "text": "甚"
+            },
+            {
+              "confidence": 0,
+              "end_time": 31590,
+              "start_time": 31510,
+              "text": "至"
+            },
+            {
+              "confidence": 0,
+              "end_time": 31790,
+              "start_time": 31590,
+              "text": "有"
+            },
+            {
+              "confidence": 0,
+              "end_time": 31950,
+              "start_time": 31790,
+              "text": "传"
+            },
+            {
+              "confidence": 0,
+              "end_time": 32110,
+              "start_time": 31950,
+              "text": "言"
+            },
+            {
+              "confidence": 0,
+              "end_time": 32350,
+              "start_time": 32230,
+              "text": "未"
+            },
+            {
+              "confidence": 0,
+              "end_time": 32470,
+              "start_time": 32350,
+              "text": "来"
+            },
+            {
+              "confidence": 0,
+              "end_time": 32670,
+              "start_time": 32470,
+              "text": "男"
+            },
+            {
+              "confidence": 0,
+              "end_time": 32830,
+              "start_time": 32670,
+              "text": "二"
+            },
+            {
+              "confidence": 0,
+              "end_time": 32950,
+              "start_time": 32830,
+              "text": "以"
+            },
+            {
+              "confidence": 0,
+              "end_time": 33030,
+              "start_time": 32950,
+              "text": "下"
+            },
+            {
+              "confidence": 0,
+              "end_time": 33190,
+              "start_time": 33030,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 33310,
+              "start_time": 33190,
+              "text": "角"
+            },
+            {
+              "confidence": 0,
+              "end_time": 33430,
+              "start_time": 33310,
+              "text": "色"
+            },
+            {
+              "confidence": 0,
+              "end_time": 33710,
+              "start_time": 33510,
+              "text": "都"
+            },
+            {
+              "confidence": 0,
+              "end_time": 33830,
+              "start_time": 33710,
+              "text": "可"
+            },
+            {
+              "confidence": 0,
+              "end_time": 33910,
+              "start_time": 33830,
+              "text": "能"
+            },
+            {
+              "confidence": 0,
+              "end_time": 34110,
+              "start_time": 33910,
+              "text": "被"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 34350,
+              "start_time": 34190,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 34630,
+              "start_time": 34470,
+              "text": "全"
+            },
+            {
+              "confidence": 0,
+              "end_time": 34750,
+              "start_time": 34630,
+              "text": "面"
+            },
+            {
+              "confidence": 0,
+              "end_time": 34950,
+              "start_time": 34790,
+              "text": "取"
+            },
+            {
+              "confidence": 0,
+              "end_time": 35070,
+              "start_time": 34950,
+              "text": "代"
+            }
+          ]
+        },
+        {
+          "end_time": 37990,
+          "start_time": 35190,
+          "text": "如此明目张胆的偷脸乱象，平台为何集体失明？",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 35350,
+              "start_time": 35190,
+              "text": "如"
+            },
+            {
+              "confidence": 0,
+              "end_time": 35470,
+              "start_time": 35350,
+              "text": "此"
+            },
+            {
+              "confidence": 0,
+              "end_time": 35630,
+              "start_time": 35510,
+              "text": "明"
+            },
+            {
+              "confidence": 0,
+              "end_time": 35750,
+              "start_time": 35630,
+              "text": "目"
+            },
+            {
+              "confidence": 0,
+              "end_time": 35910,
+              "start_time": 35790,
+              "text": "张"
+            },
+            {
+              "confidence": 0,
+              "end_time": 36030,
+              "start_time": 35950,
+              "text": "胆"
+            },
+            {
+              "confidence": 0,
+              "end_time": 36190,
+              "start_time": 36030,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 36310,
+              "start_time": 36190,
+              "text": "偷"
+            },
+            {
+              "confidence": 0,
+              "end_time": 36470,
+              "start_time": 36310,
+              "text": "脸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 36630,
+              "start_time": 36470,
+              "text": "乱"
+            },
+            {
+              "confidence": 0,
+              "end_time": 36750,
+              "start_time": 36630,
+              "text": "象"
+            },
+            {
+              "confidence": 0,
+              "end_time": 37030,
+              "start_time": 36910,
+              "text": "平"
+            },
+            {
+              "confidence": 0,
+              "end_time": 37150,
+              "start_time": 37030,
+              "text": "台"
+            },
+            {
+              "confidence": 0,
+              "end_time": 37310,
+              "start_time": 37150,
+              "text": "为"
+            },
+            {
+              "confidence": 0,
+              "end_time": 37430,
+              "start_time": 37310,
+              "text": "何"
+            },
+            {
+              "confidence": 0,
+              "end_time": 37630,
+              "start_time": 37470,
+              "text": "集"
+            },
+            {
+              "confidence": 0,
+              "end_time": 37710,
+              "start_time": 37630,
+              "text": "体"
+            },
+            {
+              "confidence": 0,
+              "end_time": 37870,
+              "start_time": 37830,
+              "text": "失"
+            },
+            {
+              "confidence": 0,
+              "end_time": 37990,
+              "start_time": 37950,
+              "text": "明"
+            }
+          ]
+        },
+        {
+          "end_time": 42470,
+          "start_time": 38150,
+          "text": "因为他们算的是另外一本账，用户停留时间加广告加载率才是核心收益。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 38270,
+              "start_time": 38150,
+              "text": "因"
+            },
+            {
+              "confidence": 0,
+              "end_time": 38350,
+              "start_time": 38270,
+              "text": "为"
+            },
+            {
+              "confidence": 0,
+              "end_time": 38470,
+              "start_time": 38350,
+              "text": "他"
+            },
+            {
+              "confidence": 0,
+              "end_time": 38550,
+              "start_time": 38470,
+              "text": "们"
+            },
+            {
+              "confidence": 0,
+              "end_time": 38710,
+              "start_time": 38550,
+              "text": "算"
+            },
+            {
+              "confidence": 0,
+              "end_time": 38790,
+              "start_time": 38710,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 38950,
+              "start_time": 38790,
+              "text": "是"
+            },
+            {
+              "confidence": 0,
+              "end_time": 39030,
+              "start_time": 38950,
+              "text": "另"
+            },
+            {
+              "confidence": 0,
+              "end_time": 39110,
+              "start_time": 39030,
+              "text": "外"
+            },
+            {
+              "confidence": 0,
+              "end_time": 39230,
+              "start_time": 39110,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 39350,
+              "start_time": 39230,
+              "text": "本"
+            },
+            {
+              "confidence": 0,
+              "end_time": 39510,
+              "start_time": 39350,
+              "text": "账"
+            },
+            {
+              "confidence": 0,
+              "end_time": 39790,
+              "start_time": 39630,
+              "text": "用"
+            },
+            {
+              "confidence": 0,
+              "end_time": 39950,
+              "start_time": 39790,
+              "text": "户"
+            },
+            {
+              "confidence": 0,
+              "end_time": 40110,
+              "start_time": 39950,
+              "text": "停"
+            },
+            {
+              "confidence": 0,
+              "end_time": 40230,
+              "start_time": 40110,
+              "text": "留"
+            },
+            {
+              "confidence": 0,
+              "end_time": 40390,
+              "start_time": 40230,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 40510,
+              "start_time": 40390,
+              "text": "间"
+            },
+            {
+              "confidence": 0,
+              "end_time": 40790,
+              "start_time": 40510,
+              "text": "加"
+            },
+            {
+              "confidence": 0,
+              "end_time": 40950,
+              "start_time": 40790,
+              "text": "广"
+            },
+            {
+              "confidence": 0,
+              "end_time": 41030,
+              "start_time": 40950,
+              "text": "告"
+            },
+            {
+              "confidence": 0,
+              "end_time": 41230,
+              "start_time": 41110,
+              "text": "加"
+            },
+            {
+              "confidence": 0,
+              "end_time": 41310,
+              "start_time": 41230,
+              "text": "载"
+            },
+            {
+              "confidence": 0,
+              "end_time": 41550,
+              "start_time": 41390,
+              "text": "率"
+            },
+            {
+              "confidence": 0,
+              "end_time": 41750,
+              "start_time": 41590,
+              "text": "才"
+            },
+            {
+              "confidence": 0,
+              "end_time": 41910,
+              "start_time": 41750,
+              "text": "是"
+            },
+            {
+              "confidence": 0,
+              "end_time": 42030,
+              "start_time": 41910,
+              "text": "核"
+            },
+            {
+              "confidence": 0,
+              "end_time": 42190,
+              "start_time": 42030,
+              "text": "心"
+            },
+            {
+              "confidence": 0,
+              "end_time": 42350,
+              "start_time": 42190,
+              "text": "收"
+            },
+            {
+              "confidence": 0,
+              "end_time": 42470,
+              "start_time": 42350,
+              "text": "益"
+            }
+          ]
+        },
+        {
+          "end_time": 49630,
+          "start_time": 42590,
+          "text": "当传统短剧还在为日更发愁时，AI 短剧已经可以日产十几，完美的契合了算法对海量、新鲜、高粘性内容的渴望。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 42790,
+              "start_time": 42590,
+              "text": "当"
+            },
+            {
+              "confidence": 0,
+              "end_time": 42910,
+              "start_time": 42790,
+              "text": "传"
+            },
+            {
+              "confidence": 0,
+              "end_time": 43070,
+              "start_time": 42910,
+              "text": "统"
+            },
+            {
+              "confidence": 0,
+              "end_time": 43230,
+              "start_time": 43070,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 43350,
+              "start_time": 43230,
+              "text": "剧"
+            },
+            {
+              "confidence": 0,
+              "end_time": 43470,
+              "start_time": 43350,
+              "text": "还"
+            },
+            {
+              "confidence": 0,
+              "end_time": 43590,
+              "start_time": 43470,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 43710,
+              "start_time": 43590,
+              "text": "为"
+            },
+            {
+              "confidence": 0,
+              "end_time": 43870,
+              "start_time": 43710,
+              "text": "日"
+            },
+            {
+              "confidence": 0,
+              "end_time": 43950,
+              "start_time": 43910,
+              "text": "更"
+            },
+            {
+              "confidence": 0,
+              "end_time": 44190,
+              "start_time": 44030,
+              "text": "发"
+            },
+            {
+              "confidence": 0,
+              "end_time": 44310,
+              "start_time": 44190,
+              "text": "愁"
+            },
+            {
+              "confidence": 0,
+              "end_time": 44510,
+              "start_time": 44350,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 44950,
+              "start_time": 44790,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 45070,
+              "start_time": 44950,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 45230,
+              "start_time": 45070,
+              "text": "剧"
+            },
+            {
+              "confidence": 0,
+              "end_time": 45350,
+              "start_time": 45230,
+              "text": "已"
+            },
+            {
+              "confidence": 0,
+              "end_time": 45430,
+              "start_time": 45350,
+              "text": "经"
+            },
+            {
+              "confidence": 0,
+              "end_time": 45510,
+              "start_time": 45430,
+              "text": "可"
+            },
+            {
+              "confidence": 0,
+              "end_time": 45630,
+              "start_time": 45510,
+              "text": "以"
+            },
+            {
+              "confidence": 0,
+              "end_time": 45750,
+              "start_time": 45630,
+              "text": "日"
+            },
+            {
+              "confidence": 0,
+              "end_time": 45910,
+              "start_time": 45790,
+              "text": "产"
+            },
+            {
+              "confidence": 0,
+              "end_time": 46110,
+              "start_time": 45910,
+              "text": "十"
+            },
+            {
+              "confidence": 0,
+              "end_time": 46230,
+              "start_time": 46110,
+              "text": "几"
+            },
+            {
+              "confidence": 0,
+              "end_time": 46510,
+              "start_time": 46390,
+              "text": "完"
+            },
+            {
+              "confidence": 0,
+              "end_time": 46630,
+              "start_time": 46510,
+              "text": "美"
+            },
+            {
+              "confidence": 0,
+              "end_time": 46710,
+              "start_time": 46670,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 46870,
+              "start_time": 46750,
+              "text": "契"
+            },
+            {
+              "confidence": 0,
+              "end_time": 46990,
+              "start_time": 46870,
+              "text": "合"
+            },
+            {
+              "confidence": 0,
+              "end_time": 47150,
+              "start_time": 46990,
+              "text": "了"
+            },
+            {
+              "confidence": 0,
+              "end_time": 47270,
+              "start_time": 47150,
+              "text": "算"
+            },
+            {
+              "confidence": 0,
+              "end_time": 47430,
+              "start_time": 47270,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 47630,
+              "start_time": 47430,
+              "text": "对"
+            },
+            {
+              "confidence": 0,
+              "end_time": 47790,
+              "start_time": 47630,
+              "text": "海"
+            },
+            {
+              "confidence": 0,
+              "end_time": 47950,
+              "start_time": 47790,
+              "text": "量"
+            },
+            {
+              "confidence": 0,
+              "end_time": 48270,
+              "start_time": 48070,
+              "text": "新"
+            },
+            {
+              "confidence": 0,
+              "end_time": 48390,
+              "start_time": 48270,
+              "text": "鲜"
+            },
+            {
+              "confidence": 0,
+              "end_time": 48710,
+              "start_time": 48510,
+              "text": "高"
+            },
+            {
+              "confidence": 0,
+              "end_time": 48830,
+              "start_time": 48750,
+              "text": "粘"
+            },
+            {
+              "confidence": 0,
+              "end_time": 48990,
+              "start_time": 48870,
+              "text": "性"
+            },
+            {
+              "confidence": 0,
+              "end_time": 49190,
+              "start_time": 49070,
+              "text": "内"
+            },
+            {
+              "confidence": 0,
+              "end_time": 49270,
+              "start_time": 49190,
+              "text": "容"
+            },
+            {
+              "confidence": 0,
+              "end_time": 49430,
+              "start_time": 49270,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 49550,
+              "start_time": 49430,
+              "text": "渴"
+            },
+            {
+              "confidence": 0,
+              "end_time": 49630,
+              "start_time": 49550,
+              "text": "望"
+            }
+          ]
+        },
+        {
+          "end_time": 55830,
+          "start_time": 49830,
+          "text": "而用户协议中的上传者应确保内容不侵犯第三方合法权益，平台不承担由此产生的法律责任。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 49990,
+              "start_time": 49830,
+              "text": "而"
+            },
+            {
+              "confidence": 0,
+              "end_time": 50110,
+              "start_time": 49990,
+              "text": "用"
+            },
+            {
+              "confidence": 0,
+              "end_time": 50230,
+              "start_time": 50110,
+              "text": "户"
+            },
+            {
+              "confidence": 0,
+              "end_time": 50390,
+              "start_time": 50230,
+              "text": "协"
+            },
+            {
+              "confidence": 0,
+              "end_time": 50470,
+              "start_time": 50390,
+              "text": "议"
+            },
+            {
+              "confidence": 0,
+              "end_time": 50630,
+              "start_time": 50510,
+              "text": "中"
+            },
+            {
+              "confidence": 0,
+              "end_time": 50870,
+              "start_time": 50630,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 51070,
+              "start_time": 50870,
+              "text": "上"
+            },
+            {
+              "confidence": 0,
+              "end_time": 51270,
+              "start_time": 51070,
+              "text": "传"
+            },
+            {
+              "confidence": 0,
+              "end_time": 51470,
+              "start_time": 51270,
+              "text": "者"
+            },
+            {
+              "confidence": 0,
+              "end_time": 51710,
+              "start_time": 51470,
+              "text": "应"
+            },
+            {
+              "confidence": 0,
+              "end_time": 51870,
+              "start_time": 51710,
+              "text": "确"
+            },
+            {
+              "confidence": 0,
+              "end_time": 52030,
+              "start_time": 51870,
+              "text": "保"
+            },
+            {
+              "confidence": 0,
+              "end_time": 52150,
+              "start_time": 52030,
+              "text": "内"
+            },
+            {
+              "confidence": 0,
+              "end_time": 52230,
+              "start_time": 52150,
+              "text": "容"
+            },
+            {
+              "confidence": 0,
+              "end_time": 52430,
+              "start_time": 52230,
+              "text": "不"
+            },
+            {
+              "confidence": 0,
+              "end_time": 52590,
+              "start_time": 52470,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 52710,
+              "start_time": 52590,
+              "text": "犯"
+            },
+            {
+              "confidence": 0,
+              "end_time": 52870,
+              "start_time": 52750,
+              "text": "第"
+            },
+            {
+              "confidence": 0,
+              "end_time": 52990,
+              "start_time": 52870,
+              "text": "三"
+            },
+            {
+              "confidence": 0,
+              "end_time": 53190,
+              "start_time": 52990,
+              "text": "方"
+            },
+            {
+              "confidence": 0,
+              "end_time": 53350,
+              "start_time": 53190,
+              "text": "合"
+            },
+            {
+              "confidence": 0,
+              "end_time": 53470,
+              "start_time": 53350,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 53670,
+              "start_time": 53470,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 53750,
+              "start_time": 53670,
+              "text": "益"
+            },
+            {
+              "confidence": 0,
+              "end_time": 54110,
+              "start_time": 53950,
+              "text": "平"
+            },
+            {
+              "confidence": 0,
+              "end_time": 54230,
+              "start_time": 54110,
+              "text": "台"
+            },
+            {
+              "confidence": 0,
+              "end_time": 54390,
+              "start_time": 54230,
+              "text": "不"
+            },
+            {
+              "confidence": 0,
+              "end_time": 54510,
+              "start_time": 54390,
+              "text": "承"
+            },
+            {
+              "confidence": 0,
+              "end_time": 54630,
+              "start_time": 54510,
+              "text": "担"
+            },
+            {
+              "confidence": 0,
+              "end_time": 54830,
+              "start_time": 54670,
+              "text": "由"
+            },
+            {
+              "confidence": 0,
+              "end_time": 54990,
+              "start_time": 54830,
+              "text": "此"
+            },
+            {
+              "confidence": 0,
+              "end_time": 55110,
+              "start_time": 54990,
+              "text": "产"
+            },
+            {
+              "confidence": 0,
+              "end_time": 55190,
+              "start_time": 55110,
+              "text": "生"
+            },
+            {
+              "confidence": 0,
+              "end_time": 55350,
+              "start_time": 55190,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 55470,
+              "start_time": 55350,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 55590,
+              "start_time": 55470,
+              "text": "律"
+            },
+            {
+              "confidence": 0,
+              "end_time": 55750,
+              "start_time": 55590,
+              "text": "责"
+            },
+            {
+              "confidence": 0,
+              "end_time": 55830,
+              "start_time": 55750,
+              "text": "任"
+            }
+          ]
+        },
+        {
+          "end_time": 61430,
+          "start_time": 55950,
+          "text": "这道精心设计的防火墙，让平台既能享受流量盛宴，又能将侵权风险精准的外包。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 56150,
+              "start_time": 55950,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 56230,
+              "start_time": 56150,
+              "text": "道"
+            },
+            {
+              "confidence": 0,
+              "end_time": 56470,
+              "start_time": 56350,
+              "text": "精"
+            },
+            {
+              "confidence": 0,
+              "end_time": 56590,
+              "start_time": 56470,
+              "text": "心"
+            },
+            {
+              "confidence": 0,
+              "end_time": 56750,
+              "start_time": 56590,
+              "text": "设"
+            },
+            {
+              "confidence": 0,
+              "end_time": 56790,
+              "start_time": 56750,
+              "text": "计"
+            },
+            {
+              "confidence": 0,
+              "end_time": 56950,
+              "start_time": 56790,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 57070,
+              "start_time": 56950,
+              "text": "防"
+            },
+            {
+              "confidence": 0,
+              "end_time": 57230,
+              "start_time": 57070,
+              "text": "火"
+            },
+            {
+              "confidence": 0,
+              "end_time": 57430,
+              "start_time": 57230,
+              "text": "墙"
+            },
+            {
+              "confidence": 0,
+              "end_time": 57750,
+              "start_time": 57550,
+              "text": "让"
+            },
+            {
+              "confidence": 0,
+              "end_time": 57910,
+              "start_time": 57790,
+              "text": "平"
+            },
+            {
+              "confidence": 0,
+              "end_time": 58070,
+              "start_time": 57910,
+              "text": "台"
+            },
+            {
+              "confidence": 0,
+              "end_time": 58270,
+              "start_time": 58110,
+              "text": "既"
+            },
+            {
+              "confidence": 0,
+              "end_time": 58470,
+              "start_time": 58270,
+              "text": "能"
+            },
+            {
+              "confidence": 0,
+              "end_time": 58590,
+              "start_time": 58470,
+              "text": "享"
+            },
+            {
+              "confidence": 0,
+              "end_time": 58710,
+              "start_time": 58590,
+              "text": "受"
+            },
+            {
+              "confidence": 0,
+              "end_time": 58870,
+              "start_time": 58710,
+              "text": "流"
+            },
+            {
+              "confidence": 0,
+              "end_time": 58990,
+              "start_time": 58870,
+              "text": "量"
+            },
+            {
+              "confidence": 0,
+              "end_time": 59190,
+              "start_time": 59030,
+              "text": "盛"
+            },
+            {
+              "confidence": 0,
+              "end_time": 59270,
+              "start_time": 59230,
+              "text": "宴"
+            },
+            {
+              "confidence": 0,
+              "end_time": 59590,
+              "start_time": 59430,
+              "text": "又"
+            },
+            {
+              "confidence": 0,
+              "end_time": 59710,
+              "start_time": 59590,
+              "text": "能"
+            },
+            {
+              "confidence": 0,
+              "end_time": 59870,
+              "start_time": 59710,
+              "text": "将"
+            },
+            {
+              "confidence": 0,
+              "end_time": 60030,
+              "start_time": 59950,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 60190,
+              "start_time": 60070,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 60430,
+              "start_time": 60270,
+              "text": "风"
+            },
+            {
+              "confidence": 0,
+              "end_time": 60550,
+              "start_time": 60430,
+              "text": "险"
+            },
+            {
+              "confidence": 0,
+              "end_time": 60830,
+              "start_time": 60670,
+              "text": "精"
+            },
+            {
+              "confidence": 0,
+              "end_time": 60950,
+              "start_time": 60830,
+              "text": "准"
+            },
+            {
+              "confidence": 0,
+              "end_time": 61030,
+              "start_time": 60990,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 61230,
+              "start_time": 61110,
+              "text": "外"
+            },
+            {
+              "confidence": 0,
+              "end_time": 61430,
+              "start_time": 61230,
+              "text": "包"
+            }
+          ]
+        },
+        {
+          "end_time": 64590,
+          "start_time": 61630,
+          "text": "于是，一条心照不宣的灰色产业链悄然闭环。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 61830,
+              "start_time": 61630,
+              "text": "于"
+            },
+            {
+              "confidence": 0,
+              "end_time": 61990,
+              "start_time": 61830,
+              "text": "是"
+            },
+            {
+              "confidence": 0,
+              "end_time": 62270,
+              "start_time": 62070,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 62390,
+              "start_time": 62270,
+              "text": "条"
+            },
+            {
+              "confidence": 0,
+              "end_time": 62550,
+              "start_time": 62470,
+              "text": "心"
+            },
+            {
+              "confidence": 0,
+              "end_time": 62670,
+              "start_time": 62630,
+              "text": "照"
+            },
+            {
+              "confidence": 0,
+              "end_time": 62870,
+              "start_time": 62750,
+              "text": "不"
+            },
+            {
+              "confidence": 0,
+              "end_time": 62950,
+              "start_time": 62910,
+              "text": "宣"
+            },
+            {
+              "confidence": 0,
+              "end_time": 63150,
+              "start_time": 62990,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 63270,
+              "start_time": 63150,
+              "text": "灰"
+            },
+            {
+              "confidence": 0,
+              "end_time": 63430,
+              "start_time": 63270,
+              "text": "色"
+            },
+            {
+              "confidence": 0,
+              "end_time": 63550,
+              "start_time": 63430,
+              "text": "产"
+            },
+            {
+              "confidence": 0,
+              "end_time": 63670,
+              "start_time": 63550,
+              "text": "业"
+            },
+            {
+              "confidence": 0,
+              "end_time": 63830,
+              "start_time": 63670,
+              "text": "链"
+            },
+            {
+              "confidence": 0,
+              "end_time": 64150,
+              "start_time": 64030,
+              "text": "悄"
+            },
+            {
+              "confidence": 0,
+              "end_time": 64310,
+              "start_time": 64150,
+              "text": "然"
+            },
+            {
+              "confidence": 0,
+              "end_time": 64470,
+              "start_time": 64390,
+              "text": "闭"
+            },
+            {
+              "confidence": 0,
+              "end_time": 64590,
+              "start_time": 64550,
+              "text": "环"
+            }
+          ]
+        },
+        {
+          "end_time": 67440,
+          "start_time": 64960,
+          "text": "制作方偷脸，以极低成本量产海量内容。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 65080,
+              "start_time": 64960,
+              "text": "制"
+            },
+            {
+              "confidence": 0,
+              "end_time": 65200,
+              "start_time": 65080,
+              "text": "作"
+            },
+            {
+              "confidence": 0,
+              "end_time": 65320,
+              "start_time": 65200,
+              "text": "方"
+            },
+            {
+              "confidence": 0,
+              "end_time": 65520,
+              "start_time": 65360,
+              "text": "偷"
+            },
+            {
+              "confidence": 0,
+              "end_time": 65640,
+              "start_time": 65560,
+              "text": "脸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 65880,
+              "start_time": 65760,
+              "text": "以"
+            },
+            {
+              "confidence": 0,
+              "end_time": 66080,
+              "start_time": 65960,
+              "text": "极"
+            },
+            {
+              "confidence": 0,
+              "end_time": 66280,
+              "start_time": 66080,
+              "text": "低"
+            },
+            {
+              "confidence": 0,
+              "end_time": 66360,
+              "start_time": 66280,
+              "text": "成"
+            },
+            {
+              "confidence": 0,
+              "end_time": 66480,
+              "start_time": 66360,
+              "text": "本"
+            },
+            {
+              "confidence": 0,
+              "end_time": 66680,
+              "start_time": 66480,
+              "text": "量"
+            },
+            {
+              "confidence": 0,
+              "end_time": 66840,
+              "start_time": 66680,
+              "text": "产"
+            },
+            {
+              "confidence": 0,
+              "end_time": 67080,
+              "start_time": 66880,
+              "text": "海"
+            },
+            {
+              "confidence": 0,
+              "end_time": 67200,
+              "start_time": 67080,
+              "text": "量"
+            },
+            {
+              "confidence": 0,
+              "end_time": 67320,
+              "start_time": 67200,
+              "text": "内"
+            },
+            {
+              "confidence": 0,
+              "end_time": 67440,
+              "start_time": 67320,
+              "text": "容"
+            }
+          ]
+        },
+        {
+          "end_time": 71520,
+          "start_time": 67600,
+          "text": "平台算法将高性价比内容推送用户，来换取流量与广告收入。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 67760,
+              "start_time": 67600,
+              "text": "平"
+            },
+            {
+              "confidence": 0,
+              "end_time": 67880,
+              "start_time": 67760,
+              "text": "台"
+            },
+            {
+              "confidence": 0,
+              "end_time": 68080,
+              "start_time": 67880,
+              "text": "算"
+            },
+            {
+              "confidence": 0,
+              "end_time": 68240,
+              "start_time": 68080,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 68480,
+              "start_time": 68280,
+              "text": "将"
+            },
+            {
+              "confidence": 0,
+              "end_time": 68680,
+              "start_time": 68480,
+              "text": "高"
+            },
+            {
+              "confidence": 0,
+              "end_time": 68800,
+              "start_time": 68680,
+              "text": "性"
+            },
+            {
+              "confidence": 0,
+              "end_time": 68960,
+              "start_time": 68800,
+              "text": "价"
+            },
+            {
+              "confidence": 0,
+              "end_time": 69120,
+              "start_time": 68960,
+              "text": "比"
+            },
+            {
+              "confidence": 0,
+              "end_time": 69240,
+              "start_time": 69120,
+              "text": "内"
+            },
+            {
+              "confidence": 0,
+              "end_time": 69360,
+              "start_time": 69240,
+              "text": "容"
+            },
+            {
+              "confidence": 0,
+              "end_time": 69520,
+              "start_time": 69360,
+              "text": "推"
+            },
+            {
+              "confidence": 0,
+              "end_time": 69680,
+              "start_time": 69520,
+              "text": "送"
+            },
+            {
+              "confidence": 0,
+              "end_time": 69840,
+              "start_time": 69680,
+              "text": "用"
+            },
+            {
+              "confidence": 0,
+              "end_time": 69960,
+              "start_time": 69840,
+              "text": "户"
+            },
+            {
+              "confidence": 0,
+              "end_time": 70240,
+              "start_time": 70040,
+              "text": "来"
+            },
+            {
+              "confidence": 0,
+              "end_time": 70400,
+              "start_time": 70240,
+              "text": "换"
+            },
+            {
+              "confidence": 0,
+              "end_time": 70560,
+              "start_time": 70400,
+              "text": "取"
+            },
+            {
+              "confidence": 0,
+              "end_time": 70720,
+              "start_time": 70560,
+              "text": "流"
+            },
+            {
+              "confidence": 0,
+              "end_time": 70800,
+              "start_time": 70720,
+              "text": "量"
+            },
+            {
+              "confidence": 0,
+              "end_time": 71000,
+              "start_time": 70800,
+              "text": "与"
+            },
+            {
+              "confidence": 0,
+              "end_time": 71160,
+              "start_time": 71000,
+              "text": "广"
+            },
+            {
+              "confidence": 0,
+              "end_time": 71280,
+              "start_time": 71160,
+              "text": "告"
+            },
+            {
+              "confidence": 0,
+              "end_time": 71440,
+              "start_time": 71280,
+              "text": "收"
+            },
+            {
+              "confidence": 0,
+              "end_time": 71520,
+              "start_time": 71440,
+              "text": "入"
+            }
+          ]
+        },
+        {
+          "end_time": 74080,
+          "start_time": 71720,
+          "text": "用户在不知情中贡献了时间和注意力。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 71840,
+              "start_time": 71720,
+              "text": "用"
+            },
+            {
+              "confidence": 0,
+              "end_time": 71960,
+              "start_time": 71840,
+              "text": "户"
+            },
+            {
+              "confidence": 0,
+              "end_time": 72120,
+              "start_time": 71960,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 72240,
+              "start_time": 72120,
+              "text": "不"
+            },
+            {
+              "confidence": 0,
+              "end_time": 72400,
+              "start_time": 72240,
+              "text": "知"
+            },
+            {
+              "confidence": 0,
+              "end_time": 72600,
+              "start_time": 72400,
+              "text": "情"
+            },
+            {
+              "confidence": 0,
+              "end_time": 72760,
+              "start_time": 72600,
+              "text": "中"
+            },
+            {
+              "confidence": 0,
+              "end_time": 73040,
+              "start_time": 72880,
+              "text": "贡"
+            },
+            {
+              "confidence": 0,
+              "end_time": 73160,
+              "start_time": 73040,
+              "text": "献"
+            },
+            {
+              "confidence": 0,
+              "end_time": 73360,
+              "start_time": 73160,
+              "text": "了"
+            },
+            {
+              "confidence": 0,
+              "end_time": 73440,
+              "start_time": 73360,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 73560,
+              "start_time": 73440,
+              "text": "间"
+            },
+            {
+              "confidence": 0,
+              "end_time": 73760,
+              "start_time": 73560,
+              "text": "和"
+            },
+            {
+              "confidence": 0,
+              "end_time": 73880,
+              "start_time": 73760,
+              "text": "注"
+            },
+            {
+              "confidence": 0,
+              "end_time": 73960,
+              "start_time": 73880,
+              "text": "意"
+            },
+            {
+              "confidence": 0,
+              "end_time": 74080,
+              "start_time": 73960,
+              "text": "力"
+            }
+          ]
+        },
+        {
+          "end_time": 78560,
+          "start_time": 74240,
+          "text": "在这套效率之上的系统里，三方看似共赢，直到被侵权者找上门来。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 74400,
+              "start_time": 74240,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 74560,
+              "start_time": 74400,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 74720,
+              "start_time": 74560,
+              "text": "套"
+            },
+            {
+              "confidence": 0,
+              "end_time": 74880,
+              "start_time": 74720,
+              "text": "效"
+            },
+            {
+              "confidence": 0,
+              "end_time": 75000,
+              "start_time": 74880,
+              "text": "率"
+            },
+            {
+              "confidence": 0,
+              "end_time": 75160,
+              "start_time": 75000,
+              "text": "之"
+            },
+            {
+              "confidence": 0,
+              "end_time": 75280,
+              "start_time": 75160,
+              "text": "上"
+            },
+            {
+              "confidence": 0,
+              "end_time": 75400,
+              "start_time": 75280,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 75560,
+              "start_time": 75400,
+              "text": "系"
+            },
+            {
+              "confidence": 0,
+              "end_time": 75640,
+              "start_time": 75560,
+              "text": "统"
+            },
+            {
+              "confidence": 0,
+              "end_time": 75840,
+              "start_time": 75640,
+              "text": "里"
+            },
+            {
+              "confidence": 0,
+              "end_time": 76120,
+              "start_time": 75920,
+              "text": "三"
+            },
+            {
+              "confidence": 0,
+              "end_time": 76320,
+              "start_time": 76120,
+              "text": "方"
+            },
+            {
+              "confidence": 0,
+              "end_time": 76480,
+              "start_time": 76320,
+              "text": "看"
+            },
+            {
+              "confidence": 0,
+              "end_time": 76600,
+              "start_time": 76480,
+              "text": "似"
+            },
+            {
+              "confidence": 0,
+              "end_time": 76800,
+              "start_time": 76600,
+              "text": "共"
+            },
+            {
+              "confidence": 0,
+              "end_time": 76920,
+              "start_time": 76800,
+              "text": "赢"
+            },
+            {
+              "confidence": 0,
+              "end_time": 77160,
+              "start_time": 77040,
+              "text": "直"
+            },
+            {
+              "confidence": 0,
+              "end_time": 77280,
+              "start_time": 77160,
+              "text": "到"
+            },
+            {
+              "confidence": 0,
+              "end_time": 77440,
+              "start_time": 77280,
+              "text": "被"
+            },
+            {
+              "confidence": 0,
+              "end_time": 77600,
+              "start_time": 77520,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 77760,
+              "start_time": 77640,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 77960,
+              "start_time": 77800,
+              "text": "者"
+            },
+            {
+              "confidence": 0,
+              "end_time": 78120,
+              "start_time": 77960,
+              "text": "找"
+            },
+            {
+              "confidence": 0,
+              "end_time": 78240,
+              "start_time": 78120,
+              "text": "上"
+            },
+            {
+              "confidence": 0,
+              "end_time": 78360,
+              "start_time": 78240,
+              "text": "门"
+            },
+            {
+              "confidence": 0,
+              "end_time": 78560,
+              "start_time": 78360,
+              "text": "来"
+            }
+          ]
+        },
+        {
+          "end_time": 84690,
+          "start_time": 78810,
+          "text": "今年3月，北京互联网法院对一起 AI 换脸侵权案的判决，如一盆冰水浇在了这场狂欢上。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 78930,
+              "start_time": 78810,
+              "text": "今"
+            },
+            {
+              "confidence": 0,
+              "end_time": 79050,
+              "start_time": 78930,
+              "text": "年"
+            },
+            {
+              "confidence": 0,
+              "end_time": 79170,
+              "start_time": 79050,
+              "text": "3"
+            },
+            {
+              "confidence": 0,
+              "end_time": 79330,
+              "start_time": 79170,
+              "text": "月"
+            },
+            {
+              "confidence": 0,
+              "end_time": 79570,
+              "start_time": 79450,
+              "text": "北"
+            },
+            {
+              "confidence": 0,
+              "end_time": 79690,
+              "start_time": 79570,
+              "text": "京"
+            },
+            {
+              "confidence": 0,
+              "end_time": 79890,
+              "start_time": 79730,
+              "text": "互"
+            },
+            {
+              "confidence": 0,
+              "end_time": 79970,
+              "start_time": 79890,
+              "text": "联"
+            },
+            {
+              "confidence": 0,
+              "end_time": 80130,
+              "start_time": 79970,
+              "text": "网"
+            },
+            {
+              "confidence": 0,
+              "end_time": 80290,
+              "start_time": 80130,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 80410,
+              "start_time": 80290,
+              "text": "院"
+            },
+            {
+              "confidence": 0,
+              "end_time": 80650,
+              "start_time": 80490,
+              "text": "对"
+            },
+            {
+              "confidence": 0,
+              "end_time": 80810,
+              "start_time": 80650,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 80930,
+              "start_time": 80810,
+              "text": "起"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 81250,
+              "start_time": 81050,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 81450,
+              "start_time": 81330,
+              "text": "换"
+            },
+            {
+              "confidence": 0,
+              "end_time": 81650,
+              "start_time": 81450,
+              "text": "脸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 81770,
+              "start_time": 81690,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 81930,
+              "start_time": 81810,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 82050,
+              "start_time": 81930,
+              "text": "案"
+            },
+            {
+              "confidence": 0,
+              "end_time": 82210,
+              "start_time": 82050,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 82330,
+              "start_time": 82210,
+              "text": "判"
+            },
+            {
+              "confidence": 0,
+              "end_time": 82450,
+              "start_time": 82330,
+              "text": "决"
+            },
+            {
+              "confidence": 0,
+              "end_time": 82770,
+              "start_time": 82570,
+              "text": "如"
+            },
+            {
+              "confidence": 0,
+              "end_time": 82890,
+              "start_time": 82770,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 83050,
+              "start_time": 82890,
+              "text": "盆"
+            },
+            {
+              "confidence": 0,
+              "end_time": 83250,
+              "start_time": 83050,
+              "text": "冰"
+            },
+            {
+              "confidence": 0,
+              "end_time": 83450,
+              "start_time": 83250,
+              "text": "水"
+            },
+            {
+              "confidence": 0,
+              "end_time": 83690,
+              "start_time": 83570,
+              "text": "浇"
+            },
+            {
+              "confidence": 0,
+              "end_time": 83810,
+              "start_time": 83690,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 83930,
+              "start_time": 83810,
+              "text": "了"
+            },
+            {
+              "confidence": 0,
+              "end_time": 84050,
+              "start_time": 83930,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 84170,
+              "start_time": 84050,
+              "text": "场"
+            },
+            {
+              "confidence": 0,
+              "end_time": 84370,
+              "start_time": 84170,
+              "text": "狂"
+            },
+            {
+              "confidence": 0,
+              "end_time": 84530,
+              "start_time": 84370,
+              "text": "欢"
+            },
+            {
+              "confidence": 0,
+              "end_time": 84690,
+              "start_time": 84530,
+              "text": "上"
+            }
+          ]
+        },
+        {
+          "end_time": 90840,
+          "start_time": 84850,
+          "text": "法院认定，擅自使用深度合成技术生成高度相似性的形象，就算侵权，需要到道歉并赔偿。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 85010,
+              "start_time": 84850,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 85130,
+              "start_time": 85010,
+              "text": "院"
+            },
+            {
+              "confidence": 0,
+              "end_time": 85290,
+              "start_time": 85130,
+              "text": "认"
+            },
+            {
+              "confidence": 0,
+              "end_time": 85450,
+              "start_time": 85290,
+              "text": "定"
+            },
+            {
+              "confidence": 0,
+              "end_time": 85770,
+              "start_time": 85610,
+              "text": "擅"
+            },
+            {
+              "confidence": 0,
+              "end_time": 85970,
+              "start_time": 85770,
+              "text": "自"
+            },
+            {
+              "confidence": 0,
+              "end_time": 86090,
+              "start_time": 85970,
+              "text": "使"
+            },
+            {
+              "confidence": 0,
+              "end_time": 86210,
+              "start_time": 86090,
+              "text": "用"
+            },
+            {
+              "confidence": 0,
+              "end_time": 86410,
+              "start_time": 86250,
+              "text": "深"
+            },
+            {
+              "confidence": 0,
+              "end_time": 86530,
+              "start_time": 86410,
+              "text": "度"
+            },
+            {
+              "confidence": 0,
+              "end_time": 86690,
+              "start_time": 86530,
+              "text": "合"
+            },
+            {
+              "confidence": 0,
+              "end_time": 86810,
+              "start_time": 86690,
+              "text": "成"
+            },
+            {
+              "confidence": 0,
+              "end_time": 87010,
+              "start_time": 86890,
+              "text": "技"
+            },
+            {
+              "confidence": 0,
+              "end_time": 87090,
+              "start_time": 87010,
+              "text": "术"
+            },
+            {
+              "confidence": 0,
+              "end_time": 87410,
+              "start_time": 87250,
+              "text": "生"
+            },
+            {
+              "confidence": 0,
+              "end_time": 87570,
+              "start_time": 87410,
+              "text": "成"
+            },
+            {
+              "confidence": 0,
+              "end_time": 87730,
+              "start_time": 87570,
+              "text": "高"
+            },
+            {
+              "confidence": 0,
+              "end_time": 87850,
+              "start_time": 87730,
+              "text": "度"
+            },
+            {
+              "confidence": 0,
+              "end_time": 88050,
+              "start_time": 87850,
+              "text": "相"
+            },
+            {
+              "confidence": 0,
+              "end_time": 88170,
+              "start_time": 88050,
+              "text": "似"
+            },
+            {
+              "confidence": 0,
+              "end_time": 88290,
+              "start_time": 88170,
+              "text": "性"
+            },
+            {
+              "confidence": 0,
+              "end_time": 88490,
+              "start_time": 88330,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 88570,
+              "start_time": 88490,
+              "text": "形"
+            },
+            {
+              "confidence": 0,
+              "end_time": 88690,
+              "start_time": 88570,
+              "text": "象"
+            },
+            {
+              "confidence": 0,
+              "end_time": 89010,
+              "start_time": 88850,
+              "text": "就"
+            },
+            {
+              "confidence": 0,
+              "end_time": 89170,
+              "start_time": 89010,
+              "text": "算"
+            },
+            {
+              "confidence": 0,
+              "end_time": 89330,
+              "start_time": 89250,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 89490,
+              "start_time": 89370,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 89690,
+              "start_time": 89610,
+              "text": "需"
+            },
+            {
+              "confidence": 0,
+              "end_time": 89810,
+              "start_time": 89690,
+              "text": "要"
+            },
+            {
+              "confidence": 0,
+              "end_time": 89970,
+              "start_time": 89850,
+              "text": "到"
+            },
+            {
+              "confidence": 0,
+              "end_time": 90160,
+              "start_time": 90040,
+              "text": "道"
+            },
+            {
+              "confidence": 0,
+              "end_time": 90280,
+              "start_time": 90160,
+              "text": "歉"
+            },
+            {
+              "confidence": 0,
+              "end_time": 90520,
+              "start_time": 90320,
+              "text": "并"
+            },
+            {
+              "confidence": 0,
+              "end_time": 90680,
+              "start_time": 90520,
+              "text": "赔"
+            },
+            {
+              "confidence": 0,
+              "end_time": 90840,
+              "start_time": 90680,
+              "text": "偿"
+            }
+          ]
+        },
+        {
+          "end_time": 96280,
+          "start_time": 91000,
+          "text": "几乎同时，各大平台开始批量下架涉嫌侵权的 AI 短剧，并对违规账号进行封禁。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 91160,
+              "start_time": 91000,
+              "text": "几"
+            },
+            {
+              "confidence": 0,
+              "end_time": 91280,
+              "start_time": 91160,
+              "text": "乎"
+            },
+            {
+              "confidence": 0,
+              "end_time": 91480,
+              "start_time": 91320,
+              "text": "同"
+            },
+            {
+              "confidence": 0,
+              "end_time": 91600,
+              "start_time": 91480,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 91880,
+              "start_time": 91720,
+              "text": "各"
+            },
+            {
+              "confidence": 0,
+              "end_time": 92040,
+              "start_time": 91880,
+              "text": "大"
+            },
+            {
+              "confidence": 0,
+              "end_time": 92160,
+              "start_time": 92040,
+              "text": "平"
+            },
+            {
+              "confidence": 0,
+              "end_time": 92320,
+              "start_time": 92160,
+              "text": "台"
+            },
+            {
+              "confidence": 0,
+              "end_time": 92440,
+              "start_time": 92320,
+              "text": "开"
+            },
+            {
+              "confidence": 0,
+              "end_time": 92560,
+              "start_time": 92440,
+              "text": "始"
+            },
+            {
+              "confidence": 0,
+              "end_time": 92720,
+              "start_time": 92560,
+              "text": "批"
+            },
+            {
+              "confidence": 0,
+              "end_time": 92880,
+              "start_time": 92720,
+              "text": "量"
+            },
+            {
+              "confidence": 0,
+              "end_time": 93080,
+              "start_time": 92880,
+              "text": "下"
+            },
+            {
+              "confidence": 0,
+              "end_time": 93200,
+              "start_time": 93080,
+              "text": "架"
+            },
+            {
+              "confidence": 0,
+              "end_time": 93440,
+              "start_time": 93280,
+              "text": "涉"
+            },
+            {
+              "confidence": 0,
+              "end_time": 93560,
+              "start_time": 93440,
+              "text": "嫌"
+            },
+            {
+              "confidence": 0,
+              "end_time": 93720,
+              "start_time": 93640,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 93840,
+              "start_time": 93760,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 94000,
+              "start_time": 93840,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 94160,
+              "start_time": 94040,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 94400,
+              "start_time": 94240,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 94560,
+              "start_time": 94400,
+              "text": "剧"
+            },
+            {
+              "confidence": 0,
+              "end_time": 94840,
+              "start_time": 94680,
+              "text": "并"
+            },
+            {
+              "confidence": 0,
+              "end_time": 95040,
+              "start_time": 94840,
+              "text": "对"
+            },
+            {
+              "confidence": 0,
+              "end_time": 95200,
+              "start_time": 95040,
+              "text": "违"
+            },
+            {
+              "confidence": 0,
+              "end_time": 95320,
+              "start_time": 95200,
+              "text": "规"
+            },
+            {
+              "confidence": 0,
+              "end_time": 95480,
+              "start_time": 95320,
+              "text": "账"
+            },
+            {
+              "confidence": 0,
+              "end_time": 95640,
+              "start_time": 95480,
+              "text": "号"
+            },
+            {
+              "confidence": 0,
+              "end_time": 95840,
+              "start_time": 95680,
+              "text": "进"
+            },
+            {
+              "confidence": 0,
+              "end_time": 95920,
+              "start_time": 95840,
+              "text": "行"
+            },
+            {
+              "confidence": 0,
+              "end_time": 96120,
+              "start_time": 95920,
+              "text": "封"
+            },
+            {
+              "confidence": 0,
+              "end_time": 96280,
+              "start_time": 96120,
+              "text": "禁"
+            }
+          ]
+        },
+        {
+          "end_time": 99920,
+          "start_time": 96440,
+          "text": "这场技术驱动的野性生长第一次撞上了法律的明确边界。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 96640,
+              "start_time": 96440,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 96800,
+              "start_time": 96640,
+              "text": "场"
+            },
+            {
+              "confidence": 0,
+              "end_time": 96920,
+              "start_time": 96800,
+              "text": "技"
+            },
+            {
+              "confidence": 0,
+              "end_time": 97040,
+              "start_time": 96920,
+              "text": "术"
+            },
+            {
+              "confidence": 0,
+              "end_time": 97200,
+              "start_time": 97080,
+              "text": "驱"
+            },
+            {
+              "confidence": 0,
+              "end_time": 97320,
+              "start_time": 97200,
+              "text": "动"
+            },
+            {
+              "confidence": 0,
+              "end_time": 97480,
+              "start_time": 97320,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 97600,
+              "start_time": 97480,
+              "text": "野"
+            },
+            {
+              "confidence": 0,
+              "end_time": 97720,
+              "start_time": 97600,
+              "text": "性"
+            },
+            {
+              "confidence": 0,
+              "end_time": 97920,
+              "start_time": 97800,
+              "text": "生"
+            },
+            {
+              "confidence": 0,
+              "end_time": 98080,
+              "start_time": 97920,
+              "text": "长"
+            },
+            {
+              "confidence": 0,
+              "end_time": 98240,
+              "start_time": 98160,
+              "text": "第"
+            },
+            {
+              "confidence": 0,
+              "end_time": 98360,
+              "start_time": 98240,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 98480,
+              "start_time": 98360,
+              "text": "次"
+            },
+            {
+              "confidence": 0,
+              "end_time": 98640,
+              "start_time": 98480,
+              "text": "撞"
+            },
+            {
+              "confidence": 0,
+              "end_time": 98800,
+              "start_time": 98640,
+              "text": "上"
+            },
+            {
+              "confidence": 0,
+              "end_time": 98960,
+              "start_time": 98800,
+              "text": "了"
+            },
+            {
+              "confidence": 0,
+              "end_time": 99080,
+              "start_time": 98960,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 99200,
+              "start_time": 99080,
+              "text": "律"
+            },
+            {
+              "confidence": 0,
+              "end_time": 99360,
+              "start_time": 99200,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 99520,
+              "start_time": 99360,
+              "text": "明"
+            },
+            {
+              "confidence": 0,
+              "end_time": 99640,
+              "start_time": 99520,
+              "text": "确"
+            },
+            {
+              "confidence": 0,
+              "end_time": 99840,
+              "start_time": 99640,
+              "text": "边"
+            },
+            {
+              "confidence": 0,
+              "end_time": 99920,
+              "start_time": 99840,
+              "text": "界"
+            }
+          ]
+        },
+        {
+          "end_time": 104400,
+          "start_time": 100240,
+          "text": "这场风波折射出产业深层的根本矛盾，一边是侵权速生的捷径。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 100440,
+              "start_time": 100240,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 100600,
+              "start_time": 100440,
+              "text": "场"
+            },
+            {
+              "confidence": 0,
+              "end_time": 100760,
+              "start_time": 100600,
+              "text": "风"
+            },
+            {
+              "confidence": 0,
+              "end_time": 100920,
+              "start_time": 100760,
+              "text": "波"
+            },
+            {
+              "confidence": 0,
+              "end_time": 101080,
+              "start_time": 100960,
+              "text": "折"
+            },
+            {
+              "confidence": 0,
+              "end_time": 101200,
+              "start_time": 101080,
+              "text": "射"
+            },
+            {
+              "confidence": 0,
+              "end_time": 101440,
+              "start_time": 101200,
+              "text": "出"
+            },
+            {
+              "confidence": 0,
+              "end_time": 101600,
+              "start_time": 101440,
+              "text": "产"
+            },
+            {
+              "confidence": 0,
+              "end_time": 101720,
+              "start_time": 101600,
+              "text": "业"
+            },
+            {
+              "confidence": 0,
+              "end_time": 101920,
+              "start_time": 101760,
+              "text": "深"
+            },
+            {
+              "confidence": 0,
+              "end_time": 102040,
+              "start_time": 101920,
+              "text": "层"
+            },
+            {
+              "confidence": 0,
+              "end_time": 102240,
+              "start_time": 102040,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 102360,
+              "start_time": 102240,
+              "text": "根"
+            },
+            {
+              "confidence": 0,
+              "end_time": 102480,
+              "start_time": 102360,
+              "text": "本"
+            },
+            {
+              "confidence": 0,
+              "end_time": 102640,
+              "start_time": 102480,
+              "text": "矛"
+            },
+            {
+              "confidence": 0,
+              "end_time": 102760,
+              "start_time": 102640,
+              "text": "盾"
+            },
+            {
+              "confidence": 0,
+              "end_time": 103080,
+              "start_time": 102880,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 103200,
+              "start_time": 103080,
+              "text": "边"
+            },
+            {
+              "confidence": 0,
+              "end_time": 103400,
+              "start_time": 103200,
+              "text": "是"
+            },
+            {
+              "confidence": 0,
+              "end_time": 103480,
+              "start_time": 103440,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 103640,
+              "start_time": 103560,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 103840,
+              "start_time": 103760,
+              "text": "速"
+            },
+            {
+              "confidence": 0,
+              "end_time": 104000,
+              "start_time": 103920,
+              "text": "生"
+            },
+            {
+              "confidence": 0,
+              "end_time": 104200,
+              "start_time": 104000,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 104320,
+              "start_time": 104200,
+              "text": "捷"
+            },
+            {
+              "confidence": 0,
+              "end_time": 104400,
+              "start_time": 104320,
+              "text": "径"
+            }
+          ]
+        },
+        {
+          "end_time": 107230,
+          "start_time": 104790,
+          "text": "通过攫取现成的生物特征，实现短期套利。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 104870,
+              "start_time": 104790,
+              "text": "通"
+            },
+            {
+              "confidence": 0,
+              "end_time": 104950,
+              "start_time": 104870,
+              "text": "过"
+            },
+            {
+              "confidence": 0,
+              "end_time": 105110,
+              "start_time": 105070,
+              "text": "攫"
+            },
+            {
+              "confidence": 0,
+              "end_time": 105310,
+              "start_time": 105150,
+              "text": "取"
+            },
+            {
+              "confidence": 0,
+              "end_time": 105470,
+              "start_time": 105310,
+              "text": "现"
+            },
+            {
+              "confidence": 0,
+              "end_time": 105550,
+              "start_time": 105510,
+              "text": "成"
+            },
+            {
+              "confidence": 0,
+              "end_time": 105750,
+              "start_time": 105550,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 105870,
+              "start_time": 105750,
+              "text": "生"
+            },
+            {
+              "confidence": 0,
+              "end_time": 105990,
+              "start_time": 105870,
+              "text": "物"
+            },
+            {
+              "confidence": 0,
+              "end_time": 106150,
+              "start_time": 105990,
+              "text": "特"
+            },
+            {
+              "confidence": 0,
+              "end_time": 106270,
+              "start_time": 106150,
+              "text": "征"
+            },
+            {
+              "confidence": 0,
+              "end_time": 106470,
+              "start_time": 106310,
+              "text": "实"
+            },
+            {
+              "confidence": 0,
+              "end_time": 106590,
+              "start_time": 106470,
+              "text": "现"
+            },
+            {
+              "confidence": 0,
+              "end_time": 106750,
+              "start_time": 106590,
+              "text": "短"
+            },
+            {
+              "confidence": 0,
+              "end_time": 106910,
+              "start_time": 106750,
+              "text": "期"
+            },
+            {
+              "confidence": 0,
+              "end_time": 107070,
+              "start_time": 106950,
+              "text": "套"
+            },
+            {
+              "confidence": 0,
+              "end_time": 107230,
+              "start_time": 107150,
+              "text": "利"
+            }
+          ]
+        },
+        {
+          "end_time": 112550,
+          "start_time": 107430,
+          "text": "另一边是合规原创的正道，需投入大量时间与创意，从零开始构建虚拟角色。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 107590,
+              "start_time": 107430,
+              "text": "另"
+            },
+            {
+              "confidence": 0,
+              "end_time": 107710,
+              "start_time": 107590,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 107870,
+              "start_time": 107710,
+              "text": "边"
+            },
+            {
+              "confidence": 0,
+              "end_time": 108030,
+              "start_time": 107870,
+              "text": "是"
+            },
+            {
+              "confidence": 0,
+              "end_time": 108190,
+              "start_time": 108030,
+              "text": "合"
+            },
+            {
+              "confidence": 0,
+              "end_time": 108350,
+              "start_time": 108190,
+              "text": "规"
+            },
+            {
+              "confidence": 0,
+              "end_time": 108590,
+              "start_time": 108430,
+              "text": "原"
+            },
+            {
+              "confidence": 0,
+              "end_time": 108710,
+              "start_time": 108590,
+              "text": "创"
+            },
+            {
+              "confidence": 0,
+              "end_time": 108870,
+              "start_time": 108710,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 108990,
+              "start_time": 108870,
+              "text": "正"
+            },
+            {
+              "confidence": 0,
+              "end_time": 109190,
+              "start_time": 108990,
+              "text": "道"
+            },
+            {
+              "confidence": 0,
+              "end_time": 109430,
+              "start_time": 109350,
+              "text": "需"
+            },
+            {
+              "confidence": 0,
+              "end_time": 109670,
+              "start_time": 109550,
+              "text": "投"
+            },
+            {
+              "confidence": 0,
+              "end_time": 109830,
+              "start_time": 109670,
+              "text": "入"
+            },
+            {
+              "confidence": 0,
+              "end_time": 109950,
+              "start_time": 109830,
+              "text": "大"
+            },
+            {
+              "confidence": 0,
+              "end_time": 110070,
+              "start_time": 109950,
+              "text": "量"
+            },
+            {
+              "confidence": 0,
+              "end_time": 110230,
+              "start_time": 110070,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 110350,
+              "start_time": 110230,
+              "text": "间"
+            },
+            {
+              "confidence": 0,
+              "end_time": 110510,
+              "start_time": 110350,
+              "text": "与"
+            },
+            {
+              "confidence": 0,
+              "end_time": 110710,
+              "start_time": 110550,
+              "text": "创"
+            },
+            {
+              "confidence": 0,
+              "end_time": 110790,
+              "start_time": 110710,
+              "text": "意"
+            },
+            {
+              "confidence": 0,
+              "end_time": 111150,
+              "start_time": 110950,
+              "text": "从"
+            },
+            {
+              "confidence": 0,
+              "end_time": 111350,
+              "start_time": 111150,
+              "text": "零"
+            },
+            {
+              "confidence": 0,
+              "end_time": 111470,
+              "start_time": 111350,
+              "text": "开"
+            },
+            {
+              "confidence": 0,
+              "end_time": 111590,
+              "start_time": 111470,
+              "text": "始"
+            },
+            {
+              "confidence": 0,
+              "end_time": 111790,
+              "start_time": 111630,
+              "text": "构"
+            },
+            {
+              "confidence": 0,
+              "end_time": 111910,
+              "start_time": 111790,
+              "text": "建"
+            },
+            {
+              "confidence": 0,
+              "end_time": 112110,
+              "start_time": 111950,
+              "text": "虚"
+            },
+            {
+              "confidence": 0,
+              "end_time": 112230,
+              "start_time": 112110,
+              "text": "拟"
+            },
+            {
+              "confidence": 0,
+              "end_time": 112430,
+              "start_time": 112270,
+              "text": "角"
+            },
+            {
+              "confidence": 0,
+              "end_time": 112550,
+              "start_time": 112430,
+              "text": "色"
+            }
+          ]
+        },
+        {
+          "end_time": 115470,
+          "start_time": 112750,
+          "text": "在浮躁的快钱逻辑下，捷径一度压制了正途。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 112950,
+              "start_time": 112750,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 113110,
+              "start_time": 112990,
+              "text": "浮"
+            },
+            {
+              "confidence": 0,
+              "end_time": 113230,
+              "start_time": 113110,
+              "text": "躁"
+            },
+            {
+              "confidence": 0,
+              "end_time": 113390,
+              "start_time": 113230,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 113510,
+              "start_time": 113390,
+              "text": "快"
+            },
+            {
+              "confidence": 0,
+              "end_time": 113670,
+              "start_time": 113510,
+              "text": "钱"
+            },
+            {
+              "confidence": 0,
+              "end_time": 113830,
+              "start_time": 113710,
+              "text": "逻"
+            },
+            {
+              "confidence": 0,
+              "end_time": 113910,
+              "start_time": 113830,
+              "text": "辑"
+            },
+            {
+              "confidence": 0,
+              "end_time": 114110,
+              "start_time": 113910,
+              "text": "下"
+            },
+            {
+              "confidence": 0,
+              "end_time": 114350,
+              "start_time": 114310,
+              "text": "捷"
+            },
+            {
+              "confidence": 0,
+              "end_time": 114510,
+              "start_time": 114470,
+              "text": "径"
+            },
+            {
+              "confidence": 0,
+              "end_time": 114710,
+              "start_time": 114590,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 114830,
+              "start_time": 114710,
+              "text": "度"
+            },
+            {
+              "confidence": 0,
+              "end_time": 114990,
+              "start_time": 114830,
+              "text": "压"
+            },
+            {
+              "confidence": 0,
+              "end_time": 115070,
+              "start_time": 114990,
+              "text": "制"
+            },
+            {
+              "confidence": 0,
+              "end_time": 115230,
+              "start_time": 115070,
+              "text": "了"
+            },
+            {
+              "confidence": 0,
+              "end_time": 115350,
+              "start_time": 115230,
+              "text": "正"
+            },
+            {
+              "confidence": 0,
+              "end_time": 115470,
+              "start_time": 115430,
+              "text": "途"
+            }
+          ]
+        },
+        {
+          "end_time": 120310,
+          "start_time": 115750,
+          "text": "司法判决定性 AI 换脸侵权，则宣告这条捷径的终点是法律的峭壁。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 115910,
+              "start_time": 115750,
+              "text": "司"
+            },
+            {
+              "confidence": 0,
+              "end_time": 116070,
+              "start_time": 115910,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 116230,
+              "start_time": 116070,
+              "text": "判"
+            },
+            {
+              "confidence": 0,
+              "end_time": 116350,
+              "start_time": 116230,
+              "text": "决"
+            },
+            {
+              "confidence": 0,
+              "end_time": 116510,
+              "start_time": 116390,
+              "text": "定"
+            },
+            {
+              "confidence": 0,
+              "end_time": 116630,
+              "start_time": 116510,
+              "text": "性"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 116910,
+              "start_time": 116750,
+              "text": "AI"
+            },
+            {
+              "confidence": 0,
+              "end_time": -1,
+              "start_time": -1,
+              "text": " "
+            },
+            {
+              "confidence": 0,
+              "end_time": 117150,
+              "start_time": 116990,
+              "text": "换"
+            },
+            {
+              "confidence": 0,
+              "end_time": 117310,
+              "start_time": 117150,
+              "text": "脸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 117470,
+              "start_time": 117390,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 117670,
+              "start_time": 117510,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 117990,
+              "start_time": 117790,
+              "text": "则"
+            },
+            {
+              "confidence": 0,
+              "end_time": 118150,
+              "start_time": 117990,
+              "text": "宣"
+            },
+            {
+              "confidence": 0,
+              "end_time": 118310,
+              "start_time": 118150,
+              "text": "告"
+            },
+            {
+              "confidence": 0,
+              "end_time": 118430,
+              "start_time": 118310,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 118550,
+              "start_time": 118430,
+              "text": "条"
+            },
+            {
+              "confidence": 0,
+              "end_time": 118670,
+              "start_time": 118590,
+              "text": "捷"
+            },
+            {
+              "confidence": 0,
+              "end_time": 118790,
+              "start_time": 118710,
+              "text": "径"
+            },
+            {
+              "confidence": 0,
+              "end_time": 119030,
+              "start_time": 118830,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 119150,
+              "start_time": 119030,
+              "text": "终"
+            },
+            {
+              "confidence": 0,
+              "end_time": 119270,
+              "start_time": 119150,
+              "text": "点"
+            },
+            {
+              "confidence": 0,
+              "end_time": 119630,
+              "start_time": 119350,
+              "text": "是"
+            },
+            {
+              "confidence": 0,
+              "end_time": 119750,
+              "start_time": 119630,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 119870,
+              "start_time": 119750,
+              "text": "律"
+            },
+            {
+              "confidence": 0,
+              "end_time": 120030,
+              "start_time": 119870,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 120110,
+              "start_time": 120070,
+              "text": "峭"
+            },
+            {
+              "confidence": 0,
+              "end_time": 120310,
+              "start_time": 120230,
+              "text": "壁"
+            }
+          ]
+        },
+        {
+          "end_time": 121990,
+          "start_time": 120430,
+          "text": "这也凸显出数字时代的困境。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 120630,
+              "start_time": 120430,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 120750,
+              "start_time": 120630,
+              "text": "也"
+            },
+            {
+              "confidence": 0,
+              "end_time": 120870,
+              "start_time": 120750,
+              "text": "凸"
+            },
+            {
+              "confidence": 0,
+              "end_time": 120990,
+              "start_time": 120870,
+              "text": "显"
+            },
+            {
+              "confidence": 0,
+              "end_time": 121150,
+              "start_time": 120990,
+              "text": "出"
+            },
+            {
+              "confidence": 0,
+              "end_time": 121270,
+              "start_time": 121150,
+              "text": "数"
+            },
+            {
+              "confidence": 0,
+              "end_time": 121390,
+              "start_time": 121270,
+              "text": "字"
+            },
+            {
+              "confidence": 0,
+              "end_time": 121510,
+              "start_time": 121390,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 121590,
+              "start_time": 121510,
+              "text": "代"
+            },
+            {
+              "confidence": 0,
+              "end_time": 121750,
+              "start_time": 121590,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 121910,
+              "start_time": 121750,
+              "text": "困"
+            },
+            {
+              "confidence": 0,
+              "end_time": 121990,
+              "start_time": 121910,
+              "text": "境"
+            }
+          ]
+        },
+        {
+          "end_time": 127800,
+          "start_time": 122280,
+          "text": "我们的生物特征极易被技术剥离与滥用，但社会对数字身份的保护仍存在巨大空白。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 122360,
+              "start_time": 122280,
+              "text": "我"
+            },
+            {
+              "confidence": 0,
+              "end_time": 122440,
+              "start_time": 122360,
+              "text": "们"
+            },
+            {
+              "confidence": 0,
+              "end_time": 122600,
+              "start_time": 122440,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 122720,
+              "start_time": 122600,
+              "text": "生"
+            },
+            {
+              "confidence": 0,
+              "end_time": 122840,
+              "start_time": 122720,
+              "text": "物"
+            },
+            {
+              "confidence": 0,
+              "end_time": 123000,
+              "start_time": 122840,
+              "text": "特"
+            },
+            {
+              "confidence": 0,
+              "end_time": 123160,
+              "start_time": 123000,
+              "text": "征"
+            },
+            {
+              "confidence": 0,
+              "end_time": 123440,
+              "start_time": 123280,
+              "text": "极"
+            },
+            {
+              "confidence": 0,
+              "end_time": 123560,
+              "start_time": 123440,
+              "text": "易"
+            },
+            {
+              "confidence": 0,
+              "end_time": 123760,
+              "start_time": 123560,
+              "text": "被"
+            },
+            {
+              "confidence": 0,
+              "end_time": 123880,
+              "start_time": 123760,
+              "text": "技"
+            },
+            {
+              "confidence": 0,
+              "end_time": 124000,
+              "start_time": 123880,
+              "text": "术"
+            },
+            {
+              "confidence": 0,
+              "end_time": 124200,
+              "start_time": 124080,
+              "text": "剥"
+            },
+            {
+              "confidence": 0,
+              "end_time": 124280,
+              "start_time": 124200,
+              "text": "离"
+            },
+            {
+              "confidence": 0,
+              "end_time": 124520,
+              "start_time": 124320,
+              "text": "与"
+            },
+            {
+              "confidence": 0,
+              "end_time": 124680,
+              "start_time": 124520,
+              "text": "滥"
+            },
+            {
+              "confidence": 0,
+              "end_time": 124840,
+              "start_time": 124680,
+              "text": "用"
+            },
+            {
+              "confidence": 0,
+              "end_time": 125160,
+              "start_time": 124960,
+              "text": "但"
+            },
+            {
+              "confidence": 0,
+              "end_time": 125320,
+              "start_time": 125160,
+              "text": "社"
+            },
+            {
+              "confidence": 0,
+              "end_time": 125400,
+              "start_time": 125320,
+              "text": "会"
+            },
+            {
+              "confidence": 0,
+              "end_time": 125600,
+              "start_time": 125400,
+              "text": "对"
+            },
+            {
+              "confidence": 0,
+              "end_time": 125760,
+              "start_time": 125600,
+              "text": "数"
+            },
+            {
+              "confidence": 0,
+              "end_time": 125880,
+              "start_time": 125760,
+              "text": "字"
+            },
+            {
+              "confidence": 0,
+              "end_time": 126000,
+              "start_time": 125880,
+              "text": "身"
+            },
+            {
+              "confidence": 0,
+              "end_time": 126080,
+              "start_time": 126000,
+              "text": "份"
+            },
+            {
+              "confidence": 0,
+              "end_time": 126280,
+              "start_time": 126080,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 126440,
+              "start_time": 126280,
+              "text": "保"
+            },
+            {
+              "confidence": 0,
+              "end_time": 126520,
+              "start_time": 126440,
+              "text": "护"
+            },
+            {
+              "confidence": 0,
+              "end_time": 126880,
+              "start_time": 126640,
+              "text": "仍"
+            },
+            {
+              "confidence": 0,
+              "end_time": 127040,
+              "start_time": 126880,
+              "text": "存"
+            },
+            {
+              "confidence": 0,
+              "end_time": 127160,
+              "start_time": 127040,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 127280,
+              "start_time": 127160,
+              "text": "巨"
+            },
+            {
+              "confidence": 0,
+              "end_time": 127440,
+              "start_time": 127280,
+              "text": "大"
+            },
+            {
+              "confidence": 0,
+              "end_time": 127600,
+              "start_time": 127440,
+              "text": "空"
+            },
+            {
+              "confidence": 0,
+              "end_time": 127800,
+              "start_time": 127600,
+              "text": "白"
+            }
+          ]
+        },
+        {
+          "end_time": 132280,
+          "start_time": 127880,
+          "text": "我们发布在数字世界的每一张面容，都可能面临被窃取、被标注的风险。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 128000,
+              "start_time": 127880,
+              "text": "我"
+            },
+            {
+              "confidence": 0,
+              "end_time": 128120,
+              "start_time": 128000,
+              "text": "们"
+            },
+            {
+              "confidence": 0,
+              "end_time": 128280,
+              "start_time": 128120,
+              "text": "发"
+            },
+            {
+              "confidence": 0,
+              "end_time": 128360,
+              "start_time": 128280,
+              "text": "布"
+            },
+            {
+              "confidence": 0,
+              "end_time": 128560,
+              "start_time": 128360,
+              "text": "在"
+            },
+            {
+              "confidence": 0,
+              "end_time": 128680,
+              "start_time": 128560,
+              "text": "数"
+            },
+            {
+              "confidence": 0,
+              "end_time": 128800,
+              "start_time": 128680,
+              "text": "字"
+            },
+            {
+              "confidence": 0,
+              "end_time": 128920,
+              "start_time": 128800,
+              "text": "世"
+            },
+            {
+              "confidence": 0,
+              "end_time": 129000,
+              "start_time": 128920,
+              "text": "界"
+            },
+            {
+              "confidence": 0,
+              "end_time": 129160,
+              "start_time": 129000,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 129280,
+              "start_time": 129160,
+              "text": "每"
+            },
+            {
+              "confidence": 0,
+              "end_time": 129360,
+              "start_time": 129280,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 129520,
+              "start_time": 129360,
+              "text": "张"
+            },
+            {
+              "confidence": 0,
+              "end_time": 129680,
+              "start_time": 129520,
+              "text": "面"
+            },
+            {
+              "confidence": 0,
+              "end_time": 129840,
+              "start_time": 129680,
+              "text": "容"
+            },
+            {
+              "confidence": 0,
+              "end_time": 130120,
+              "start_time": 129960,
+              "text": "都"
+            },
+            {
+              "confidence": 0,
+              "end_time": 130240,
+              "start_time": 130120,
+              "text": "可"
+            },
+            {
+              "confidence": 0,
+              "end_time": 130360,
+              "start_time": 130240,
+              "text": "能"
+            },
+            {
+              "confidence": 0,
+              "end_time": 130480,
+              "start_time": 130360,
+              "text": "面"
+            },
+            {
+              "confidence": 0,
+              "end_time": 130600,
+              "start_time": 130480,
+              "text": "临"
+            },
+            {
+              "confidence": 0,
+              "end_time": 130840,
+              "start_time": 130640,
+              "text": "被"
+            },
+            {
+              "confidence": 0,
+              "end_time": 131000,
+              "start_time": 130880,
+              "text": "窃"
+            },
+            {
+              "confidence": 0,
+              "end_time": 131240,
+              "start_time": 131040,
+              "text": "取"
+            },
+            {
+              "confidence": 0,
+              "end_time": 131560,
+              "start_time": 131360,
+              "text": "被"
+            },
+            {
+              "confidence": 0,
+              "end_time": 131760,
+              "start_time": 131560,
+              "text": "标"
+            },
+            {
+              "confidence": 0,
+              "end_time": 131880,
+              "start_time": 131760,
+              "text": "注"
+            },
+            {
+              "confidence": 0,
+              "end_time": 132080,
+              "start_time": 131880,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 132160,
+              "start_time": 132080,
+              "text": "风"
+            },
+            {
+              "confidence": 0,
+              "end_time": 132280,
+              "start_time": 132160,
+              "text": "险"
+            }
+          ]
+        },
+        {
+          "end_time": 135320,
+          "start_time": 132480,
+          "text": "未来应对这挑战，需要构建一个多元的治理框架。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 132640,
+              "start_time": 132480,
+              "text": "未"
+            },
+            {
+              "confidence": 0,
+              "end_time": 132800,
+              "start_time": 132640,
+              "text": "来"
+            },
+            {
+              "confidence": 0,
+              "end_time": 133080,
+              "start_time": 132880,
+              "text": "应"
+            },
+            {
+              "confidence": 0,
+              "end_time": 133160,
+              "start_time": 133080,
+              "text": "对"
+            },
+            {
+              "confidence": 0,
+              "end_time": 133360,
+              "start_time": 133160,
+              "text": "这"
+            },
+            {
+              "confidence": 0,
+              "end_time": 133520,
+              "start_time": 133360,
+              "text": "挑"
+            },
+            {
+              "confidence": 0,
+              "end_time": 133640,
+              "start_time": 133520,
+              "text": "战"
+            },
+            {
+              "confidence": 0,
+              "end_time": 133880,
+              "start_time": 133760,
+              "text": "需"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134000,
+              "start_time": 133880,
+              "text": "要"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134160,
+              "start_time": 134000,
+              "text": "构"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134280,
+              "start_time": 134160,
+              "text": "建"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134360,
+              "start_time": 134280,
+              "text": "一"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134480,
+              "start_time": 134360,
+              "text": "个"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134600,
+              "start_time": 134480,
+              "text": "多"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134680,
+              "start_time": 134600,
+              "text": "元"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134840,
+              "start_time": 134680,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 134920,
+              "start_time": 134840,
+              "text": "治"
+            },
+            {
+              "confidence": 0,
+              "end_time": 135040,
+              "start_time": 134920,
+              "text": "理"
+            },
+            {
+              "confidence": 0,
+              "end_time": 135240,
+              "start_time": 135080,
+              "text": "框"
+            },
+            {
+              "confidence": 0,
+              "end_time": 135320,
+              "start_time": 135240,
+              "text": "架"
+            }
+          ]
+        },
+        {
+          "end_time": 146320,
+          "start_time": 135720,
+          "text": "法律需明确数字人格权边界，平台要落实与其技术能力匹配的审核责任，技术上需推广数字水印、区块链等追溯工具，公众也应提升数字素养，审慎处理个人生物信息。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 135800,
+              "start_time": 135720,
+              "text": "法"
+            },
+            {
+              "confidence": 0,
+              "end_time": 135880,
+              "start_time": 135800,
+              "text": "律"
+            },
+            {
+              "confidence": 0,
+              "end_time": 136080,
+              "start_time": 135960,
+              "text": "需"
+            },
+            {
+              "confidence": 0,
+              "end_time": 136240,
+              "start_time": 136120,
+              "text": "明"
+            },
+            {
+              "confidence": 0,
+              "end_time": 136400,
+              "start_time": 136240,
+              "text": "确"
+            },
+            {
+              "confidence": 0,
+              "end_time": 136560,
+              "start_time": 136400,
+              "text": "数"
+            },
+            {
+              "confidence": 0,
+              "end_time": 136640,
+              "start_time": 136560,
+              "text": "字"
+            },
+            {
+              "confidence": 0,
+              "end_time": 136800,
+              "start_time": 136640,
+              "text": "人"
+            },
+            {
+              "confidence": 0,
+              "end_time": 136920,
+              "start_time": 136800,
+              "text": "格"
+            },
+            {
+              "confidence": 0,
+              "end_time": 137080,
+              "start_time": 136960,
+              "text": "权"
+            },
+            {
+              "confidence": 0,
+              "end_time": 137280,
+              "start_time": 137160,
+              "text": "边"
+            },
+            {
+              "confidence": 0,
+              "end_time": 137440,
+              "start_time": 137280,
+              "text": "界"
+            },
+            {
+              "confidence": 0,
+              "end_time": 137760,
+              "start_time": 137600,
+              "text": "平"
+            },
+            {
+              "confidence": 0,
+              "end_time": 137840,
+              "start_time": 137760,
+              "text": "台"
+            },
+            {
+              "confidence": 0,
+              "end_time": 138040,
+              "start_time": 137840,
+              "text": "要"
+            },
+            {
+              "confidence": 0,
+              "end_time": 138160,
+              "start_time": 138040,
+              "text": "落"
+            },
+            {
+              "confidence": 0,
+              "end_time": 138280,
+              "start_time": 138160,
+              "text": "实"
+            },
+            {
+              "confidence": 0,
+              "end_time": 138480,
+              "start_time": 138280,
+              "text": "与"
+            },
+            {
+              "confidence": 0,
+              "end_time": 138640,
+              "start_time": 138480,
+              "text": "其"
+            },
+            {
+              "confidence": 0,
+              "end_time": 138760,
+              "start_time": 138640,
+              "text": "技"
+            },
+            {
+              "confidence": 0,
+              "end_time": 138880,
+              "start_time": 138760,
+              "text": "术"
+            },
+            {
+              "confidence": 0,
+              "end_time": 139000,
+              "start_time": 138880,
+              "text": "能"
+            },
+            {
+              "confidence": 0,
+              "end_time": 139120,
+              "start_time": 139000,
+              "text": "力"
+            },
+            {
+              "confidence": 0,
+              "end_time": 139280,
+              "start_time": 139120,
+              "text": "匹"
+            },
+            {
+              "confidence": 0,
+              "end_time": 139360,
+              "start_time": 139280,
+              "text": "配"
+            },
+            {
+              "confidence": 0,
+              "end_time": 139520,
+              "start_time": 139360,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 139640,
+              "start_time": 139520,
+              "text": "审"
+            },
+            {
+              "confidence": 0,
+              "end_time": 139800,
+              "start_time": 139640,
+              "text": "核"
+            },
+            {
+              "confidence": 0,
+              "end_time": 140000,
+              "start_time": 139840,
+              "text": "责"
+            },
+            {
+              "confidence": 0,
+              "end_time": 140080,
+              "start_time": 140000,
+              "text": "任"
+            },
+            {
+              "confidence": 0,
+              "end_time": 140400,
+              "start_time": 140280,
+              "text": "技"
+            },
+            {
+              "confidence": 0,
+              "end_time": 140520,
+              "start_time": 140400,
+              "text": "术"
+            },
+            {
+              "confidence": 0,
+              "end_time": 140680,
+              "start_time": 140520,
+              "text": "上"
+            },
+            {
+              "confidence": 0,
+              "end_time": 140920,
+              "start_time": 140720,
+              "text": "需"
+            },
+            {
+              "confidence": 0,
+              "end_time": 141040,
+              "start_time": 140920,
+              "text": "推"
+            },
+            {
+              "confidence": 0,
+              "end_time": 141200,
+              "start_time": 141040,
+              "text": "广"
+            },
+            {
+              "confidence": 0,
+              "end_time": 141320,
+              "start_time": 141200,
+              "text": "数"
+            },
+            {
+              "confidence": 0,
+              "end_time": 141440,
+              "start_time": 141320,
+              "text": "字"
+            },
+            {
+              "confidence": 0,
+              "end_time": 141640,
+              "start_time": 141440,
+              "text": "水"
+            },
+            {
+              "confidence": 0,
+              "end_time": 141760,
+              "start_time": 141640,
+              "text": "印"
+            },
+            {
+              "confidence": 0,
+              "end_time": 142120,
+              "start_time": 142040,
+              "text": "区"
+            },
+            {
+              "confidence": 0,
+              "end_time": 142280,
+              "start_time": 142160,
+              "text": "块"
+            },
+            {
+              "confidence": 0,
+              "end_time": 142440,
+              "start_time": 142280,
+              "text": "链"
+            },
+            {
+              "confidence": 0,
+              "end_time": 142600,
+              "start_time": 142440,
+              "text": "等"
+            },
+            {
+              "confidence": 0,
+              "end_time": 142760,
+              "start_time": 142600,
+              "text": "追"
+            },
+            {
+              "confidence": 0,
+              "end_time": 142840,
+              "start_time": 142800,
+              "text": "溯"
+            },
+            {
+              "confidence": 0,
+              "end_time": 143040,
+              "start_time": 142920,
+              "text": "工"
+            },
+            {
+              "confidence": 0,
+              "end_time": 143160,
+              "start_time": 143040,
+              "text": "具"
+            },
+            {
+              "confidence": 0,
+              "end_time": 143480,
+              "start_time": 143320,
+              "text": "公"
+            },
+            {
+              "confidence": 0,
+              "end_time": 143600,
+              "start_time": 143480,
+              "text": "众"
+            },
+            {
+              "confidence": 0,
+              "end_time": 143760,
+              "start_time": 143600,
+              "text": "也"
+            },
+            {
+              "confidence": 0,
+              "end_time": 143920,
+              "start_time": 143760,
+              "text": "应"
+            },
+            {
+              "confidence": 0,
+              "end_time": 144040,
+              "start_time": 143920,
+              "text": "提"
+            },
+            {
+              "confidence": 0,
+              "end_time": 144160,
+              "start_time": 144040,
+              "text": "升"
+            },
+            {
+              "confidence": 0,
+              "end_time": 144280,
+              "start_time": 144160,
+              "text": "数"
+            },
+            {
+              "confidence": 0,
+              "end_time": 144400,
+              "start_time": 144280,
+              "text": "字"
+            },
+            {
+              "confidence": 0,
+              "end_time": 144600,
+              "start_time": 144400,
+              "text": "素"
+            },
+            {
+              "confidence": 0,
+              "end_time": 144680,
+              "start_time": 144600,
+              "text": "养"
+            },
+            {
+              "confidence": 0,
+              "end_time": 145000,
+              "start_time": 144960,
+              "text": "审"
+            },
+            {
+              "confidence": 0,
+              "end_time": 145160,
+              "start_time": 145080,
+              "text": "慎"
+            },
+            {
+              "confidence": 0,
+              "end_time": 145400,
+              "start_time": 145240,
+              "text": "处"
+            },
+            {
+              "confidence": 0,
+              "end_time": 145480,
+              "start_time": 145400,
+              "text": "理"
+            },
+            {
+              "confidence": 0,
+              "end_time": 145640,
+              "start_time": 145520,
+              "text": "个"
+            },
+            {
+              "confidence": 0,
+              "end_time": 145760,
+              "start_time": 145640,
+              "text": "人"
+            },
+            {
+              "confidence": 0,
+              "end_time": 145920,
+              "start_time": 145760,
+              "text": "生"
+            },
+            {
+              "confidence": 0,
+              "end_time": 146040,
+              "start_time": 145920,
+              "text": "物"
+            },
+            {
+              "confidence": 0,
+              "end_time": 146200,
+              "start_time": 146040,
+              "text": "信"
+            },
+            {
+              "confidence": 0,
+              "end_time": 146320,
+              "start_time": 146200,
+              "text": "息"
+            }
+          ]
+        },
+        {
+          "end_time": 148640,
+          "start_time": 146480,
+          "text": "唯有多方协同，才能既鼓励创新。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 146600,
+              "start_time": 146480,
+              "text": "唯"
+            },
+            {
+              "confidence": 0,
+              "end_time": 146760,
+              "start_time": 146600,
+              "text": "有"
+            },
+            {
+              "confidence": 0,
+              "end_time": 146880,
+              "start_time": 146760,
+              "text": "多"
+            },
+            {
+              "confidence": 0,
+              "end_time": 147040,
+              "start_time": 146880,
+              "text": "方"
+            },
+            {
+              "confidence": 0,
+              "end_time": 147240,
+              "start_time": 147040,
+              "text": "协"
+            },
+            {
+              "confidence": 0,
+              "end_time": 147440,
+              "start_time": 147240,
+              "text": "同"
+            },
+            {
+              "confidence": 0,
+              "end_time": 147680,
+              "start_time": 147520,
+              "text": "才"
+            },
+            {
+              "confidence": 0,
+              "end_time": 147800,
+              "start_time": 147680,
+              "text": "能"
+            },
+            {
+              "confidence": 0,
+              "end_time": 147920,
+              "start_time": 147880,
+              "text": "既"
+            },
+            {
+              "confidence": 0,
+              "end_time": 148160,
+              "start_time": 148040,
+              "text": "鼓"
+            },
+            {
+              "confidence": 0,
+              "end_time": 148280,
+              "start_time": 148160,
+              "text": "励"
+            },
+            {
+              "confidence": 0,
+              "end_time": 148480,
+              "start_time": 148280,
+              "text": "创"
+            },
+            {
+              "confidence": 0,
+              "end_time": 148640,
+              "start_time": 148480,
+              "text": "新"
+            }
+          ]
+        },
+        {
+          "end_time": 153770,
+          "start_time": 148970,
+          "text": "要守住数字时代的人格尊严底线，确保技术进步服务于人，而非侵犯于人。",
+          "words": [
+            {
+              "confidence": 0,
+              "end_time": 149050,
+              "start_time": 148970,
+              "text": "要"
+            },
+            {
+              "confidence": 0,
+              "end_time": 149250,
+              "start_time": 149130,
+              "text": "守"
+            },
+            {
+              "confidence": 0,
+              "end_time": 149370,
+              "start_time": 149250,
+              "text": "住"
+            },
+            {
+              "confidence": 0,
+              "end_time": 149490,
+              "start_time": 149370,
+              "text": "数"
+            },
+            {
+              "confidence": 0,
+              "end_time": 149610,
+              "start_time": 149490,
+              "text": "字"
+            },
+            {
+              "confidence": 0,
+              "end_time": 149770,
+              "start_time": 149610,
+              "text": "时"
+            },
+            {
+              "confidence": 0,
+              "end_time": 149850,
+              "start_time": 149770,
+              "text": "代"
+            },
+            {
+              "confidence": 0,
+              "end_time": 150010,
+              "start_time": 149850,
+              "text": "的"
+            },
+            {
+              "confidence": 0,
+              "end_time": 150130,
+              "start_time": 150010,
+              "text": "人"
+            },
+            {
+              "confidence": 0,
+              "end_time": 150250,
+              "start_time": 150130,
+              "text": "格"
+            },
+            {
+              "confidence": 0,
+              "end_time": 150450,
+              "start_time": 150250,
+              "text": "尊"
+            },
+            {
+              "confidence": 0,
+              "end_time": 150530,
+              "start_time": 150450,
+              "text": "严"
+            },
+            {
+              "confidence": 0,
+              "end_time": 150770,
+              "start_time": 150570,
+              "text": "底"
+            },
+            {
+              "confidence": 0,
+              "end_time": 150890,
+              "start_time": 150770,
+              "text": "线"
+            },
+            {
+              "confidence": 0,
+              "end_time": 151250,
+              "start_time": 151090,
+              "text": "确"
+            },
+            {
+              "confidence": 0,
+              "end_time": 151410,
+              "start_time": 151250,
+              "text": "保"
+            },
+            {
+              "confidence": 0,
+              "end_time": 151530,
+              "start_time": 151410,
+              "text": "技"
+            },
+            {
+              "confidence": 0,
+              "end_time": 151650,
+              "start_time": 151530,
+              "text": "术"
+            },
+            {
+              "confidence": 0,
+              "end_time": 151850,
+              "start_time": 151690,
+              "text": "进"
+            },
+            {
+              "confidence": 0,
+              "end_time": 151970,
+              "start_time": 151850,
+              "text": "步"
+            },
+            {
+              "confidence": 0,
+              "end_time": 152250,
+              "start_time": 152090,
+              "text": "服"
+            },
+            {
+              "confidence": 0,
+              "end_time": 152370,
+              "start_time": 152250,
+              "text": "务"
+            },
+            {
+              "confidence": 0,
+              "end_time": 152530,
+              "start_time": 152370,
+              "text": "于"
+            },
+            {
+              "confidence": 0,
+              "end_time": 152730,
+              "start_time": 152530,
+              "text": "人"
+            },
+            {
+              "confidence": 0,
+              "end_time": 152890,
+              "start_time": 152730,
+              "text": "而"
+            },
+            {
+              "confidence": 0,
+              "end_time": 153090,
+              "start_time": 152890,
+              "text": "非"
+            },
+            {
+              "confidence": 0,
+              "end_time": 153250,
+              "start_time": 153130,
+              "text": "侵"
+            },
+            {
+              "confidence": 0,
+              "end_time": 153370,
+              "start_time": 153250,
+              "text": "犯"
+            },
+            {
+              "confidence": 0,
+              "end_time": 153570,
+              "start_time": 153450,
+              "text": "于"
+            },
+            {
+              "confidence": 0,
+              "end_time": 153770,
+              "start_time": 153570,
+              "text": "人"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

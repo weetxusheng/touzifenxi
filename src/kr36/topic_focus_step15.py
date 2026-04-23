@@ -60,13 +60,12 @@ class SubpageForDownload:
 
 
 def topic_time_window(
-    report_date: date, *, previous_week_only: bool
+    report_date: date, *, mode: str = "weekday_split"
 ) -> tuple[date | None, date | None]:
-    if not previous_week_only:
-        return (None, None)
+    """专题详情子项时间窗；见 ``source_adapter.resolve_kr36_topic_subitem_date_window``。"""
     from . import source_adapter as m
 
-    return m.resolve_previous_week_window(report_date)
+    return m.resolve_kr36_topic_subitem_date_window(report_date, mode=mode)
 
 
 def step1_parse_topics_listing_and_select_focus(

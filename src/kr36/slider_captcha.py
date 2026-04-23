@@ -754,6 +754,60 @@ def _solve_once(
     return True, btn_box, drag_px
 
 
+def _captcha_ui_ready_in_any_frame(page: Any) -> bool:
+    """各 frame 内背景图 + 滑块图均已 naturalWidth>0（与 _solve_once 中判定一致）。"""
+    for f in page.frames:
+        try:
+            if f.evaluate(_JS_WAIT_NATURAL_WIDTH):
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def page_suggests_captcha_iframe_or_images(page: Any) -> bool:
+    """
+    滑块已插入 DOM 或验证码 iframe 已出现（可能尚未 decode 完图）。
+    用于晚于首屏 HTML 的弹窗，避免主文档字符串尚未含 captcha-verify 时误判为「可关窗」。
+    """
+    for f in page.frames:
+        try:
+            u = (f.url or "").lower()
+            if "bytedance" in u or "verifycenter" in u:
+                return True
+            if f.evaluate("() => !!(document.querySelector('img.captcha-verify-image'))"):
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def wait_for_slider_captcha_ui_ready(page: Any, *, timeout_ms: int = 20000) -> bool:
+    """
+    监听滑块层：等 iframe 挂到 DOM，再等背景/拼图 `naturalWidth>0`（加载完成可解）。
+
+    不依赖主线程固定秒数睡眠；`timeout_ms` 为**上限**，就绪即提前返回。
+    返回 False 时调用方仍可调 `solve_slider_captcha`（内部有按钮等待等兜底）。
+    """
+    if timeout_ms <= 0:
+        return _captcha_ui_ready_in_any_frame(page)
+    t_first = min(10_000, max(1_000, int(timeout_ms)))
+    try:
+        page.locator(
+            "iframe[src*='bytedance'], iframe[src*='verifycenter']"
+        ).first.wait_for(state="attached", timeout=t_first)
+    except Exception:
+        pass
+    deadline = time.time() + timeout_ms / 1000.0
+    while time.time() < deadline:
+        if _captcha_ui_ready_in_any_frame(page):
+            print("[captcha] slider 弹层就绪（iframe + 图已 decode）")
+            return True
+        time.sleep(0.12)
+    print(f"[captcha] 等待滑块弹层/图片加载超时 {timeout_ms}ms（将继续尝试 detect/solve）")
+    return False
+
+
 # ── 主入口 ────────────────────────────────────────────────────────────────────
 
 def solve_slider_captcha(page: Any, max_attempts: int = 3) -> bool:

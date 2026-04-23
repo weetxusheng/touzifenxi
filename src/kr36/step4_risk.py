@@ -14,11 +14,12 @@ def try_36kr_step4_html_after_risk(url: str) -> str:
     - 直抓 ``empty`` 且判定为风控/验证页（``fetch_error`` 含 ``kr36_risk``，
       或页面标题像验证/封禁页）。
 
-    实际执行：``Kr36SourceAdapter.step4_fetch_html_via_playwright_slider``（Chromium
+    实际执行：``Kr36RiskStep4Tool.fetch``（与 Adapter 中 step4/联调**同一**实现：Chromium
     打开页面 + 自动滑块 + 可选写回 cookie）。未启用或失败时返回空串。
     """
 
     from c114.runtime.config import load_c114_runtime_config
+    from kr36.risk_step4_tool import Kr36RiskStep4Tool
     from kr36.source_adapter import Kr36SourceAdapter
 
     project = Path(__file__).resolve().parents[2]
@@ -29,4 +30,4 @@ def try_36kr_step4_html_after_risk(url: str) -> str:
         return ""
     conf = (rc.source_configs or {}).get("kr36", {}) or {}
     adapter = Kr36SourceAdapter(conf)
-    return adapter.step4_fetch_html_via_playwright_slider(url)
+    return Kr36RiskStep4Tool(adapter).fetch(url, log_phase="content-fetch-step4")

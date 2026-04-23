@@ -5,6 +5,7 @@ from kr36.email import (
     _compose_item_viewpoint,
     _filter_kr36_visible_activities,
     _render_activity_source_item,
+    _render_viewpoint_as_html,
     _step5_item_has_original_text,
     render_kr36_brief_email,
 )
@@ -121,11 +122,6 @@ def test_kr36_email_renders_fixed_three_bucket_template(tmp_path) -> None:
 
     assert "activity-card-title" in rendered.html
     assert "活动A" in rendered.html
-    assert "时间：" in rendered.html
-    assert "地点：" in rendered.html
-    assert "主题：" in rendered.html
-    assert "状态：" in rendered.html
-    assert "倒计时：" in rendered.html
     assert "activity-card" in rendered.html
     assert "活动A 的观点：" not in rendered.html
     assert "查看链接" not in rendered.html
@@ -245,9 +241,71 @@ categories:
     out = render_kr36_brief_email(step6.read_text(encoding="utf-8"), step6, omit_source_links=True)
     assert "条专题子项" not in out.html
     assert "下为逐条观点" not in out.html
-    assert "子项甲" in out.html
+    # 首条 summary 经 compose 后为「甲短：…」形态，链上标题用结论文「甲短」而非 original_title。
+    assert "甲短" in out.html
     assert "子项乙" in out.html
     assert "甲长文观点" in out.html or "提炼标题：甲短" in out.html
+    assert "subclass-title" in out.html
+    assert "专题线一" in out.html
+
+
+def test_omit_mode_topic_two_subclasses_in_template(tmp_path) -> None:
+    """step5 中两个「聚合主题」的专题子项在邮件里按子类分块（外层 ol + 子类标题 + 内层观点 ol）。"""
+    step6 = tmp_path / "kr36_step6_brief_20260421.md"
+    step6.write_text(
+        "# 简报\n\n## 运行摘要\n\n- 专题：x。\n\n## 占位\n\n### 核心判断\n\nx\n",
+        encoding="utf-8",
+    )
+    step5 = tmp_path / "kr36_step_5_content_analysis_20260421.yaml"
+    step5.write_text(
+        """
+report_date: '2026-04-21'
+input_path: 'x'
+generated_at: 'x'
+categories:
+  - topic: '人工智能与前沿技术'
+    items:
+      - original_title: 'A文'
+        channel: '专题'
+        original_url: 'https://36kr.com/video/10'
+        original_content: { text: 'x', title: '', summary: '', source: '', status: success }
+        selected_contents: []
+        analysis:
+          summary: '观点A。'
+          core_points: []
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+  - topic: '公司动态与商业策略'
+    items:
+      - original_title: 'B文'
+        channel: '专题'
+        original_url: 'https://36kr.com/video/20'
+        original_content: { text: 'x', title: '', summary: '', source: '', status: success }
+        selected_contents: []
+        analysis:
+          summary: '观点B。'
+          core_points: []
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+""",
+        encoding="utf-8",
+    )
+    out = render_kr36_brief_email(step6.read_text(encoding="utf-8"), step6, omit_source_links=True)
+    assert "subclass-outline" in out.html
+    assert "subclass-item" in out.html
+    assert "人工智能与前沿技术" in out.html
+    assert "公司动态与商业策略" in out.html
+    assert "A文" in out.html and "B文" in out.html
+    assert "人工智能与前沿技术：" in out.text
+    assert "公司动态与商业策略：" in out.text
 
 
 def test_omit_mode_activity_drops_ended_per_step5_and_hot_topics(tmp_path) -> None:
@@ -337,10 +395,10 @@ categories:
     out = render_kr36_brief_email(step6.read_text(encoding="utf-8"), step6, omit_source_links=True)
     assert "条活动子项" not in out.html
     assert "下为逐条观点" not in out.html
-    assert "今日活动共覆盖" in out.html
+    assert "今日活动共覆盖" not in out.html
+    assert "活动信息" not in out.html
     assert "已收场" not in out.html
-    assert "进行中活动" in out.html
-    assert "今天开始" in out.html or "报名中" in out.html
+    assert "activity-card" in out.html
     assert "activity-viewpoint" not in out.html
 
 
@@ -406,6 +464,15 @@ def test_compose_item_viewpoint_leads_with_title_not_labels() -> None:
     assert "提炼标题" not in out
     assert "内容要点" not in out
     assert "AI“同伴保全”行为挑战人类控制权：加州大学伯克利分校研究显示" in out.replace(" ", "")
+
+
+def test_colon_lead_viewpoint_renders_head_and_body() -> None:
+    """冒号总起式：结论加粗，展开段保留 **粗体**。"""
+    s = "顶尖模型存在同伴风险：**7 个**模型会作弊：加州大学研究显示。"
+    html = _render_viewpoint_as_html(s)
+    assert "vp-main" in html and "vp-body" in html
+    assert "同伴风险" in html
+    assert "<strong>7 个</strong>" in html
 
 
 def test_activity_source_dedupes_identical_status_and_countdown() -> None:
