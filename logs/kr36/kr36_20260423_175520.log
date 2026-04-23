@@ -1,0 +1,108 @@
+[kr36] 2026-04-23 17:55:20 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=E:\AI\touzifenxi
+[kr36] PYTHON_BIN=E:\AI\touzifenxi\.venv\Scripts\python.exe
+[kr36] TIMEOUT=50s
+[kr36] LOG_FILE=E:\AI\touzifenxi\logs\kr36\kr36_20260423_175520.log
+[kr36] running: "E:\AI\touzifenxi\.venv\Scripts\python.exe" scripts\websearch.py run --source 36kr --timeout 50
+2026-04-23 17:55:21 [kr36] listing_begin report_date=2026-04-23 rounds_total=3 candidate_limit=120 mode=sequential step0.5_then_step1
+2026-04-23 17:55:21 [kr36] step0.5_topic_round_start page=1 round=1/3 stage=topics url=https://36kr.com/topics/
+2026-04-23 17:55:21 [kr36] 进入专题页(0.5步)，数据 0 条，累计 0 条
+2026-04-23 17:55:21 [kr36] fetch_start url=https://36kr.com/topics/
+2026-04-23 17:55:23 [kr36] fetch_ok method=curl url=https://36kr.com/topics/ html_length=73868
+2026-04-23 17:55:23 [kr36] throttle_wait url=https://36kr.com/topics/3770543132934659 wait_ms=34960 global_wait_ms=34960 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 17:55:58 [kr36] fetch_start url=https://36kr.com/topics/3770543132934659
+2026-04-23 17:56:00 [kr36] fetch_ok method=curl url=https://36kr.com/topics/3770543132934659 html_length=1460
+2026-04-23 17:56:00 [kr36] step4_recover_trigger url=https://36kr.com/topics/3770543132934659 phase=topic-detail reason=risk_interstitial
+2026-04-23 17:56:00 [kr36] playwright_slider_start phase='topic-detail' url=https://36kr.com/topics/3770543132934659 headless=false channel='msedge'
+2026-04-23 17:56:26 [kr36] playwright_slider_preloop phase='topic-detail' url=https://36kr.com/topics/3770543132934659 wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
+2026-04-23 17:56:26 [kr36] playwright_slider_wait_ui phase='topic-detail' url=https://36kr.com/topics/3770543132934659 ui_ready=true
+2026-04-23 17:56:32 [kr36] slider_captcha_solve_result attempted=true
+2026-04-23 17:56:32 [kr36] playwright_slider_attempt phase='topic-detail' url=https://36kr.com/topics/3770543132934659 attempted=true
+2026-04-23 17:56:47 [kr36] playwright_slider_csr_list_wait_timeout phase='topic-detail' url=https://36kr.com/topics/3770543132934659 selector='.topic-list-item, .topic-item, .kr-topic-item'
+2026-04-23 17:56:50 [kr36] playwright_slider_after_solve phase='topic-detail' url=https://36kr.com/topics/3770543132934659 html_length=88457
+2026-04-23 17:56:50 [kr36] playwright_slider_close_on_pass phase='topic-detail' url=https://36kr.com/topics/3770543132934659
+2026-04-23 17:56:51 [kr36] fetch_start url=https://36kr.com/video/3766585318896386
+2026-04-23 17:56:53 [kr36] fetch_ok method=curl url=https://36kr.com/video/3766585318896386 html_length=14308
+2026-04-23 17:56:53 [kr36] topic_video_no_cdn_in_html len=14308 page='https://36kr.com/video/3766585318896386' skip_playwright_slider auto_solver=true looks_risk_like=false
+2026-04-23 17:56:53 [kr36] topic_video_cdn_extract count=0 html_len=14308 preview='-' page='https://36kr.com/video/3766585318896386'
+2026-04-23 17:56:53 [kr36] topic_video_fallback_html_only cdn_tried=0 page='https://36kr.com/video/3766585318896386' html_len=14308
+2026-04-23 17:56:53 [kr36] throttle_wait url=https://36kr.com/video/3764840757948933 wait_ms=21252 global_wait_ms=21252 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 17:57:14 [kr36] fetch_start url=https://36kr.com/video/3764840757948933
+2026-04-23 17:57:16 [kr36] fetch_ok method=curl url=https://36kr.com/video/3764840757948933 html_length=14308
+2026-04-23 17:57:16 [kr36] topic_video_no_cdn_in_html len=14308 page='https://36kr.com/video/3764840757948933' skip_playwright_slider auto_solver=true looks_risk_like=false
+2026-04-23 17:57:16 [kr36] topic_video_cdn_extract count=0 html_len=14308 preview='-' page='https://36kr.com/video/3764840757948933'
+2026-04-23 17:57:16 [kr36] topic_video_fallback_html_only cdn_tried=0 page='https://36kr.com/video/3764840757948933' html_len=14308
+2026-04-23 17:57:16 [kr36] throttle_wait url=https://36kr.com/video/3765091828527880 wait_ms=36286 global_wait_ms=36286 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 17:57:52 [kr36] fetch_start url=https://36kr.com/video/3765091828527880
+2026-04-23 17:57:54 [kr36] fetch_ok method=curl url=https://36kr.com/video/3765091828527880 html_length=14308
+2026-04-23 17:57:54 [kr36] topic_video_no_cdn_in_html len=14308 page='https://36kr.com/video/3765091828527880' skip_playwright_slider auto_solver=true looks_risk_like=false
+2026-04-23 17:57:54 [kr36] topic_video_cdn_extract count=0 html_len=14308 preview='-' page='https://36kr.com/video/3765091828527880'
+2026-04-23 17:57:54 [kr36] topic_video_fallback_html_only cdn_tried=0 page='https://36kr.com/video/3765091828527880' html_len=14308
+2026-04-23 17:57:54 [kr36] throttle_wait url=https://36kr.com/topics/3771153216865028 wait_ms=31214 global_wait_ms=31214 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 17:58:25 [kr36] fetch_start url=https://36kr.com/topics/3771153216865028
+2026-04-23 17:58:27 [kr36] fetch_ok method=curl url=https://36kr.com/topics/3771153216865028 html_length=60355
+2026-04-23 17:58:27 [kr36] throttle_wait url=https://36kr.com/p/3770688595214857 wait_ms=21088 global_wait_ms=21088 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 17:58:48 [kr36] fetch_start url=https://36kr.com/p/3770688595214857
+2026-04-23 17:58:50 [kr36] fetch_ok method=curl url=https://36kr.com/p/3770688595214857 html_length=75400
+2026-04-23 17:58:50 [kr36] throttle_wait url=https://36kr.com/p/3766410231726855 wait_ms=34317 global_wait_ms=34317 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 17:59:25 [kr36] fetch_start url=https://36kr.com/p/3766410231726855
+2026-04-23 17:59:27 [kr36] fetch_ok method=curl url=https://36kr.com/p/3766410231726855 html_length=81854
+2026-04-23 17:59:27 [kr36] throttle_wait url=https://36kr.com/p/3764728843289089 wait_ms=35200 global_wait_ms=35200 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 18:00:02 [kr36] fetch_start url=https://36kr.com/p/3764728843289089
+2026-04-23 18:00:06 [kr36] fetch_ok method=curl url=https://36kr.com/p/3764728843289089 html_length=84584
+2026-04-23 18:00:06 [kr36] throttle_wait url=https://36kr.com/p/3766718158324489 wait_ms=19186 global_wait_ms=19186 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 18:00:25 [kr36] fetch_start url=https://36kr.com/p/3766718158324489
+2026-04-23 18:00:27 [kr36] fetch_ok method=curl url=https://36kr.com/p/3766718158324489 html_length=86772
+2026-04-23 18:00:27 [kr36] throttle_wait url=https://36kr.com/p/3765076875117314 wait_ms=23803 global_wait_ms=23803 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 18:00:51 [kr36] fetch_start url=https://36kr.com/p/3765076875117314
+2026-04-23 18:00:54 [kr36] fetch_ok method=curl url=https://36kr.com/p/3765076875117314 html_length=90429
+2026-04-23 18:00:54 [kr36] throttle_wait url=https://36kr.com/p/3764953900990977 wait_ms=26853 global_wait_ms=26853 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 18:01:21 [kr36] fetch_start url=https://36kr.com/p/3764953900990977
+2026-04-23 18:01:23 [kr36] fetch_ok method=curl url=https://36kr.com/p/3764953900990977 html_length=89322
+2026-04-23 18:01:23 [kr36] throttle_wait url=https://36kr.com/p/3757975636050695 wait_ms=30106 global_wait_ms=30106 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 18:01:53 [kr36] fetch_start url=https://36kr.com/p/3757975636050695
+2026-04-23 18:01:56 [kr36] fetch_ok method=curl url=https://36kr.com/p/3757975636050695 html_length=79675
+2026-04-23 18:01:56 [kr36] step0.5_topic_round_end page=1 round=1/3 stage=topics status=ok fetched=10 total_topic_refs=10 elapsed_ms=394899
+2026-04-23 18:01:56 [kr36] 完成专题页(0.5步)，数据 10 条，累计 10 条
+2026-04-23 18:01:56 [kr36] step1_listing_next round=2/3 stage=activity
+2026-04-23 18:01:56 [kr36] step1_main_round_start page=2 round=2/3 stage=activity url=https://36kr.com/activity
+2026-04-23 18:01:56 [kr36] 进入活动页，数据 0 条，累计 0 条
+2026-04-23 18:01:56 [kr36] throttle_wait url=https://36kr.com/activity wait_ms=30329 global_wait_ms=30329 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 18:02:26 [kr36] fetch_start url=https://36kr.com/activity
+2026-04-23 18:02:30 [kr36] fetch_ok method=curl url=https://36kr.com/activity html_length=61604
+2026-04-23 18:02:30 [kr36] round_end page=2 round=2/3 stage=activity status=ok fetched=2 total_refs=2 elapsed_ms=34325
+2026-04-23 18:02:30 [kr36] 完成活动页，数据 2 条，累计 2 条
+2026-04-23 18:02:30 [kr36] round_next round=3/3 stage=search
+2026-04-23 18:02:30 [kr36] round_start page=3 round=3/3 stage=search category=36氪独家 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 date_window=2026-04-17~2026-04-19
+2026-04-23 18:02:30 [kr36] 进入搜索页(36氪独家)，数据 0 条，累计 2 条
+2026-04-23 18:02:30 [kr36] throttle_wait url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 wait_ms=31227 global_wait_ms=31227 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-23 18:03:01 [kr36] fetch_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-23 18:03:04 [kr36] search_enrich_direct_step4 reason=auto_solver url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-23 18:03:04 [kr36] playwright_slider_start phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 headless=false channel='msedge'
+2026-04-23 18:03:29 [kr36] playwright_slider_preloop phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
+2026-04-23 18:03:33 [kr36] playwright_slider_ok phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102530
+2026-04-23 18:03:34 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102530
+2026-04-23 18:03:34 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102530
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-21 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-20 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-09 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-26 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-31 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-19 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-16 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-05 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-24 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-04 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-22 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-14 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-07 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-26 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-02-26 window=2026-04-17~2026-04-19
+2026-04-23 18:03:34 [kr36] round_end page=3 round=3/3 stage=search category=36氪独家 status=ok fetched=1 total_refs=3 elapsed_ms=63980
+2026-04-23 18:03:34 [kr36] 完成搜索页(36氪独家)，数据 1 条，累计 3 条
+2026-04-23 18:03:34 [kr36] listing_end report_date=2026-04-23 total_refs=13 stopped_by=normal_complete
+[kr36] 2026-04-23 18:10:52 finished with exit code 0.

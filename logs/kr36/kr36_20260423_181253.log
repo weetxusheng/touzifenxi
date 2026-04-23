@@ -1,0 +1,13 @@
+[kr36] 2026-04-23 18:12:53 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=E:\AI\touzifenxi
+[kr36] PYTHON_BIN=E:\AI\touzifenxi\.venv\Scripts\python.exe
+[kr36] TIMEOUT=30s
+[kr36] LOG_FILE=E:\AI\touzifenxi\logs\kr36\kr36_20260423_181253.log
+[kr36] running: "E:\AI\touzifenxi\.venv\Scripts\python.exe" scripts\websearch.py run --source 36kr --timeout 30
+2026-04-23 18:12:54 [kr36] listing_begin report_date=2026-04-23 rounds_total=3 candidate_limit=120 mode=sequential step0.5_then_step1
+2026-04-23 18:12:54 [kr36] step0.5_topic_round_start page=1 round=1/3 stage=topics url=https://36kr.com/topics/
+2026-04-23 18:12:54 [kr36] 进入专题页(0.5步)，数据 0 条，累计 0 条
+2026-04-23 18:12:54 [kr36] fetch_start url=https://36kr.com/topics/
+2026-04-23 18:12:55 [kr36] topics_activity_enrich_direct_step4 reason=auto_solver url=https://36kr.com/topics/ page_kind=topics
+2026-04-23 18:12:55 [kr36] playwright_slider_start phase='topics-activity-step4-topics' url=https://36kr.com/topics/ headless=false channel='msedge'
+2026-04-23 18:13:21 [kr36] playwright_slider_preloop phase='topics-activity-step4-topics' url=https://36kr.com/topics/ wait_after_load_ms=1800 slider_ui_ready_max_ms=20000

@@ -81,15 +81,15 @@ KR36_RELATIVE_TIME_REQUIRED_EXACT_URLS = frozenset(
 KR36_SEARCH_BASE = "https://36kr.com/search/articles/"
 KR36_SEARCH_CATEGORY_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("36氪独家", "36氪独家"),
-    ("深氪", "深氪"),
-    ("后浪白皮书", "后浪白皮书"),
-    ("行业日报", "行业日报"),
-    ("Long China 50", "Long China 50"),
-    ("投资派", "投资派"),
-    ("新青年观察", "新青年观察"),
-    ("KRLab", "KRLab"),
-    ("AI协同创新中心", "AI协同创新中心"),
-    ("数智前瞻", "数智前瞻"),
+    # ("深氪", "深氪"),
+    # ("后浪白皮书", "后浪白皮书"),
+    # ("行业日报", "行业日报"),
+    # ("Long China 50", "Long China 50"),
+    # ("投资派", "投资派"),
+    # ("新青年观察", "新青年观察"),
+    # ("KRLab", "KRLab"),
+    # ("AI协同创新中心", "AI协同创新中心"),
+    # ("数智前瞻", "数智前瞻"),
 )
 KR36_LINK_RE = re.compile(
     r'<a[^>]+href="(?P<href>(?:/p/\d+(?:\?[^"]*)?)|(?:https?://(?:www\.)?36kr\.com/p/\d+(?:\?[^"]*)?))"[^>]*>(?P<title>.*?)</a>',
@@ -1357,14 +1357,39 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             from . import topic_focus_step15 as t15
 
             if not t15.step5_list_video_cdn_urls_from_subpage_html(html):
-                # 壳页/短页（~14k）常不含 initialState/流地址，与风控同路径再拉，避免只落 .html
-                _append_kr36_debug_log(
-                    f"[kr36] topic_video_no_cdn_in_html len={len(html)} page={video_page_url!r} "
-                    "trying_playwright_slider"
+                # /video/ 首屏常为 CSR 壳：curl 无 CDN 且未必带「人机验证」文案；仅判 captcha 会漏掉，
+                # 导致只落 html、不跑下载与 ASR。小体积页或验证壳脚本页在开启 auto_solver 且非 http_only 时补一轮 step4。
+                looks_risk_like = _looks_like_captcha_or_block(html)
+                interstitial = _kr36_search_html_has_risk_interstitial(html)
+                blob_len = len(html or "")
+                small_shell = blob_len < 22000
+                can_browser = not self.http_only_mode and self.risk_verification_auto_solver
+                should_recover = can_browser and (
+                    looks_risk_like or interstitial or small_shell
                 )
-                html = self._kr36_topic_video_page_recover_with_playwright(
-                    video_page_url, log_reason="no_cdn_in_html"
-                )
+                if should_recover:
+                    reason_parts: list[str] = []
+                    if looks_risk_like:
+                        reason_parts.append("captcha_copy")
+                    if interstitial:
+                        reason_parts.append("risk_interstitial")
+                    if small_shell:
+                        reason_parts.append(f"small_shell_len={blob_len}")
+                    _append_kr36_debug_log(
+                        f"[kr36] topic_video_no_cdn_in_html page={video_page_url!r} "
+                        f"try_playwright reason={','.join(reason_parts)}"
+                    )
+                    html = self._kr36_topic_video_page_recover_with_playwright(
+                        video_page_url, log_reason="no_cdn_in_html"
+                    )
+                else:
+                    _append_kr36_debug_log(
+                        f"[kr36] topic_video_no_cdn_in_html len={blob_len} page={video_page_url!r} "
+                        f"skip_playwright http_only={str(self.http_only_mode).lower()} "
+                        f"auto_solver={str(self.risk_verification_auto_solver).lower()} "
+                        f"looks_risk_like={str(looks_risk_like).lower()} "
+                        f"interstitial={str(interstitial).lower()} small_shell={str(small_shell).lower()}"
+                    )
         if not html:
             return
 
@@ -3892,6 +3917,46 @@ def _is_usable_html(html: str) -> bool:
     if "<html" not in lowered:
         return False
     return not _looks_like_captcha_or_block(html)
+
+
+def _kr36_listing_requires_step4_recovery(url: str, html: str) -> bool:
+    """
+    列表页被拦或仅返回 CSR 壳时，``_looks_like_captcha_or_block`` 常为假（验证码文案未进首屏 HTML）。
+    此时与显式风控页一样应走 ``Kr36RiskStep4Tool.fetch``（滑块 + 回写 Cookie）。
+    """
+    blob = html or ""
+    if not blob.strip():
+        return False
+    if _looks_like_captcha_or_block(blob):
+        return False
+    if not _is_usable_html(blob):
+        return False
+    if _kr36_activity_listing_index_url(url):
+        return not _kr36_listing_html_has_parsable_activity_items(blob)
+    if _kr36_topics_listing_index_url(url):
+        return not _kr36_listing_html_has_parsable_topic_links(blob)
+    if _is_kr36_search_articles_url(url):
+        if _kr36_html_contains_search_article_links(blob):
+            return False
+        if _kr36_search_html_likely_zero_hits_message(blob):
+            return False
+        return True
+    return False
+
+
+def _kr36_needs_playwright_slider_recovery(url: str, html: str) -> bool:
+    """
+    统一「需走 Playwright + 自动滑块」判定：显式验证码文案、字节系验证壳脚本、
+    或专题/活动/搜索列表 curl 仅为 CSR 壳（与 ``maybe_recover`` 触发条件一致）。
+    """
+    blob = html or ""
+    if not blob.strip():
+        return False
+    if _looks_like_captcha_or_block(blob):
+        return True
+    if _kr36_search_html_has_risk_interstitial(blob):
+        return True
+    return _kr36_listing_requires_step4_recovery(url, blob)
 
 
 def _int_list_config(value: Any, *, default: list[int]) -> list[int]:

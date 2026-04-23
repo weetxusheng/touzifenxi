@@ -56,7 +56,7 @@
       "risk_cooldown_jitter_ms": 8000,
       "deferred_retry_skip_blocked_ratio_percent": 85,
       "risk_verification_command": "",
-      "risk_incognito_cookie_refresh_enabled": true,
+      "risk_incognito_cookie_refresh_enabled": false,
       "risk_verification_wait_ms": 3000,
       "browser_fallback_enabled": false
     }
