@@ -3,6 +3,8 @@ from datetime import date
 from kr36 import slider_captcha
 from kr36.source_adapter import (
     _bool_config,
+    _include_kr36_activity_in_crawl_list,
+    _kr36_likely_36kr_csr_risk_listing_shell,
     _kr36_step4_post_slider_page_looks_resolved,
     _normalize_kr36_playwright_chromium_channel,
     _kr36_search_html_has_risk_interstitial,
@@ -15,11 +17,15 @@ from kr36.source_adapter import (
     extract_video_media_url,
     extract_video_media_urls,
     infer_kr36_bucket,
+    parse_activity_listing_html,
     parse_search_listing_html,
     parse_topic_detail_html,
+    resolve_current_week_window,
+    resolve_kr36_topic_subitem_date_window,
     resolve_kr36_video_detail_page_url,
     resolve_previous_week_window,
     select_focus_topics,
+    _kr36_topic_subitem_date_mode_from_config,
 )
 from utils.tools.content_models import RawArticleRef
 
@@ -145,9 +151,77 @@ def test_search_playwright_body_classifies_risk_vs_real_page() -> None:
     assert _kr36_search_html_likely_zero_hits_message(empty_msg) is True
 
 
+def test_kr36_csr_risk_listing_shell_not_ok_for_step4() -> None:
+    """小壳在验证码进 HTML 前 _is_usable_html 为真，应用壳检测拦住「秒关窗」。"""
+    from kr36.source_adapter import Kr36SourceAdapter
+
+    shell = (
+        "<html><head><title>36氪</title></head><body>"
+        "https://36kr.com/foo "
+        + ("x" * 2100)
+        + "</body></html>"
+    )
+    assert 500 < len(shell) < 15000
+    assert _kr36_likely_36kr_csr_risk_listing_shell(shell) is True
+
+    big = "<html><head></head><body>36kr.com" + "z" * 20000 + "</body></html>"
+    assert _kr36_likely_36kr_csr_risk_listing_shell(big) is False
+
+    ad = Kr36SourceAdapter({})
+    assert not ad._step4_playwright_allows_return_html(
+        shell, age_s=10.0, after_slider_attempt=False
+    )
+
+
 def test_bucket_keeps_topics_separate() -> None:
     assert infer_kr36_bucket("https://36kr.com/topics/123", "36氪编辑精选") == "专题"
     assert infer_kr36_bucket("https://36kr.com/activity/foo", "活动报名") == "活动"
+
+
+def test_activity_crawl_list_drops_ended_keeps_pending_and_ongoing() -> None:
+    assert _include_kr36_activity_in_crawl_list("已结束") is False
+    for st in ("未开始", "报名中", "活动中"):
+        assert _include_kr36_activity_in_crawl_list(st) is True
+    assert _include_kr36_activity_in_crawl_list("") is True
+
+
+def test_parse_activity_listing_html_filters_ended_cards() -> None:
+    html = """
+    <a class="activity-item" href="https://x.com/a">活动A 已结束 04月01日-04月02日 北京</a>
+    <a class="activity-item" href="https://x.com/b">活动B 报名中 04月21日-04月22日 上海</a>
+    <a class="activity-item" href="https://x.com/c">活动C 活动中 04月20日-04月25日 深圳</a>
+    """
+    refs = parse_activity_listing_html(
+        html,
+        base_url="https://36kr.com",
+        listing_url="https://36kr.com/activity",
+        report_date=date(2026, 4, 22),
+    )
+    by_url = {r.url: (r.metadata or {}).get("activity_status") for r in refs}
+    assert by_url == {
+        "https://x.com/b": "报名中",
+        "https://x.com/c": "活动中",
+    }
+
+
+def test_parse_activity_listing_html_extracts_card_description() -> None:
+    html = """
+    <a class="activity-item" href="https://x.com/fbif">
+      <p class="item-title">FBIF2026食品饮料创新论坛及FBIF展览</p>
+      <p class="item-introduce">FBIF2026是集论坛、展览与赛事于一体的综合活动。</p>
+      报名中 04月27日-04月29日 杭州
+    </a>
+    """
+    refs = parse_activity_listing_html(
+        html,
+        base_url="https://36kr.com",
+        listing_url="https://36kr.com/activity",
+        report_date=date(2026, 4, 23),
+    )
+    assert len(refs) == 1
+    ref = refs[0]
+    assert "FBIF2026是集论坛、展览与赛事于一体的综合活动。" in (ref.summary or "")
+    assert (ref.metadata or {}).get("activity_description") == "FBIF2026是集论坛、展览与赛事于一体的综合活动。"
 
 
 def test_select_focus_topics_picks_requested_two_topics() -> None:
@@ -194,6 +268,38 @@ def test_resolve_previous_week_window_uses_week_monday_minus_7_days() -> None:
     window_start, window_end = resolve_previous_week_window(date(2026, 4, 22))
     assert window_start.isoformat() == "2026-04-13"
     assert window_end.isoformat() == "2026-04-19"
+
+
+def test_resolve_current_week_window_is_monday_through_sunday() -> None:
+    s, e = resolve_current_week_window(date(2026, 4, 24))
+    assert s.isoformat() == "2026-04-20"
+    assert e.isoformat() == "2026-04-26"
+
+
+def test_resolve_kr36_topic_subitem_date_window_weekday_split_mon_to_thu_is_previous_week() -> None:
+    s, e = resolve_kr36_topic_subitem_date_window(date(2026, 4, 22), mode="weekday_split")
+    assert s and e
+    assert s.isoformat() == "2026-04-13"
+    assert e.isoformat() == "2026-04-19"
+
+
+def test_resolve_kr36_topic_subitem_date_window_weekday_split_fri_to_sun_is_current_week() -> None:
+    s, e = resolve_kr36_topic_subitem_date_window(date(2026, 4, 24), mode="weekday_split")
+    assert s and e
+    assert s.isoformat() == "2026-04-20"
+    assert e.isoformat() == "2026-04-26"
+
+
+def test_resolve_kr36_topic_subitem_date_window_none() -> None:
+    s, e = resolve_kr36_topic_subitem_date_window(date(2026, 4, 22), mode="none")
+    assert s is None and e is None
+
+
+def test_kr36_topic_subitem_date_mode_from_config_uses_legacy_bool() -> None:
+    assert _kr36_topic_subitem_date_mode_from_config({"topic_previous_week_only": True}) == "previous_week"
+    assert _kr36_topic_subitem_date_mode_from_config({"topic_previous_week_only": False}) == "none"
+    assert _kr36_topic_subitem_date_mode_from_config({}) == "weekday_split"
+    assert _kr36_topic_subitem_date_mode_from_config({"topic_subitem_date_mode": "Previous_Week"}) == "previous_week"
 
 
 def test_parse_topic_detail_html_filters_previous_week_and_keeps_video_article() -> None:

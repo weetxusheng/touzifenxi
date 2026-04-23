@@ -6,6 +6,7 @@ LLM 章节生成、checkpoint 和问题汇总由 steps.step6_brief 负责。
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Any
 
 from ..analysis.models import BriefSectionDraft, ContentAnalysisInput
@@ -19,6 +20,44 @@ def _payload_is_kr36_report(payload: ContentAnalysisInput) -> bool:
     return "kr36" in p.lower()
 
 
+def format_kr36_crawl_week_range_label(report_date_iso: str) -> str:
+    """
+    36Kr 简报主标题内日期（与 ``source_adapter.resolve_kr36_search_category_date_window``
+    / ``resolve_kr36_topic_subitem_date_window``(weekday_split) 语义对齐）：
+
+    - **周一至周四**：展示**上一自然周**（上周一～上周日），与「跑在本周但抓上周数据」一致。
+    - **周五至周日**：展示**本周一～报告日**（本周内已累积区间）。
+
+    例如：周四跑 → 「上周一 至 上周日」；周五跑 → 「本周一 至 今天」。
+    """
+    s = (report_date_iso or "").strip()
+    if len(s) < 10:
+        return s or "日期未知"
+    try:
+        d = date.fromisoformat(s[:10])
+    except ValueError:
+        return s
+    if d.weekday() <= 3:
+        # 与 resolve_previous_week_window 一致：完整上一自然周
+        current_week_monday = d - timedelta(days=d.weekday())
+        previous_week_sunday = current_week_monday - timedelta(days=1)
+        previous_week_monday = previous_week_sunday - timedelta(days=6)
+        if previous_week_monday == previous_week_sunday:
+            return previous_week_monday.isoformat()
+        return f"{previous_week_monday.isoformat()} 至 {previous_week_sunday.isoformat()}"
+    monday = d - timedelta(days=d.weekday())
+    if monday == d:
+        return d.isoformat()
+    return f"{monday.isoformat()} 至 {d.isoformat()}"
+
+
+def _brief_title_date_phrase(payload: ContentAnalysisInput) -> str:
+    raw = (payload.report_date or "").strip() or "日期未知"
+    if not _payload_is_kr36_report(payload):
+        return raw
+    return format_kr36_crawl_week_range_label(raw)
+
+
 def render_brief_markdown(payload: ContentAnalysisInput) -> str:
     """Render the step 6 brief from the current content-analysis payload."""
     search_payload = None
@@ -27,7 +66,7 @@ def render_brief_markdown(payload: ContentAnalysisInput) -> str:
         if search_results_path.exists():
             search_payload = load_search_results_yaml(search_results_path)
     summary = build_brief_runtime_summary(payload, search_payload)
-    lines = [f"# {infer_brief_title(payload.input_path)}（{payload.report_date}）", "", "## 运行摘要", ""]
+    lines = [f"# {infer_brief_title(payload.input_path)}（{_brief_title_date_phrase(payload)}）", "", "## 运行摘要", ""]
     lines.extend(
         [
             f"- 原始文章数：{summary['original_articles']}",
@@ -104,7 +143,7 @@ def render_generated_brief_markdown(
         if search_results_path.exists():
             search_payload = load_search_results_yaml(search_results_path)
     summary = build_brief_runtime_summary(payload, search_payload)
-    lines = [f"# {infer_brief_title(payload.input_path)}（{payload.report_date}）", "", "## 运行摘要", ""]
+    lines = [f"# {infer_brief_title(payload.input_path)}（{_brief_title_date_phrase(payload)}）", "", "## 运行摘要", ""]
     lines.extend(
         [
             f"- 原始文章数：{summary['original_articles']}",
