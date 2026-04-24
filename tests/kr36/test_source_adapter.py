@@ -19,12 +19,16 @@ from kr36.source_adapter import (
     extract_video_media_url,
     extract_video_media_urls,
     infer_kr36_bucket,
+    infer_kr36_info_channel_from_listing_url,
     parse_activity_listing_html,
     parse_search_listing_html,
     parse_topic_detail_html,
     resolve_current_week_window,
+    resolve_kr36_information_ai_vc_date_window,
+    resolve_kr36_search_category_date_window,
     resolve_kr36_topic_subitem_date_window,
     resolve_kr36_video_detail_page_url,
+    resolve_kr36_weekly_listing_date_window,
     resolve_previous_week_window,
     select_focus_topics,
     _kr36_topic_subitem_date_mode_from_config,
@@ -216,6 +220,41 @@ def test_bucket_keeps_topics_separate() -> None:
     assert infer_kr36_bucket("https://36kr.com/activity/foo", "活动报名") == "活动"
 
 
+def test_kr36_weekly_listing_window_mon_sat_previous_sun_current() -> None:
+    """周一至周六：上一完整自然周；周日：本周一～当天。"""
+    assert resolve_kr36_weekly_listing_date_window(date(2026, 4, 23)) == resolve_previous_week_window(
+        date(2026, 4, 23)
+    )
+    assert resolve_kr36_weekly_listing_date_window(date(2026, 4, 25)) == resolve_previous_week_window(
+        date(2026, 4, 25)
+    )
+    assert resolve_kr36_weekly_listing_date_window(date(2026, 4, 26)) == (
+        date(2026, 4, 20),
+        date(2026, 4, 26),
+    )
+    assert resolve_kr36_search_category_date_window(date(2026, 4, 23)) == resolve_kr36_weekly_listing_date_window(
+        date(2026, 4, 23)
+    )
+
+
+def test_kr36_information_ai_vc_date_window_is_report_day_only() -> None:
+    d = date(2026, 4, 23)
+    assert resolve_kr36_information_ai_vc_date_window(d) == (d, d)
+
+
+def test_kr36_topic_subitem_weekday_split_classic() -> None:
+    s, e = resolve_kr36_topic_subitem_date_window(date(2026, 4, 23), mode="weekday_split")
+    assert (s, e) == resolve_previous_week_window(date(2026, 4, 23))
+    s2, e2 = resolve_kr36_topic_subitem_date_window(date(2026, 4, 24), mode="weekday_split")
+    assert (s2, e2) == resolve_previous_week_window(date(2026, 4, 24))
+
+
+def test_infer_kr36_info_channel_ai_and_contact() -> None:
+    assert infer_kr36_info_channel_from_listing_url("https://36kr.com/information/AI/") == "AI"
+    assert infer_kr36_info_channel_from_listing_url("https://36kr.com/information/contact/") == "创投"
+    assert infer_kr36_info_channel_from_listing_url("https://36kr.com/information/venturecapital/") == "创投"
+
+
 def test_activity_crawl_list_drops_ended_keeps_pending_and_ongoing() -> None:
     assert _include_kr36_activity_in_crawl_list("已结束") is False
     for st in ("未开始", "报名中", "活动中"):
@@ -234,6 +273,7 @@ def test_parse_activity_listing_html_filters_ended_cards() -> None:
         base_url="https://36kr.com",
         listing_url="https://36kr.com/activity",
         report_date=date(2026, 4, 22),
+        listing_date_window=None,
     )
     by_url = {r.url: (r.metadata or {}).get("activity_status") for r in refs}
     assert by_url == {
@@ -255,11 +295,28 @@ def test_parse_activity_listing_html_extracts_card_description() -> None:
         base_url="https://36kr.com",
         listing_url="https://36kr.com/activity",
         report_date=date(2026, 4, 23),
+        listing_date_window=None,
     )
     assert len(refs) == 1
     ref = refs[0]
     assert "FBIF2026是集论坛、展览与赛事于一体的综合活动。" in (ref.summary or "")
     assert (ref.metadata or {}).get("activity_description") == "FBIF2026是集论坛、展览与赛事于一体的综合活动。"
+
+
+def test_parse_activity_listing_html_filters_by_listing_date_window() -> None:
+    html = """
+    <a class="activity-item" href="https://x.com/in">窗内 报名中 04月16日-04月17日 北京</a>
+    <a class="activity-item" href="https://x.com/out">窗外 报名中 04月27日-04月28日 上海</a>
+    """
+    win = (date(2026, 4, 13), date(2026, 4, 19))
+    refs = parse_activity_listing_html(
+        html,
+        base_url="https://36kr.com",
+        listing_url="https://36kr.com/activity",
+        report_date=date(2026, 4, 22),
+        listing_date_window=win,
+    )
+    assert [r.url for r in refs] == ["https://x.com/in"]
 
 
 def test_select_focus_topics_picks_requested_two_topics() -> None:
@@ -321,8 +378,15 @@ def test_resolve_kr36_topic_subitem_date_window_weekday_split_mon_to_thu_is_prev
     assert e.isoformat() == "2026-04-19"
 
 
-def test_resolve_kr36_topic_subitem_date_window_weekday_split_fri_to_sun_is_current_week() -> None:
+def test_resolve_kr36_topic_subitem_date_window_weekday_split_fri_sat_is_previous_week() -> None:
     s, e = resolve_kr36_topic_subitem_date_window(date(2026, 4, 24), mode="weekday_split")
+    assert s and e
+    assert s.isoformat() == "2026-04-13"
+    assert e.isoformat() == "2026-04-19"
+
+
+def test_resolve_kr36_topic_subitem_date_window_weekday_split_sunday_is_week_to_date() -> None:
+    s, e = resolve_kr36_topic_subitem_date_window(date(2026, 4, 26), mode="weekday_split")
     assert s and e
     assert s.isoformat() == "2026-04-20"
     assert e.isoformat() == "2026-04-26"

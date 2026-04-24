@@ -24,13 +24,17 @@ class Kr36RiskStep4Tool:
     def __init__(self, adapter: "Kr36SourceAdapter") -> None:
         self._adapter: Any = adapter
 
-    def fetch(self, url: str, *, log_phase: str = "step4") -> str:
+    def fetch(self, url: str, *, log_phase: str = "step4", skip_cookies: bool = False) -> str:
         """
         打开 ``url``，遇滑块则自动解，返回页面 HTML（与 ``playwright_slider_session`` 一致）。
+
+        ``skip_cookies=True``：不注入本地 Cookie，以全新身份访问（用于视频页解除 CDN 限速）。
         """
         from .playwright_slider_session import fetch_36kr_page_html_with_playwright_slider
 
-        return fetch_36kr_page_html_with_playwright_slider(url, self._adapter, log_phase=log_phase)
+        return fetch_36kr_page_html_with_playwright_slider(
+            url, self._adapter, log_phase=log_phase, skip_cookies=skip_cookies
+        )
 
     def maybe_recover(self, url: str, html: str, *, log_phase: str) -> str:
         """
