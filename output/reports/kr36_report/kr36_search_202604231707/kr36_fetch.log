@@ -1,6 +1,0 @@
-2026-04-23 17:27:30 [kr36] playwright_slider_error phase='search-listing-step4' url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB error=Target page, context or browser has been closed
-2026-04-23 17:27:30 [kr36] fetch_ok method=curl url=https://36kr.com/search/articles/%E6%95%B0%E6%99%BA%E5%89%8D%E7%9E%BB html_length=44009
-2026-04-23 17:27:30 [kr36] round_end page=12 round=12/12 stage=search category=数智前瞻 status=ok fetched=0 total_refs=3 elapsed_ms=45051
-2026-04-23 17:27:30 [kr36] search_zero_result category=数智前瞻 html_length=44009 has_list_main=false has_search_item=false has_p_link=false risk_like=false
-2026-04-23 17:27:30 [kr36] 完成搜索页(数智前瞻)，数据 0 条，累计 3 条
-2026-04-23 17:27:30 [kr36] listing_end report_date=2026-04-23 total_refs=13 stopped_by=normal_complete

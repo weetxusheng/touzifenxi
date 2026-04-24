@@ -38,14 +38,24 @@ INFO_SUBCATEGORIES = (
     "KRLab",
     "AI协同创新中心",
     "数智前瞻",
+    # /information/AI、/information/contact 等列表的 step1 栏目名，须与 source_adapter 一致。
+    "AI",
+    "创投",
 )
+# 简报「资讯」栏只展示以下三个独立栏目（与 step1「栏目」一致）；其余资讯子类不进简报。
+KR36_BRIEF_INFO_CHANNELS: tuple[str, ...] = ("36氪独家", "AI", "创投")
+KR36_BRIEF_INFO_CHANNELS_SET: frozenset[str] = frozenset(KR36_BRIEF_INFO_CHANNELS)
 BUCKET_TOPIC = "专题"
 BUCKET_ACTIVITY = "活动"
 BUCKET_INFO = "资讯"
 # 活动区默认最多展示条数；已结束场次于展示前筛除（见 _is_kr36_activity_ended）。
 KR36_ACTIVITY_VISIBLE_MAX = 8
-# 专题/资讯 栏头「描述」在邮件 HTML 中控制在约此字数内（与 Step5 汇总统一下再截断）。
+# 专题栏头「描述」约此字数内截断。
 KR36_TOPIC_INFO_SECTION_BLURB_MAX_CHARS = 200
+# 资讯栏总览：聚合全部子项结论，篇幅更长，接近「本期资讯一条总观点」。
+KR36_INFO_SECTION_BLURB_MAX_CHARS = 520
+# 资讯逐条观点（omit 源地址 HTML）：与栏头总述同量级，避免 260 字硬截断。
+KR36_INFO_VIEWPOINT_MAX_CHARS = 520
 FOOTER_DISCLAIMER = "本报告由系统自动生成，仅供参考，不构成投资建议。"
 PLACEHOLDER_LINK_TEXT = {"无", "暂无", "日期未知"}
 # step5 逐条观点里 `【子类名】` 与专题/资讯子类分组的行首标记（与 per-item 扁平标题一致）
@@ -114,14 +124,44 @@ def _is_compact_viewpoint_head(head: str, body: str) -> bool:
     return True
 
 
-def _split_viewpoint_for_point_topic_row(viewpoint: str) -> tuple[str | None, str]:
-    """
-    将「主观点/解释」或「结论句：展开」拆成 (结论, 展开)。
+# 大标题行：「一、…」「十一、…」等单独成行时顶格展示，不参与 vp-content 整块缩进。
+_KR36_LEADING_CN_CHAPTER_LINE: re.Pattern[str] = re.compile(
+    r"^[一二三四五六七八九十百零]+、"
+)
 
-    若可拆分，用结论作为「xx 的观点」中可点链的 **xx**（替代仅文章标题），避免标题与首句重复。
-    不可拆时返回 (None, 原文)。
-    """
+# 子类区块序号：一、二、…十、十一、…
+_CN_ORD_CHARS = "一二三四五六七八九十"
+
+
+def _cn_subclass_ordinal(n: int) -> str:
+    """将正整数 n 转为中文序号前缀，如 1→'一、'，11→'十一、'。"""
+    if 1 <= n <= 10:
+        return _CN_ORD_CHARS[n - 1] + "、"
+    if 11 <= n <= 19:
+        return "十" + _CN_ORD_CHARS[n - 11] + "、"
+    if n == 20:
+        return "二十、"
+    return str(n) + "、"
+
+
+def _strip_leading_cn_chapter_line(viewpoint: str) -> tuple[str | None, str]:
+    """若首行为中文序号大标题（一、二、…），拆出 (该行, 余下正文)；否则 (None, 原文)。"""
     t = str(viewpoint or "").strip()
+    if not t:
+        return None, ""
+    lines = t.splitlines()
+    if len(lines) < 2:
+        return None, t
+    first = lines[0].strip()
+    if not _KR36_LEADING_CN_CHAPTER_LINE.match(first):
+        return None, t
+    rest = "\n".join(lines[1:]).strip()
+    return first, rest
+
+
+def _split_viewpoint_compact_inner(work: str) -> tuple[str | None, str]:
+    """在已去掉大标题行的正文上，做「主观点/解释」或首处「：」结论拆分。"""
+    t = str(work or "").strip()
     if not t:
         return None, ""
     if re.search(r"主观点\s*[：:]", t):
@@ -148,12 +188,53 @@ def _split_viewpoint_for_point_topic_row(viewpoint: str) -> tuple[str | None, st
     return None, t
 
 
+def _split_viewpoint_for_point_topic_row(viewpoint: str) -> tuple[str | None, str]:
+    """
+    将「主观点/解释」或「结论句：展开」拆成 (结论, 展开)。
+
+    若可拆分，用结论作为「xx 的观点」中可点链的 **xx**（替代仅文章标题），避免标题与首句重复。
+    不可拆时返回 (None, 原文)。
+    """
+    t = str(viewpoint or "").strip()
+    if not t:
+        return None, ""
+    _ch, tail = _strip_leading_cn_chapter_line(t)
+    work = tail if _ch else t
+    return _split_viewpoint_compact_inner(work)
+
+
+def _strip_low_quality_body_prefix(text: str) -> str:
+    """若正文描述以禁用的免责前缀（如「公开可解析信息有限，待核对：」）开头，剥去该前缀。"""
+    t = text.strip()
+    for prefix in _LOW_QUALITY_SUMMARY_PREFIXES:
+        if t.startswith(prefix):
+            # 去掉前缀及紧随的冒号/空格
+            rest = t[len(prefix):].lstrip("：: \u3000")
+            return rest if rest else ""
+    return t
+
+
 def _render_viewpoint_row_body_html(viewpoint: str) -> str:
-    """列表项正文：已用首句作链上标题时，只渲染冒号后一段，避免首句在正文重复。"""
-    h, rest = _split_viewpoint_for_point_topic_row(viewpoint)
-    if h and rest:
-        return _render_viewpoint_as_html(rest)
-    return _render_viewpoint_as_html(viewpoint)
+    """列表项正文：内联紧跟 point-topic 冒号，不换行、不缩进。
+    若首句已用作链上标题，只渲染冒号后描述段，避免重复。"""
+    t = str(viewpoint or "").strip()
+    if not t:
+        return ""
+    ch, tail = _strip_leading_cn_chapter_line(t)
+    work = tail if ch else t
+    h, rest = _split_viewpoint_compact_inner(work)
+    body_src = rest if h and rest else work
+    # 描述体以禁用前缀开头时，剥去该前缀，保留后续有效内容
+    body_src = _strip_low_quality_body_prefix(body_src)
+    if not body_src:
+        return ""
+    body_html = _render_inline_markdown(body_src)
+    if ch:
+        return (
+            f'<span class="vp-chapter-inline">{_html.escape(ch)}</span>'
+            f'<span class="vp-inline">{body_html}</span>'
+        )
+    return f'<span class="vp-inline">{body_html}</span>'
 
 
 def _kr36_build_plain_text(
@@ -244,7 +325,6 @@ def _kr36_build_plain_text(
                             f"{index}) 名称：{str(source.get('title') or '待补充')}；"
                             f"时间：{str(source.get('time') or '待补充')}；"
                             f"地点：{str(source.get('city') or '待补充')}；"
-                            f"主题：{str(source.get('theme') or '待补充')}；"
                             f"状态：{str(source.get('status') or '待补充')}；"
                             f"倒计时：{str(source.get('countdown') or '待补充')}；"
                             f"链接：{str(source.get('url') or '待补充')}。"
@@ -255,7 +335,6 @@ def _kr36_build_plain_text(
                             f"{index}) 名称：{str(source.get('title') or '待补充')}；"
                             f"时间：{str(source.get('time') or '待补充')}；"
                             f"地点：{str(source.get('city') or '待补充')}；"
-                            f"主题：{str(source.get('theme') or '待补充')}；"
                             f"状态：{str(source.get('status') or '待补充')}；"
                             f"倒计时：{str(source.get('countdown') or '待补充')}；"
                             f"链接：{str(source.get('url') or '待补充')}"
@@ -672,7 +751,12 @@ def _collect_bucket_sources(
 
 
 def _html_point_topic_label(topic: str, url: str, *, viewpoint: str = "") -> str:
-    """观点条目标题行：有链时可点。若观点为「结论：正文」，链文用结论句，替代文章标题。"""
+    """可点链文 + 全角冒号。
+
+    专题与资讯一致：``viewpoint``（step5 摘要）能稳健拆成「观点：解释」时，**链文用观点句**
+    （冒号前结论，对应提示词 25～40 字规范），**不用** ``topic`` 里的文章标题充当观点；
+    无法拆分时才用 ``topic`` 作链文。``href`` 始终为原文 ``url``。
+    """
     t = (topic or "").strip() or "待补充"
     u = (url or "").strip()
     h, vbody = _split_viewpoint_for_point_topic_row(viewpoint)
@@ -690,8 +774,7 @@ def _html_point_topic_label(topic: str, url: str, *, viewpoint: str = "") -> str
 
 def _html_point_topic_label_for_row(label: str, url: str, *, viewpoint: str = "") -> str:
     """
-    扁平行：若标签为 `【子类】文章标题` 且有条目链，则仅「文章标题」为链接，子类前缀不链。
-    若 `viewpoint` 可拆出结论文，链文优先用结论文（同 `_html_point_topic_label`）。
+    扁平行：``【子类】文章标题`` 时前缀不链；链文优先用摘要拆出的观点句，否则用标题段（``rest``）。
     """
     u = (url or "").strip()
     lab = (label or "").strip() or "待补充"
@@ -729,17 +812,34 @@ def _html_escape_section_summary(text: str) -> str:
     t = (text or "").strip()
     if not t:
         return '<p class="section-summary"></p>'
+
+    def _clean_summary_sentence(s: str) -> str:
+        """移除句中包含禁用低质量前缀或片段的「、」分隔短句。"""
+        parts = s.split("、")
+        clean = [
+            p for p in parts
+            if not any(p.strip().startswith(pfx) for pfx in _LOW_QUALITY_SUMMARY_PREFIXES)
+            and not any(frag in p for frag in _LOW_QUALITY_SUMMARY_FRAGMENTS)
+        ]
+        return "、".join(clean) if clean else ""
+
     if "\n" in t:
-        body = "<br>".join(_html.escape(line.strip()) for line in t.splitlines() if str(line).strip())
-        return f'<p class="section-summary">{body}</p>'
-    return f'<p class="section-summary">{_html.escape(t)}</p>'
+        lines = [_clean_summary_sentence(line.strip()) for line in t.splitlines()]
+        lines = [ln for ln in lines if ln]
+        body = "<br>".join(_html.escape(ln) for ln in lines)
+        return f'<p class="section-summary">{body}</p>' if body else '<p class="section-summary"></p>'
+    cleaned = _clean_summary_sentence(t)
+    if not cleaned:
+        return '<p class="section-summary"></p>'
+    return f'<p class="section-summary">{_html.escape(cleaned)}</p>'
 
 
 def _render_subclass_grouped_viewpoints_html(
     groups: list[tuple[str, list[tuple[str, str, str]]]],
 ) -> str:
-    """专题/资讯：按子类（聚合主题）分块，每块内为编号观点。"""
+    """专题/资讯：按子类分块；链文优先观点句，与专题同款。"""
     blocks: list[str] = []
+    ordinal_idx = 0
     for subclass, pairs in groups:
         sc = (subclass or "").strip() or "未分类"
         title_line = _title_trailing_colon(sc)
@@ -749,25 +849,37 @@ def _render_subclass_grouped_viewpoints_html(
                 topic, viewpoint, u = str(row[0]), str(row[1]), str(row[2] or "").strip()
             else:
                 topic, viewpoint, u = str(row[0]), str(row[1]), ""
+            # 跳过低质量条目（前缀 startswith 或正文 contains 禁用片段）
+            _vp_check = str(viewpoint or "").strip()
+            _tp_check = str(topic or "").strip()
+            if any(_vp_check.startswith(p) for p in _LOW_QUALITY_SUMMARY_PREFIXES):
+                continue
+            if any(_tp_check.startswith(p) for p in _LOW_QUALITY_SUMMARY_PREFIXES):
+                continue
+            if any(f in _vp_check for f in _LOW_QUALITY_SUMMARY_FRAGMENTS):
+                continue
+            if any(f in _tp_check for f in _LOW_QUALITY_SUMMARY_FRAGMENTS):
+                continue
             li_parts.append(
                 "<li>"
                 f"{_html_point_topic_label(topic, u, viewpoint=viewpoint)}"
-                f'<span class="vp-content">{_render_viewpoint_row_body_html(viewpoint)}</span>'
+                f"{_render_viewpoint_row_body_html(viewpoint)}"
                 "</li>"
             )
         items_html = "".join(li_parts)
         if not items_html:
             continue
+        ordinal_idx += 1
+        ordinal = _cn_subclass_ordinal(ordinal_idx)
         blocks.append(
-            '<li class="subclass-item">'
-            '<div class="subclass-head">'
-            f'<span class="subclass-title">{_html.escape(title_line)}</span></div>'
-            f'<ol class="viewpoints viewpoints-in-subclass">{items_html}</ol>'
-            "</li>"
+            '<div class="subclass-block">'
+            f'<div class="subclass-heading">{_html.escape(ordinal + title_line)}</div>'
+            f'<ol class="viewpoints-list">{items_html}</ol>'
+            "</div>"
         )
     if not blocks:
         return ""
-    return f'<ol class="subclass-outline">{"".join(blocks)}</ol>'
+    return f'<div class="section-groups">{"".join(blocks)}</div>'
 
 
 def _render_bucket_section_html(
@@ -803,7 +915,7 @@ def _render_bucket_section_html(
             li_flat.append(
                 "<li>"
                 f"{_html_point_topic_label_for_row(topic, u, viewpoint=viewpoint)}"
-                f'<span class="vp-content">{_render_viewpoint_row_body_html(viewpoint)}</span>'
+                f"{_render_viewpoint_row_body_html(viewpoint)}"
                 "</li>"
             )
         items_html = "".join(li_flat)
@@ -854,8 +966,6 @@ def _render_bucket_section_html(
                 f'{_html.escape(str(item.get("time") or "待补充"))}</p>'
                 '<p class="activity-field"><span class="activity-field-label">地点：</span>'
                 f'{_html.escape(str(item.get("city") or "待补充"))}</p>'
-                '<p class="activity-field"><span class="activity-field-label">主题：</span>'
-                f'{_html.escape(str(item.get("theme") or "待补充"))}</p>'
                 '<p class="activity-field"><span class="activity-field-label">状态：</span>'
                 f'{_html.escape(str(item.get("status") or "待补充"))}</p>'
                 '<p class="activity-field"><span class="activity-field-label">倒计时：</span>'
@@ -872,8 +982,6 @@ def _render_bucket_section_html(
                 f'{_html.escape(str(item.get("time") or "待补充"))}</p>'
                 '<p class="activity-field"><span class="activity-field-label">地点：</span>'
                 f'{_html.escape(str(item.get("city") or "待补充"))}</p>'
-                '<p class="activity-field"><span class="activity-field-label">主题：</span>'
-                f'{_html.escape(str(item.get("theme") or "待补充"))}</p>'
                 '<p class="activity-field"><span class="activity-field-label">状态：</span>'
                 f'{_html.escape(str(item.get("status") or "待补充"))}</p>'
                 '<p class="activity-field"><span class="activity-field-label">倒计时：</span>'
@@ -1152,16 +1260,15 @@ def _compose_item_viewpoint(summary: str, core_points: list[str]) -> str:
         if text and text not in points:
             points.append(text)
 
+    # 仅保留明确的元数据前缀；"文章"/"报道"/"属于" 过于泛化，会误杀正常财经内容
     low_signal_hints = (
         "这是一篇",
         "这是一条",
         "该内容为",
-        "该页面",
+        "该页面为",
+        "该页面是",
         "专题索引",
         "导航页",
-        "属于",
-        "文章",
-        "报道",
     )
     is_low_signal_summary = bool(summary_text) and any(hint in summary_text for hint in low_signal_hints)
 
@@ -1278,6 +1385,59 @@ def _load_article_viewpoint_map(step6_path: Path | None) -> dict[str, str]:
     return {}
 
 
+_LOW_QUALITY_SUMMARY_PREFIXES: tuple[str, ...] = (
+    "公开可解析信息有限",
+    "公开可解析",
+    "页面因技术风控",
+    "原文页面因技术原因",
+    "原文内容因技术原因",
+    "原文内容因技术风控",
+    # LLM 生成的免责前缀变体
+    "信息因页面风控技术无法直接获取",
+    "专题内容因技术风控无法直接解析",
+    "项目因技术风控无法解析",
+    "项目信息因页面技术风控无法获取",
+    "内容因技术风控",
+    "相关信息待补充",
+)
+
+# 包含检查：summary/viewpoint 正文中含以下片段即视为低质量，整条跳过
+_LOW_QUALITY_SUMMARY_FRAGMENTS: tuple[str, ...] = (
+    "因技术原因无法完整获取",
+    "因页面访问受限而无法获取",
+    "因页面访问受限无法获取",
+    "因技术风控无法直接获取",
+    "无法提炼具体事实、数据及核心论点",
+    "具体内容（如案例、数据、观点）无法解析",
+    "原文无法解析而暂缺",
+    "可解析信息有限",
+    "可解析内容有限",
+)
+
+
+def _step5_item_should_omit(item: Any) -> bool:
+    """
+    返回 True 表示该条目应从简报中跳过：
+      1. LLM 输出了 omit: true（数据确实完全不可用）
+      2. summary 以已知低质量前缀开头
+      3. summary 正文中含低质量片段（"因技术原因无法完整获取" 等）
+    """
+    try:
+        ana = getattr(item, "analysis", None)
+        if ana is None:
+            return False
+        if getattr(ana, "omit", False):
+            return True
+        s = (getattr(ana, "summary", None) or "").strip()
+        if any(s.startswith(p) for p in _LOW_QUALITY_SUMMARY_PREFIXES):
+            return True
+        if any(f in s for f in _LOW_QUALITY_SUMMARY_FRAGMENTS):
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _step5_item_has_original_text(item: Any) -> bool:
     """用于资讯：主正文 `original_content.text` 为空或明显失败时视为无原文，不展示该条。"""
     try:
@@ -1320,7 +1480,7 @@ def _section_blurb_cap(text: str, max_chars: int = KR36_TOPIC_INFO_SECTION_BLURB
     return _clip_readable_text(t, max(24, max_chars), min_chars=80)
 
 
-def _rollup_phrase_from_step5_item(item: Any, *, max_chars: int = 32) -> str:
+def _rollup_phrase_from_step5_item(item: Any, *, max_chars: int = 40) -> str:
     """从 step5 单条提炼用于栏头总述的短语（结论句优先，其次标题）。"""
     v = _compose_item_viewpoint(item.analysis.summary, list(item.analysis.core_points))
     text_in = (str(v) if v and str(v).strip() else str(item.analysis.summary or "")).strip()
@@ -1353,10 +1513,15 @@ def _synthesize_step5_bucket_rollup(
     bucket: str,
     default_topic_name: str,
     require_original_text: bool = False,
+    phrase_max_chars: int = 40,
+    max_phrases_per_category: int = 3,
+    blurb_max_chars: int | None = None,
+    resolved_channel_allowlist: frozenset[str] | None = None,
 ) -> str:
-    """按 step5 各分类生成栏头总述：聚合每条短语，避免拼接冗长正文。"""
+    """按 step5 各分类生成栏头总述：聚合每条短语；资讯栏可提高 phrase 数量与单条长度。"""
     if step6_path is None:
         return ""
+    umap = _build_url_article_map(_load_articles(step6_path))
     for candidate in _build_step5_path_candidates(step6_path):
         if not candidate.is_file():
             continue
@@ -1367,6 +1532,18 @@ def _synthesize_step5_bucket_rollup(
         parts: list[str] = []
         for section in payload.categories:
             rows = [it for it in section.items if _channel_to_email_bucket(it.channel) == bucket]
+            if resolved_channel_allowlist is not None:
+
+                def _allow_resolved(it: Any) -> str:
+                    c = _kr36_step5_item_resolved_channel(it, umap)
+                    if c:
+                        return c
+                    u = (getattr(it, "original_url", None) or "").strip()
+                    if bucket == BUCKET_INFO and u and "search/articles" in u.lower():
+                        return "36氪独家"
+                    return ""
+
+                rows = [it for it in rows if _allow_resolved(it) in resolved_channel_allowlist]
             if require_original_text:
                 rows = [it for it in rows if _step5_item_has_original_text(it)]
             if not rows:
@@ -1374,18 +1551,21 @@ def _synthesize_step5_bucket_rollup(
             tname = (section.topic or "").strip() or default_topic_name
             phrases: list[str] = []
             for it in rows:
-                p = _rollup_phrase_from_step5_item(it)
+                p = _rollup_phrase_from_step5_item(it, max_chars=phrase_max_chars)
                 if p and p not in phrases:
                     phrases.append(p)
             if not phrases:
                 continue
-            lead = "、".join(phrases[:3])
-            suffix = "等" if len(phrases) > 3 else ""
-            parts.append(f"「{tname}」共{len(rows)}条，聚焦{lead}{suffix}。")
+            cap = max(1, max_phrases_per_category)
+            lead = "、".join(phrases[:cap])
+            suffix = "等" if len(phrases) > cap else ""
+            parts.append(f"「{tname}」共{len(rows)}条，主线包括{lead}{suffix}。")
         if not parts:
             return ""
-        merged = _normalize_sentence(" ".join(parts))
-        return _section_blurb_cap(merged)
+        joiner = "；" if bucket == BUCKET_INFO else " "
+        merged = _normalize_sentence(joiner.join(parts))
+        limit = blurb_max_chars if blurb_max_chars is not None else KR36_TOPIC_INFO_SECTION_BLURB_MAX_CHARS
+        return _section_blurb_cap(merged, max_chars=limit)
     return ""
 
 
@@ -1399,18 +1579,23 @@ def _synthesize_step5_topic_rollup_from_all_topic_items(step6_path: Path | None)
         bucket=BUCKET_TOPIC,
         default_topic_name="专题",
         require_original_text=False,
+        resolved_channel_allowlist=frozenset({BUCKET_TOPIC}),
     )
 
 
 def _synthesize_step5_info_rollup_from_all_info_items(step6_path: Path | None) -> str:
     """
-    与专题汇总同构：每档 category 下所有「栏目=资讯」且有效原文子项，拼栏头总述，约 200 字内。
+    每档 category 下所有「栏目=资讯」且有效原文子项，拼成一段总观点式栏头（多子类、多要点、字数上限更高）。
     """
     return _synthesize_step5_bucket_rollup(
         step6_path,
         bucket=BUCKET_INFO,
         default_topic_name="资讯",
-        require_original_text=True,
+        require_original_text=False,
+        phrase_max_chars=72,
+        max_phrases_per_category=8,
+        blurb_max_chars=KR36_INFO_SECTION_BLURB_MAX_CHARS,
+        resolved_channel_allowlist=KR36_BRIEF_INFO_CHANNELS_SET,
     )
 
 
@@ -1457,6 +1642,14 @@ def _subclass_groups_from_bracket_labels(
     if len(order) == 1 and order[0] == "未分类":
         return None
     return [(k, m[k]) for k in order]
+
+
+def _sort_kr36_brief_info_subclass_groups(
+    groups: list[tuple[str, list[tuple[str, str, str]]]],
+) -> list[tuple[str, list[tuple[str, str, str]]]]:
+    """资讯子类按 36氪独家 → AI → 创投 固定顺序输出（中文序号仍由渲染层生成）。"""
+    rank = {ch: i for i, ch in enumerate(KR36_BRIEF_INFO_CHANNELS)}
+    return sorted(groups, key=lambda g: rank.get((g[0] or "").strip().rstrip("："), 99))
 
 
 def _load_step5_per_item_points_by_bucket(
@@ -1507,24 +1700,58 @@ def _load_step5_per_item_points_by_bucket(
                     item_url=u_item,
                     url_article_map=umap,
                 )
+                art_scope: dict[str, Any] | None = None
+                if u_item and umap:
+                    _a = umap.get(u_item) or umap.get(_normalize_url_for_match(u_item) or "")
+                    if isinstance(_a, dict):
+                        art_scope = _a
+                s5_ch = str(getattr(item, "channel", None) or "").strip()
+                if b == BUCKET_INFO:
+                    if not _kr36_brief_info_article_in_scope(
+                        art_scope, url=u_item, step5_channel=s5_ch
+                    ):
+                        continue
+                if b == BUCKET_TOPIC:
+                    if _kr36_brief_info_article_in_scope(
+                        art_scope, url=u_item, step5_channel=s5_ch
+                    ):
+                        continue
                 t = (item.original_title or "").strip() or "（未命名）"
                 v = _compose_item_viewpoint(item.analysis.summary, list(item.analysis.core_points))
                 if not (v and str(v).strip()):
                     v = str(item.analysis.summary or "").strip() or "（本条目暂无可生成观点。）"
+                v_cap = (
+                    max(viewpoint_max_chars, KR36_INFO_VIEWPOINT_MAX_CHARS)
+                    if b == BUCKET_INFO
+                    else viewpoint_max_chars
+                )
                 v = _clip_readable_text(
                     _normalize_sentence(str(v)),
-                    viewpoint_max_chars,
-                    min_chars=max(80, viewpoint_max_chars // 2),
+                    v_cap,
+                    min_chars=max(80, v_cap // 2),
                 )
+                if _step5_item_should_omit(item):
+                    continue
                 if b == BUCKET_ACTIVITY and umap:
                     u = u_item
                     if u:
                         art = umap.get(u) or umap.get(_normalize_url_for_match(u) or "")
                         if art and not _include_kr36_activity_in_feed(art):
                             continue
-                if b == BUCKET_INFO and not _step5_item_has_original_text(item):
-                    continue
-                raw[b].append((g, t, v, u_item))
+                # 资讯：抓取失败/视频无正文时 step5 仍有可靠摘要；若此处再要求 original text，
+                # 整栏会变空并触发 Markdown 回退，子类（36氪独家/AI/创投）结构丢失。
+                row_g = g
+                if b == BUCKET_INFO and u_item:
+                    ch_res = ""
+                    if isinstance(art_scope, dict):
+                        ch_res = str(art_scope.get("channel") or "").strip()
+                    if not ch_res:
+                        ch_res = s5_ch
+                    if ch_res in KR36_BRIEF_INFO_CHANNELS_SET:
+                        row_g = ch_res
+                    elif (not ch_res or ch_res == BUCKET_INFO) and "search/articles" in u_item.lower():
+                        row_g = "36氪独家"
+                raw[b].append((row_g, t, v, u_item))
         if max_activity_subitems and raw[BUCKET_ACTIVITY]:
             raw[BUCKET_ACTIVITY] = raw[BUCKET_ACTIVITY][: max(0, max_activity_subitems)]
         out: dict[str, list[tuple[str, str, str]]] = {}
@@ -1649,9 +1876,9 @@ def _build_omit_info_comprehensive_summary(
     points: list[tuple[str, str, str]],
     *,
     intro_text: str = "",
-    max_chars: int = 300,
+    max_chars: int = KR36_INFO_SECTION_BLURB_MAX_CHARS,
 ) -> str:
-    """资讯多条时给出可读总述；单条不展示总结。"""
+    """资讯多条时给出可读总述（覆盖更多条目要点）；单条不展示总结。"""
     if len(points) <= 1:
         return ""
 
@@ -1661,17 +1888,17 @@ def _build_omit_info_comprehensive_summary(
         raw = str(label or "").strip()
         topic = _KR36_SUBCLASS_IN_POINT_LABEL.sub("", raw, count=1).strip() if raw else ""
         if topic and topic not in topics:
-            topics.append(_trim_text(topic, 24))
+            topics.append(_trim_text(topic, 40))
         h, _rest = _split_viewpoint_for_point_topic_row(str(viewpoint or ""))
         hv = (h or "").strip()
         if hv and hv not in heads:
-            heads.append(_trim_text(hv, 30))
+            heads.append(_trim_text(hv, 56))
 
-    focus = "、".join(topics[:3]) if topics else "本期重点资讯"
-    core = "；".join(heads[:3]) if heads else ""
-    summary = f"本批资讯共{len(points)}条，重点关注{focus}。"
+    focus = "、".join(topics[:8]) if topics else "本期重点资讯"
+    core = "；".join(heads[:8]) if heads else ""
+    summary = f"本批资讯共{len(points)}条，综合主线：{focus}。"
     if core:
-        summary += f"核心判断包括：{core}。"
+        summary += f"主要判断包括：{core}。"
     intro = (intro_text or "").strip()
     if intro:
         summary = f"{intro} {summary}"
@@ -1684,7 +1911,10 @@ def _infer_bucket_from_url(url: str) -> str | None:
     normalized = str(url or "").strip()
     if not normalized:
         return None
+    low = normalized.lower()
     if re.search(r"^https?://(?:www\.)?36kr\.com/search/articles/", normalized):
+        return BUCKET_INFO
+    if "/information/" in low and "36kr.com" in low:
         return BUCKET_INFO
     if re.search(r"^https?://(?:www\.)?36kr\.com/topics/", normalized):
         return BUCKET_TOPIC
@@ -1693,15 +1923,150 @@ def _infer_bucket_from_url(url: str) -> str | None:
     return None
 
 
+def _kr36_title_implied_brief_channel(title: str) -> str | None:
+    """标题中常见「独家/首发/硬氪」标记 → 简报资讯三栏之一（与 36kr 编辑习惯对齐）。"""
+    compact = re.sub(r"[\s\u3000]+", "", title or "")
+    if "36氪独家" in compact or "氪独家" in compact:
+        return "36氪独家"
+    if "36氪首发" in compact or "氪首发" in compact:
+        return "创投"
+    if "硬氪专访" in compact:
+        return "创投"
+    return None
+
+
+def _kr36_effective_listing_channel(
+    article: dict[str, Any],
+    url_channel_map: dict[str, str],
+) -> str:
+    """合并 step1 CSV 栏目、hot 栏目与标题推断，供简报分桶与资讯子类展示。"""
+    url = str(article.get("url") or "").strip()
+    hot_ch = str(article.get("channel") or "").strip()
+    csv_ch = ""
+    if url:
+        csv_ch = str(
+            url_channel_map.get(url) or url_channel_map.get(_normalize_url_for_match(url) or "") or ""
+        ).strip()
+    th = _kr36_title_implied_brief_channel(str(article.get("title") or ""))
+    if th:
+        return th
+    if csv_ch in KR36_BRIEF_INFO_CHANNELS_SET:
+        return csv_ch
+    if hot_ch in KR36_BRIEF_INFO_CHANNELS_SET:
+        return hot_ch
+    if csv_ch:
+        return csv_ch
+    return hot_ch
+
+
+def _dedupe_hot_articles_for_brief(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """同一 URL 在 hot_topics 中可能重复（专题收录 + 搜索/资讯列表各一条），简报优先保留资讯三栏条目。"""
+
+    def score(x: dict[str, Any]) -> int:
+        ch = str(x.get("channel") or "").strip()
+        sb = str(x.get("source_bucket") or "").strip()
+        s = 0
+        if ch in KR36_BRIEF_INFO_CHANNELS_SET:
+            s += 100
+        if sb in KR36_BRIEF_INFO_CHANNELS_SET:
+            s += 80
+        if _kr36_title_implied_brief_channel(str(x.get("title") or "")):
+            s += 40
+        if ch != BUCKET_TOPIC:
+            s += 5
+        return s
+
+    by_key: dict[str, list[dict[str, Any]]] = {}
+    order: list[str] = []
+    for a in articles:
+        url = str(a.get("url") or "").strip()
+        if not url:
+            continue
+        k = _normalize_url_for_match(url) or url
+        if k not in by_key:
+            order.append(k)
+            by_key[k] = []
+        by_key[k].append(a)
+    out: list[dict[str, Any]] = []
+    for k in order:
+        cands = by_key[k]
+        out.append(cands[0] if len(cands) == 1 else max(cands, key=score))
+    no_url = [a for a in articles if not str(a.get("url") or "").strip()]
+    return out + no_url
+
+
+def _patch_articles_for_kr36_brief(
+    articles: list[dict[str, Any]], step6_path: Path
+) -> list[dict[str, Any]]:
+    merged = _dedupe_hot_articles_for_brief(articles)
+    cmap = _load_url_channel_map(step6_path)
+    for a in merged:
+        eff = _kr36_effective_listing_channel(a, cmap)
+        if eff:
+            a["channel"] = eff
+    return merged
+
+
+def _kr36_brief_info_article_in_scope(
+    article: dict[str, Any] | None,
+    *,
+    url: str = "",
+    step5_channel: str = "",
+) -> bool:
+    """简报「资讯」栏是否收录：仅 36氪独家 / AI / 创投；无 hot 时以 step5 栏目为准。"""
+    u = (url or str((article or {}).get("url") or "")).strip()
+    ch = str((article or {}).get("channel") or "").strip() if article else ""
+    s5 = (step5_channel or "").strip()
+    if ch in KR36_BRIEF_INFO_CHANNELS_SET:
+        return True
+    # step5 分析稿栏目：无 hot 或 hot 仍为「专题」占位时，以 item.channel 为准
+    if s5 in KR36_BRIEF_INFO_CHANNELS_SET:
+        return True
+    if not ch and "search/articles" in u.lower():
+        return True
+    # step1 偶发栏目写作「资讯」的搜索条目，归入 36氪独家 检索链路
+    if ch == BUCKET_INFO and "search/articles" in u.lower():
+        return True
+    return False
+
+
+def _kr36_step5_item_resolved_channel(item: Any, url_article_map: dict[str, dict[str, Any]]) -> str:
+    u = (getattr(item, "original_url", None) or "").strip()
+    if u and url_article_map:
+        art = url_article_map.get(u) or url_article_map.get(_normalize_url_for_match(u) or "")
+        if isinstance(art, dict):
+            ch = str(art.get("channel") or "").strip()
+            if ch:
+                return ch
+    return str(getattr(item, "channel", None) or "").strip()
+
+
 def _normalize_bucket(article: dict[str, Any]) -> str:
-    bucket = str(article.get("source_bucket") or article.get("channel") or "").strip()
-    if bucket == BUCKET_TOPIC:
-        return BUCKET_TOPIC
-    if bucket == BUCKET_ACTIVITY:
+    """专题/活动/资讯归桶：资讯子类栏目优先；再按 URL 路径；最后 source_bucket/channel。
+
+    避免 source_bucket=专题 盖住搜索页 URL、或 AI/创投 栏目被算进专题。
+    """
+    channel = str(article.get("channel") or "").strip()
+    source_bucket = str(article.get("source_bucket") or "").strip()
+    url = str(article.get("url") or "").strip()
+
+    if channel in INFO_SUBCATEGORIES:
+        return BUCKET_INFO
+
+    inferred = _infer_bucket_from_url(url)
+    if inferred == BUCKET_ACTIVITY:
         return BUCKET_ACTIVITY
-    inferred = _infer_bucket_from_url(str(article.get("url") or ""))
-    if inferred:
-        return inferred
+    if inferred == BUCKET_INFO:
+        return BUCKET_INFO
+    if inferred == BUCKET_TOPIC:
+        return BUCKET_TOPIC
+
+    if source_bucket == BUCKET_ACTIVITY or channel == BUCKET_ACTIVITY:
+        return BUCKET_ACTIVITY
+
+    if source_bucket == BUCKET_TOPIC or channel == BUCKET_TOPIC:
+        return BUCKET_TOPIC
+
     return BUCKET_INFO
 
 
@@ -1916,9 +2281,7 @@ def _resolve_step5_item_bucket(
     url_article_map: dict[str, dict[str, Any]] | None = None,
 ) -> str:
     """
-    step5 分桶优先级：
-    1) 默认按 step5 item.channel；
-    2) 若命中 hot_topics 原始文章，且其 source_bucket/channel 为资讯子类，则强制归到资讯。
+    step5 分桶：以 hot_topics 条目的归桶为准（与简报 URL 统计一致）；无源数据时退回 item.channel。
     """
     base = _channel_to_email_bucket(item_channel)
     u = (item_url or "").strip()
@@ -1927,10 +2290,7 @@ def _resolve_step5_item_bucket(
     art = url_article_map.get(u) or url_article_map.get(_normalize_url_for_match(u) or "")
     if not isinstance(art, dict):
         return base
-    raw_bucket = str(art.get("source_bucket") or art.get("channel") or "").strip()
-    if raw_bucket and _channel_to_email_bucket(raw_bucket) == BUCKET_INFO:
-        return BUCKET_INFO
-    return base
+    return _normalize_bucket(art)
 
 
 def _dominant_bucket_from_channels(channels: list[str]) -> str:
@@ -2009,7 +2369,9 @@ def _collect_present_info_channels(sections: list[dict[str, Any]], url_channel_m
                 continue
             if channel not in present:
                 present.append(channel)
-    return [channel for channel in INFO_SUBCATEGORIES if channel in present] or present
+    return [channel for channel in KR36_BRIEF_INFO_CHANNELS if channel in present] or [
+        c for c in present if c in KR36_BRIEF_INFO_CHANNELS_SET
+    ]
 
 
 def _collect_section_channel_labels(section: dict[str, Any], url_channel_map: dict[str, str]) -> list[str]:
@@ -2020,7 +2382,9 @@ def _collect_section_channel_labels(section: dict[str, Any], url_channel_map: di
             continue
         if channel not in labels:
             labels.append(channel)
-    return [channel for channel in INFO_SUBCATEGORIES if channel in labels] or labels
+    return [channel for channel in KR36_BRIEF_INFO_CHANNELS if channel in labels] or [
+        c for c in labels if c in KR36_BRIEF_INFO_CHANNELS_SET
+    ]
 
 
 def _render_topic_link_item(article: dict[str, Any]) -> str:
@@ -2059,20 +2423,24 @@ def _render_info_article_link(article: dict[str, Any]) -> str:
 
 
 def _render_info_channel_source_groups(articles: list[dict[str, Any]], url_channel_map: dict[str, str]) -> str:
-    grouped: dict[str, list[dict[str, Any]]] = {channel: [] for channel in INFO_SUBCATEGORIES}
+    grouped: dict[str, list[dict[str, Any]]] = {channel: [] for channel in KR36_BRIEF_INFO_CHANNELS}
     for article in articles:
         if _normalize_bucket(article) != BUCKET_INFO:
+            continue
+        if not _kr36_brief_info_article_in_scope(article):
             continue
         url = str(article.get("url") or "").strip()
         channel = str(article.get("channel") or "").strip()
         if channel not in grouped:
             channel = str(url_channel_map.get(url) or "").strip()
+        if channel not in grouped and "search/articles" in url.lower():
+            channel = "36氪独家"
         if channel not in grouped:
             continue
         grouped[channel].append(article)
 
     blocks: list[str] = []
-    for channel in INFO_SUBCATEGORIES:
+    for channel in KR36_BRIEF_INFO_CHANNELS:
         items = grouped[channel][:5]
         if not items:
             continue
@@ -2285,14 +2653,24 @@ def render_kr36_brief_email(
     lead_text, section_intros, _run_stats = _partition_summary_items(summary_items)
 
     raw_articles = _load_articles(step6_path) if step6_path else []
+    if raw_articles and step6_path is not None:
+        raw_articles = _patch_articles_for_kr36_brief(raw_articles, step6_path)
     url_bucket_map = _build_url_bucket_map(raw_articles)
     url_article_map = _build_url_article_map(raw_articles)
     article_viewpoint_map = _load_article_viewpoint_map(step6_path)
-    topic_articles = _filter_articles_by_bucket(raw_articles, BUCKET_TOPIC)
+    topic_articles = [
+        a
+        for a in raw_articles
+        if _normalize_bucket(a) == BUCKET_TOPIC and not _kr36_brief_info_article_in_scope(a)
+    ]
     activity_articles = _filter_kr36_visible_activities(
         _filter_articles_by_bucket(raw_articles, BUCKET_ACTIVITY)
     )
-    info_articles = _filter_articles_by_bucket(raw_articles, BUCKET_INFO)
+    info_articles = [
+        a
+        for a in raw_articles
+        if _normalize_bucket(a) == BUCKET_INFO and _kr36_brief_info_article_in_scope(a)
+    ]
 
     topic_analysis_sections: list[dict[str, Any]] = []
     activity_analysis_sections: list[dict[str, Any]] = []
@@ -2362,9 +2740,13 @@ def render_kr36_brief_email(
             activity_points = per_item_by_bucket.get(BUCKET_ACTIVITY) or _build_bucket_points(
                 sections=activity_analysis_sections, fallback_articles=[]
             )
-            info_points = per_item_by_bucket.get(BUCKET_INFO) or _build_bucket_points(
-                sections=info_analysis_sections, fallback_articles=[]
-            )
+            _info_step5 = per_item_by_bucket.get(BUCKET_INFO)
+            if _info_step5 is None:
+                info_points = _build_bucket_points(
+                    sections=info_analysis_sections, fallback_articles=[]
+                )
+            else:
+                info_points = _info_step5
         else:
             topic_points = _build_bucket_points(sections=topic_analysis_sections, fallback_articles=[])
             activity_points = _build_bucket_points(sections=activity_analysis_sections, fallback_articles=[])
@@ -2390,8 +2772,14 @@ def render_kr36_brief_email(
         bucket: str, points: list[tuple[str, str, str]]
     ) -> list[tuple[str, list[tuple[str, str, str]]]] | None:
         if step5_subclass_by_bucket and step5_subclass_by_bucket.get(bucket):
-            return step5_subclass_by_bucket[bucket]
-        return _subclass_groups_from_bracket_labels(points)
+            sg = step5_subclass_by_bucket[bucket]
+            if bucket == BUCKET_INFO:
+                return _sort_kr36_brief_info_subclass_groups(sg)
+            return sg
+        br = _subclass_groups_from_bracket_labels(points)
+        if bucket == BUCKET_INFO and br:
+            return _sort_kr36_brief_info_subclass_groups(br)
+        return br
 
     topic_subclass_groups = _merge_subclass_for_bucket(BUCKET_TOPIC, topic_points)
     info_subclass_groups = _merge_subclass_for_bucket(BUCKET_INFO, info_points)
@@ -2461,12 +2849,14 @@ def render_kr36_brief_email(
         if len(info_points) <= 1:
             info_summary = ""
         elif (info_rollup or "").strip():
-            info_summary = _section_blurb_cap(str(info_rollup or "").strip(), max_chars=300)
+            info_summary = _section_blurb_cap(
+                str(info_rollup or "").strip(), max_chars=KR36_INFO_SECTION_BLURB_MAX_CHARS
+            )
         else:
             info_summary = _build_omit_info_comprehensive_summary(
                 info_points,
                 intro_text=section_intros.get("info", ""),
-                max_chars=300,
+                max_chars=KR36_INFO_SECTION_BLURB_MAX_CHARS,
             )
     elif (info_rollup or "").strip():
         ir = (info_rollup or "").strip()
@@ -2480,7 +2870,9 @@ def render_kr36_brief_email(
             raw_article_count=len(info_articles),
         )
     if not (omit_source_links and per_item_by_bucket and per_item_by_bucket.get(BUCKET_INFO)):
-        info_summary = _section_blurb_cap(info_summary)
+        info_summary = _section_blurb_cap(
+            info_summary, max_chars=KR36_INFO_SECTION_BLURB_MAX_CHARS
+        )
 
     bucket_blocks: list[dict[str, object]] = [
         {
@@ -2561,22 +2953,28 @@ def render_kr36_brief_email(
       }}
       .section-title{{margin:0 0 12px;font-size:21px;color:#102235;letter-spacing:-0.01em;}}
       .section-summary{{margin:0 0 12px;font-size:14px;line-height:1.9;color:#314457;}}
-      .subclass-outline{{margin:4px 0 0 0;padding-left:1.4em;list-style:decimal;}}
-      .subclass-item{{margin:14px 0;}}
-      .subclass-item:first-child{{margin-top:0;}}
-      .subclass-head{{margin:0;}}
-      .subclass-title{{font-size:16px;font-weight:700;color:#1a3a52;line-height:1.4;display:inline;}}
-      .subclass-outline .viewpoints-in-subclass{{margin:0;padding:0 0 0 1.35em;list-style:decimal;}}
-      .viewpoints-in-subclass{{margin-top:0;}}
+      .section-groups{{margin:4px 0 0 0;}}
+      .subclass-block{{margin:12px 0 4px;}}
+      .subclass-block:first-child{{margin-top:0;}}
+      .subclass-heading{{
+        font-size:16px;font-weight:700;color:#102235;
+        margin:0 0 6px;padding:0;line-height:1.5;
+      }}
+      .viewpoints-list{{margin:0;padding-left:20px;list-style:decimal;}}
+      .viewpoints-list > li{{
+        margin:6px 0;line-height:1.8;color:#314457;
+        font-size:14px;list-style-position:outside;
+      }}
+      .viewpoints-list > li:first-child{{margin-top:0;}}
+      .viewpoints-list > li:last-child{{margin-bottom:0;}}
       .viewpoints{{margin:0;padding-left:18px;}}
-      .viewpoints li{{margin:12px 0;line-height:1.8;color:#314457;font-size:14px;}}
-      .subclass-outline .viewpoints-in-subclass > li:first-child{{margin-top:0;}}
-      .subclass-outline .viewpoints-in-subclass > li:last-child{{margin-bottom:0;}}
+      .viewpoints li{{margin:12px 0;line-height:1.8;color:#314457;font-size:14px;list-style-position:outside;}}
       .viewpoints-no-index{{padding-left:0;list-style:none;}}
       .point-topic{{font-weight:700;color:#2d4d69;display:inline;margin-bottom:0;}}
       .point-topic .point-topic-link{{color:#0f5ea8;text-decoration:none;}}
       .point-topic .point-topic-link:hover{{text-decoration:underline;}}
-      .vp-content{{display:inline;margin-left:2px;}}
+      .vp-inline{{display:inline;color:#314457;}}
+      .vp-chapter-inline{{display:inline;font-weight:700;color:#1a3a52;margin-right:2px;}}
       .vp-label{{font-weight:700;color:#1a3a52;margin-right:2px;}}
       .vp-main{{color:#1a3a52;font-weight:700;}}
       .vp-body{{color:#314457;}}

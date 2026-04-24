@@ -36,9 +36,12 @@ from utils.tools.runtime.checkpoint import StepCheckpointStore
 # 与 ``content-analysis-agent.md`` 一致：避免与已废弃的「提炼标题」旧格式冲突，且禁止模型用标题冒充结论句。
 KR36_STEP5_USER_HINT = (
     "【36Kr】每条 summary 须为系统提示中的「结论句：正文段」（全角冒号分隔）；"
+    "冒号前结论句须 **25～40 字**（不少于 25、不超过 40），与简报「核心判断」小观点中的核心结论同尺度；"
     "结论句必须据 `original_content` / `topic_fulltext_excerpt` 归纳，"
     "禁止直接使用 `original_title` 或与标题同义改写；"
-    "勿使用「提炼标题：…；内容要点：…」等旧格式。\n"
+    "勿使用「提炼标题：…；内容要点：…」等旧格式。"
+    "`core_points` 每条须以 `1、` `2、` … 顿号编号开头（与简报小观点一致），勿用 `1）`。"
+    "禁止输出「因原文为加密脚本」「无法获取实际内容」「故无法完成分析」等拒写套话；正文不足时仍给齐 summary 与要点，用「待补充」「可解析信息有限」等简短表述。\n"
 )
 
 

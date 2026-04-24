@@ -33,6 +33,7 @@ data/**
 !data/raw/README.md
 !data/processed/
 !data/processed/README.md
+output/*
 
 # Skill local runtime files
 skills/.skills_store_lock.json

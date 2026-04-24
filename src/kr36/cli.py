@@ -99,6 +99,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="音频路径，如 …/…_36kr_topic_video_xxx.asr.mp3",
     )
 
+    export_reading = subparsers.add_parser(
+        "export-content-reading",
+        help="根据步骤2正文 YAML（kr36_step_4_content_*.yaml）生成 HTML + Markdown 阅读原文汇编。",
+    )
+    export_reading.add_argument(
+        "--content-yaml",
+        type=Path,
+        default=None,
+        help="正文 YAML 路径；若省略则需同时指定 --run-dir 与 --date。",
+    )
+    export_reading.add_argument(
+        "--run-dir",
+        type=Path,
+        default=None,
+        help="单次运行目录（其下含 kr36_step_4_content_<date>.yaml）。",
+    )
+    export_reading.add_argument(
+        "--date",
+        default=None,
+        help="与 --run-dir 合用，YYYY-MM-DD，用于解析 kr36_step_4_content_YYYYMMDD.yaml。",
+    )
+
     return parser
 
 
@@ -190,6 +212,24 @@ def run_with_args(args: argparse.Namespace, *, paths: AppPaths | None = None) ->
         exit_code = run_kr36_transcribe_audio(Path(str(args.audio)))
         if exit_code != 0:
             raise SystemExit(exit_code)
+        return
+
+    if args.command == "export-content-reading":
+        from .content_fetch_document import write_content_fetch_reading_docs
+
+        cy = getattr(args, "content_yaml", None)
+        run_dir_arg = getattr(args, "run_dir", None)
+        date_arg = getattr(args, "date", None)
+        if cy:
+            content_yaml = Path(cy).resolve()
+        elif run_dir_arg and date_arg:
+            target_d = date.fromisoformat(str(date_arg))
+            content_yaml = Path(run_dir_arg).resolve() / kr36_names.step4_content_name(target_d)
+        else:
+            raise SystemExit("请指定 --content-yaml，或同时指定 --run-dir 与 --date。")
+        html_p, md_p = write_content_fetch_reading_docs(content_yaml)
+        print(f"步骤2 阅读原文汇编 HTML: {html_p}")
+        print(f"步骤2 阅读原文汇编 Markdown: {md_p}")
         return
 
     if args.command != "run":

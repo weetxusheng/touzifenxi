@@ -398,8 +398,8 @@ def _build_source_runtime_configs(config: dict[str, Any]) -> dict[str, dict[str,
         "kr36": {
             "candidate_limit": 120,
             "channel_urls": [
-                "https://36kr.com/topics/",
-                "https://36kr.com/activity/",
+                "https://36kr.com/information/AI/",
+                "https://36kr.com/information/contact/",
             ],
         },
     }
@@ -429,8 +429,8 @@ def _build_source_runtime_configs(config: dict[str, Any]) -> dict[str, dict[str,
         urls = merged["kr36"].get("channel_urls")
         if not isinstance(urls, list) or not urls:
             merged["kr36"]["channel_urls"] = [
-                "https://36kr.com/topics/",
-                "https://36kr.com/activity/",
+                "https://36kr.com/information/AI/",
+                "https://36kr.com/information/contact/",
             ]
     return merged
 

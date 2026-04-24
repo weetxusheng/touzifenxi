@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import random
 import time
 from typing import Any
 
@@ -16,12 +17,17 @@ def fetch_36kr_page_html_with_playwright_slider(
     adapter: Any,
     *,
     log_phase: str = "step4",
+    skip_cookies: bool = False,
 ) -> str:
     """
     用 Playwright 打开 URL，遇风控/滑块则自动拖滑块。
 
     关窗：仅当验证通过，或自打开起已满 180s（硬超时，返回当前 HTML 或空串）。
     ``log_phase`` 仅写日志，不影响逻辑。
+
+    ``skip_cookies=True``：不加载本地 kr36_cookies.json，以全新身份访问。
+    用于视频详情页——降级 Cookie 会导致 ByteDance 验证 CDN 拒绝下发验证图，
+    而全新会话（无标记）可正常触发并解题。
     """
     from . import source_adapter as sa
     from .slider_captcha import page_suggests_captcha_iframe_or_images
@@ -29,6 +35,8 @@ def fetch_36kr_page_html_with_playwright_slider(
 
     if "36kr.com" not in (url or "").lower():
         return ""
+
+    _is_video_page = sa._is_kr36_detail_page_url(url) and "/video/" in url
     try:
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -58,6 +66,10 @@ def fetch_36kr_page_html_with_playwright_slider(
         f"[kr36] Playwright 滑块会话 phase={log_phase!r} headless={str(headless).lower()} "
         f"channel={ch_note!r} url={url}"
     )
+    print(
+        "[kr36] 浏览器即将打开。36kr SPA 在加载后通常会做 2-3 次客户端路由跳转，"
+        "页面会短暂刷新——这是正常现象，请稍等验证图/滑块出现后再操作。"
+    )
     sa._append_kr36_debug_log(
         f"[kr36] playwright_slider_start phase={log_phase!r} url={url} "
         f"headless={str(headless).lower()} channel={ch_note!r}"
@@ -74,7 +86,14 @@ def fetch_36kr_page_html_with_playwright_slider(
                 viewport={"width": 1440, "height": 1024},
                 extra_http_headers={"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.5"},
             )
-            sa._load_kr36_cookies_into_browser_context(context)
+            # 隐藏 Playwright 自动化特征，防止 ByteDance 验证中心拒绝下发验证图片
+            sa._apply_playwright_stealth(context)
+            if not skip_cookies:
+                sa._load_kr36_cookies_into_browser_context(context)
+            else:
+                sa._append_kr36_debug_log(
+                    f"[kr36] playwright_skip_cookies phase={log_phase!r} url={url}"
+                )
             page = context.new_page()
             page.set_default_timeout(timeout_ms)
             page.goto(url, wait_until="load", timeout=timeout_ms)
@@ -83,6 +102,19 @@ def fetch_36kr_page_html_with_playwright_slider(
             except PlaywrightTimeoutError:
                 pass
             page.wait_for_timeout(max(500, int(adapter.browser_wait_after_load_ms)))
+            # 等待 SPA 客户端路由跳转稳定：36kr 在 load 后常做 2-3 次 hash/path 变更
+            # 每隔 1.2s 检测 URL 是否变化，稳定则提前退出，最多等 7.2s
+            _url_prev = page.url
+            for _settle_i in range(6):
+                page.wait_for_timeout(1200)
+                _url_curr = page.url
+                if _url_curr == _url_prev:
+                    break
+                _url_prev = _url_curr
+            sa._append_kr36_debug_log(
+                f"[kr36] playwright_slider_url_settled phase={log_phase!r} "
+                f"final_url={page.url!r}"
+            )
             t0 = time.time()
             step4_solved = False
             sa._append_kr36_debug_log(
@@ -93,16 +125,47 @@ def fetch_36kr_page_html_with_playwright_slider(
             end = time.time() + session_hard_max_s
             html = ""
             saw_captcha_risk: bool = False
+            # 连续 ui_ready=False 的次数；达阈值时延长等待、避免频繁轮询
+            _captcha_ui_fail_streak: int = 0
             while time.time() < end:
                 try:
                     html = page.content()
                 except Exception:
                     html = ""
                 age_s = time.time() - t0
+
+                # ── "Please wait..." SPA 加载壳检测 ──────────────────────────────
+                # 可见文字极短（≤200字）且含 "please wait"，说明 SPA 的 JS 尚未水化。
+                # 此时跳过所有验证码判断，静默等 60~80s 让客户端路由完成，再重判。
+                try:
+                    _visible_body = page.inner_text("body", timeout=2000).strip()
+                except Exception:
+                    _visible_body = ""
+                if (
+                    "please wait" in _visible_body.lower()
+                    and len(_visible_body) < 200
+                ):
+                    _pw_wait_s = random.randint(60, 80)
+                    sa._append_kr36_debug_log(
+                        f"[kr36] playwright_please_wait_shell phase={log_phase!r} "
+                        f"url={url} age_s={age_s:.1f} wait_s={_pw_wait_s}"
+                    )
+                    print(
+                        f"[kr36] 页面仍显示 'Please wait...'，等待 {_pw_wait_s}s 让 SPA 加载完成…"
+                        "（请勿手动刷新）"
+                    )
+                    page.wait_for_timeout(_pw_wait_s * 1000)
+                    continue
+
                 need_slider = sa._looks_like_captcha_or_block(
                     html
                 ) or page_suggests_captcha_iframe_or_images(page)
                 if need_slider:
+                    if not saw_captcha_risk:
+                        print(
+                            "[kr36] 已检测到36kr验证页面，正在等待验证图/滑块加载完成…"
+                            "（页面会短暂刷新，属正常现象，请勿手动刷新）"
+                        )
                     saw_captcha_risk = True
                     ui_ready = wait_for_slider_captcha_ui_ready(
                         page,
@@ -112,6 +175,23 @@ def fetch_36kr_page_html_with_playwright_slider(
                         f"[kr36] playwright_slider_wait_ui phase={log_phase!r} url={url} "
                         f"ui_ready={str(ui_ready).lower()}"
                     )
+                    if not ui_ready:
+                        # 验证图片仍未加载：不触发解题动作（避免无效拖拽），
+                        # 等待一段时间让 ByteDance CDN 恢复后再重试
+                        _captcha_ui_fail_streak += 1
+                        backoff_s = min(30 * _captcha_ui_fail_streak, 90)
+                        sa._append_kr36_debug_log(
+                            f"[kr36] playwright_slider_captcha_img_not_ready phase={log_phase!r} "
+                            f"url={url} streak={_captcha_ui_fail_streak} backoff_s={backoff_s}"
+                        )
+                        print(
+                            f"[kr36] 验证图片尚未加载（第 {_captcha_ui_fail_streak} 次），"
+                            f"等待 {backoff_s}s 后重试，请勿手动刷新页面…"
+                        )
+                        page.wait_for_timeout(backoff_s * 1000)
+                        continue
+                    _captcha_ui_fail_streak = 0
+                    print("[kr36] 验证图/滑块已就绪，正在自动拖拽解题…")
                     solved = sa._kr36_try_solve_slider_captcha(page)
                     if solved:
                         step4_solved = True
@@ -163,6 +243,7 @@ def fetch_36kr_page_html_with_playwright_slider(
                             html,
                             age_s=time.time() - t0,
                             after_slider_attempt=True,
+                            url=url,
                         ):
                             page.wait_for_timeout(2000)
                             try:
@@ -173,11 +254,16 @@ def fetch_36kr_page_html_with_playwright_slider(
                             html,
                             age_s=time.time() - t0,
                             after_slider_attempt=True,
+                            url=url,
                         ):
                             sa._append_kr36_debug_log(
                                 f"[kr36] playwright_slider_after_solve phase={log_phase!r} url={url} "
                                 f"html_length={len(html)}"
                             )
+                            if _is_video_page:
+                                html = _enrich_html_with_js_initial_state(
+                                    page, html, log_phase=log_phase, url=url
+                                )
                             if adapter.persist_browser_cookies:
                                 sa.save_kr36_cookies(
                                     sa.extract_kr36_cookie_values(context.cookies())
@@ -194,11 +280,15 @@ def fetch_36kr_page_html_with_playwright_slider(
                     html,
                     age_s=age_s,
                     after_slider_attempt=step4_solved,
+                    url=url,
                 ) and (
                     step4_solved
                     or (
                         sa._is_usable_html(html)
-                        and not sa._kr36_likely_36kr_csr_risk_listing_shell(html)
+                        and (
+                            not sa._kr36_likely_36kr_csr_risk_listing_shell(html)
+                            or sa._is_kr36_detail_page_url(url)
+                        )
                         and not page_suggests_captcha_iframe_or_images(page)
                     )
                 ):
@@ -210,11 +300,31 @@ def fetch_36kr_page_html_with_playwright_slider(
                         f"[kr36] playwright_slider_ok phase={log_phase!r} url={url} "
                         f"html_length={len(html)}"
                     )
+                    if _is_video_page:
+                        html = _enrich_html_with_js_initial_state(
+                            page, html, log_phase=log_phase, url=url
+                        )
                     context.close()
                     browser.close()
                     sa._kr36_risk_recovery_reset(url)
                     return html
                 page.wait_for_timeout(poll)
+                # 详情页（/video/ /p/）提前退出：40s 内未出现验证页，说明 36kr
+                # 不打算走验证流程，继续等只会空转；有验证则不受此限制。
+                if (
+                    not saw_captcha_risk
+                    and sa._is_kr36_detail_page_url(url)
+                    and (time.time() - t0) > 40.0
+                ):
+                    sa._append_kr36_debug_log(
+                        f"[kr36] playwright_slider_detail_no_captcha_break "
+                        f"phase={log_phase!r} url={url} age_s={time.time()-t0:.1f}"
+                    )
+                    print(
+                        "[kr36] 视频/文章详情页 40s 内未出现验证页面，已提前退出浏览器。"
+                        "如需更长等待，可调大 browser_verification_timeout_ms。"
+                    )
+                    break
             try:
                 html = page.content()
             except Exception:
@@ -224,7 +334,7 @@ def fetch_36kr_page_html_with_playwright_slider(
                     sa.extract_kr36_cookie_values(context.cookies())
                 )
             sa._append_kr36_debug_log(
-                f"[kr36] playwright_slider_hard_180s phase={log_phase!r} url={url} "
+                f"[kr36] playwright_slider_hard_timeout phase={log_phase!r} url={url} "
                 f"html_length={len(html or '')} saw_captcha_risk={str(saw_captcha_risk).lower()}"
             )
             context.close()
@@ -240,3 +350,43 @@ def fetch_36kr_page_html_with_playwright_slider(
             f"[kr36] playwright_slider_unexpected phase={log_phase!r} url={url} error={error}"
         )
     return ""
+
+
+def _enrich_html_with_js_initial_state(page: Any, html: str, *, log_phase: str, url: str) -> str:
+    """
+    视频页专用：页面加载完成后，通过 JS 直接读取 window.initialState，
+    将其序列化后注入到返回的 HTML 中，供 step5_list_video_cdn_urls_from_subpage_html 解析。
+
+    这比依赖 page.content() 更可靠，因为 SPA 的 initialState 由 JS 动态写入，
+    page.content() 未必总能拿到最新值。
+    """
+    import json as _json
+
+    from . import source_adapter as sa
+
+    try:
+        state_json: str = page.evaluate(
+            "() => { try { return JSON.stringify(window.initialState || null); } catch(e) { return null; } }"
+        )
+        if not state_json or state_json == "null":
+            return html
+        # 简单验证：必须含 videoDetail
+        parsed = _json.loads(state_json)
+        if not isinstance(parsed, dict) or "videoDetail" not in parsed:
+            return html
+        # 注入到 HTML 末尾，供现有正则/JSON 解析器识别
+        injected = f'<script>window.initialState={state_json};</script>'
+        if "window.initialState=" in (html or ""):
+            return html  # 已有，不重复注入
+        enriched = (html or "") + "\n" + injected
+        sa._append_kr36_debug_log(
+            f"[kr36] playwright_js_initialstate_injected phase={log_phase!r} url={url} "
+            f"state_len={len(state_json)}"
+        )
+        print(f"[kr36] JS 直读 initialState 成功（含 videoDetail），已注入 HTML")
+        return enriched
+    except Exception as exc:
+        sa._append_kr36_debug_log(
+            f"[kr36] playwright_js_initialstate_error phase={log_phase!r} url={url} err={exc!r}"
+        )
+        return html

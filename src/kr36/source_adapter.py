@@ -68,7 +68,13 @@ def _kr36_risk_recovery_reset(url: str) -> None:
 
 KR36_ROOT = "https://36kr.com"
 KR36_DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
-KR36_DEFAULT_CHANNEL_URLS: tuple[str, ...] = ()
+# 资讯频道列表（/information/*）；专题 /topics/、活动 /activity 由主流程单独抓取，勿重复写进 channel_urls。
+# 每条 ref 的 channel/source_bucket 由 infer_kr36_info_channel_from_listing_url 决定；step1 infer_topic 沿用栏目名，
+# 简报「资讯」栏下按子类（AI、创投…）分块展示。
+KR36_DEFAULT_CHANNEL_URLS: tuple[str, ...] = (
+    "https://36kr.com/information/AI/",
+    "https://36kr.com/information/contact/",
+)
 # 专题和活动单独抓取，不受 candidate_limit 和日期过滤约束。
 KR36_TOPICS_URL = "https://36kr.com/topics/"
 KR36_ACTIVITY_URL = "https://36kr.com/activity"
@@ -735,7 +741,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 f"[kr36] step1_listing_next round={round_index + 1}/{rounds_total} stage=activity"
             )
 
-        # 2) 活动页：全量抓取，不受日期和 candidate_limit 约束。
+        # 2) 活动页：状态过滤 + 活动开始日落在「周窗」内（与专题/搜索周窗一致，见 resolve_kr36_weekly_listing_date_window）。
         round_index += 1
         started_at = time.time()
         _append_kr36_debug_log(
@@ -754,11 +760,13 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 f"url={KR36_ACTIVITY_URL} fetched=0 total_refs={len(refs)}"
             )
             activity_html = ""
+        _act_dw = resolve_kr36_weekly_listing_date_window(report_date)
         activity_items = parse_activity_listing_html(
             activity_html,
             base_url=KR36_ROOT,
             listing_url=KR36_ACTIVITY_URL,
             report_date=report_date,
+            listing_date_window=_act_dw,
         )
         refs.extend(activity_items)
         _append_kr36_debug_log(
@@ -774,7 +782,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         info_categories = {name for name, _ in KR36_SEARCH_CATEGORY_KEYWORDS}
         info_counts: dict[str, int] = {}
         info_total_count = 0
-        # 搜索分类日期窗：上周一 → 今天，覆盖完整上周 + 本周已发内容。
+        # 搜索分类日期窗：Mon~Sat 上一完整自然周；Sun 本周一～当天。AI/创投仅当天，见 resolve_kr36_information_ai_vc_date_window。
         _sdw = resolve_kr36_search_category_date_window(report_date)
         effective_window: tuple[date, date] = _sdw
         if self.search_listing_enabled:
@@ -882,13 +890,20 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 )
                 html = ""
             before_count = len(refs)
+            _info_ch = infer_kr36_info_channel_from_listing_url(channel_url)
+            _info_dw = (
+                resolve_kr36_information_ai_vc_date_window(report_date)
+                if _info_ch in ("AI", "创投")
+                else None
+            )
             for item in parse_listing_html(
                 html,
                 base_url=KR36_ROOT,
                 listing_url=channel_url,
                 report_date=report_date,
                 require_relative_time=requires_relative_time_filter(channel_url),
-                fixed_category=infer_kr36_info_channel_from_listing_url(channel_url),
+                fixed_category=_info_ch,
+                date_window=_info_dw,
             ):
                 if item.source_bucket in info_categories:
                     if info_counts.get(item.source_bucket, 0) >= self.info_per_category_limit:
@@ -1091,6 +1106,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                             base_url=KR36_ROOT,
                             listing_url=retry_url,
                             report_date=report_date,
+                            listing_date_window=resolve_kr36_weekly_listing_date_window(report_date),
                         )
                     )
                 elif stage == "search":
@@ -1110,13 +1126,20 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                         if info_total >= self.candidate_limit:
                             break
                 else:
+                    _rch = infer_kr36_info_channel_from_listing_url(retry_url)
+                    _rdw = (
+                        resolve_kr36_information_ai_vc_date_window(report_date)
+                        if _rch in ("AI", "创投")
+                        else None
+                    )
                     for item in parse_listing_html(
                         retry_html,
                         base_url=KR36_ROOT,
                         listing_url=retry_url,
                         report_date=report_date,
                         require_relative_time=requires_relative_time_filter(retry_url),
-                        fixed_category=infer_kr36_info_channel_from_listing_url(retry_url),
+                        fixed_category=_rch,
+                        date_window=_rdw,
                     ):
                         if item.source_bucket in info_categories:
                             if info_counts.get(item.source_bucket, 0) >= self.info_per_category_limit:
@@ -1152,7 +1175,33 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         return refs
 
     def fetch_listing(self, report_date: date) -> list[RawArticleRef]:
+        self._warn_if_cookie_degraded()
         return self._fetch_listing_sequential(report_date)
+
+    def _warn_if_cookie_degraded(self) -> None:
+        """运行前检测 Cookie 质量：sensors 过短说明未完整初始化，视频页将只拿到 CSR 空壳。"""
+        cookies = load_kr36_cookies()
+        sv = cookies.get("s_v_web_id", "")
+        sensors = cookies.get("sensorsdata2015jssdkcross", "")
+        if not sv:
+            print(
+                "[kr36] ⚠  Cookie 缺少 s_v_web_id，36kr 视频/文章页将返回空壳。"
+                "请用正常浏览器访问 36kr.com 后，将 Cookie 更新至 config/kr36_cookies.json。"
+            )
+            _append_kr36_debug_log("[kr36] cookie_quality sv_missing")
+        elif len(sensors) < 1000:
+            print(
+                f"[kr36] ⚠  sensorsdata2015jssdkcross 只有 {len(sensors)} 字节（正常应 >1KB）。"
+                "36kr 视频页可能只返回 'Please wait...' 空壳，CDN 地址无法提取。\n"
+                "建议：用正常浏览器访问 36kr.com 并充分浏览，再把最新 Cookie 更新至 config/kr36_cookies.json。"
+            )
+            _append_kr36_debug_log(
+                f"[kr36] cookie_quality sensors_short len={len(sensors)}"
+            )
+        else:
+            _append_kr36_debug_log(
+                f"[kr36] cookie_quality ok sv_len={len(sv)} sensors_len={len(sensors)}"
+            )
 
     def _fetch_listing_sequential(self, report_date: date) -> list[RawArticleRef]:
         deferred_pages: list[dict[str, str]] = []
@@ -1359,37 +1408,63 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             if not t15.step5_list_video_cdn_urls_from_subpage_html(html):
                 # /video/ 首屏常为 CSR 壳：curl 无 CDN 且未必带「人机验证」文案；仅判 captcha 会漏掉，
                 # 导致只落 html、不跑下载与 ASR。小体积页或验证壳脚本页在开启 auto_solver 且非 http_only 时补一轮 step4。
-                looks_risk_like = _looks_like_captcha_or_block(html)
-                interstitial = _kr36_search_html_has_risk_interstitial(html)
-                blob_len = len(html or "")
-                small_shell = blob_len < 22000
-                can_browser = not self.http_only_mode and self.risk_verification_auto_solver
-                should_recover = can_browser and (
-                    looks_risk_like or interstitial or small_shell
-                )
-                if should_recover:
-                    reason_parts: list[str] = []
-                    if looks_risk_like:
-                        reason_parts.append("captcha_copy")
-                    if interstitial:
-                        reason_parts.append("risk_interstitial")
-                    if small_shell:
-                        reason_parts.append(f"small_shell_len={blob_len}")
-                    _append_kr36_debug_log(
-                        f"[kr36] topic_video_no_cdn_in_html page={video_page_url!r} "
-                        f"try_playwright reason={','.join(reason_parts)}"
+
+                # ── 替代方案 1：移动版 URL（m.36kr.com）不走 CSR，curl 常能直接拿到 initialState ──
+                video_id = _extract_kr36_video_id(video_page_url)
+                if video_id:
+                    mobile_url = f"https://m.36kr.com/video/{video_id}"
+                    try:
+                        mobile_html = self._fetch_text(mobile_url)
+                    except Exception as _me:
+                        mobile_html = ""
+                        _append_kr36_debug_log(
+                            f"[kr36] topic_video_mobile_fetch_exception page={mobile_url!r} err={_me!r}"
+                        )
+                    if mobile_html and t15.step5_list_video_cdn_urls_from_subpage_html(mobile_html):
+                        _append_kr36_debug_log(
+                            f"[kr36] topic_video_mobile_ok page={mobile_url!r} "
+                            f"html_len={len(mobile_html)}"
+                        )
+                        print(f"[kr36] 移动版页面获取 CDN 成功，无需 Playwright：{mobile_url}")
+                        html = mobile_html
+                    else:
+                        _append_kr36_debug_log(
+                            f"[kr36] topic_video_mobile_no_cdn page={mobile_url!r} "
+                            f"mobile_len={len(mobile_html or '')}"
+                        )
+
+                if not t15.step5_list_video_cdn_urls_from_subpage_html(html):
+                    looks_risk_like = _looks_like_captcha_or_block(html)
+                    interstitial = _kr36_search_html_has_risk_interstitial(html)
+                    blob_len = len(html or "")
+                    small_shell = blob_len < 22000
+                    can_browser = not self.http_only_mode and self.risk_verification_auto_solver
+                    should_recover = can_browser and (
+                        looks_risk_like or interstitial or small_shell
                     )
-                    html = self._kr36_topic_video_page_recover_with_playwright(
-                        video_page_url, log_reason="no_cdn_in_html"
-                    )
-                else:
-                    _append_kr36_debug_log(
-                        f"[kr36] topic_video_no_cdn_in_html len={blob_len} page={video_page_url!r} "
-                        f"skip_playwright http_only={str(self.http_only_mode).lower()} "
-                        f"auto_solver={str(self.risk_verification_auto_solver).lower()} "
-                        f"looks_risk_like={str(looks_risk_like).lower()} "
-                        f"interstitial={str(interstitial).lower()} small_shell={str(small_shell).lower()}"
-                    )
+                    if should_recover:
+                        reason_parts: list[str] = []
+                        if looks_risk_like:
+                            reason_parts.append("captcha_copy")
+                        if interstitial:
+                            reason_parts.append("risk_interstitial")
+                        if small_shell:
+                            reason_parts.append(f"small_shell_len={blob_len}")
+                        _append_kr36_debug_log(
+                            f"[kr36] topic_video_no_cdn_in_html page={video_page_url!r} "
+                            f"try_playwright reason={','.join(reason_parts)}"
+                        )
+                        html = self._kr36_topic_video_page_recover_with_playwright(
+                            video_page_url, log_reason="no_cdn_in_html"
+                        )
+                    else:
+                        _append_kr36_debug_log(
+                            f"[kr36] topic_video_no_cdn_in_html len={blob_len} page={video_page_url!r} "
+                            f"skip_playwright http_only={str(self.http_only_mode).lower()} "
+                            f"auto_solver={str(self.risk_verification_auto_solver).lower()} "
+                            f"looks_risk_like={str(looks_risk_like).lower()} "
+                            f"interstitial={str(interstitial).lower()} small_shell={str(small_shell).lower()}"
+                        )
         if not html:
             return
 
@@ -1864,7 +1939,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         return ok
 
     def _step4_playwright_allows_return_html(
-        self, html: str, *, age_s: float, after_slider_attempt: bool
+        self, html: str, *, age_s: float, after_slider_attempt: bool, url: str = ""
     ) -> bool:
         """
         关窗前约束：防「首屏壳子 + 宽松启发」在验证/滑块未出现时秒关。
@@ -1874,17 +1949,22 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         - 未跑滑块：须满 ``step4_min_dwell_before_ok_ms``；若仅靠
           ``_kr36_step4_post_slider_page_looks_resolved`` 而 ``_is_usable_html`` 为假，
           须再满 ``step4_post_heuristic_min_age_ms``。
+        - url: 若为文章/视频详情页（/p/ 或 /video/），跳过列表 CSR 壳判定，避免180s死循环。
         """
         strict = _is_usable_html(html)
         post = _kr36_step4_post_slider_page_looks_resolved(html)
         if not strict and not post:
             return False
+        # 文章/视频详情页不是列表页，不套用 CSR 列表壳判定
+        is_detail = _is_kr36_detail_page_url(url) if url else False
         # 未拖滑块：2k~15k 的 36kr CSR 首屏在验证码进 DOM 前 _is_usable_html 会为真，禁止关窗
+        # 详情页（/p/ /video/）例外：HTML 内容即为正页数据，允许在满最小驻留后关窗
         if (
             not after_slider_attempt
             and strict
             and (not post)
             and _kr36_likely_36kr_csr_risk_listing_shell(html)
+            and not is_detail
         ):
             return False
         if after_slider_attempt:
@@ -1947,21 +2027,62 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         return Kr36RiskStep4Tool(self).maybe_recover(url, html, log_phase=log_phase)
 
     def _kr36_topic_video_page_recover_with_playwright(self, video_page_url: str, *, log_reason: str) -> str:
-        """视频专题：Playwright+自动滑块后，优先用 curl 再拉（cookie 已落盘/刷新）。"""
+        """
+        视频专题：Playwright + 自动滑块，两次尝试。
+
+        第一次（skip_cookies=True）：不带任何 36kr Cookie。
+            ByteDance 对全新会话放行验证图，stealth 脚本隐藏 webdriver，验证可被解题。
+        第二次（skip_cookies=False，仅在第一次未拿到 CDN 时）：带本地 Cookie。
+            兜底，适用于 Cookie 有效的情况。
+        """
+        from . import topic_focus_step15 as t15
         from .risk_step4_tool import Kr36RiskStep4Tool
 
         _append_kr36_debug_log(
             f"[kr36] topic_video_playwright_recover reason={log_reason} page={video_page_url!r}"
         )
+
+        tool = Kr36RiskStep4Tool(self)
+
+        # ── 第一次：无 Cookie（全新身份）────────────────────────────────────────
+        print(
+            f"[kr36] 视频页 Playwright（无 Cookie 全新身份）：{video_page_url}"
+        )
         try:
-            solved_html = Kr36RiskStep4Tool(self).fetch(
+            html_no_cookie = tool.fetch(
+                video_page_url, log_phase="step4-video-nocookie", skip_cookies=True
+            )
+        except Exception as error:
+            _append_kr36_debug_log(
+                f"[kr36] topic_video_playwright_nocookie_exception page={video_page_url!r} err={error!r}"
+            )
+            html_no_cookie = ""
+        if html_no_cookie and t15.step5_list_video_cdn_urls_from_subpage_html(html_no_cookie):
+            _append_kr36_debug_log(
+                f"[kr36] topic_video_playwright_nocookie_ok page={video_page_url!r} "
+                f"html_len={len(html_no_cookie)}"
+            )
+            return html_no_cookie
+
+        # ── 第二次：有 Cookie（兜底）────────────────────────────────────────────
+        print(
+            f"[kr36] 无 Cookie 未拿到 CDN，改用有 Cookie 模式重试：{video_page_url}"
+        )
+        _append_kr36_debug_log(
+            f"[kr36] topic_video_playwright_nocookie_no_cdn page={video_page_url!r} "
+            f"fallback=with_cookie"
+        )
+        try:
+            solved_html = tool.fetch(
                 video_page_url, log_phase="step4-video"
             )
-        except Exception as error:  # 防御：与 step4 内部日志互补
+        except Exception as error:
             _append_kr36_debug_log(
                 f"[kr36] topic_video_playwright_slider_exception page={video_page_url!r} err={error!r}"
             )
-            return ""
+            return html_no_cookie or ""
+
+        # 解题后尝试 curl 重拉（cookie 已落盘）
         retried_html = ""
         try:
             retried_html = self._fetch_text(video_page_url)
@@ -1969,9 +2090,9 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             _append_kr36_debug_log(
                 f"[kr36] topic_video_post_playwright_curl_exception page={video_page_url!r} err={retry_error!r}"
             )
-        if not _looks_like_captcha_or_block(retried_html) and retried_html:
+        if retried_html and not _looks_like_captcha_or_block(retried_html):
             return retried_html
-        return solved_html
+        return solved_html or html_no_cookie or ""
 
     def _visible_playwright_fetch_until_deadline(
         self,
@@ -2019,6 +2140,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     user_agent=KR36_DEFAULT_USER_AGENT,
                     viewport={"width": 1440, "height": 1024},
                 )
+                _apply_playwright_stealth(context)
                 if load_existing_cookies:
                     _load_kr36_cookies_into_browser_context(context)
                 if incognito_mode:
@@ -2318,6 +2440,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     viewport={"width": 1440, "height": 1024},
                     extra_http_headers={"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.5"},
                 )
+                _apply_playwright_stealth(context)
                 _load_kr36_cookies_into_browser_context(context)
                 page = context.new_page()
                 page.set_default_timeout(timeout_ms)
@@ -2603,6 +2726,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     viewport={"width": 1440, "height": 1024},
                     extra_http_headers={"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.5"},
                 )
+                _apply_playwright_stealth(context)
                 _load_kr36_cookies_into_browser_context(context)
                 page = context.new_page()
                 page.set_default_timeout(timeout_ms)
@@ -2702,6 +2826,22 @@ def _is_kr36_topic_detail_url(url: str) -> bool:
     parts = (p.path or "").rstrip("/").split("/")
     # /topics/3770543132934659 → ['', 'topics', '3770543132934659']
     return len(parts) == 3 and parts[1] == "topics" and parts[2].isdigit()
+
+
+def _is_kr36_detail_page_url(url: str) -> bool:
+    """文章详情页（/p/）或视频详情页（/video/）——区别于列表页，不应套用 CSR 列表壳判定。"""
+    try:
+        p = urlparse((url or "").strip())
+    except Exception:
+        return False
+    host = p.netloc.lower().split(":", 1)[0]
+    if host not in ("36kr.com", "www.36kr.com"):
+        return False
+    path = (p.path or "/").rstrip("/")
+    segments = path.split("/")
+    if len(segments) >= 2 and segments[1] in ("p", "video"):
+        return True
+    return False
 
 
 def _kr36_topics_listing_index_url(url: str) -> bool:
@@ -2814,10 +2954,17 @@ def parse_listing_html(
     report_date: date,
     require_relative_time: bool = False,
     fixed_category: str | None = None,
+    date_window: tuple[date, date] | None = None,
 ) -> list[RawArticleRef]:
     lowered_listing = listing_url.lower()
     if "/activity" in lowered_listing:
-        return parse_activity_listing_html(html, base_url=base_url, listing_url=listing_url, report_date=report_date)
+        return parse_activity_listing_html(
+            html,
+            base_url=base_url,
+            listing_url=listing_url,
+            report_date=report_date,
+            listing_date_window=resolve_kr36_weekly_listing_date_window(report_date),
+        )
 
     refs: list[RawArticleRef] = []
     matches = list(KR36_LINK_RE.finditer(html))
@@ -2831,14 +2978,23 @@ def parse_listing_html(
             context = html[max(0, match.start() - 200): min(len(html), match.end() + 200)]
             if KR36_RELATIVE_TIME_RE.search(clean_html_text(context)) is None:
                 continue
+        published_day: date | None = None
+        if date_window is not None:
+            item_html = html[max(0, match.start() - 600): min(len(html), match.end() + 600)]
+            published_day = _infer_search_result_published_date(item_html, report_date)
+            if published_day is None:
+                continue
+            if published_day < date_window[0] or published_day > date_window[1]:
+                continue
         category = fixed_category or infer_kr36_bucket(url, title)
+        pub_iso = (published_day or report_date).isoformat()
         refs.append(
             RawArticleRef(
                 source_site="36kr",
                 article_id=f"36kr:{url.rsplit('/', 1)[-1]}",
                 title=title,
                 url=url,
-                published_at=report_date.isoformat(),
+                published_at=pub_iso,
                 channel=category or "资讯",
                 source_bucket=category or "资讯",
                 summary="",
@@ -3066,20 +3222,26 @@ def resolve_previous_week_window(report_date: date) -> tuple[date, date]:
     return previous_week_monday, previous_week_sunday
 
 
-def resolve_kr36_search_category_date_window(report_date: date) -> tuple[date, date]:
-    """搜索分类专用日期窗。
+def resolve_kr36_weekly_listing_date_window(report_date: date) -> tuple[date, date]:
+    """专题子项、36氪独家等搜索、活动开始日筛选共用。
 
-    - 周四及之前（Mon~Thu, weekday 0-3）：上周五 → 上周日（周末精选）。
-    - 周五及之后（Fri~Sun, weekday 4-6）：本周一 → 今天。
+    周一至周六：上一完整自然周（周一～周日）；周日：本周一～报告日当天。
     """
-    if report_date.weekday() <= 3:
-        # 上周日 = 今天往前推 weekday+1 天；上周五 = 上周日再前 2 天
-        last_sunday = report_date - timedelta(days=report_date.weekday() + 1)
-        last_friday = last_sunday - timedelta(days=2)
-        return last_friday, last_sunday
-    # 周五及以后：本周一至今天
-    current_week_monday = report_date - timedelta(days=report_date.weekday())
-    return current_week_monday, report_date
+    if report_date.weekday() == 6:
+        monday = report_date - timedelta(days=report_date.weekday())
+        return monday, report_date
+    return resolve_previous_week_window(report_date)
+
+
+def resolve_kr36_search_category_date_window(report_date: date) -> tuple[date, date]:
+    """搜索分类（如 36氪独家）专用日期窗，规则见 ``resolve_kr36_weekly_listing_date_window``。"""
+    return resolve_kr36_weekly_listing_date_window(report_date)
+
+
+def resolve_kr36_information_ai_vc_date_window(report_date: date) -> tuple[date, date]:
+    """AI / 创投 资讯列表（/information/AI、/information/contact）：仅报告日当天。"""
+    d = report_date
+    return d, d
 
 
 def resolve_current_week_window(report_date: date) -> tuple[date, date]:
@@ -3115,7 +3277,7 @@ def resolve_kr36_topic_subitem_date_window(
     """
     专题详情页子项（二级）的日期窗。
 
-    - ``weekday_split``（默认）：周一至周四为「自然周上的上周一～周日」；周五至周日为「本周一～周日」。
+    - ``weekday_split``（默认）：周一至周六为「上一完整自然周」；周日为「本周一～报告日当天」（与搜索周窗一致）。
     - ``previous_week``：始终为上周窗（与历史 ``topic_previous_week_only=true`` 一致）。
     - ``none``：不按时窗筛子项（与 ``topic_previous_week_only=false`` 一致）。活动页不走本函数。
 
@@ -3123,19 +3285,14 @@ def resolve_kr36_topic_subitem_date_window(
     """
     m = (mode or "").strip().lower()
     if m in ("", "weekday_split", "weekday", "default", "auto"):
-        if report_date.weekday() <= 3:  # Mon=0 .. Thu=3
-            s, e = resolve_previous_week_window(report_date)
-            return s, e
-        s, e = resolve_current_week_window(report_date)
+        s, e = resolve_kr36_weekly_listing_date_window(report_date)
         return s, e
     if m in ("previous_week", "last_week", "true", "1", "on", "yes", "old"):
         s, e = resolve_previous_week_window(report_date)
         return s, e
     if m in ("none", "unfiltered", "off", "false", "0", "no", "all"):
         return None, None
-    s, e = resolve_previous_week_window(report_date)
-    s2, e2 = resolve_current_week_window(report_date)
-    return (s, e) if report_date.weekday() <= 3 else (s2, e2)
+    return resolve_kr36_weekly_listing_date_window(report_date)
 
 
 def parse_topic_detail_html(
@@ -3530,8 +3687,12 @@ def parse_activity_listing_html(
     base_url: str,
     listing_url: str,
     report_date: date,
+    listing_date_window: tuple[date, date] | None = None,
 ) -> list[RawArticleRef]:
-    """活动页抓取；已结束场不进入清单。优先匹配 class=activity-item 卡片。"""
+    """活动页抓取；已结束场不进入清单。优先匹配 class=activity-item 卡片。
+
+    ``listing_date_window`` 非空时，仅保留「时间」段解析出的开始日落在闭区间内的卡片；解析不到开始日时不筛除。
+    """
 
     refs: list[RawArticleRef] = []
     seen_urls: set[str] = set()
@@ -3557,6 +3718,14 @@ def parse_activity_listing_html(
         theme = infer_activity_theme(context, title)
         description = infer_activity_description(context)
         start_label = build_activity_start_label(status, date_range, report_date)
+
+        if listing_date_window is not None and date_range:
+            start_text = date_range.split("-", 1)[0].strip()
+            range_start = parse_activity_month_day(start_text, report_date.year)
+            if range_start is not None:
+                lo, hi = listing_date_window
+                if range_start < lo or range_start > hi:
+                    continue
 
         summary_parts: list[str] = []
         if description:
@@ -3610,6 +3779,14 @@ def parse_activity_listing_html(
         theme = infer_activity_theme(context, title)
         description = infer_activity_description(context)
         start_label = build_activity_start_label(status, date_range, report_date)
+
+        if listing_date_window is not None and date_range:
+            start_text = date_range.split("-", 1)[0].strip()
+            range_start = parse_activity_month_day(start_text, report_date.year)
+            if range_start is not None:
+                lo, hi = listing_date_window
+                if range_start < lo or range_start > hi:
+                    continue
 
         summary_parts: list[str] = []
         if description:
@@ -3668,16 +3845,22 @@ def infer_kr36_bucket(url: str, title: str) -> str | None:
 
 
 def infer_kr36_info_channel_from_listing_url(listing_url: str) -> str | None:
-    normalized = str(listing_url or "").strip().lower()
-    mapping: tuple[tuple[str, str], ...] = (
-        ("/information/latest/", "最新"),
-        ("/information/finance/", "财经"),
-        ("/information/auto/", "汽车"),
-        ("/information/technology/", "科技"),
-        ("/information/venturecapital/", "创投"),
+    """从 /information/* 列表页 URL 推断资讯子类名（与 step1 栏目名、简报子类标题一致）。"""
+    try:
+        path = urlparse(str(listing_url or "").strip()).path.lower().rstrip("/")
+    except Exception:
+        path = ""
+    segments: tuple[tuple[str, str], ...] = (
+        ("/information/ai", "AI"),
+        ("/information/contact", "创投"),
+        ("/information/latest", "最新"),
+        ("/information/finance", "财经"),
+        ("/information/auto", "汽车"),
+        ("/information/technology", "科技"),
+        ("/information/venturecapital", "创投"),
     )
-    for token, label in mapping:
-        if token in normalized:
+    for suffix, label in segments:
+        if path == suffix or path.endswith(suffix):
             return label
     return None
 
@@ -3829,6 +4012,29 @@ def _load_kr36_cookies_into_browser_context(context: Any) -> None:
             for name, value in cookies.items()
         ]
     )
+
+
+_PLAYWRIGHT_STEALTH_SCRIPT = """
+Object.defineProperty(navigator, 'webdriver', { get: () => false });
+if (!window.chrome) {
+  window.chrome = { runtime: {}, loadTimes: function(){}, csi: function(){}, app: {} };
+}
+Object.defineProperty(navigator, 'plugins', {
+  get: () => { const p = [1,2,3,4,5]; p.item = () => null; return p; }
+});
+Object.defineProperty(navigator, 'languages', {
+  get: () => ['zh-CN', 'zh', 'en-US', 'en']
+});
+Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+"""
+
+
+def _apply_playwright_stealth(context: Any) -> None:
+    """注入反自动化检测脚本，使 ByteDance/verifycenter 不把 Playwright 识别为 webdriver。"""
+    try:
+        context.add_init_script(_PLAYWRIGHT_STEALTH_SCRIPT)
+    except Exception:
+        pass
 
 
 def _looks_like_captcha_or_block(html: str) -> bool:

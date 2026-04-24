@@ -2,13 +2,55 @@
 import json
 
 from kr36.email import (
+    BUCKET_INFO,
     _compose_item_viewpoint,
     _filter_kr36_visible_activities,
+    _normalize_bucket,
     _render_activity_source_item,
     _render_viewpoint_as_html,
+    _render_viewpoint_row_body_html,
+    _split_viewpoint_for_point_topic_row,
     _step5_item_has_original_text,
     render_kr36_brief_email,
 )
+
+
+def test_dedupe_and_title_patch_moves_exclusive_article_to_info_scope() -> None:
+    """hot 中同 URL 先专题后 36氪独家时保留独家；标题含硬氪专访时栏目视为创投。"""
+    from kr36.email import _dedupe_hot_articles_for_brief, _kr36_title_implied_brief_channel
+
+    dup = [
+        {
+            "source_bucket": "专题",
+            "channel": "专题",
+            "title": "小米汽车重磅任命｜36氪独家",
+            "url": "https://36kr.com/p/1",
+        },
+        {
+            "source_bucket": "36氪独家",
+            "channel": "36氪独家",
+            "title": "小米汽车重磅任命｜36氪独家",
+            "url": "https://36kr.com/p/1",
+        },
+    ]
+    one = _dedupe_hot_articles_for_brief(dup)
+    assert len(one) == 1
+    assert one[0]["channel"] == "36氪独家"
+    assert _kr36_title_implied_brief_channel("半年融资｜硬氪专访") == "创投"
+    assert _kr36_title_implied_brief_channel("xx｜36氪首发") == "创投"
+
+
+def test_normalize_bucket_prefers_info_channel_over_topic_source_bucket() -> None:
+    """专题页同步下来的条目常带 source_bucket=专题，仍以栏目 AI/创投 归入资讯。"""
+    art = {
+        "source_bucket": "专题",
+        "channel": "AI",
+        "title": "某文",
+        "url": "https://36kr.com/p/999",
+    }
+    assert _normalize_bucket(art) == BUCKET_INFO
+    art2 = {**art, "channel": "创投"}
+    assert _normalize_bucket(art2) == BUCKET_INFO
 
 
 def test_kr36_email_renders_fixed_three_bucket_template(tmp_path) -> None:
@@ -118,7 +160,7 @@ def test_kr36_email_renders_fixed_three_bucket_template(tmp_path) -> None:
     assert "2) 子类页 的观点：资讯判断。" in rendered.text
     assert "编辑精选 | https://36kr.com/topics/1" in rendered.text
     assert "子类页 | https://36kr.com/search/articles/123" in rendered.text
-    assert "名称：活动A；时间：04月21日-04月22日；地点：上海；主题：AI Agent；状态：报名中；倒计时：今天开始；链接：https://36kr.com/sign-up-activity/1" in rendered.text
+    assert "名称：活动A；时间：04月21日-04月22日；地点：上海；状态：报名中；倒计时：今天开始；链接：https://36kr.com/sign-up-activity/1" in rendered.text
 
     assert "activity-card-title" in rendered.html
     assert "活动A" in rendered.html
@@ -141,6 +183,7 @@ def test_kr36_email_omit_source_links_drops_url_blocks_keeps_info_viewpoints(tmp
                 "articles": [
                     {
                         "source_bucket": "资讯",
+                        "channel": "AI",
                         "title": "品牌文",
                         "url": "https://36kr.com/p/100",
                     }
@@ -245,7 +288,7 @@ categories:
     assert "甲短" in out.html
     assert "子项乙" in out.html
     assert "甲长文观点" in out.html or "提炼标题：甲短" in out.html
-    assert "subclass-title" in out.html
+    assert "subclass-heading" in out.html
     assert "专题线一" in out.html
 
 
@@ -299,13 +342,138 @@ categories:
         encoding="utf-8",
     )
     out = render_kr36_brief_email(step6.read_text(encoding="utf-8"), step6, omit_source_links=True)
-    assert "subclass-outline" in out.html
-    assert "subclass-item" in out.html
+    assert "section-groups" in out.html
+    assert "subclass-block" in out.html
     assert "人工智能与前沿技术" in out.html
     assert "公司动态与商业策略" in out.html
     assert "A文" in out.html and "B文" in out.html
     assert "人工智能与前沿技术：" in out.text
     assert "公司动态与商业策略：" in out.text
+
+
+def test_omit_mode_info_step5_keeps_rows_without_body_title_link_and_view_explain(tmp_path) -> None:
+    """资讯：链文优先用 summary 冒号前观点句（非文章标题），与专题同款。"""
+    step6 = tmp_path / "kr36_step6_brief_20260421.md"
+    step6.write_text(
+        "# 简报\n\n## 运行摘要\n\n- 资讯：导言。\n\n## 占位\n\n### 核心判断\n\nx\n",
+        encoding="utf-8",
+    )
+    hot = tmp_path / "kr36_hot_topics_20260421.json"
+    hot.write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "source_bucket": "AI",
+                        "channel": "AI",
+                        "title": "AI 文",
+                        "url": "https://36kr.com/p/9001",
+                    },
+                    {
+                        "source_bucket": "创投",
+                        "channel": "创投",
+                        "title": "创投文",
+                        "url": "https://36kr.com/p/9002",
+                    },
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    step5 = tmp_path / "kr36_step_5_content_analysis_20260421.yaml"
+    step5.write_text(
+        """
+report_date: '2026-04-21'
+input_path: 'x'
+generated_at: 'x'
+categories:
+  - topic: '产业'
+    items:
+      - original_title: 'AI 文'
+        channel: 'AI'
+        original_url: 'https://36kr.com/p/9001'
+        original_content:
+          text: ''
+          status: empty
+        selected_contents: []
+        analysis:
+          summary: '结论句要短：后面是展开说明用于解释区。'
+          core_points: []
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+      - original_title: '创投文'
+        channel: '创投'
+        original_url: 'https://36kr.com/p/9002'
+        original_content:
+          text: ''
+          status: empty
+        selected_contents: []
+        analysis:
+          summary: '仅一段无冒号拆分。'
+          core_points: []
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+""",
+        encoding="utf-8",
+    )
+    out = render_kr36_brief_email(step6.read_text(encoding="utf-8"), step6, omit_source_links=True)
+    assert "point-topic-link" in out.html
+    assert "viewpoints-list" in out.html
+    assert 'href="https://36kr.com/p/9001"' in out.html
+    assert 'href="https://36kr.com/p/9002"' in out.html
+    # 链文为观点句「结论句要短」，href 仍为原文；正文为冒号后展开
+    assert '">结论句要短</a>：</span><span class="vp-inline">后面是展开说明用于解释区' in out.html
+    # 勿因 step5 资讯为空列表而回退成 Markdown 节标题当条目
+    assert "一、AI监督" not in out.html
+
+
+def test_omit_mode_info_step5_without_hot_json_uses_step5_channel(tmp_path) -> None:
+    """报告目录无 kr36_hot_topics.json 时，仍以 step5 的 AI/创投 栏目生成资讯块。"""
+    step6 = tmp_path / "kr36_step6_brief_20260421.md"
+    step6.write_text(
+        "# 简报\n\n## 运行摘要\n\n- 资讯：x。\n\n## 占位\n\n### 核心判断\n\nx\n",
+        encoding="utf-8",
+    )
+    step5 = tmp_path / "kr36_step_5_content_analysis_20260421.yaml"
+    step5.write_text(
+        """
+report_date: '2026-04-21'
+input_path: 'x'
+categories:
+  - topic: '动态'
+    items:
+      - original_title: '某 AI 报道'
+        channel: 'AI'
+        original_url: 'https://36kr.com/p/777'
+        original_content: { text: '', status: empty }
+        selected_contents: []
+        analysis:
+          summary: '短结：长解释写在这里。'
+          core_points: []
+          new_facts: []
+          entities: []
+          signals: []
+          risk_or_uncertainty: []
+          why_it_matters: ''
+          layer_notes: []
+""",
+        encoding="utf-8",
+    )
+    out = render_kr36_brief_email(step6.read_text(encoding="utf-8"), step6, omit_source_links=True)
+    assert "point-topic-link" in out.html
+    assert "viewpoints-list" in out.html
+    assert 'href="https://36kr.com/p/777"' in out.html
+    assert '">短结</a>' in out.html
+    assert "subclass-heading" in out.html
 
 
 def test_omit_mode_activity_drops_ended_per_step5_and_hot_topics(tmp_path) -> None:
@@ -473,6 +641,38 @@ def test_colon_lead_viewpoint_renders_head_and_body() -> None:
     assert "vp-main" in html and "vp-body" in html
     assert "同伴风险" in html
     assert "<strong>7 个</strong>" in html
+
+
+def test_multiline_cn_chapter_line_splits_colon_on_second_line() -> None:
+    """首行「一、…」单独成行时：链文用第二行结论，首行不塞进冒号拆分。"""
+    v = (
+        "一、AI技术应用与伦理：\n"
+        "AI技术滥用冲击伦理边界，虚假信息与身份盗用风险激增：展开段落。"
+    )
+    h, rest = _split_viewpoint_for_point_topic_row(v)
+    assert h == "AI技术滥用冲击伦理边界，虚假信息与身份盗用风险激增"
+    assert rest == "展开段落。"
+
+
+def test_multiline_cn_chapter_row_body_html_has_flush_chapter() -> None:
+    """大标题内联：vp-chapter-inline 在前，vp-inline 正文在后，均无块级缩进。"""
+    v = (
+        "一、AI技术应用与伦理\n"
+        "AI技术滥用冲击伦理边界，虚假信息与身份盗用风险激增：展开段落。"
+    )
+    html = _render_viewpoint_row_body_html(v)
+    assert 'class="vp-chapter-inline"' in html
+    assert "一、AI技术应用与伦理" in html
+    assert "展开段落" in html
+    assert html.index("vp-chapter-inline") < html.index("vp-inline")
+
+
+def test_colon_viewpoint_body_html_wraps_description_in_vp_inline() -> None:
+    """冒号总起式：结论在链上，正文只保留展开段并包在 vp-inline 内联 span 里（不缩进）。"""
+    html = _render_viewpoint_row_body_html("短结论：描述层要内联展示。")
+    assert "vp-inline" in html
+    assert "描述层要内联展示" in html
+    assert "短结论" not in html
 
 
 def test_activity_source_dedupes_identical_status_and_countdown() -> None:
