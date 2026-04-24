@@ -1,6 +1,6 @@
 # 专题聚焦 Step 1.5（`topic_focus_step15`）
 
-与主流程四步（`pipeline.md`：分析 → 拉正文 → 整合 → 简报）中的 **Step 1**（文章理解/分组）**不是同一步**：本页描述的是 **36kr 专题链路**「从 `/topics/` 到本地视频/文章落盘 + 视频转写」的可复用分段，实现见 `src/kr36/topic_focus_step15.py`，编排见 `Kr36SourceAdapter` 中专题下载与 `_download_topic_item_asset`。
+与主流程四步（`pipeline.md`：分析 → 拉正文 → 整合 → 简报）中的 **Step 1**（文章理解/分组）**不是同一步**：本页描述的是 **36kr 专题链路**「从 `/topics/` 到本地视频/文章落盘 + 视频转写」的可复用分段，实现见 `src/utils/steps/kr36_topic_focus_step15.py`，编排见 `Kr36SourceAdapter` 中专题下载与 `_download_topic_item_asset`。
 
 ## 步骤总览（1.5 专题内有序步骤）
 
@@ -28,18 +28,18 @@
 | 文件 | 说明 |
 |------|------|
 | `kr36_hot_topics_YYYYMMDD.json` | 文章列表（`content_text` 多为空） |
-| **`kr36_topic_fulltext_YYYYMMDD.json`** | 仅专题子项：`items[].content_text` 为 **ASR 或子页 HTML**，`fulltext_source` 标明来源；**整理/后续步骤请用** `kr36.topic_fulltext_index.load_kr36_topic_fulltext_json` 或 `load_content_by_article_id_from_topic_fulltext(run_dir, report_date)` 按 `article_id` 取全文，**不必再对视频 URL 拉网页当正文**。 |
+| **`kr36_topic_fulltext_YYYYMMDD.json`** | 仅专题子项：`items[].content_text` 为 **ASR 或子页 HTML**，`fulltext_source` 标明来源；**整理/后续步骤请用** `kr36.topic.fulltext_index.load_kr36_topic_fulltext_json` 或 `load_content_by_article_id_from_topic_fulltext(run_dir, report_date)` 按 `article_id` 取全文，**不必再对视频 URL 拉网页当正文**。 |
 
-实现：`src/kr36/topic_fulltext_index.py`，在 `fetch_and_materialize_kr36_articles` 与 `run_kr36_videos_from_hot_topics_json` 末尾写入。
+实现：`src/kr36/topic/fulltext_index.py`，在 `fetch_and_materialize_kr36_articles` 与 `run_kr36_videos_from_hot_topics_json` 末尾写入。
 
 ## 相关文件
 
 | 模块 | 作用 |
 |------|------|
-| `topic_focus_step15.py` | Step 1–5 纯函数 + **Step 6** 转写封装（与线上一致） |
-| `topic_fulltext_index.py` | 汇总专题全文落盘为 `kr36_topic_fulltext_*.json` |
-| `volc_speech.py` | 火山 HTTP `bigmodel/recognize/flash` |
-| `topic_media.py` | CDN 下载、ffmpeg 抽 MP3 |
+| `utils/steps/kr36_topic_focus_step15.py` | Step 1–5 纯函数 + **Step 6** 转写封装（与线上一致） |
+| `topic/fulltext_index.py` | 汇总专题全文落盘为 `kr36_topic_fulltext_*.json` |
+| `utils/volc_speech.py` | 火山 HTTP `bigmodel/recognize/flash` |
+| `topic/media.py` | CDN 下载、ffmpeg 抽 MP3 |
 | `source_adapter.py` | `_download_topic_item_asset` 串联 4→5→6 |
 
 CLI：`python -m kr36.cli kr36-transcribe-audio --audio <path/to/basename.asr.mp3>` 仅重跑 Step 6（不下载视频）。

@@ -519,7 +519,7 @@ def main() -> None:
         from datetime import date as date_cls
 
         from c114.pipeline import parse_clock_hh_mm, shanghai_local_today_at, shanghai_yesterday
-        from kr36.email_send import send_latest_kr36_brief_email
+        from kr36.emailing.send import send_latest_kr36_brief_email
 
         report_date = None
         require_dt = None

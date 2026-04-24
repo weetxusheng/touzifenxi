@@ -11,13 +11,12 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from html import unescape
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 from urllib.parse import quote
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -25,10 +24,12 @@ from urllib.parse import urlparse
 from utils.tools.content_models import ContentSourceAdapter
 from utils.tools.content_models import RawArticleDetail, RawArticleRef, StandardArticle
 
-KR36_PROJECT_ROOT = Path(__file__).resolve().parents[2]
-KR36_COOKIES_FILE = KR36_PROJECT_ROOT / "config" / "kr36_cookies.json"
-KR36_DEBUG_LOG_FILE = KR36_PROJECT_ROOT / "log.txt"
-_kr36_debug_log_path_override: Path | None = None
+from kr36.core.source.common import (
+    KR36_COOKIES_FILE,
+    _append_kr36_debug_log,
+    _safe_filename,
+    _safe_path_component,
+)
 
 # 同进程内、跨 Kr36SourceAdapter 实例与 step4 旁路，共享「每 URL 风控恢复」计数（上限见 risk_max_recovery_rounds_per_url）。
 _kr36_risk_recovery_lock = threading.Lock()
@@ -357,12 +358,12 @@ def _kr36_slider_drag(page: object, sx: float, sy: float, drag_px: float) -> Non
 def _kr36_try_solve_slider_captcha(page: object) -> bool:
     """
     Detect and solve 36kr slider-puzzle captcha.
-    Delegates to src.kr36.slider_captcha.solve_slider_captcha which uses
+    Delegates to ``utils.slider_solver.captcha.solve_slider_captcha`` which uses
     TM_CCOEFF_NORMED + alpha-mask template matching for precise hole location.
     Returns True if a drag attempt was made.
     """
     try:
-        from .slider_captcha import solve_slider_captcha
+        from utils.slider_solver.captcha import solve_slider_captcha
         result = solve_slider_captcha(page)
         _append_kr36_debug_log(
             f"[kr36] slider_captcha_solve_result attempted={str(result).lower()}"
@@ -1189,6 +1190,26 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 "请用正常浏览器访问 36kr.com 后，将 Cookie 更新至 config/kr36_cookies.json。"
             )
             _append_kr36_debug_log("[kr36] cookie_quality sv_missing")
+            if not self.http_only_mode:
+                print("[kr36] 检测到 s_v_web_id 缺失，自动调用 slider_solver 预热 Cookie...")
+                _append_kr36_debug_log("[kr36] cookie_quality_auto_recover start method=slider_solver")
+                try:
+                    from utils.slider_solver.session import SliderRiskTool
+
+                    SliderRiskTool(self).fetch(KR36_ROOT, log_phase="cookie-bootstrap")
+                    refreshed = load_kr36_cookies()
+                    refreshed_sv = str(refreshed.get("s_v_web_id", "")).strip()
+                    if refreshed_sv:
+                        print("[kr36] cookie 预热成功：已写回 s_v_web_id。")
+                        _append_kr36_debug_log("[kr36] cookie_quality_auto_recover success has_sv=true")
+                    else:
+                        print("[kr36] cookie 预热后仍缺少 s_v_web_id，请手动更新 Cookie。")
+                        _append_kr36_debug_log("[kr36] cookie_quality_auto_recover failed has_sv=false")
+                except Exception as error:  # noqa: BLE001
+                    print(f"[kr36] 自动调用 slider_solver 失败：{error}")
+                    _append_kr36_debug_log(
+                        f"[kr36] cookie_quality_auto_recover error={type(error).__name__}: {error}"
+                    )
         elif len(sensors) < 1000:
             print(
                 f"[kr36] ⚠  sensorsdata2015jssdkcross 只有 {len(sensors)} 字节（正常应 >1KB）。"
@@ -1262,7 +1283,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
     ) -> list[RawArticleRef]:
         """① /topics/ 列表 → ② 聚焦专题详情页解析条目；③ 视频在 _download_topic_item_asset 打开 /video/{id} 再下 CDN。
         五段语义见 ``topic_focus_step15``（Step 1.5）。"""
-        from . import topic_focus_step15 as t15
+        from utils.steps import kr36_topic_focus_step15 as t15
 
         focus_topics, topic_refs = t15.step1_parse_topics_listing_and_select_focus(
             topics_html,
@@ -1297,8 +1318,8 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 _append_kr36_debug_log(
                     f"[kr36] topic_detail_csr_shell url={topic_ref.url} html_length={len(topic_html)} → playwright"
                 )
-                from .risk_step4_tool import Kr36RiskStep4Tool
-                enriched = Kr36RiskStep4Tool(self).fetch(
+                from utils.slider_solver.session import SliderRiskTool
+                enriched = SliderRiskTool(self).fetch(
                     topic_ref.url, log_phase="topic-detail-csr"
                 )
                 if enriched and not _looks_like_captcha_or_block(enriched) and len(enriched) > len(topic_html):
@@ -1403,7 +1424,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 video_page_url, log_reason="captcha_or_block"
             )
         if item_kind == "video" and html:
-            from . import topic_focus_step15 as t15
+            from utils.steps import kr36_topic_focus_step15 as t15
 
             if not t15.step5_list_video_cdn_urls_from_subpage_html(html):
                 # /video/ 首屏常为 CSR 壳：curl 无 CDN 且未必带「人机验证」文案；仅判 captcha 会漏掉，
@@ -1469,15 +1490,15 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             return
 
         if item_kind == "video":
-            from . import topic_media
-            from . import volc_speech as kr36_volc_speech
+            from .topic import media as topic_media
+            from utils import volc_speech as shared_volc_speech
 
             cookie_str = ""
             effective_cookies = load_kr36_cookies()
             if effective_cookies:
                 cookie_str = "; ".join(f"{k}={v}" for k, v in effective_cookies.items())
 
-            from . import topic_focus_step15 as t15
+            from utils.steps import kr36_topic_focus_step15 as t15
 
             cdn_urls = list(t15.step5_list_video_cdn_urls_from_subpage_html(html))
             cdn_prev = cdn_urls[0][:120] if cdn_urls else "-"
@@ -1520,7 +1541,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 fallback_path.write_text(html, encoding="utf-8")
                 return
 
-            creds = kr36_volc_speech.resolve_volc_speech_credentials(config=self._source_config)
+            creds = shared_volc_speech.resolve_volc_speech_credentials(config=self._source_config)
             mp3_path = day_dir / f"{basename}.asr.mp3"
             transcript_path = day_dir / f"{basename}.transcript.txt"
             if self.topic_extract_audio_enabled and topic_media.ffmpeg_executable():
@@ -1871,7 +1892,8 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             )
             return False
         env = os.environ.copy()
-        env["KR36_RISK_URL"] = url
+        env["RISK_VERIFICATION_URL"] = url
+        env["KR36_RISK_URL"] = url  # 兼容旧子进程脚本
         command = str(self.risk_verification_command or "").strip()
         if command:
             _append_kr36_debug_log(f"[kr36] verification_command_start url={url} command={command}")
@@ -2007,24 +2029,24 @@ class Kr36SourceAdapter(ContentSourceAdapter):
     def step4_fetch_html_via_playwright_slider(
         self, url: str, *, log_phase: str = "step4"
     ) -> str:
-        """遇 36kr 风控/滑块时，用浏览器打开并自动滑块，写回 cookie 后返回 HTML。实现见 `risk_step4_tool` / `playwright_slider_session`。"""
+        """遇 36kr 风控/滑块时，用浏览器打开并自动滑块，写回 cookie 后返回 HTML。实现见 ``utils.slider_solver``。"""
 
-        from .risk_step4_tool import Kr36RiskStep4Tool
+        from utils.slider_solver.session import SliderRiskTool
 
-        return Kr36RiskStep4Tool(self).fetch(url, log_phase=log_phase)
+        return SliderRiskTool(self).fetch(url, log_phase=log_phase)
 
     def _maybe_recover_html_with_step4(
         self, url: str, html: str, *, log_phase: str
     ) -> str:
         """
         首屏为验证码/风控文案时，与 ``scripts/kr36/run_kr36_auto_captcha_test`` 同一路径：
-        ``Kr36RiskStep4Tool``（内部 ``playwright_slider_session`` + 自动滑块），并写回 cookie。
+        ``SliderRiskTool``（内部 ``utils.slider_solver`` + 自动滑块），并写回 cookie。
 
         ``http_only_mode`` 为真时不启动 Playwright，原样返回 ``html``。
         """
-        from .risk_step4_tool import Kr36RiskStep4Tool
+        from utils.slider_solver.session import SliderRiskTool
 
-        return Kr36RiskStep4Tool(self).maybe_recover(url, html, log_phase=log_phase)
+        return SliderRiskTool(self).maybe_recover(url, html, log_phase=log_phase)
 
     def _kr36_topic_video_page_recover_with_playwright(self, video_page_url: str, *, log_reason: str) -> str:
         """
@@ -2035,14 +2057,14 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         第二次（skip_cookies=False，仅在第一次未拿到 CDN 时）：带本地 Cookie。
             兜底，适用于 Cookie 有效的情况。
         """
-        from . import topic_focus_step15 as t15
-        from .risk_step4_tool import Kr36RiskStep4Tool
+        from utils.steps import kr36_topic_focus_step15 as t15
+        from utils.slider_solver.session import SliderRiskTool
 
         _append_kr36_debug_log(
             f"[kr36] topic_video_playwright_recover reason={log_reason} page={video_page_url!r}"
         )
 
-        tool = Kr36RiskStep4Tool(self)
+        tool = SliderRiskTool(self)
 
         # ── 第一次：无 Cookie（全新身份）────────────────────────────────────────
         print(
@@ -2363,16 +2385,16 @@ class Kr36SourceAdapter(ContentSourceAdapter):
 
         当 ``risk_verification_auto_solver=True``（且非 ``http_only_mode``）时，跳过轻量拉页，
         **直接**走与联调脚本（``run_kr36_auto_captcha_test``）相同的
-        ``Kr36RiskStep4Tool.fetch``（完整滑块会话），保证行为完全统一。
+        ``SliderRiskTool.fetch``（完整滑块会话），保证行为完全统一。
         """
         if not self.http_only_mode and self.risk_verification_auto_solver:
-            from .risk_step4_tool import Kr36RiskStep4Tool
+            from utils.slider_solver.session import SliderRiskTool
 
             _append_kr36_debug_log(
                 f"[kr36] search_enrich_direct_step4 reason=auto_solver url={url}"
             )
             print("[kr36] 搜索列表：auto_solver=true，直接走 step4（与联调脚本相同路径）")
-            return Kr36RiskStep4Tool(self).fetch(url, log_phase="search-listing-step4")
+            return SliderRiskTool(self).fetch(url, log_phase="search-listing-step4")
 
         enriched = self._playwright_kr36_search_listing_html(url)
         if enriched and _kr36_search_playwright_body_acceptable(enriched):
@@ -2501,7 +2523,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         """
         轻量 ``_playwright_kr36_topics_activity_listing_html_once`` 无滑块循环，遇风控/验证码时往往仍拿不到列表体。
         在 ``http_only_mode`` 为 false 时，于此前提下改走与 ``_maybe_recover_html_with_step4``/正文相同的
-        ``Kr36RiskStep4Tool``（全量自动滑块会话），避免活动/专题只「等无痕」而不触发滑块。
+        ``SliderRiskTool``（全量自动滑块会话），避免活动/专题只「等无痕」而不触发滑块。
 
         触发：HTML 已像验证码/风控、或含字节系风险壳、或 ``risk_verification_auto_solver`` 为 true
         （任意轻量拉页失败也尝试 step4，用于小壳/难判页面）。
@@ -2516,7 +2538,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             try_step4 = True
         if not try_step4:
             return ""
-        from .risk_step4_tool import Kr36RiskStep4Tool
+        from utils.slider_solver.session import SliderRiskTool
 
         _append_kr36_debug_log(
             f"[kr36] topics_activity_step4_after_listing url={url} page_kind={page_kind} "
@@ -2527,7 +2549,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             "改走与正文相同的 step4（Playwright+自动滑块）…"
         )
         try:
-            step4_html = Kr36RiskStep4Tool(self).fetch(
+            step4_html = SliderRiskTool(self).fetch(
                 url, log_phase="topics-activity-step4"
             )
         except Exception as error:  # noqa: BLE001
@@ -2550,7 +2572,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         self, url: str, listing_html: str
     ) -> str:
         """
-        搜索页轻量 Playwright 同专题/活动：无全量滑块；失败时接 ``Kr36RiskStep4Tool`` 与逻辑见
+        搜索页轻量 Playwright 同专题/活动：无全量滑块；失败时接 ``SliderRiskTool`` 与逻辑见
         ``_kr36_try_step4_after_topics_activity_listing_failed``。
         """
         if self.http_only_mode:
@@ -2563,7 +2585,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             try_step4 = True
         if not try_step4:
             return ""
-        from .risk_step4_tool import Kr36RiskStep4Tool
+        from utils.slider_solver.session import SliderRiskTool
 
         _append_kr36_debug_log(
             f"[kr36] search_step4_after_listing url={url} "
@@ -2574,7 +2596,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             "改走与正文相同的 step4（Playwright+自动滑块）…"
         )
         try:
-            step4_html = Kr36RiskStep4Tool(self).fetch(
+            step4_html = SliderRiskTool(self).fetch(
                 url, log_phase="search-listing-step4"
             )
         except Exception as error:  # noqa: BLE001
@@ -2597,13 +2619,13 @@ class Kr36SourceAdapter(ContentSourceAdapter):
 
         当 ``risk_verification_auto_solver=True``（且非 ``http_only_mode``）时，跳过轻量拉页，
         **直接**走与联调脚本（``run_kr36_auto_captcha_test``）相同的
-        ``Kr36RiskStep4Tool.fetch``（完整滑块会话），保证行为完全统一。
+        ``SliderRiskTool.fetch``（完整滑块会话），保证行为完全统一。
         """
         page_kind = _kr36_topics_activity_page_kind(url)
         if not page_kind:
             return ""
         if not self.http_only_mode and self.risk_verification_auto_solver:
-            from .risk_step4_tool import Kr36RiskStep4Tool
+            from utils.slider_solver.session import SliderRiskTool
 
             _append_kr36_debug_log(
                 f"[kr36] topics_activity_enrich_direct_step4 reason=auto_solver url={url} page_kind={page_kind}"
@@ -2612,7 +2634,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 f"[kr36] 专题/活动列表（{page_kind}）：auto_solver=true，"
                 "直接走 step4（与联调脚本相同路径）"
             )
-            return Kr36RiskStep4Tool(self).fetch(url, log_phase=f"topics-activity-step4-{page_kind}")
+            return SliderRiskTool(self).fetch(url, log_phase=f"topics-activity-step4-{page_kind}")
 
         enriched = self._playwright_kr36_topics_activity_listing_html(url, page_kind=page_kind)
         if enriched and _kr36_topics_activity_playwright_body_acceptable(enriched, page_kind=page_kind):
@@ -2829,7 +2851,12 @@ def _is_kr36_topic_detail_url(url: str) -> bool:
 
 
 def _is_kr36_detail_page_url(url: str) -> bool:
-    """文章详情页（/p/）或视频详情页（/video/）——区别于列表页，不应套用 CSR 列表壳判定。"""
+    """
+    文章或视频「详情」页：须为 ``/p/{id}`` 或 ``/video/{id}``（``id`` 非空）。
+
+    ``/video/``、``/p/`` 等列表索引只有两段路径前缀，**不算**详情页；此前误判会导致
+    视频列表被当作详情、提前 40s 断连，且与「Please wait…」壳页逻辑冲突。
+    """
     try:
         p = urlparse((url or "").strip())
     except Exception:
@@ -2837,11 +2864,27 @@ def _is_kr36_detail_page_url(url: str) -> bool:
     host = p.netloc.lower().split(":", 1)[0]
     if host not in ("36kr.com", "www.36kr.com"):
         return False
-    path = (p.path or "/").rstrip("/")
-    segments = path.split("/")
-    if len(segments) >= 2 and segments[1] in ("p", "video"):
-        return True
-    return False
+    raw = (p.path or "/").strip("/")
+    if not raw:
+        return False
+    segments = raw.split("/")
+    if len(segments) < 2:
+        return False
+    kind, rid = segments[0], segments[1]
+    if kind not in ("p", "video"):
+        return False
+    return bool(rid.strip())
+
+
+def _is_kr36_video_detail_page_url(url: str) -> bool:
+    """视频详情 ``/video/{id}``，用于 initialState 注入等；列表 ``/video/`` 为假。"""
+    if not _is_kr36_detail_page_url(url):
+        return False
+    try:
+        raw = urlparse((url or "").strip()).path.strip("/").split("/")
+        return bool(raw) and raw[0] == "video"
+    except Exception:
+        return False
 
 
 def _kr36_topics_listing_index_url(url: str) -> bool:
@@ -3635,23 +3678,6 @@ def _guess_file_extension_from_url(url: str, *, default: str) -> str:
     return default
 
 
-def _safe_path_component(value: str, *, fallback: str = "topic") -> str:
-    token = re.sub(r"[\\/:*?\"<>|]+", "_", str(value or "").strip())
-    token = token.strip(" .")
-    if not token:
-        token = fallback
-    return token[:80]
-
-
-def _safe_filename(value: str, *, fallback: str = "item") -> str:
-    token = re.sub(r"[\\/:*?\"<>|]+", "_", str(value or "").strip())
-    token = re.sub(r"\s+", "_", token)
-    token = token.strip("._")
-    if not token:
-        token = fallback
-    return token[:120]
-
-
 def _extract_activity_title(content: str) -> str:
     """从活动卡片内层 HTML 提取名称。"""
     m = KR36_ACTIVITY_TITLE_RE.search(content)
@@ -4049,7 +4075,7 @@ def _looks_like_captcha_or_block(html: str) -> bool:
     lowered = sample.lower()
     if not lowered:
         return True
-    # 用中文提示与验证码 DOM 类名等较稳定片段；见 slider_captcha 中 captcha-verify-image
+    # 用中文提示与验证码 DOM 类名等较稳定片段；见 utils.slider_solver.captcha 中 captcha-verify-image
     risk_tokens = (
         "captcha-verify",
         "verifycenter",
@@ -4128,7 +4154,7 @@ def _is_usable_html(html: str) -> bool:
 def _kr36_listing_requires_step4_recovery(url: str, html: str) -> bool:
     """
     列表页被拦或仅返回 CSR 壳时，``_looks_like_captcha_or_block`` 常为假（验证码文案未进首屏 HTML）。
-    此时与显式风控页一样应走 ``Kr36RiskStep4Tool.fetch``（滑块 + 回写 Cookie）。
+    此时与显式风控页一样应走 ``SliderRiskTool.fetch``（滑块 + 回写 Cookie）。
     """
     blob = html or ""
     if not blob.strip():
@@ -4202,39 +4228,6 @@ def _bool_config(value: Any, *, default: bool) -> bool:
     return default
 
 
-@contextmanager
-def kr36_debug_log_file(path: Path) -> Iterator[None]:
-    """本次抓取把 [kr36] 调试日志写入 path（如 kr36_report/.../kr36_fetch.log），结束后恢复。"""
-    global _kr36_debug_log_path_override
-    prev = _kr36_debug_log_path_override
-    _kr36_debug_log_path_override = path.resolve()
-    try:
-        yield
-    finally:
-        _kr36_debug_log_path_override = prev
-
-
-def _append_kr36_debug_log(message: str) -> None:
-    try:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        line = f"{timestamp} {message}"
-        log_file = _resolve_kr36_debug_log_file()
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-        with log_file.open("a", encoding="utf-8") as stream:
-            stream.write(f"{line}\n")
-        echo_stdout = str(os.getenv("KR36_LOG_ECHO_STDOUT", "0")).strip().lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }
-        if echo_stdout:
-            print(line)
-    except Exception:
-        # 调试日志不影响主流程。
-        return
-
-
 def _append_kr36_stage_log(*, action: str, stage_name: str, data_count: int, total_refs: int) -> None:
     """写入面向人工排查的中文阶段日志。"""
     _append_kr36_debug_log(
@@ -4242,11 +4235,4 @@ def _append_kr36_stage_log(*, action: str, stage_name: str, data_count: int, tot
     )
 
 
-def _resolve_kr36_debug_log_file() -> Path:
-    custom_log_file = os.getenv("KR36_LOG_FILE", "").strip()
-    if custom_log_file:
-        return Path(custom_log_file)
-    if _kr36_debug_log_path_override is not None:
-        return _kr36_debug_log_path_override
-    return KR36_DEBUG_LOG_FILE
 

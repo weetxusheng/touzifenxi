@@ -20,18 +20,17 @@ from utils.tools.llm import StructuredChatClient
 from utils.tools.output.briefing import write_step1_csv
 from utils.tools.runtime.checkpoint import StepCheckpointStore, checkpoint_path_for_step
 
-from . import names as kr36_names
-from .brief_assets import save_brief_preview_assets
-from .pipeline import run_stages_2_3_4
-from .settings import AppPaths, ensure_directories, resolve_paths
+from .core import names as kr36_names
+from .core.pipeline import run_stages_2_3_4
+from .core.settings import AppPaths, ensure_directories, resolve_paths
 from utils.tools.content_models import RawArticleRef
 
-from .source_adapter import (
+from .core.source_adapter import (
     Kr36SourceAdapter,
     effective_topic_item_kind_for_download,
     kr36_debug_log_file,
 )
-from .topic_fulltext_index import write_kr36_topic_fulltext_json
+from .topic.fulltext_index import write_kr36_topic_fulltext_json
 
 RUN_DIR_PREFIX = "kr36_search_"
 HOT_TOPICS_RUN_PREFIX = "kr36_hot_topics_"
@@ -215,7 +214,7 @@ def run_with_args(args: argparse.Namespace, *, paths: AppPaths | None = None) ->
         return
 
     if args.command == "export-content-reading":
-        from .content_fetch_document import write_content_fetch_reading_docs
+        from .topic.reading_docs import write_content_fetch_reading_docs
 
         cy = getattr(args, "content_yaml", None)
         run_dir_arg = getattr(args, "run_dir", None)
@@ -389,7 +388,7 @@ def _kr36_transcribe_output_paths(audio: Path) -> tuple[Path, Path]:
 
 
 def run_kr36_transcribe_audio(audio_path: Path) -> int:
-    from . import topic_focus_step15 as t15
+    from utils.steps import kr36_topic_focus_step15 as t15
 
     p = audio_path.resolve()
     if not p.is_file():
