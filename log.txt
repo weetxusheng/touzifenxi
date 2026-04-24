@@ -1,25 +1,5 @@
-[c114] 2026/04/22 周三 22:15:42.55 starting daily brief run (no email)...
+[c114] 2026/04/24 周五 12:36:44.85 starting daily brief run (no email)...
 [c114] PROJECT_ROOT=E:\AI\touzifenxi
 [c114] PYTHON_BIN=E:\AI\touzifenxi\.venv\Scripts\python.exe
-2026-04-23 10:10:00 [kr36] playwright_slider_start phase='auto-captcha-test' url=https://36kr.com/topics/ headless=true channel='msedge'
-2026-04-23 10:10:17 [kr36] playwright_slider_preloop phase='auto-captcha-test' url=https://36kr.com/topics/ wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
-2026-04-23 10:10:21 [kr36] playwright_slider_ok phase='auto-captcha-test' url=https://36kr.com/topics/ html_length=88025
-2026-04-23 10:12:59 [kr36] playwright_slider_start phase='auto-captcha-test' url=https://36kr.com/topics/ headless=false channel='msedge'
-2026-04-23 10:13:30 [kr36] playwright_slider_preloop phase='auto-captcha-test' url=https://36kr.com/topics/ wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
-2026-04-23 10:13:55 [kr36] playwright_slider_start phase='auto-captcha-test' url=https://36kr.com/topics/ headless=false channel='msedge'
-2026-04-23 10:14:18 [kr36] playwright_slider_preloop phase='auto-captcha-test' url=https://36kr.com/topics/ wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
-2026-04-23 10:14:19 [kr36] playwright_slider_error phase='auto-captcha-test' url=https://36kr.com/topics/ error=Page.wait_for_timeout: Target page, context or browser has been closed
-2026-04-23 10:40:15 [kr36] playwright_slider_start phase='auto-captcha-test' url=https://36kr.com/activity headless=false channel='msedge'
-2026-04-23 10:40:38 [kr36] playwright_slider_preloop phase='auto-captcha-test' url=https://36kr.com/activity wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
-2026-04-23 10:40:38 [kr36] playwright_slider_wait_ui phase='auto-captcha-test' url=https://36kr.com/activity ui_ready=true
-2026-04-23 10:40:56 [kr36] slider_captcha_solve_result attempted=true
-2026-04-23 10:40:56 [kr36] playwright_slider_attempt phase='auto-captcha-test' url=https://36kr.com/activity attempted=true
-2026-04-23 10:41:05 [kr36] playwright_slider_wait_ui phase='auto-captcha-test' url=https://36kr.com/activity ui_ready=true
-2026-04-23 10:41:09 [kr36] slider_captcha_solve_result attempted=true
-2026-04-23 10:41:09 [kr36] playwright_slider_attempt phase='auto-captcha-test' url=https://36kr.com/activity attempted=true
-2026-04-23 10:41:16 [kr36] playwright_slider_after_solve phase='auto-captcha-test' url=https://36kr.com/activity html_length=3244
-2026-04-23 10:41:16 [kr36] auto-captcha-test_ risk_post_success_dwell start_ms=8000
-2026-04-23 11:54:00 [kr36] search_date_filtered fixed_category=娴嬭瘯 pub=2021-09-05 window=2026-04-13~2026-04-19
-2026-04-23 11:54:00 [kr36] search_date_parse_failed fixed_category=娴嬭瘯 window=2026-04-13~2026-04-19 item_html_len=46 action=exclude
-2026-04-23 11:55:08 [kr36] search_date_filtered fixed_category=娴嬭瘯 pub=2021-09-05 window=2026-04-13~2026-04-19
-2026-04-23 11:55:08 [kr36] search_date_parse_failed fixed_category=娴嬭瘯 window=2026-04-13~2026-04-19 item_html_len=46 action=exclude
+[c114] per-request timeout=300s
+[c114] 2026/04/24 周五 13:09:51.28 finished with exit code 0.

@@ -5,6 +5,8 @@ from __future__ import annotations
 import csv
 import json
 import re
+import ssl
+import time
 from collections import Counter
 from dataclasses import asdict, dataclass, replace
 from datetime import date, datetime
@@ -13,11 +15,18 @@ from html.parser import HTMLParser
 from io import StringIO
 from pathlib import Path
 from typing import Iterable
-from urllib.parse import urljoin
+from urllib.error import URLError
+from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 
 from utils.tools.output.briefing import build_step1_csv_rows
 from .source_adapter import C114SourceAdapter
+
+# 与常见桌面 Chrome 接近，降低被对端提前截断 TLS（SSLEOFError）的概率。
+_FETCH_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
 
 ARTICLE_URL_RE = re.compile(r"https://www\.c114\.com\.cn/(?:[\w-]+/\d+|news/\d+)/a\d+\.html$")
 ASCII_WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9&.+-]{1,30}")
@@ -256,13 +265,46 @@ def strip_title_suffix(value: str) -> str:
     return TITLE_SUFFIX_RE.sub("", cleaned).strip()
 
 
-def fetch_text(url: str, timeout: float = 20.0) -> str:
+def _https_context() -> ssl.SSLContext:
+    """Prefer certifi CAs: some Windows hosts lack OpenSSL default paths and raise OSError/ENOENT on connect."""
+
+    try:
+        import certifi
+
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.load_verify_locations(certifi.where())
+        return context
+    except Exception:
+        return ssl.create_default_context()
+
+
+def fetch_text(url: str, timeout: float = 20.0, *, retries: int = 3) -> str:
     """Fetch a C114 page and decode it with the site's legacy encoding."""
 
-    request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(request, timeout=timeout) as response:
-        payload = response.read()
-    return payload.decode("gb18030", errors="ignore")
+    if retries < 1:
+        retries = 1
+    if urlparse(url).scheme == "https":
+        context = _https_context()
+    else:
+        context = None
+    headers = {
+        "User-Agent": _FETCH_UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    }
+    last_err: BaseException | None = None
+    for attempt in range(retries):
+        request = Request(url, headers=headers)
+        try:
+            with urlopen(request, timeout=timeout, context=context) as response:
+                payload = response.read()
+            return payload.decode("gb18030", errors="ignore")
+        except (URLError, OSError) as err:
+            last_err = err
+            if attempt >= retries - 1:
+                raise
+            time.sleep(1.0 * (2**attempt))
+    raise last_err  # pragma: no cover
 
 
 def filter_candidates_for_channel(html: str, channel: ChannelSpec) -> list[ArticleCandidate]:

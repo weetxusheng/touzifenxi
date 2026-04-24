@@ -23,6 +23,7 @@ from ..analysis.models import (
     SelectedDocument,
 )
 from ..analysis.validation import normalize_content_analysis_draft, normalize_content_analysis_topic_response
+from ..brief.links import bare_title_for_link_dedupe, brief_link_dedupe_key, has_ymd_in_title_or_pub
 from utils.tools.llm import (
     MiniMaxChatClient,
     StructuredLLMError,
@@ -536,6 +537,24 @@ def sanitize_step5_link_candidates(payload: ContentAnalysisInput) -> ContentAnal
 
     sanitized_categories: list[ContentAnalysisSection] = []
     for category in payload.categories:
+        seen_for_source_keys: set[str] = set()
+        source_label_keys: set[str] = set()
+        source_bare_titles: set[str] = set()
+        for item in category.items:
+            _nt = sanitize_link_text(item.original_title)
+            _npa = sanitize_link_text(item.original_published_at)
+            _nu = normalize_link_url(item.original_url)
+            _ks = (
+                bool(_nu)
+                and not is_probably_garbled(item.original_title)
+                and _nu not in seen_for_source_keys
+            )
+            if _ks:
+                seen_for_source_keys.add(_nu)
+                if _nt and not is_probably_garbled(item.original_title):
+                    source_label_keys.add(brief_link_dedupe_key(_nt, _npa))
+                    source_bare_titles.add(bare_title_for_link_dedupe(_nt))
+
         seen_source_urls: set[str] = set()
         seen_supplement_urls: set[str] = set()
         sanitized_items: list[ContentAnalysisItem] = []
@@ -557,11 +576,20 @@ def sanitize_step5_link_candidates(payload: ContentAnalysisInput) -> ContentAnal
             for selected in item.selected_contents:
                 normalized_selected_url = normalize_link_url(selected.url)
                 resolved_title = selected.document.title or selected.result_title
+                r_title = sanitize_link_text(resolved_title or "")
+                r_pub = sanitize_link_text(selected.published_at)
+                dedupe_key = brief_link_dedupe_key(r_title, r_pub)
+                fuzzy_dup = (
+                    not has_ymd_in_title_or_pub(r_title, r_pub)
+                    and bare_title_for_link_dedupe(r_title) in source_bare_titles
+                )
                 if (
                     not normalized_selected_url
                     or is_probably_garbled(resolved_title)
                     or normalized_selected_url in seen_source_urls
                     or normalized_selected_url in seen_supplement_urls
+                    or dedupe_key in source_label_keys
+                    or fuzzy_dup
                 ):
                     continue
                 seen_supplement_urls.add(normalized_selected_url)

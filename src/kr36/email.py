@@ -50,9 +50,11 @@ BUCKET_ACTIVITY = "活动"
 BUCKET_INFO = "资讯"
 # 活动区默认最多展示条数；已结束场次于展示前筛除（见 _is_kr36_activity_ended）。
 KR36_ACTIVITY_VISIBLE_MAX = 8
-# 专题栏头「描述」约此字数内截断。
+# 通用栏头截断默认（单段兜底）；专题 step5 跨 category 总述见下。
 KR36_TOPIC_INFO_SECTION_BLURB_MAX_CHARS = 200
-# 资讯栏总览：聚合全部子项结论，篇幅更长，接近「本期资讯一条总观点」。
+# 邮件里专题「运行摘要 + rollup」合并后再截断，须大于下方资讯 rollup 上限以容纳导言。
+KR36_TOPIC_BRIEF_SUMMARY_MAX_CHARS = 720
+# 资讯栏总览；专题 step5 跨 category 总述与之共用上限（勿用默认 200 字，否则栏头只够写第一节）。
 KR36_INFO_SECTION_BLURB_MAX_CHARS = 520
 # 资讯逐条观点（omit 源地址 HTML）：与栏头总述同量级，避免 260 字硬截断。
 KR36_INFO_VIEWPOINT_MAX_CHARS = 520
@@ -1507,6 +1509,19 @@ def _rollup_phrase_from_step5_item(item: Any, *, max_chars: int = 40) -> str:
     return _clip_readable_text(phrase, max(12, max_chars), min_chars=12).rstrip("。")
 
 
+def _rollup_join_phrases(phrases: list[str], *, cap: int, sep: str) -> tuple[str, str]:
+    """将多条结论短语拼成栏头一句；专题与资讯均用分号衔接，便于概述下方多文。"""
+    n = max(1, cap)
+    cleaned: list[str] = []
+    for p in phrases[:n]:
+        q = (p or "").strip().rstrip("。；; ")
+        if q:
+            cleaned.append(q)
+    lead = sep.join(cleaned)
+    suffix = "等" if len(phrases) > n else ""
+    return lead, suffix
+
+
 def _synthesize_step5_bucket_rollup(
     step6_path: Path | None,
     *,
@@ -1518,7 +1533,7 @@ def _synthesize_step5_bucket_rollup(
     blurb_max_chars: int | None = None,
     resolved_channel_allowlist: frozenset[str] | None = None,
 ) -> str:
-    """按 step5 各分类生成栏头总述：聚合每条短语；资讯栏可提高 phrase 数量与单条长度。"""
+    """按 step5 各分类生成栏头总述：聚合结论短语成叙事概述，不报条数、不写「主线包括」。"""
     if step6_path is None:
         return ""
     umap = _build_url_article_map(_load_articles(step6_path))
@@ -1557,13 +1572,13 @@ def _synthesize_step5_bucket_rollup(
             if not phrases:
                 continue
             cap = max(1, max_phrases_per_category)
-            lead = "、".join(phrases[:cap])
-            suffix = "等" if len(phrases) > cap else ""
-            parts.append(f"「{tname}」共{len(rows)}条，主线包括{lead}{suffix}。")
+            lead, suffix = _rollup_join_phrases(phrases, cap=cap, sep="；")
+            if not lead:
+                continue
+            parts.append(f"「{tname}」{lead}{suffix}。")
         if not parts:
             return ""
-        joiner = "；" if bucket == BUCKET_INFO else " "
-        merged = _normalize_sentence(joiner.join(parts))
+        merged = _normalize_sentence("；".join(parts))
         limit = blurb_max_chars if blurb_max_chars is not None else KR36_TOPIC_INFO_SECTION_BLURB_MAX_CHARS
         return _section_blurb_cap(merged, max_chars=limit)
     return ""
@@ -1571,21 +1586,25 @@ def _synthesize_step5_bucket_rollup(
 
 def _synthesize_step5_topic_rollup_from_all_topic_items(step6_path: Path | None) -> str:
     """
-    按 step5 中每个 `category`（专题线）下所有「栏目=专题」子项，拼成一段总述，
-    覆盖该专题下全部文章的分析要点，用于栏头 `section-summary`；返回前已压到约 200 字内。
+    按 step5 每个专题 `category` 下「栏目=专题」子项，拼栏头 `section-summary`：
+    与资讯同款——用各文结论文以分号串联成概述，**不写**条数与「主线包括」；
+    多档 category 之间也用分号衔接；总字数上限与资讯栏头同为 ``KR36_INFO_SECTION_BLURB_MAX_CHARS``（避免默认 200 字只覆盖第一节）。
     """
     return _synthesize_step5_bucket_rollup(
         step6_path,
         bucket=BUCKET_TOPIC,
         default_topic_name="专题",
         require_original_text=False,
+        max_phrases_per_category=8,
+        blurb_max_chars=KR36_INFO_SECTION_BLURB_MAX_CHARS,
         resolved_channel_allowlist=frozenset({BUCKET_TOPIC}),
     )
 
 
 def _synthesize_step5_info_rollup_from_all_info_items(step6_path: Path | None) -> str:
     """
-    每档 category 下所有「栏目=资讯」且有效原文子项，拼成一段总观点式栏头（多子类、多要点、字数上限更高）。
+    每档 step5 ``category`` 下「栏目=资讯」子项的结论短语，拼资讯栏头：叙事概述、不报条数；
+    短语之间用分号衔接，仍受总字数上限约束（非原文照搬）。
     """
     return _synthesize_step5_bucket_rollup(
         step6_path,
@@ -1878,7 +1897,7 @@ def _build_omit_info_comprehensive_summary(
     intro_text: str = "",
     max_chars: int = KR36_INFO_SECTION_BLURB_MAX_CHARS,
 ) -> str:
-    """资讯多条时给出可读总述（覆盖更多条目要点）；单条不展示总结。"""
+    """资讯多条时的栏头 fallback：用结论文分号串联成概述，不报条数、不套「主线包括」。"""
     if len(points) <= 1:
         return ""
 
@@ -1894,11 +1913,13 @@ def _build_omit_info_comprehensive_summary(
         if hv and hv not in heads:
             heads.append(_trim_text(hv, 56))
 
-    focus = "、".join(topics[:8]) if topics else "本期重点资讯"
-    core = "；".join(heads[:8]) if heads else ""
-    summary = f"本批资讯共{len(points)}条，综合主线：{focus}。"
-    if core:
-        summary += f"主要判断包括：{core}。"
+    cleaned_heads = [h.strip().rstrip("。；; ") for h in heads[:8] if (h or "").strip()]
+    if cleaned_heads:
+        summary = "；".join(cleaned_heads) + "。"
+    elif topics:
+        summary = "；".join(t.strip().rstrip("。；; ") for t in topics[:8]) + "。"
+    else:
+        summary = "本期资讯要点并列呈现，详见下列观点。"
     intro = (intro_text or "").strip()
     if intro:
         summary = f"{intro} {summary}"
@@ -2830,7 +2851,9 @@ def render_kr36_brief_email(
             intro_text=section_intros.get("topic", ""),
             raw_article_count=len(topic_articles),
         )
-    topic_summary = _section_blurb_cap(topic_summary, max_chars=500)
+    topic_summary = _section_blurb_cap(
+        topic_summary, max_chars=KR36_TOPIC_BRIEF_SUMMARY_MAX_CHARS
+    )
 
     if omit_source_links:
         # 活动区在邮件卡片里直接展示原始活动信息，不再渲染总结概览。

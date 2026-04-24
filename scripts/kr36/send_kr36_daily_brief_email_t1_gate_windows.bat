@@ -1,8 +1,8 @@
 @echo off
 setlocal EnableExtensions
 
-rem Send latest 36Kr T-1 brief email after loading env vars from .env.
-rem Gate ensures only brief generated after today's gate-time can be sent.
+rem Send latest 36Kr T-1 brief after loading .env. Gate: brief mtime not before gate (Shanghai).
+rem Same-dir kr36_step_*_brief_*.html must exist (enforced in send-kr36-latest-brief-email).
 
 set "MAIL_TO_LIST=zx944532395@sina.com chenxusheng@cjhxfund.com"
 set "T1_GATE_TIME=15:00"

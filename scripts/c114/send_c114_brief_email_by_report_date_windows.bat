@@ -1,12 +1,11 @@
 @echo off
 setlocal EnableExtensions
 
-rem Send T-1 C114 brief when task runs. Requires .env SMTP.
-rem Same-dir c114_step_6_brief_YYYYMMDD.html must exist (enforced in send-c114-latest-brief-email).
-rem Gate: step6 .md mtime not before gate-time today (Shanghai).
+rem Send C114 step6 brief for report date. Usage: this.bat [YYYY-MM-DD]
+rem No arg: use T-1 calendar day in Asia/Shanghai (same idea as c114 T-1 brief).
 
+set "REPORT_DATE=%~1"
 set "MAIL_TO_LIST=zx944532395@sina.com chenxusheng@cjhxfund.com liuyangcj@cjhxfund.com"
-set "T1_GATE_TIME=11:56"
 
 for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
 
@@ -18,15 +17,24 @@ if not defined PYTHON_BIN (
   )
 )
 
+if exist "%PROJECT_ROOT%\.venv\Scripts\touzifenxi.exe" (
+  set "TFX=%PROJECT_ROOT%\.venv\Scripts\touzifenxi.exe"
+) else (
+  set "TFX=touzifenxi"
+)
+
 cd /d "%PROJECT_ROOT%"
 set "PYTHONPATH=src"
 
+if "%REPORT_DATE%"=="" (
+  for /f "delims=" %%D in ('"%PYTHON_BIN%" -c "from datetime import datetime, timedelta, timezone; s = timezone(timedelta(hours=8)); print((datetime.now(s) - timedelta(days=1)).date().isoformat())"') do set "REPORT_DATE=%%D"
+)
+
 call :load_dotenv
 
-echo [C114 mail] mode=t1-gate gate=%T1_GATE_TIME% recipients=%MAIL_TO_LIST%
-"%PYTHON_BIN%" -m touzifenxi.cli send-c114-latest-brief-email --t1-gate --gate-time %T1_GATE_TIME% --to %MAIL_TO_LIST%
+echo [C114 mail] report-date=%REPORT_DATE% recipients=%MAIL_TO_LIST%
+"%TFX%" send-c114-latest-brief-email --report-date %REPORT_DATE% --to %MAIL_TO_LIST%
 set "EXIT_CODE=%ERRORLEVEL%"
-
 echo [C114 mail] exit=%EXIT_CODE%
 endlocal & exit /b %EXIT_CODE%
 

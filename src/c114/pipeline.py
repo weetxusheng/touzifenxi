@@ -73,6 +73,13 @@ def send_latest_c114_brief_email(
         )
 
     step6_path = candidates[0]
+    html_path = step6_path.with_suffix(".html")
+    if not html_path.is_file():
+        return EmailSendResult(
+            succeeded=False,
+            step6_path=str(step6_path),
+            error_detail=f"同目录缺少与 step6 配套的 HTML，请先生成后再发信: {html_path}",
+        )
 
     if require_modified_not_before is not None:
         mtime = datetime.fromtimestamp(step6_path.stat().st_mtime, tz=_SHANGHAI)

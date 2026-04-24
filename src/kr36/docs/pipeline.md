@@ -30,7 +30,32 @@
 - `src/kr36/pipeline.py`：步骤 2–4 编排
 - `src/kr36/synthetic_workflow_from_step1.py`：用 `ArticleAnalysis` 构造与「无外搜」等价的拉取计划
 - `src/kr36/names.py`：文件名约定
-- `src/kr36/brief_assets.py`：HTML/邮件侧导出
+- `src/kr36/brief_assets.py`：由 Step6 Markdown 生成 HTML / 纯文本 / doc 预览（内部调用 `email.render_kr36_brief_email`）
+- `src/kr36/email.py`：固定三栏（专题 / 活动 / 资讯）邮件与预览 HTML 的排版与 step5 对齐逻辑
+
+## 简报与邮件渲染（`email.py` + `brief_assets`）
+
+Pipeline 落盘 `kr36_step_6_brief_*.md`（或与运行目录一致的 step6 简报）后，可用 `save_brief_preview_assets(step6_path, markdown_text)` 生成同 stem 的 `.html`、`*_email.txt`、`*_doc.html`。渲染通常带 `omit_source_links=True`：**不展示源地址列表**，专题 / 资讯列表正文来自 **step5** `kr36_step_5_content_analysis_*.yaml`（与 step6 同目录、日期对齐），并依赖同目录 `kr36_hot_topics_*.json` 做 URL→栏目归桶（无 hot 时以 step5 条目的 `channel` 为准，避免资讯整栏被清空）。
+
+### 栏头 `section-summary`（专题与资讯）
+
+- 优先使用 step5 汇总：`_synthesize_step5_topic_rollup_from_all_topic_items` / `_synthesize_step5_info_rollup_from_all_info_items`，从各篇分析中抽取 **结论文**（`_rollup_phrase_from_step5_item`，对应提示词里 summary **冒号前** 的 25～40 字结论），再拼接成概述。
+- **不写**「共 N 条」「主线包括」等元句式；同一专题线（或资讯下同一 `category`）内多条结论文用 **`；`** 串联；**多档** `category` 拼成一段栏头时，块与块之间也用 **`；`**。step5 rollup 截断上限与资讯同为 **`KR36_INFO_SECTION_BLURB_MAX_CHARS`（520）**，避免误用默认 200 字导致栏头只剩第一节；邮件里专题栏头合并运行摘要后再经 **`KR36_TOPIC_BRIEF_SUMMARY_MAX_CHARS`（720）** 截断。
+- 无 step5 可用 rollup 时，资讯栏头可走 `_build_omit_info_comprehensive_summary`（仍以结论文分号串联，不报条数）。
+
+### 列表正文（专题 / 资讯）
+
+- 有 step5 时：专题与资讯均为 **子类分块**（资讯子类为 **36氪独家 / AI / 创投**，与 step1 栏目一致）+ `ol.viewpoints-list` 逐条观点。
+- 每条结构：**可点击链文** + 全角冒号 + **内联展开**；`href` 始终为该条 **原文 URL**。链上可见文字优先为 summary 可拆出的 **观点句（冒号前）**，与专题一致；**不用** `original_title` 顶替观点（除非无法从摘要拆出结论时再回退标题）。
+- 活动区在 omit 模式下一般为卡片列表，逻辑单独分支。
+
+### 提示词与结论句长度
+
+- Step5 系统提示：`src/kr36/prompts/content-analysis-agent.md`（summary **单行** `结论：展开`，结论 **25～40 字**）。
+- Step6 简报：`src/kr36/prompts/brief-agent.md`（核心判断小观点中的「核心结论」与 step5 结论句尺度对齐）。
+- 批量补全时用户侧补强：`utils/tools/steps/step5_content_analysis.py` 中 `KR36_STEP5_USER_HINT` 与上述一致。
+
+若仅改排版或栏头规则、**不**重跑 LLM，可只更新 `email.py` 后重新执行 `save_brief_preview_assets`；要让结论文本身变长/变短，需重跑 step5 / step6 以刷新 YAML / Markdown。
 
 ## 专题聚焦 Step 1.5（与上表「四步」并行的一条专题链）
 

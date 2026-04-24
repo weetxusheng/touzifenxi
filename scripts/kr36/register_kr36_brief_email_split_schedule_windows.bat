@@ -1,24 +1,24 @@
 @echo off
 setlocal EnableExtensions
 
-rem Register two daily tasks: send C114 step6 brief by report date (loads .env).
-rem Default: 10:00 and 11:20. Usage:
-rem   register_c114_split_schedule_windows.bat [TIME1] [TIME2] [TASK1_NAME] [TASK2_NAME]
+rem Register two daily tasks: send 36Kr brief by report date (loads .env).
+rem Default times: 10:00 and 11:20. Usage:
+rem   register_kr36_brief_email_split_schedule_windows.bat [TIME1] [TIME2] [TASK1_NAME] [TASK2_NAME]
 
 set "TIME1=%~1"
 if "%TIME1%"=="" set "TIME1=10:00"
 set "TIME2=%~2"
 if "%TIME2%"=="" set "TIME2=11:20"
 set "TASK1=%~3"
-if "%TASK1%"=="" set "TASK1=touzifenxi-c114-brief-email-1000"
+if "%TASK1%"=="" set "TASK1=touzifenxi-kr36-brief-email-1000"
 set "TASK2=%~4"
-if "%TASK2%"=="" set "TASK2=touzifenxi-c114-brief-email-1120"
+if "%TASK2%"=="" set "TASK2=touzifenxi-kr36-brief-email-1120"
 
-set "MAIL_SCRIPT=%~dp0send_c114_brief_email_by_report_date_windows.bat"
+set "MAIL_SCRIPT=%~dp0send_kr36_brief_email_by_report_date_windows.bat"
 
 if not exist "%MAIL_SCRIPT%" echo [ERROR] Missing: "%MAIL_SCRIPT%" & exit /b 1
 
-echo [INFO] Register two daily mail tasks (send_c114_brief_email_by_report_date_windows)...
+echo [INFO] Register two daily 36Kr mail tasks (send_kr36_brief_email_by_report_date_windows)...
 echo        %TIME1% ^| "%TASK1%" ^| "%MAIL_SCRIPT%"
 echo        %TIME2% ^| "%TASK2%" ^| "%MAIL_SCRIPT%"
 
