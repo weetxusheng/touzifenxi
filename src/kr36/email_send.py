@@ -75,6 +75,14 @@ def send_latest_kr36_brief_email(
             error_detail=f"未找到 {report_date.strftime('%Y%m%d')} 的 36Kr 简报 Markdown 文件",
         )
 
+    html_path = brief_md_path.with_suffix(".html")
+    if not html_path.is_file():
+        return EmailSendResult(
+            succeeded=False,
+            step6_path=str(brief_md_path),
+            error_detail=f"同目录缺少与简报配套的 HTML，请先生成后再发信: {html_path}",
+        )
+
     if require_modified_not_before is not None:
         modified_at = datetime.fromtimestamp(brief_md_path.stat().st_mtime, tz=_SHANGHAI)
         if modified_at < require_modified_not_before:

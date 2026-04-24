@@ -38,6 +38,9 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+  "c114_network: live fetch to c114 (requires C114_NETWORK_TEST=1)",
+]
 
 [tool.ruff]
 target-version = "py39"
