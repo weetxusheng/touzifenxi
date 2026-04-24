@@ -519,7 +519,7 @@ def _should_run_kr36_step4_playwright_bypass(
     *,
     kr36_step4_risk_playwright: bool,
 ) -> bool:
-    """36kr 直抓「失败或疑似风控/验证页」时，交由 Playwright+滑块（见 `kr36.step4_risk`）。"""
+    """36kr 直抓失败或疑似风控时，交由 Playwright+滑块兜底。"""
 
     if not kr36_step4_risk_playwright or not _is_36kr_url(url):
         return False
@@ -574,7 +574,7 @@ def fetch_url_content(
             f"[kr36] fetch_url_content: 直抓未获得有效正文，进入浏览器自动验证（Playwright+滑块）: "
             f"url={url} status={last.fetch_status!r} err={last.fetch_error!r} title={_title_preview}"
         )
-        from kr36.step4_risk import try_36kr_step4_html_after_risk
+        from utils.slider_solver.kr36_bridge import try_36kr_step4_html_after_risk
         from kr36.source_adapter import _is_usable_html
 
         html_pw = try_36kr_step4_html_after_risk(url)

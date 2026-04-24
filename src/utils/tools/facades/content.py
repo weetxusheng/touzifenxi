@@ -57,7 +57,7 @@ from ..content.yaml_io import (
     save_content_results,
     search_workflow_to_search_results_input,
 )
-from ..steps.step4_content_fetch import run_content_fetch_workflow, validate_content_fetch_inputs
+from utils.steps.step4_content_fetch import run_content_fetch_workflow, validate_content_fetch_inputs
 
 __all__ = [
     "AliyunIQSClient",

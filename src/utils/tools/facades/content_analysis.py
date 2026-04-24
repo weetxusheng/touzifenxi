@@ -36,7 +36,7 @@ from ..analysis.yaml_io import (
 from ..brief.links import format_brief_link_line, infer_brief_title, infer_related_step3_path
 from ..brief.markdown import build_brief_runtime_summary, render_brief_markdown, render_generated_brief_markdown
 from ..brief.render import escape_yaml, render_analysis_list, render_layer_issues_yaml
-from ..steps.step5_content_analysis import (
+from utils.steps.step5_content_analysis import (
     auto_complete_content_analysis,
     build_content_analysis_prompt_payload,
     build_content_analysis_topic_prompt_payload,
@@ -51,7 +51,7 @@ from ..steps.step5_content_analysis import (
     split_content_analysis_items_for_topic,
     truncate_html_fallback_prompt_text,
 )
-from ..steps.step6_brief import (
+from utils.steps.step6_brief import (
     auto_complete_brief_sections,
     brief_section_draft_from_dict,
     brief_section_draft_to_dict,

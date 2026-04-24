@@ -65,7 +65,7 @@ def write_analysis_outputs(
 ) -> list[SearchChecklistItem]:
     """Persist the analysis CSV and, when available, the step 2 checklist YAML."""
 
-    from ..steps.step2_keywords import (
+    from utils.steps.step2_keywords import (
         apply_step2_checkpoint_results,
         autofill_search_checklist_items,
         build_search_checklist_items,

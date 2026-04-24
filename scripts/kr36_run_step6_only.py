@@ -19,7 +19,7 @@ STEP5_CANON = "kr36_step_5_content_analysis"
 LEGACY_STEP3 = "kr36_step3_analysis"
 STEP6_PREFIX = "kr36_step_6_brief"
 
-from kr36.brief_assets import save_brief_preview_assets  # noqa: E402
+from kr36.emailing.preview_assets import save_brief_preview_assets  # noqa: E402
 from utils.tools.facades.content_analysis import (  # noqa: E402
     generate_brief_markdown,
     load_content_analysis_inputs,
