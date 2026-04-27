@@ -1,0 +1,4 @@
+interface:
+  display_name: "文件对照"
+  short_description: "比较章节型 Word 文档，输出按章节整理的修订对照表"
+  default_prompt: "使用 $file-comparison 时，先阅读 skill 根目录下的 SKILL.md，重点看适用场景、最小可运行路径、配置硬门槛、输出产物、目录说明和分发约束。这个 skill 支持两种正式入口：`python scripts/file_comparison.py` 用于单次对照生成，`python scripts/file_comparison_web.py` 用于批量上传、自动配对、发起任务和轮询结果。默认会先做本地章节预处理，再按 `chapter_batch_size` 把章节分批送给 minimax、kimi-code、deepseek-ark 三模型链路比较，批次首发 provider 按轮转顺序选择，全部失败后回退到本地规则 diff。运行前先复制 `config/runtime.example.json` 为 `config/runtime.local.json`，再补齐模型 API key；若只想走最小可运行路径，可把 `llm_mode` 设为 `rule`，此时不依赖外部模型。若走 `responses` 模式，则至少需要第一顺位 provider 的 API key；要启用完整 failover，需要三条 provider 配置都可用。页面和模型请求都会受到本地网络、代理、SSL 证书链影响，若出现连接异常，先检查 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY`、`SSL_CERT_FILE`。后续若修改 provider 链、输出目录结构、checkpoint 契约或脚本入口，必须同步更新 SKILL.md 和 config/README.md。"

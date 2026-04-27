@@ -1,0 +1,91 @@
+{
+  "llm_mode": "responses",
+  "execution": {
+    "per_pair_max_workers": 2
+  },
+  "llm": {
+    "provider": "minimax",
+    "model": "MiniMax-M2.7",
+    "api_key": "",
+    "api_key_env": "MINIMAX_API_KEY",
+    "base_url": "https://api.minimaxi.com/v1",
+    "timeout_seconds": 180.0,
+    "max_retries": 2,
+    "retry_backoff_seconds": 2.0,
+    "min_interval_seconds": 2.0,
+    "providers": [
+      {
+        "provider": "minimax",
+        "model": "MiniMax-M2.7",
+        "api_key": "",
+        "api_key_env": "MINIMAX_API_KEY",
+        "base_url": "https://api.minimaxi.com/v1",
+        "timeout_seconds": 180.0,
+        "max_retries": 2,
+        "retry_backoff_seconds": 2.0,
+        "min_interval_seconds": 2.0
+      },
+      {
+        "provider": "kimi-code",
+        "model": "kimi-for-coding",
+        "api_key": "",
+        "api_key_env": "KIMI_CODE_API_KEY",
+        "base_url": "https://api.kimi.com/coding",
+        "timeout_seconds": 180.0,
+        "max_retries": 2,
+        "retry_backoff_seconds": 2.0,
+        "min_interval_seconds": 2.0
+      },
+      {
+        "provider": "deepseek-ark",
+        "model": "ep-20260415114137-55jp7",
+        "api_key": "",
+        "api_key_env": "ARK_API_KEY",
+        "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+        "timeout_seconds": 180.0,
+        "max_retries": 2,
+        "retry_backoff_seconds": 2.0,
+        "min_interval_seconds": 2.0
+      }
+    ],
+    "chapter_batch_size": 4,
+    "retry": {
+      "honor_retry_after": true,
+      "jitter_seconds": 0.5
+    },
+    "retry_classifier": {
+      "parse_max_attempts": 2,
+      "infra_max_attempts": 2,
+      "postprocess_max_attempts": 2,
+      "fatal_max_attempts": 1
+    },
+    "concurrency": {
+      "default": 1,
+      "providers": {
+        "minimax": 1,
+        "kimi-code": 1,
+        "deepseek-ark": 1
+      }
+    },
+    "task_routing": {
+      "enabled": true,
+      "batch_compare": [
+        "minimax",
+        "kimi-code",
+        "deepseek-ark"
+      ]
+    }
+  },
+  "paths": {
+    "output_mode": "skill",
+    "output_root": "output/file-comparison/runs"
+  },
+  "pairing": {
+    "month_pattern": "(?P<month>\\d{1,2})月"
+  },
+  "ui": {
+    "poll_interval_seconds": 2.0,
+    "host": "127.0.0.1",
+    "port": 8765
+  }
+}

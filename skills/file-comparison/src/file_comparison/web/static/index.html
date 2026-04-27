@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>文件对照任务</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd@5/dist/reset.css" />
+  <style>
+    :root {
+      --page-bg: linear-gradient(180deg, #f6f8fc 0%, #e7f0ff 100%);
+      --card-shadow: 0 18px 48px rgba(26, 54, 93, 0.12);
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background: var(--page-bg);
+    }
+    #root {
+      min-height: 100vh;
+    }
+    .page-shell {
+      padding: 28px;
+    }
+    .hero-card {
+      border-radius: 24px;
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top right, rgba(22, 119, 255, 0.18), transparent 32%),
+        linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
+    }
+    .drop-zone .ant-upload {
+      padding: 28px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/antd@5/dist/antd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
