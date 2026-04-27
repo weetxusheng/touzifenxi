@@ -95,9 +95,15 @@ def fetch_page_html_with_playwright_slider(
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
         from playwright.sync_api import sync_playwright
-    except ImportError:
+    except ImportError as error:
         sa._append_kr36_debug_log(
-            f"[slider] playwright_slider_skip reason=missing_playwright phase={log_phase!r}"
+            f"[slider] playwright_slider_skip reason=missing_playwright phase={log_phase!r} "
+            f"error={type(error).__name__}: {error}"
+        )
+        print(
+            f"[slider] Playwright 导入失败 phase={log_phase!r}: "
+            f"{type(error).__name__}: {error}",
+            flush=True,
         )
         return ""
     max_rr = int(getattr(adapter, "risk_max_recovery_rounds_per_url", 3) or 3)

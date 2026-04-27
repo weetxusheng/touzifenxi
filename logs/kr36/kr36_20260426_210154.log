@@ -1,0 +1,150 @@
+[kr36] 2026-04-26 21:01:54 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=e:\AI\touzifenxi
+[kr36] PYTHON_CMD="e:\AI\touzifenxi\.venv\Scripts\python.exe"
+[kr36] TIMEOUT=50s
+[kr36] LOG_FILE=e:\AI\touzifenxi\logs\kr36\kr36_20260426_210154.log
+[kr36] running: "e:\AI\touzifenxi\.venv\Scripts\python.exe" scripts\websearch.py run --source 36kr --timeout 50
+2026-04-26 21:01:55 [kr36] cookie_quality sensors_short len=481
+2026-04-26 21:01:55 [kr36] listing_begin report_date=2026-04-26 rounds_total=5 candidate_limit=120 mode=sequential step0.5_then_step1
+2026-04-26 21:01:55 [kr36] step0.5_topic_round_start page=1 round=1/5 stage=topics url=https://36kr.com/topics/
+2026-04-26 21:01:55 [kr36] 进入专题页(0.5步)，数据 0 条，累计 0 条
+2026-04-26 21:01:55 [kr36] fetch_start url=https://36kr.com/topics/
+2026-04-26 21:01:56 [kr36] fetch_ok method=curl url=https://36kr.com/topics/ html_length=74118
+2026-04-26 21:01:56 [kr36] throttle_wait url=https://36kr.com/topics/3780490016134406 wait_ms=27930 global_wait_ms=27930 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:02:24 [kr36] fetch_start url=https://36kr.com/topics/3780490016134406
+2026-04-26 21:02:24 [kr36] fetch_ok method=curl url=https://36kr.com/topics/3780490016134406 html_length=75711
+2026-04-26 21:02:24 [kr36] throttle_wait url=https://36kr.com/video/3775108051513856 wait_ms=22809 global_wait_ms=22809 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:02:47 [kr36] fetch_start url=https://36kr.com/video/3775108051513856
+2026-04-26 21:02:47 [kr36] fetch_ok method=curl url=https://36kr.com/video/3775108051513856 html_length=14308
+2026-04-26 21:02:47 [kr36] throttle_wait url=https://m.36kr.com/video/3775108051513856 wait_ms=20492 global_wait_ms=20492 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:03:08 [kr36] fetch_start url=https://m.36kr.com/video/3775108051513856
+2026-04-26 21:03:08 [kr36] fetch_ok method=curl url=https://m.36kr.com/video/3775108051513856 html_length=14308
+2026-04-26 21:03:08 [kr36] topic_video_mobile_no_cdn page='https://m.36kr.com/video/3775108051513856' mobile_len=14308
+2026-04-26 21:03:08 [kr36] topic_video_no_cdn_in_html page='https://36kr.com/video/3775108051513856' try_playwright reason=small_shell_len=14308
+2026-04-26 21:03:08 [kr36] topic_video_playwright_recover reason=no_cdn_in_html page='https://36kr.com/video/3775108051513856'
+2026-04-26 21:03:09 [slider] playwright_slider_start phase='step4-video-nocookie' url=https://36kr.com/video/3775108051513856 headless=false channel='msedge'
+2026-04-26 21:03:18 [slider] playwright_skip_cookies phase='step4-video-nocookie' url=https://36kr.com/video/3775108051513856
+2026-04-26 21:03:29 [slider] playwright_slider_url_settled phase='step4-video-nocookie' final_url='https://36kr.com/video/3775108051513856'
+2026-04-26 21:03:29 [slider] playwright_slider_preloop phase='step4-video-nocookie' url=https://36kr.com/video/3775108051513856 wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
+2026-04-26 21:03:34 [slider] playwright_slider_ok phase='step4-video-nocookie' url=https://36kr.com/video/3775108051513856 html_length=70160
+2026-04-26 21:03:35 [kr36] topic_video_playwright_nocookie_ok page='https://36kr.com/video/3775108051513856' html_len=70160
+2026-04-26 21:03:35 [kr36] topic_video_cdn_extract count=7 html_len=70160 preview='https://videos.36krcdn.com/20260420/v2_1776686255537_video_mp4_v11' page='https://36kr.com/video/3775108051513856'
+2026-04-26 21:03:56 [kr36] topic_video_download_ok cdn='https://videos.36krcdn.com/20260420/v2_1776686255537_video_mp4_v11' local=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-21\videos\氪大事___三五百的蛋糕外包价不到80，蛋糕店为什么成了幽灵外卖的重灾区？_36kr_topic_video_3775108051513856.mp4
+2026-04-26 21:04:04 [kr36] topic_asr_ok chars=1186 transcript=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-21\videos\氪大事___三五百的蛋糕外包价不到80，蛋糕店为什么成了幽灵外卖的重灾区？_36kr_topic_video_3775108051513856.transcript.txt code=20000000 role=topic_video_asr_transcript
+2026-04-26 21:04:04 [kr36] fetch_start url=https://36kr.com/video/3773069882356484
+2026-04-26 21:04:05 [kr36] fetch_ok method=curl url=https://36kr.com/video/3773069882356484 html_length=59245
+2026-04-26 21:04:05 [kr36] topic_video_cdn_extract count=7 html_len=59245 preview='https://videos.36krcdn.com/20260419/v2_1776561497102_video_mp4_v9' page='https://36kr.com/video/3773069882356484'
+2026-04-26 21:04:24 [kr36] topic_video_download_ok cdn='https://videos.36krcdn.com/20260419/v2_1776561497102_video_mp4_v9' local=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-20\videos\全球医疗价值重估_老外涌进中国医院_36kr_topic_video_3773069882356484.mp4
+2026-04-26 21:04:37 [kr36] topic_asr_ok chars=1078 transcript=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-20\videos\全球医疗价值重估_老外涌进中国医院_36kr_topic_video_3773069882356484.transcript.txt code=20000000 role=topic_video_asr_transcript
+2026-04-26 21:04:37 [kr36] throttle_wait url=https://36kr.com/video/3777825420063241 wait_ms=4943 global_wait_ms=4943 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:04:42 [kr36] fetch_start url=https://36kr.com/video/3777825420063241
+2026-04-26 21:04:42 [kr36] fetch_ok method=curl url=https://36kr.com/video/3777825420063241 html_length=60654
+2026-04-26 21:04:42 [kr36] topic_video_cdn_extract count=7 html_len=60654 preview='https://videos.36krcdn.com/20260422/v2_1776851856830_video_mov_v11' page='https://36kr.com/video/3777825420063241'
+2026-04-26 21:04:56 [kr36] topic_video_download_ok cdn='https://videos.36krcdn.com/20260422/v2_1776851856830_video_mov_v11' local=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-22\videos\80后湖北老乡，拿走了王健林的万达电影_36kr_topic_video_3777825420063241.mp4
+2026-04-26 21:05:06 [kr36] topic_asr_ok chars=780 transcript=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-22\videos\80后湖北老乡，拿走了王健林的万达电影_36kr_topic_video_3777825420063241.transcript.txt code=20000000 role=topic_video_asr_transcript
+2026-04-26 21:05:06 [kr36] throttle_wait url=https://36kr.com/video/3776684100317955 wait_ms=2484 global_wait_ms=2484 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:05:09 [kr36] fetch_start url=https://36kr.com/video/3776684100317955
+2026-04-26 21:05:09 [kr36] fetch_ok method=curl url=https://36kr.com/video/3776684100317955 html_length=60490
+2026-04-26 21:05:09 [kr36] topic_video_cdn_extract count=7 html_len=60490 preview='https://videos.36krcdn.com/20260421/v2_1776782408195_video_mp4_v11' page='https://36kr.com/video/3776684100317955'
+2026-04-26 21:05:33 [kr36] topic_video_download_ok cdn='https://videos.36krcdn.com/20260421/v2_1776782408195_video_mp4_v11' local=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-22\videos\库克正式卸任，乔布斯的“退烧药”，终于用完了_36kr_topic_video_3776684100317955.mp4
+2026-04-26 21:05:46 [kr36] topic_asr_ok chars=1149 transcript=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-22\videos\库克正式卸任，乔布斯的“退烧药”，终于用完了_36kr_topic_video_3776684100317955.transcript.txt code=20000000 role=topic_video_asr_transcript
+2026-04-26 21:05:46 [kr36] fetch_start url=https://36kr.com/video/3779361122202119
+2026-04-26 21:05:47 [kr36] fetch_ok method=curl url=https://36kr.com/video/3779361122202119 html_length=58380
+2026-04-26 21:05:47 [kr36] topic_video_cdn_extract count=7 html_len=58380 preview='https://videos.36krcdn.com/20260423/v2_1776945729905_video_mp4_v11' page='https://36kr.com/video/3779361122202119'
+2026-04-26 21:06:12 [kr36] topic_video_download_ok cdn='https://videos.36krcdn.com/20260423/v2_1776945729905_video_mp4_v11' local=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-23\videos\爱奇艺想拿AI当遮羞布_36kr_topic_video_3779361122202119.mp4
+2026-04-26 21:06:19 [kr36] topic_asr_ok chars=1420 transcript=E:\AI\touzifenxi\output\reports\kr36_report\kr36_search_202604262101\kr36_topic_downloads\本周有大事丨蛋糕店为什么成了幽灵外卖的重灾区；AI短剧真的能赚钱吗；80后湖北老乡，拿走了王健林的万达电影\2026-04-23\videos\爱奇艺想拿AI当遮羞布_36kr_topic_video_3779361122202119.transcript.txt code=20000000 role=topic_video_asr_transcript
+2026-04-26 21:06:19 [kr36] throttle_wait url=https://36kr.com/topics/3780865660869640 wait_ms=6988 global_wait_ms=6988 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:06:26 [kr36] fetch_start url=https://36kr.com/topics/3780865660869640
+2026-04-26 21:06:26 [kr36] fetch_ok method=curl url=https://36kr.com/topics/3780865660869640 html_length=61506
+2026-04-26 21:06:26 [kr36] throttle_wait url=https://36kr.com/p/3774566936216064 wait_ms=30043 global_wait_ms=30043 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:06:57 [kr36] fetch_start url=https://36kr.com/p/3774566936216064
+2026-04-26 21:06:57 [kr36] fetch_ok method=curl url=https://36kr.com/p/3774566936216064 html_length=1460
+2026-04-26 21:06:57 [kr36] throttle_wait url=https://36kr.com/p/3780375304312072 wait_ms=25775 global_wait_ms=25775 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:07:23 [kr36] fetch_start url=https://36kr.com/p/3780375304312072
+2026-04-26 21:07:23 [kr36] fetch_ok method=curl url=https://36kr.com/p/3780375304312072 html_length=1460
+2026-04-26 21:07:23 [kr36] throttle_wait url=https://36kr.com/p/3778135439709446 wait_ms=36801 global_wait_ms=36801 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:08:00 [kr36] fetch_start url=https://36kr.com/p/3778135439709446
+2026-04-26 21:08:00 [kr36] fetch_ok method=curl url=https://36kr.com/p/3778135439709446 html_length=1460
+2026-04-26 21:08:00 [kr36] throttle_wait url=https://36kr.com/p/3778121523025154 wait_ms=38869 global_wait_ms=38869 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:08:39 [kr36] fetch_start url=https://36kr.com/p/3778121523025154
+2026-04-26 21:08:40 [kr36] fetch_ok method=curl url=https://36kr.com/p/3778121523025154 html_length=1460
+2026-04-26 21:08:40 [kr36] throttle_wait url=https://36kr.com/p/3780191213229314 wait_ms=31757 global_wait_ms=31757 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:09:11 [kr36] fetch_start url=https://36kr.com/p/3780191213229314
+2026-04-26 21:09:12 [kr36] fetch_ok method=curl url=https://36kr.com/p/3780191213229314 html_length=1460
+2026-04-26 21:09:12 [kr36] throttle_wait url=https://36kr.com/p/3773892499096068 wait_ms=23990 global_wait_ms=23990 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:09:36 [kr36] fetch_start url=https://36kr.com/p/3773892499096068
+2026-04-26 21:09:36 [kr36] fetch_ok method=curl url=https://36kr.com/p/3773892499096068 html_length=1460
+2026-04-26 21:09:36 [kr36] throttle_wait url=https://36kr.com/p/3775892441301511 wait_ms=20744 global_wait_ms=20744 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:09:57 [kr36] fetch_start url=https://36kr.com/p/3775892441301511
+2026-04-26 21:09:57 [kr36] fetch_ok method=curl url=https://36kr.com/p/3775892441301511 html_length=1460
+2026-04-26 21:09:57 [kr36] step0.5_topic_round_end page=1 round=1/5 stage=topics status=ok fetched=12 total_topic_refs=12 elapsed_ms=481750
+2026-04-26 21:09:57 [kr36] 完成专题页(0.5步)，数据 12 条，累计 12 条
+2026-04-26 21:09:57 [kr36] step1_listing_next round=2/5 stage=activity
+2026-04-26 21:09:57 [kr36] step1_main_round_start page=2 round=2/5 stage=activity url=https://36kr.com/activity
+2026-04-26 21:09:57 [kr36] 进入活动页，数据 0 条，累计 0 条
+2026-04-26 21:09:57 [kr36] throttle_wait url=https://36kr.com/activity wait_ms=31121 global_wait_ms=31121 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:10:28 [kr36] fetch_start url=https://36kr.com/activity
+2026-04-26 21:10:28 [kr36] topics_activity_enrich_direct_step4 reason=auto_solver url=https://36kr.com/activity page_kind=activity
+2026-04-26 21:10:28 [slider] playwright_slider_start phase='topics-activity-step4-activity' url=https://36kr.com/activity headless=false channel='msedge'
+2026-04-26 21:10:45 [slider] playwright_slider_url_settled phase='topics-activity-step4-activity' final_url='https://36kr.com/activity'
+2026-04-26 21:10:45 [slider] playwright_slider_preloop phase='topics-activity-step4-activity' url=https://36kr.com/activity wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
+2026-04-26 21:10:45 [slider] playwright_slider_wait_ui phase='topics-activity-step4-activity' url=https://36kr.com/activity ui_ready=true
+2026-04-26 21:10:52 [kr36] slider_captcha_solve_result attempted=true
+2026-04-26 21:10:52 [slider] playwright_slider_attempt phase='topics-activity-step4-activity' url=https://36kr.com/activity attempted=true
+2026-04-26 21:10:59 [slider] playwright_slider_csr_list_ready phase='topics-activity-step4-activity' url=https://36kr.com/activity selector='.activity-item, .kr-activity-list, .activity-list'
+2026-04-26 21:10:59 [slider] playwright_slider_after_solve phase='topics-activity-step4-activity' url=https://36kr.com/activity html_length=70072
+2026-04-26 21:10:59 [slider] playwright_slider_close_on_pass phase='topics-activity-step4-activity' url=https://36kr.com/activity
+2026-04-26 21:11:00 [kr36] topics_activity_csr_enriched url=https://36kr.com/activity html_length=70072
+2026-04-26 21:11:00 [kr36] fetch_ok method=curl_playwright_topics_activity url=https://36kr.com/activity html_length=70072
+2026-04-26 21:11:00 [kr36] round_end page=2 round=2/5 stage=activity status=ok fetched=0 total_refs=0 elapsed_ms=62784
+2026-04-26 21:11:00 [kr36] 完成活动页，数据 0 条，累计 0 条
+2026-04-26 21:11:00 [kr36] round_next round=3/5 stage=search
+2026-04-26 21:11:00 [kr36] round_start page=3 round=3/5 stage=search category=36氪独家 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 date_window=2026-04-20~2026-04-26
+2026-04-26 21:11:00 [kr36] 进入搜索页(36氪独家)，数据 0 条，累计 0 条
+2026-04-26 21:11:00 [kr36] fetch_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-26 21:11:00 [kr36] search_enrich_direct_step4 reason=auto_solver url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-04-26 21:11:00 [slider] playwright_slider_start phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 headless=false channel='msedge'
+2026-04-26 21:11:15 [slider] playwright_slider_url_settled phase='search-listing-step4' final_url='https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6'
+2026-04-26 21:11:15 [slider] playwright_slider_preloop phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
+2026-04-26 21:11:19 [slider] playwright_slider_ok phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102684
+2026-04-26 21:11:20 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102684
+2026-04-26 21:11:20 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102684
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-17 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-09 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-26 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-31 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-19 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-05 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-16 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-24 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-04 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-22 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-14 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-07 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-26 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-02-26 window=2026-04-20~2026-04-26
+2026-04-26 21:11:20 [kr36] round_end page=3 round=3/5 stage=search category=36氪独家 status=ok fetched=2 total_refs=2 elapsed_ms=20749
+2026-04-26 21:11:20 [kr36] 完成搜索页(36氪独家)，数据 2 条，累计 2 条
+2026-04-26 21:11:20 [kr36] round_next round=4/5 stage=search_or_channel
+2026-04-26 21:11:21 [kr36] round_start page=4 round=4/5 stage=channel url=https://36kr.com/information/AI/
+2026-04-26 21:11:21 [kr36] 进入频道页，数据 0 条，累计 2 条
+2026-04-26 21:11:21 [kr36] throttle_wait url=https://36kr.com/information/AI/ wait_ms=8841 global_wait_ms=8841 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:11:29 [kr36] fetch_start url=https://36kr.com/information/AI/
+2026-04-26 21:11:30 [kr36] fetch_ok method=curl url=https://36kr.com/information/AI/ html_length=115015
+2026-04-26 21:11:30 [kr36] round_end page=4 round=4/5 stage=channel status=ok url=https://36kr.com/information/AI/ fetched=4 total_refs=6 elapsed_ms=9352
+2026-04-26 21:11:30 [kr36] 完成频道页，数据 4 条，累计 6 条
+2026-04-26 21:11:30 [kr36] round_next round=5/5 stage=channel
+2026-04-26 21:11:30 [kr36] round_start page=5 round=5/5 stage=channel url=https://36kr.com/information/contact/
+2026-04-26 21:11:30 [kr36] 进入频道页，数据 0 条，累计 6 条
+2026-04-26 21:11:30 [kr36] throttle_wait url=https://36kr.com/information/contact/ wait_ms=23811 global_wait_ms=23811 same_url_wait_ms=0 risk_wait_ms=0
+2026-04-26 21:11:54 [kr36] fetch_start url=https://36kr.com/information/contact/
+2026-04-26 21:11:54 [kr36] fetch_ok method=curl url=https://36kr.com/information/contact/ html_length=116259
+2026-04-26 21:11:54 [kr36] round_end page=5 round=5/5 stage=channel status=ok url=https://36kr.com/information/contact/ fetched=2 total_refs=8 elapsed_ms=24464
+2026-04-26 21:11:54 [kr36] 完成频道页，数据 2 条，累计 8 条
+2026-04-26 21:11:54 [kr36] listing_end report_date=2026-04-26 total_refs=20 stopped_by=normal_complete
+[kr36] ERROR: Playwright launch failed in current Python: "e:\AI\touzifenxi\.venv\Scripts\python.exe"
+[kr36] HINT: python -m playwright install chromium

@@ -1793,10 +1793,54 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                     print(f"[kr36] 命中风控页，已记录并将在首轮结束后重试：{url}")
                     return html
                 print(
-                    "[kr36] 检测到风控页面，且未配置自动刷新 Cookie（risk_verification_command / "
-                    "risk_incognito_cookie_refresh_enabled）。"
-                    f"请配置后重试：{url}"
+                    "[kr36] 检测到风控页面，未配置 risk_verification_command / "
+                    "risk_incognito_cookie_refresh_enabled，自动调用 slider_solver 恢复。"
                 )
+                _append_kr36_debug_log(
+                    f"[kr36] risk_auto_recover_without_command url={url} mode=slider_solver"
+                )
+                if not self.http_only_mode:
+                    from utils.slider_solver.session import SliderRiskTool
+
+                    tool = SliderRiskTool(self)
+                    # 先尝试无 Cookie 全新会话，避免被污染 Cookie 持续命中风控。
+                    no_cookie_html = ""
+                    try:
+                        no_cookie_html = tool.fetch(
+                            url,
+                            log_phase="fetch_text_risk_force_nocookie",
+                            skip_cookies=True,
+                        )
+                    except Exception as error:  # noqa: BLE001
+                        _append_kr36_debug_log(
+                            f"[kr36] risk_auto_recover_nocookie_exception url={url} error={error!r}"
+                        )
+                    if _is_usable_html(no_cookie_html) and not _looks_like_captcha_or_block(no_cookie_html):
+                        _kr36_risk_recovery_reset(url)
+                        _append_kr36_debug_log(
+                            f"[kr36] fetch_ok method=slider_force_recover_nocookie url={url} "
+                            f"html_length={len(no_cookie_html)}"
+                        )
+                        return no_cookie_html
+
+                    with_cookie_html = ""
+                    try:
+                        with_cookie_html = tool.fetch(
+                            url,
+                            log_phase="fetch_text_risk_force_with_cookie",
+                        )
+                    except Exception as error:  # noqa: BLE001
+                        _append_kr36_debug_log(
+                            f"[kr36] risk_auto_recover_with_cookie_exception url={url} error={error!r}"
+                        )
+                    if _is_usable_html(with_cookie_html) and not _looks_like_captcha_or_block(with_cookie_html):
+                        _kr36_risk_recovery_reset(url)
+                        _append_kr36_debug_log(
+                            f"[kr36] fetch_ok method=slider_force_recover_with_cookie url={url} "
+                            f"html_length={len(with_cookie_html)}"
+                        )
+                        return with_cookie_html
+                    html = with_cookie_html or no_cookie_html or html
             if not self.retry_on_risk_enabled:
                 return html
             html = self._curl_retry_on_risk(url)
