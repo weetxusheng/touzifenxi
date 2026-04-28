@@ -112,7 +112,18 @@ CHANNELS: dict[str, ChannelSpec] = {
         name="首页",
         # Use ?c=web to get the standard web layout with 专题推荐 and 热点新闻 sections.
         url="https://www.c114.com.cn/?c=web",
-        path_prefixes=("/news/", "/ftth/", "/video/", "/cloud/", "/5g/", "/ai/", "/quantum/", "/satellite/", "/la/"),
+        path_prefixes=(
+            "/news/",
+            "/ftth/",
+            "/video/",
+            "/wireless/",
+            "/cloud/",
+            "/5g/",
+            "/ai/",
+            "/quantum/",
+            "/satellite/",
+            "/la/",
+        ),
         # 专题推荐 section (topic_list) + 热点新闻 section (page_content_center_list).
         # Excludes: operator tab panels (content_l_list_top_two) which surface old
         # pinned 《对话》 videos and vendor PR articles with stale publication dates.
@@ -149,6 +160,14 @@ CHANNELS: dict[str, ChannelSpec] = {
         name="Cloud&AI",
         url="https://www.c114.com.cn/ai/",
         path_prefixes=("/ai/",),
+        include_section_classes=("choose-videos", "new_video"),
+        exclude_section_classes=("special_planning",),
+    ),
+    "wireless": ChannelSpec(
+        key="wireless",
+        name="无线",
+        url="https://www.c114.com.cn/wireless/",
+        path_prefixes=("/wireless/",),
         include_section_classes=("choose-videos", "new_video"),
         exclude_section_classes=("special_planning",),
     ),

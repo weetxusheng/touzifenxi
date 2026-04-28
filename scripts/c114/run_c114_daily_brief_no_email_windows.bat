@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal EnableExtensions EnableDelayedExpansion
 
 set "SOURCE=%~1"
@@ -10,7 +11,9 @@ if not defined C114_PRT set "C114_PRT=300"
 
 rem Repo root = scripts/c114 -> two levels up from this file.
 for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
-set "LOG_FILE=!PROJECT_ROOT!\log.txt"
+set "LOG_DIR=!PROJECT_ROOT!\logs\c114"
+if not exist "!LOG_DIR!" mkdir "!LOG_DIR!"
+set "LOG_FILE=!LOG_DIR!\!LOG_TAG!.log"
 
 set "PYTHON_CMD="
 if defined PYTHON_BIN if exist "!PYTHON_BIN!" call :probe_python ""!PYTHON_BIN!""
@@ -20,7 +23,7 @@ if not defined PYTHON_CMD call :probe_python "python"
 if not defined PYTHON_CMD call :probe_python "py -3"
 
 cd /d "!PROJECT_ROOT!"
-set "PYTHONPATH=src"
+set "PYTHONPATH=!PROJECT_ROOT!\src"
 echo [!LOG_TAG!] %date% %time% starting daily brief run (no email)...
 echo [!LOG_TAG!] PROJECT_ROOT=!PROJECT_ROOT!
 echo [!LOG_TAG!] PYTHON_CMD=!PYTHON_CMD!
@@ -43,14 +46,23 @@ if errorlevel 1 (
   endlocal & exit /b 3
 )
 
+!PYTHON_CMD! -c "import cv2" >nul 2>&1
+if errorlevel 1 (
+  echo [!LOG_TAG!] ERROR: OpenCV ^(cv2^) is missing in current Python env.
+  echo [!LOG_TAG!] HINT: run scripts\install_python_deps_windows.bat
+  >> "!LOG_FILE!" echo [!LOG_TAG!] ERROR: OpenCV ^(cv2^) is missing in current Python env.
+  >> "!LOG_FILE!" echo [!LOG_TAG!] HINT: run scripts\install_python_deps_windows.bat
+  endlocal & exit /b 4
+)
+
 if exist "!PROJECT_ROOT!\.env" (
   for /f "usebackq tokens=1* delims==" %%A in ("!PROJECT_ROOT!\.env") do (
     if not "%%A"=="" if not "%%A:~0,1"=="#" set "%%A=%%B"
   )
 )
 
-rem Append Python stderr (tracebacks) to log.txt
-!PYTHON_CMD! scripts\websearch.py run --source !SOURCE! --timeout !C114_PRT! 2>> "!LOG_FILE!"
+rem Append Python stderr (tracebacks) to logs/c114/<source>.log
+!PYTHON_CMD! "!PROJECT_ROOT!\scripts\websearch.py" run --source !SOURCE! --timeout !C114_PRT! 2>> "!LOG_FILE!"
 set "EXIT_CODE=%ERRORLEVEL%"
 
 if not "!EXIT_CODE!"=="0" (

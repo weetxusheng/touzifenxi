@@ -1,0 +1,71 @@
+[c114] Âë®‰∫å 2026/04/28 10:00:01.63 starting daily brief run (no email)...
+[c114] PROJECT_ROOT=E:\AI\touzifenxi
+[c114] PYTHON_CMD="E:\AI\touzifenxi\.venv\Scripts\python.exe"
+[c114] per-request timeout=300s
+Traceback (most recent call last):
+  File "E:\AI\touzifenxi\src\utils\tools\llm\client.py", line 466, in _request_with_provider
+    with urlopen(request, timeout=provider.timeout_seconds) as response:
+  File "E:\Programs\Python310\lib\urllib\request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+  File "E:\Programs\Python310\lib\urllib\request.py", line 519, in open
+    response = self._open(req, data)
+  File "E:\Programs\Python310\lib\urllib\request.py", line 536, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "E:\Programs\Python310\lib\urllib\request.py", line 496, in _call_chain
+    result = func(*args)
+  File "E:\Programs\Python310\lib\urllib\request.py", line 1391, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "E:\Programs\Python310\lib\urllib\request.py", line 1352, in do_open
+    r = h.getresponse()
+  File "E:\Programs\Python310\lib\http\client.py", line 1374, in getresponse
+    response.begin()
+  File "E:\Programs\Python310\lib\http\client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "E:\Programs\Python310\lib\http\client.py", line 287, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\AI\touzifenxi\src\utils\tools\llm\client.py", line 274, in complete_json
+    provider, content = self._post_chat_completion(
+  File "E:\AI\touzifenxi\src\utils\tools\llm\client.py", line 388, in _post_chat_completion
+    return provider, self._request_with_provider(
+  File "E:\AI\touzifenxi\src\utils\tools\llm\client.py", line 557, in _request_with_provider
+    raise last_error from error
+utils.tools.llm.client.ProviderRequestError: volc-ark «Î«Û ß∞‹: Remote end closed connection without response
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\AI\touzifenxi\scripts\websearch.py", line 24, in <module>
+    main()
+  File "E:\AI\touzifenxi\scripts\websearch.py", line 20, in main
+    skill_main()
+  File "E:\AI\touzifenxi\src\c114\cli.py", line 461, in main
+    run_with_args(args)
+  File "E:\AI\touzifenxi\src\c114\cli.py", line 453, in run_with_args
+    handler()
+  File "E:\AI\touzifenxi\src\c114\cli.py", line 447, in <lambda>
+    "run": lambda: handle_run_command(args, paths=resolved_paths, facade=facade),
+  File "E:\AI\touzifenxi\src\utils\tools\orchestration\c114\run.py", line 43, in handle_run_command
+    run_daily_pipeline(args, paths=paths, facade=facade)
+  File "E:\AI\touzifenxi\src\c114\pipeline.py", line 223, in run_daily_pipeline
+    run_source_daily_pipeline(
+  File "E:\AI\touzifenxi\src\utils\tools\orchestration\pipeline_engine.py", line 56, in run_source_daily_pipeline
+    run_builtin_for_day(target_date, day_dir, runtime_config, llm_client)
+  File "E:\AI\touzifenxi\src\c114\pipeline.py", line 213, in _run_builtin_for_day
+    run_c114_builtin_daily_pipeline(
+  File "E:\AI\touzifenxi\src\utils\tools\orchestration\step_runner.py", line 48, in run_c114_builtin_daily_pipeline
+    run_builtin_daily_pipeline(
+  File "E:\AI\touzifenxi\src\utils\tools\orchestration\c114\pipeline_steps.py", line 669, in run_builtin_daily_pipeline
+    analyses, briefs = facade.auto_group_analysis_topics(
+  File "E:\AI\touzifenxi\src\utils\steps\step1_5_topic_grouping.py", line 59, in auto_group_analysis_topics
+    cached_assignments = complete_json_with_postprocess_retry(
+  File "E:\AI\touzifenxi\src\utils\tools\llm\__init__.py", line 83, in complete_json_with_postprocess_retry
+    response = llm_client.complete_json(system_prompt=system_prompt, user_prompt=user_prompt)
+  File "E:\AI\touzifenxi\src\utils\tools\llm\client.py", line 315, in complete_json
+    raise StructuredLLMError(str(error)) from error
+utils.tools.llm.structured_output.StructuredLLMError: volc-ark «Î«Û ß∞‹: Remote end closed connection without response
+[c114] Âë®‰∫å 2026/04/28 10:05:56.80 finished with exit code 1.
