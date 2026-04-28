@@ -1,0 +1,24 @@
+2026-04-27 18:38:36 [slider] playwright_slider_start phase='auto-captcha-test' url=https://www.36kr.com headless=false channel='msedge'
+2026-04-27 18:39:21 [slider] playwright_slider_error phase='auto-captcha-test' url=https://www.36kr.com error=Page.goto: net::ERR_TIMED_OUT at https://www.36kr.com/
+Call log:
+  - navigating to "https://www.36kr.com/", waiting until "load"
+
+2026-04-27 18:39:21 [slider] playwright_snapshot_saved phase='auto-captcha-test' url=https://www.36kr.com path=E:\AI\touzifenxi\data\raw\kr36_playwright_failures\20260427_183921_auto-captcha-test_https_www_36kr_com.txt
+2026-04-27 18:42:31 [slider] playwright_slider_start phase='auto-captcha-test' url=https://www.36kr.com headless=false channel='msedge'
+2026-04-27 18:43:00 [slider] playwright_slider_url_settled phase='auto-captcha-test' final_url='https://www.36kr.com/'
+2026-04-27 18:43:00 [slider] playwright_slider_preloop phase='auto-captcha-test' url=https://www.36kr.com wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
+2026-04-27 18:43:34 [slider] playwright_slider_wait_ui phase='auto-captcha-test' url=https://www.36kr.com ui_ready=false
+2026-04-27 18:43:34 [slider] playwright_slider_captcha_img_not_ready phase='auto-captcha-test' url=https://www.36kr.com streak=1 backoff_s=30
+2026-04-27 18:44:38 [slider] playwright_slider_wait_ui phase='auto-captcha-test' url=https://www.36kr.com ui_ready=false
+2026-04-27 18:44:38 [slider] playwright_slider_captcha_img_not_ready phase='auto-captcha-test' url=https://www.36kr.com streak=2 backoff_s=60
+2026-04-27 18:46:12 [slider] playwright_slider_wait_ui phase='auto-captcha-test' url=https://www.36kr.com ui_ready=false
+2026-04-27 18:46:12 [slider] playwright_slider_captcha_img_not_ready phase='auto-captcha-test' url=https://www.36kr.com streak=3 backoff_s=90
+2026-04-27 18:47:44 [slider] playwright_slider_hard_timeout phase='auto-captcha-test' url=https://www.36kr.com html_length=0 saw_captcha_risk=true
+2026-04-27 18:53:53 [slider] playwright_slider_start phase='auto-captcha-test' url=https://www.36kr.com headless=false channel='msedge'
+2026-04-27 18:54:20 [slider] playwright_slider_url_settled phase='auto-captcha-test' final_url='https://www.36kr.com/'
+2026-04-27 18:54:20 [slider] playwright_slider_preloop phase='auto-captcha-test' url=https://www.36kr.com wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
+2026-04-27 18:54:24 [slider] playwright_slider_wait_ui phase='auto-captcha-test' url=https://www.36kr.com ui_ready=true
+2026-04-27 18:56:24 [kr36] slider_captcha_solve_result attempted=true
+2026-04-27 18:56:24 [slider] playwright_slider_attempt phase='auto-captcha-test' url=https://www.36kr.com attempted=true
+2026-04-27 18:56:27 [slider] playwright_slider_after_solve phase='auto-captcha-test' url=https://www.36kr.com html_length=204990
+2026-04-27 18:56:27 [slider] playwright_slider_close_on_pass phase='auto-captcha-test' url=https://www.36kr.com

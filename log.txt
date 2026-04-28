@@ -1,5 +1,5 @@
-[c114] 2026/04/26 周日 20:38:11.68 starting daily brief run (no email)...
-[c114] PROJECT_ROOT=e:\AI\touzifenxi
-[c114] PYTHON_CMD="e:\AI\touzifenxi\.venv\Scripts\python.exe"
+[c114] 2026/04/27 周一 10:28:21.81 starting daily brief run (no email)...
+[c114] PROJECT_ROOT=E:\AI\touzifenxi
+[c114] PYTHON_CMD="E:\AI\touzifenxi\.venv\Scripts\python.exe"
 [c114] per-request timeout=300s
-[c114] 2026/04/26 周日 20:38:52.55 finished with exit code 0.
+[c114] 2026/04/27 周一 10:44:03.34 finished with exit code 0.

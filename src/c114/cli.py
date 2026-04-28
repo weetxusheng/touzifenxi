@@ -306,8 +306,8 @@ def build_parser() -> argparse.ArgumentParser:
     c114_parser.add_argument(
         "--channels",
         nargs="+",
-        default=["home", "quantum", "satellite", "la", "ai"],
-        choices=["home", "quantum", "satellite", "la", "ai"],
+        default=["home", "wireless", "quantum", "satellite", "la", "ai"],
+        choices=["home", "wireless", "quantum", "satellite", "la", "ai"],
         help="Channels to fetch.",
     )
     c114_parser.add_argument("--candidate-limit", type=int, default=30, help="Maximum candidates per channel.")
@@ -381,8 +381,8 @@ def build_parser() -> argparse.ArgumentParser:
     c114_run_parser.add_argument(
         "--channels",
         nargs="+",
-        default=["home", "quantum", "satellite", "la", "ai"],
-        choices=["home", "quantum", "satellite", "la", "ai"],
+        default=["home", "wireless", "quantum", "satellite", "la", "ai"],
+        choices=["home", "wireless", "quantum", "satellite", "la", "ai"],
         help="Channels to fetch.",
     )
     c114_run_parser.add_argument("--candidate-limit", type=int, default=30, help="Maximum candidates per channel.")
@@ -408,8 +408,8 @@ def build_parser() -> argparse.ArgumentParser:
     c114_direct_run_parser.add_argument(
         "--channels",
         nargs="+",
-        default=["home", "quantum", "satellite", "la", "ai"],
-        choices=["home", "quantum", "satellite", "la", "ai"],
+        default=["home", "wireless", "quantum", "satellite", "la", "ai"],
+        choices=["home", "wireless", "quantum", "satellite", "la", "ai"],
         help="Channels to fetch.",
     )
     c114_direct_run_parser.add_argument("--candidate-limit", type=int, default=30, help="Maximum candidates per channel.")

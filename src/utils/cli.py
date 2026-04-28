@@ -88,6 +88,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="指定统计日 YYYY-MM-DD；仅发送该日的 c114_step_6_brief_YYYYMMDD.md（不要与 --t1-gate 同用）。",
     )
     send_c114_latest_parser.add_argument(
+        "--brief-md",
+        default=None,
+        help="指定 Step6 Markdown 路径（相对项目根或绝对路径）；用于发送某次 run 目录下的合并稿，避免按日期取最新误选。",
+    )
+    send_c114_latest_parser.add_argument(
         "--require-built-not-before",
         dest="require_built_not_before",
         default=None,
@@ -476,6 +481,30 @@ def main() -> None:
             shanghai_yesterday,
         )
 
+        if getattr(args, "brief_md", None):
+            if args.t1_gate:
+                print("--brief-md 不能与 --t1-gate 同时使用。", file=sys.stderr)
+                raise SystemExit(2)
+            if args.report_date:
+                print("--brief-md 不能与 --report-date 同时使用。", file=sys.stderr)
+                raise SystemExit(2)
+            md_path = Path(args.brief_md)
+            if not md_path.is_absolute():
+                md_path = paths.project_root / md_path
+            result = send_latest_c114_brief_email(
+                project_root=paths.project_root,
+                recipients=args.to,
+                report_date=None,
+                require_modified_not_before=None,
+                step6_md_path=md_path,
+            )
+            if not result.succeeded:
+                print(result.error_detail or "发送失败。")
+                raise SystemExit(1)
+            print(f"Step 6 文件: {result.step6_path}")
+            print(f"邮件发送完成: {', '.join(args.to)}")
+            return
+
         report_date = None
         require_dt = None
         if args.t1_gate:
@@ -487,8 +516,13 @@ def main() -> None:
             except ValueError as exc:
                 print(f"--gate-time 无效: {exc}", file=sys.stderr)
                 raise SystemExit(2) from exc
-            report_date = shanghai_yesterday()
             require_dt = shanghai_local_today_at(gh, gm)
+            today_weekday = require_dt.weekday()  # Monday=0 ... Sunday=6
+            if today_weekday == 6:
+                print("今日为周日，按规则不发送 C114 邮件。")
+                return
+            report_date = shanghai_yesterday()
+            send_plan = [(report_date, require_dt)]
         elif args.report_date:
             report_date = date_cls.fromisoformat(args.report_date)
             if args.require_built_not_before:
@@ -498,20 +532,25 @@ def main() -> None:
                     print(f"--require-built-not-before 无效: {exc}", file=sys.stderr)
                     raise SystemExit(2) from exc
                 require_dt = shanghai_local_today_at(bh, bm)
+            send_plan = [(report_date, require_dt)]
         elif args.require_built_not_before:
             print("--require-built-not-before 需要同时指定 --report-date。", file=sys.stderr)
             raise SystemExit(2)
+        else:
+            send_plan = [(report_date, require_dt)]
 
-        result = send_latest_c114_brief_email(
-            project_root=paths.project_root,
-            recipients=args.to,
-            report_date=report_date,
-            require_modified_not_before=require_dt,
-        )
-        if not result.succeeded:
-            print(result.error_detail or "发送失败。")
-            raise SystemExit(1)
-        print(f"Step 6 文件: {result.step6_path}")
+        for planned_report_date, planned_require_dt in send_plan:
+            result = send_latest_c114_brief_email(
+                project_root=paths.project_root,
+                recipients=args.to,
+                report_date=planned_report_date,
+                require_modified_not_before=planned_require_dt,
+            )
+            if not result.succeeded:
+                token = planned_report_date.isoformat() if planned_report_date else "auto"
+                print(f"{token} 发送失败: {result.error_detail or '发送失败。'}")
+                raise SystemExit(1)
+            print(f"Step 6 文件: {result.step6_path}")
         print(f"邮件发送完成: {', '.join(args.to)}")
         return
 

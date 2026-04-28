@@ -742,7 +742,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 f"[kr36] step1_listing_next round={round_index + 1}/{rounds_total} stage=activity"
             )
 
-        # 2) 活动页：状态过滤 + 活动开始日落在「周窗」内（与专题/搜索周窗一致，见 resolve_kr36_weekly_listing_date_window）。
+        # 2) 活动页：仅按状态过滤（未开始/报名中/活动中保留，已结束排除）；不按日期窗筛。
         round_index += 1
         started_at = time.time()
         _append_kr36_debug_log(
@@ -761,13 +761,11 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                 f"url={KR36_ACTIVITY_URL} fetched=0 total_refs={len(refs)}"
             )
             activity_html = ""
-        _act_dw = resolve_kr36_weekly_listing_date_window(report_date)
         activity_items = parse_activity_listing_html(
             activity_html,
             base_url=KR36_ROOT,
             listing_url=KR36_ACTIVITY_URL,
             report_date=report_date,
-            listing_date_window=_act_dw,
         )
         refs.extend(activity_items)
         _append_kr36_debug_log(
@@ -1107,7 +1105,6 @@ class Kr36SourceAdapter(ContentSourceAdapter):
                             base_url=KR36_ROOT,
                             listing_url=retry_url,
                             report_date=report_date,
-                            listing_date_window=resolve_kr36_weekly_listing_date_window(report_date),
                         )
                     )
                 elif stage == "search":
@@ -3050,7 +3047,6 @@ def parse_listing_html(
             base_url=base_url,
             listing_url=listing_url,
             report_date=report_date,
-            listing_date_window=resolve_kr36_weekly_listing_date_window(report_date),
         )
 
     refs: list[RawArticleRef] = []
@@ -3757,11 +3753,10 @@ def parse_activity_listing_html(
     base_url: str,
     listing_url: str,
     report_date: date,
-    listing_date_window: tuple[date, date] | None = None,
 ) -> list[RawArticleRef]:
-    """活动页抓取；已结束场不进入清单。优先匹配 class=activity-item 卡片。
+    """活动页抓取：仅按状态筛选（未开始/报名中/活动中保留，已结束排除）；不按日期窗过滤。
 
-    ``listing_date_window`` 非空时，仅保留「时间」段解析出的开始日落在闭区间内的卡片；解析不到开始日时不筛除。
+    优先匹配 class=activity-item 卡片。
     """
 
     refs: list[RawArticleRef] = []
@@ -3788,14 +3783,6 @@ def parse_activity_listing_html(
         theme = infer_activity_theme(context, title)
         description = infer_activity_description(context)
         start_label = build_activity_start_label(status, date_range, report_date)
-
-        if listing_date_window is not None and date_range:
-            start_text = date_range.split("-", 1)[0].strip()
-            range_start = parse_activity_month_day(start_text, report_date.year)
-            if range_start is not None:
-                lo, hi = listing_date_window
-                if range_start < lo or range_start > hi:
-                    continue
 
         summary_parts: list[str] = []
         if description:
@@ -3849,14 +3836,6 @@ def parse_activity_listing_html(
         theme = infer_activity_theme(context, title)
         description = infer_activity_description(context)
         start_label = build_activity_start_label(status, date_range, report_date)
-
-        if listing_date_window is not None and date_range:
-            start_text = date_range.split("-", 1)[0].strip()
-            range_start = parse_activity_month_day(start_text, report_date.year)
-            if range_start is not None:
-                lo, hi = listing_date_window
-                if range_start < lo or range_start > hi:
-                    continue
 
         summary_parts: list[str] = []
         if description:

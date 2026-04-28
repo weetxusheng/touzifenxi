@@ -26,7 +26,7 @@ if not defined PYTHON_CMD call :probe_python "python"
 if not defined PYTHON_CMD call :probe_python "py -3"
 
 cd /d "%PROJECT_ROOT%"
-set "PYTHONPATH=src"
+set "PYTHONPATH=%PROJECT_ROOT%\src"
 for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd HH:mm:ss')"`) do set "RUN_AT=%%I"
 echo [%LOG_TAG%] %RUN_AT% starting daily brief run (no email)...
 echo [%LOG_TAG%] PROJECT_ROOT=%PROJECT_ROOT%
@@ -45,18 +45,27 @@ if not defined PYTHON_CMD (
   endlocal & exit /b 2
 )
 
+%PYTHON_CMD% -c "import cv2" >nul 2>&1
+if errorlevel 1 (
+  echo [%LOG_TAG%] ERROR: OpenCV ^(cv2^) is missing in current Python env.
+  echo [%LOG_TAG%] HINT: run scripts\install_python_deps_windows.bat
+  >> "%LOG_FILE%" echo [%LOG_TAG%] ERROR: OpenCV ^(cv2^) is missing in current Python env.
+  >> "%LOG_FILE%" echo [%LOG_TAG%] HINT: run scripts\install_python_deps_windows.bat
+  endlocal & exit /b 6
+)
+
 rem In kr36 auto-solver flow, Playwright must be truly usable (not only package present).
 %PYTHON_CMD% -c "from playwright.sync_api import sync_playwright, Error, TimeoutError" >nul 2>&1
 if errorlevel 1 (
   echo [%LOG_TAG%] ERROR: Playwright sync_api import failed in current Python: %PYTHON_CMD%
   echo [%LOG_TAG%] HINT: run this for details:
-  echo [%LOG_TAG%]       %PYTHON_CMD% -c "from playwright.sync_api import sync_playwright"
+  echo [%LOG_TAG%]       %PYTHON_CMD% -c "from playwright.sync_api import sync_playwright^)"
   echo [%LOG_TAG%] HINT: then reinstall:
   echo [%LOG_TAG%]       python -m pip install -U playwright ^&^& python -m playwright install chromium
   >> "%LOG_FILE%" echo [%LOG_TAG%] ERROR: Playwright sync_api import failed in current Python: %PYTHON_CMD%
-  >> "%LOG_FILE%" echo [%LOG_TAG%] HINT: %PYTHON_CMD% -c "from playwright.sync_api import sync_playwright"
+  >> "%LOG_FILE%" echo [%LOG_TAG%] HINT: %PYTHON_CMD% -c "from playwright.sync_api import sync_playwright^)"
   >> "%LOG_FILE%" echo [%LOG_TAG%] HINT: python -m pip install -U playwright ^&^& python -m playwright install chromium
-  endlocal & exit /b 4
+  endlocal & exit /b 7
 )
 
 %PYTHON_CMD% -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); b=p.chromium.launch(headless=True); b.close(); p.stop()" >nul 2>&1
@@ -65,10 +74,10 @@ if errorlevel 1 (
   echo [%LOG_TAG%] HINT: set PYTHON_BIN to project venv python and run:
   echo [%LOG_TAG%]       python -m playwright install chromium
   echo [%LOG_TAG%] HINT: run this for detailed error:
-  echo [%LOG_TAG%]       %PYTHON_CMD% -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); b=p.chromium.launch(headless=True)"
+  echo [%LOG_TAG%]       %PYTHON_CMD% -c "from playwright.sync_api import sync_playwright; p=sync_playwright^(^).start^(^); b=p.chromium.launch^(headless=True^)"
   >> "%LOG_FILE%" echo [%LOG_TAG%] ERROR: Playwright launch failed in current Python: %PYTHON_CMD%
   >> "%LOG_FILE%" echo [%LOG_TAG%] HINT: python -m playwright install chromium
-  endlocal & exit /b 5
+  endlocal & exit /b 8
 )
 
 if exist "%PROJECT_ROOT%\.env" (
@@ -77,10 +86,10 @@ if exist "%PROJECT_ROOT%\.env" (
   )
 )
 
-echo [%LOG_TAG%] running: %PYTHON_CMD% scripts\websearch.py run --source %SOURCE% --timeout %TIMEOUT%
->> "%LOG_FILE%" echo [%LOG_TAG%] running: %PYTHON_CMD% scripts\websearch.py run --source %SOURCE% --timeout %TIMEOUT%
+echo [%LOG_TAG%] running: %PYTHON_CMD% "%PROJECT_ROOT%\scripts\websearch.py" run --source %SOURCE% --timeout %TIMEOUT%
+>> "%LOG_FILE%" echo [%LOG_TAG%] running: %PYTHON_CMD% "%PROJECT_ROOT%\scripts\websearch.py" run --source %SOURCE% --timeout %TIMEOUT%
 set "PYTHONIOENCODING=utf-8"
-%PYTHON_CMD% scripts\websearch.py run --source %SOURCE% --timeout %TIMEOUT%
+%PYTHON_CMD% "%PROJECT_ROOT%\scripts\websearch.py" run --source %SOURCE% --timeout %TIMEOUT%
 set "EXIT_CODE=%ERRORLEVEL%"
 
 for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd HH:mm:ss')"`) do set "DONE_AT=%%I"

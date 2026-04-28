@@ -91,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--url",
-        default="https://36kr.com/video/3766585318896386",
+        default="https://xxx",
         help="目标 URL（yidun 模式须为易盾验证页）",
     )
     p.add_argument("--headless", action="store_true", help="无头浏览器")
