@@ -3305,15 +3305,34 @@ def resolve_previous_week_window(report_date: date) -> tuple[date, date]:
     return previous_week_monday, previous_week_sunday
 
 
+def resolve_kr36_biweekly_date_window(report_date: date) -> tuple[date, date]:
+    """周三/周六双推送周期专用数据窗口。
+
+    - 周三（weekday=2）→ 上周六 ～ 本周三（4 天：Sat Sun Mon Tue Wed）
+      last_sat = report_date - 4 days
+    - 周六（weekday=5）→ 本周三 ～ 本周六（4 天：Wed Thu Fri Sat）
+      last_wed = report_date - 3 days
+    - 其他星期          → 上一完整自然周（兜底，用于一次性/临时跑）
+    """
+    wd = report_date.weekday()
+    if wd == 2:  # 周三
+        last_sat = report_date - timedelta(days=4)
+        return last_sat, report_date
+    if wd == 5:  # 周六
+        last_wed = report_date - timedelta(days=3)
+        return last_wed, report_date
+    return resolve_previous_week_window(report_date)
+
+
 def resolve_kr36_weekly_listing_date_window(report_date: date) -> tuple[date, date]:
     """专题子项、36氪独家等搜索、活动开始日筛选共用。
 
-    周一至周六：上一完整自然周（周一～周日）；周日：本周一～报告日当天。
+    采用双周期（周三/周六）切分窗口，由 ``resolve_kr36_biweekly_date_window`` 实现：
+    - 周三 → 上周六 ～ 本周三
+    - 周六 → 本周三 ～ 本周六
+    - 其他日期 → 上一完整自然周（兜底）
     """
-    if report_date.weekday() == 6:
-        monday = report_date - timedelta(days=report_date.weekday())
-        return monday, report_date
-    return resolve_previous_week_window(report_date)
+    return resolve_kr36_biweekly_date_window(report_date)
 
 
 def resolve_kr36_search_category_date_window(report_date: date) -> tuple[date, date]:
