@@ -22,13 +22,14 @@ def _payload_is_kr36_report(payload: ContentAnalysisInput) -> bool:
 
 def format_kr36_crawl_week_range_label(report_date_iso: str) -> str:
     """
-    36Kr 简报主标题内日期（与 ``source_adapter.resolve_kr36_search_category_date_window``
-    / ``resolve_kr36_topic_subitem_date_window``(weekday_split) 语义对齐）：
+    36Kr 简报主标题内日期，与 ``source_adapter.resolve_kr36_biweekly_date_window`` 完全对齐：
 
-    - **周一至周四**：展示**上一自然周**（上周一～上周日），与「跑在本周但抓上周数据」一致。
-    - **周五至周日**：展示**本周一～报告日**（本周内已累积区间）。
+    - **周三（weekday=2）** → 上周六 ～ 本周三（4 天窗口）
+    - **周六（weekday=5）** → 本周三 ～ 本周六（4 天窗口）
+    - **其他日期**          → 上一完整自然周（兜底，用于一次性/临时跑）
 
-    例如：周四跑 → 「上周一 至 上周日」；周五跑 → 「本周一 至 今天」。
+    例如：周三 Apr 29 → 「2026-04-25 至 2026-04-29」
+          周六 May 2  → 「2026-04-29 至 2026-05-02」
     """
     s = (report_date_iso or "").strip()
     if len(s) < 10:
@@ -37,18 +38,20 @@ def format_kr36_crawl_week_range_label(report_date_iso: str) -> str:
         d = date.fromisoformat(s[:10])
     except ValueError:
         return s
-    if d.weekday() <= 3:
-        # 与 resolve_previous_week_window 一致：完整上一自然周
-        current_week_monday = d - timedelta(days=d.weekday())
-        previous_week_sunday = current_week_monday - timedelta(days=1)
-        previous_week_monday = previous_week_sunday - timedelta(days=6)
-        if previous_week_monday == previous_week_sunday:
-            return previous_week_monday.isoformat()
-        return f"{previous_week_monday.isoformat()} 至 {previous_week_sunday.isoformat()}"
-    monday = d - timedelta(days=d.weekday())
-    if monday == d:
-        return d.isoformat()
-    return f"{monday.isoformat()} 至 {d.isoformat()}"
+    wd = d.weekday()
+    if wd == 2:  # 周三 → 上周六 ～ 本周三
+        last_sat = d - timedelta(days=4)
+        return f"{last_sat.isoformat()} 至 {d.isoformat()}"
+    if wd == 5:  # 周六 → 本周三 ～ 本周六
+        last_wed = d - timedelta(days=3)
+        return f"{last_wed.isoformat()} 至 {d.isoformat()}"
+    # 兜底：上一完整自然周
+    current_week_monday = d - timedelta(days=wd)
+    previous_week_sunday = current_week_monday - timedelta(days=1)
+    previous_week_monday = previous_week_sunday - timedelta(days=6)
+    if previous_week_monday == previous_week_sunday:
+        return previous_week_monday.isoformat()
+    return f"{previous_week_monday.isoformat()} 至 {previous_week_sunday.isoformat()}"
 
 
 def _brief_title_date_phrase(payload: ContentAnalysisInput) -> str:

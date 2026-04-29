@@ -1394,6 +1394,9 @@ _LOW_QUALITY_SUMMARY_PREFIXES: tuple[str, ...] = (
     "原文页面因技术原因",
     "原文内容因技术原因",
     "原文内容因技术风控",
+    "原文内容不足",
+    "原文内容较少",
+    "原文内容过少",
     # LLM 生成的免责前缀变体
     "信息因页面风控技术无法直接获取",
     "专题内容因技术风控无法直接解析",
@@ -1414,6 +1417,13 @@ _LOW_QUALITY_SUMMARY_FRAGMENTS: tuple[str, ...] = (
     "原文无法解析而暂缺",
     "可解析信息有限",
     "可解析内容有限",
+    # 内容不足相关：LLM 输出或原文抓取失败后的套话，整条跳过
+    "原文内容不足，无法进行有效分析",
+    "无法进行有效分析",
+    "内容不足，无法",
+    "原文内容不足",
+    "内容过少，无法",
+    "原文过短，无法",
 )
 
 
@@ -1751,14 +1761,17 @@ def _load_step5_per_item_points_by_bucket(
                 )
                 if _step5_item_should_omit(item):
                     continue
+                # 资讯：原文抓取明确失败时（status=fail/block/risk 等）也整条过滤；
+                # 仅当 original_content 字段存在且 text 为空且 status 指示失败时才跳过，
+                # 避免误杀无 original_content 字段的活动/专题子项。
+                if b == BUCKET_INFO and not _step5_item_has_original_text(item):
+                    continue
                 if b == BUCKET_ACTIVITY and umap:
                     u = u_item
                     if u:
                         art = umap.get(u) or umap.get(_normalize_url_for_match(u) or "")
                         if art and not _include_kr36_activity_in_feed(art):
                             continue
-                # 资讯：抓取失败/视频无正文时 step5 仍有可靠摘要；若此处再要求 original text，
-                # 整栏会变空并触发 Markdown 回退，子类（36氪独家/AI/创投）结构丢失。
                 row_g = g
                 if b == BUCKET_INFO and u_item:
                     ch_res = ""
@@ -2164,7 +2177,12 @@ def _infer_kr36_activity_phase(article: dict[str, Any] | None) -> str:
 
 
 def _include_kr36_activity_in_feed(article: dict[str, Any] | None) -> bool:
-    """活动区/omit 子项：仅「进行中 + 待开始」；无源数据时保留。"""
+    """活动区/omit 子项：仅「进行中 + 待开始」；无源数据时保留。
+
+    过滤依据仅为 metadata 中的 activity_status / start_label 状态字段，
+    不受发布日期或简报生成日期影响——即活动在周三/周六推送周期内只要
+    状态有效就持续展示，直至状态变为「已结束」。
+    """
     if not article or not isinstance(article, dict):
         return True
     return _infer_kr36_activity_phase(article) in ("进行中", "待开始")
