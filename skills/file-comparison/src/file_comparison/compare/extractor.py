@@ -5,13 +5,11 @@ from __future__ import annotations
 import re
 import subprocess
 from pathlib import Path
-from typing import Iterable
-from zipfile import ZipFile
 from xml.etree import ElementTree as ET
+from zipfile import ZipFile
 
-from .models import NumberingLevel, Section
 from ..runtime.dependencies import ensure_python_docx_on_path
-
+from .models import NumberingLevel, Section
 
 SECTION_RE = re.compile(r"(^|\n|\x0c)(第[一二三四五六七八九十百零]+部分\s+[^\n]+)", re.M)
 
@@ -210,3 +208,11 @@ def extract_fund_name(text: str) -> str:
         if "持有期混合型发起式基金中基金（FOF）" in line:
             return line
     raise ValueError("未识别到基金名称")
+
+
+def extract_fund_name_or_empty(text: str) -> str:
+    """尽力识别基金名称；识别不到时返回空字符串，不中断对照流程。"""
+    try:
+        return extract_fund_name(text)
+    except ValueError:
+        return ""

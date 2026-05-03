@@ -3,6 +3,14 @@
   "execution": {
     "per_pair_max_workers": 2
   },
+  "compare": {
+    "skip_section_patterns": [
+      "签署页",
+      "签字页",
+      "盖章页",
+      "签章页"
+    ]
+  },
   "llm": {
     "provider": "minimax",
     "model": "MiniMax-M2.7",
@@ -13,6 +21,7 @@
     "max_retries": 2,
     "retry_backoff_seconds": 2.0,
     "min_interval_seconds": 2.0,
+    "failure_cooldown_seconds": 40.0,
     "providers": [
       {
         "provider": "minimax",
@@ -23,7 +32,8 @@
         "timeout_seconds": 180.0,
         "max_retries": 2,
         "retry_backoff_seconds": 2.0,
-        "min_interval_seconds": 2.0
+        "min_interval_seconds": 2.0,
+        "failure_cooldown_seconds": 40.0
       },
       {
         "provider": "kimi-code",
@@ -34,7 +44,8 @@
         "timeout_seconds": 180.0,
         "max_retries": 2,
         "retry_backoff_seconds": 2.0,
-        "min_interval_seconds": 2.0
+        "min_interval_seconds": 2.0,
+        "failure_cooldown_seconds": 40.0
       },
       {
         "provider": "deepseek-ark",
@@ -45,10 +56,15 @@
         "timeout_seconds": 180.0,
         "max_retries": 2,
         "retry_backoff_seconds": 2.0,
-        "min_interval_seconds": 2.0
+        "min_interval_seconds": 2.0,
+        "failure_cooldown_seconds": 40.0
       }
     ],
     "chapter_batch_size": 4,
+    "chapter_batch_char_limit": 10000,
+    "oversized_chapter_batch_size": 2,
+    "max_compare_units_per_batch": 4,
+    "max_compare_unit_chars": 10000,
     "retry": {
       "honor_retry_after": true,
       "jitter_seconds": 0.5

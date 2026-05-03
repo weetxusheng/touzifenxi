@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -14,70 +14,102 @@ if __name__ == "file_comparison":
     sys.modules.pop(__name__, None)
 
 from file_comparison.compare.chunking import (  # noqa: E402
-    INNER_HEADING_RE,
-    SubchapterInfo,
+    OMITTED_EQUAL_MARKER,
+    build_compare_units_for_llm,
     build_comparison_row,
-    build_name_row,
-    build_rows,
     build_section_rows,
-    build_candidate_section,
-    block_label,
-    block_match_key,
-    build_block_chunks,
-    heading_context,
-    is_only_numbering_changed,
-    join_chunks,
-    remove_first_inner_heading,
-    split_blocks,
+    group_compare_units_into_batches,
     preprocess_sections_for_llm,
-    row_display_text,
-    strip_leading_numbering,
-    subchapter_info,
+    remove_fully_equal_lines,
 )
 from file_comparison.compare.engine import (  # noqa: E402
-    build_pair_key,
+    apply_section_skip_rules,
+    build_output_document_paths,
+    build_output_document_stem,
     compare_pair,
-    compare_pair_with_llm,
-    rows_from_llm_payload,
-    run_task,
-    scan_folder_for_pairs,
+    normalize_product_name_rows,
 )
 from file_comparison.compare.extractor import (  # noqa: E402
-    NumberingLevel,
     Section,
-    clean_lines,
-    extract_docx_text,
-    extract_fund_name,
-    extract_text,
-    format_counter,
+    extract_fund_name_or_empty,
     format_number_label,
-    full_body_without_title,
-    int_to_letters,
-    int_to_roman,
-    normalize_title,
-    paragraph_numbering,
-    read_numbering_levels,
-    section_number,
     split_sections,
 )
-from file_comparison.compare.models import ComparisonRow, PairMatch  # noqa: E402
+from file_comparison.compare.models import CompareUnit, ComparisonRow, PairMatch  # noqa: E402
 from file_comparison.compare.writer import (  # noqa: E402
-    CHANGE_BLUE,
-    DELETE_RED,
-    MAX_UNDERLINE_CHARS,
     build_new_revision_paragraphs,
     build_old_revision_paragraphs,
     convert_docx_to_doc,
     display_text_with_subchapter,
     write_docx,
 )
-from file_comparison.runtime.checkpoint import atomic_write_json  # noqa: E402
 from file_comparison.runtime.config import load_file_comparison_runtime_config  # noqa: E402
+
+__all__ = (
+    "CompareUnit",
+    "ComparisonRow",
+    "PairMatch",
+    "Section",
+    "apply_section_skip_rules",
+    "build_output_document_paths",
+    "build_output_document_stem",
+    "build_compare_units_for_llm",
+    "build_comparison_row",
+    "build_new_revision_paragraphs",
+    "build_old_revision_paragraphs",
+    "build_section_rows",
+    "comparison_output_path",
+    "display_text_with_subchapter",
+    "extract_fund_name_or_empty",
+    "format_number_label",
+    "group_compare_units_into_batches",
+    "main",
+    "month_label",
+    "OMITTED_EQUAL_MARKER",
+    "normalize_product_name_rows",
+    "preprocess_sections_for_llm",
+    "remove_fully_equal_lines",
+    "safe_filename_part",
+    "split_sections",
+    "with_timestamp",
+    "write_docx",
+)
+
+
+MONTH_LABEL_RE = re.compile(r"\d{1,2}月")
+FILENAME_UNSAFE_RE = re.compile(r'[\\/:*?"<>|\r\n]+')
 
 
 def with_timestamp(path: Path, timestamp: str) -> Path:
     """为输出文件名追加时间戳，避免覆盖旧产物。"""
     return path.with_name(f"{path.stem}_{timestamp}{path.suffix}")
+
+
+def safe_filename_part(value: str) -> str:
+    """把产品名等业务文本清洗成可作为文件名的片段。"""
+    cleaned = FILENAME_UNSAFE_RE.sub("", value).strip()
+    cleaned = re.sub(r"\s+", "", cleaned)
+    return cleaned or "未识别产品"
+
+
+def month_label(path: Path) -> str:
+    """从文件名中提取月份标签，无法识别时退回文件 stem。"""
+    match = MONTH_LABEL_RE.search(path.stem)
+    return match.group(0) if match else path.stem
+
+
+def comparison_output_path(base_path: Path, product_name: str, old_path: Path, new_path: Path, timestamp: str) -> Path:
+    """按“前文件名 与 后文件名 对照表 时间戳”生成输出路径。"""
+    del product_name
+    pair = PairMatch(
+        pair_id="single-pair",
+        key=old_path.stem,
+        old_path=old_path,
+        new_path=new_path,
+        old_label=old_path.name,
+        new_label=new_path.name,
+    )
+    return base_path.with_name(f"{build_output_document_stem(pair, timestamp=timestamp)}{base_path.suffix}")
 
 
 def main() -> None:
@@ -103,12 +135,12 @@ def main() -> None:
     output_root.mkdir(parents=True, exist_ok=True)
     result = compare_pair(pair=pair, pair_dir=output_root, runtime_config=runtime_config)
 
-    docx_output = with_timestamp(args.docx_output, timestamp)
+    docx_output = comparison_output_path(args.docx_output, "", args.old, args.new, timestamp)
     docx_output.parent.mkdir(parents=True, exist_ok=True)
     docx_output.write_bytes(result.docx_path.read_bytes())
     print(docx_output)
     if args.doc_output:
-        doc_output = with_timestamp(args.doc_output, timestamp)
+        doc_output = comparison_output_path(args.doc_output, "", args.old, args.new, timestamp)
         if result.doc_path and result.doc_path.exists():
             doc_output.write_bytes(result.doc_path.read_bytes())
         else:

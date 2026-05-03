@@ -9,7 +9,6 @@ from urllib.error import HTTPError
 
 from ..runtime.config import LLMProviderConfig
 
-
 RETRYABLE_HTTP_CODES = {408, 409, 425, 429, 500, 502, 503, 504, 520, 529}
 MINIMAX_RETRYABLE_STATUS_CODES = {1000, 1001, 1002, 1024, 1033, 1039}
 

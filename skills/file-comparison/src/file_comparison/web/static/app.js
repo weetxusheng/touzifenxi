@@ -5,25 +5,19 @@
   const html = window.htm.bind(React.createElement);
 
   const {
-    Alert,
     App,
     Button,
     Card,
-    Col,
     ConfigProvider,
-    Divider,
     Input,
-    Layout,
-    Row,
+    Select,
     Space,
-    Statistic,
     Table,
     Tag,
     Typography,
     Upload,
   } = antd;
-  const Header = Layout.Header;
-  const Content = Layout.Content;
+  const theme = antd.theme;
   const Title = Typography.Title;
   const Paragraph = Typography.Paragraph;
   const Text = Typography.Text;
@@ -46,20 +40,78 @@
     return html`<${Tag}>${status || "待处理"}<//>`;
   }
 
+  function batchStatusTag(status) {
+    if (status === "success") return html`<${Tag} color="success">已成功<//>`;
+    if (status === "pending") return html`<${Tag}>等待中<//>`;
+    if (status === "parse_error") return html`<${Tag} color="warning">解析失败<//>`;
+    if (status === "postprocess_error") return html`<${Tag} color="warning">后处理失败<//>`;
+    if (status === "error") return html`<${Tag} color="error">调用失败<//>`;
+    if (status === "aborted") return html`<${Tag} color="default">已中止<//>`;
+    return html`<${Tag}>${status || "未知"}<//>`;
+  }
+
+  function formatDuration(durationMs) {
+    if (!durationMs) return "0s";
+    if (durationMs < 1000) return durationMs + "ms";
+    const seconds = Math.round(durationMs / 1000);
+    if (seconds < 60) return seconds + "s";
+    return Math.floor(seconds / 60) + "m " + (seconds % 60) + "s";
+  }
+
+  function fileLabelFromPath(path) {
+    return String(path || "").split("/").pop() || "";
+  }
+
+  function readTaskIdFromLocation() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("task_id") || "";
+  }
+
+  function writeTaskIdToLocation(taskId) {
+    const url = new URL(window.location.href);
+    if (taskId) {
+      url.searchParams.set("task_id", taskId);
+    } else {
+      url.searchParams.delete("task_id");
+    }
+    window.history.replaceState({}, "", url.toString());
+  }
+
+  function pairPayloadWithLabels(pair) {
+    return {
+      pair_id: pair.pair_id,
+      key: pair.key || "",
+      old_path: pair.old_path || "",
+      new_path: pair.new_path || "",
+      old_label: pair.old_label || fileLabelFromPath(pair.old_path),
+      new_label: pair.new_label || fileLabelFromPath(pair.new_path),
+    };
+  }
+
   function FileComparisonPage() {
     const app = App.useApp();
     const message = app.message;
-    const [folderPath, setFolderPath] = React.useState("");
     const [uploadedFiles, setUploadedFiles] = React.useState([]);
     const [scanPayload, setScanPayload] = React.useState(null);
+    const [editablePairs, setEditablePairs] = React.useState([]);
     const [taskPayload, setTaskPayload] = React.useState(null);
     const [currentTaskId, setCurrentTaskId] = React.useState("");
-    const [loadingScan, setLoadingScan] = React.useState(false);
     const [loadingTask, setLoadingTask] = React.useState(false);
     const [uploading, setUploading] = React.useState(false);
+    const [rerunningBatchIds, setRerunningBatchIds] = React.useState({});
+    const [pollVersion, setPollVersion] = React.useState(0);
+
+    React.useEffect(function () {
+      window.sessionStorage.removeItem("fileComparison.currentTaskId");
+      const savedTaskId = readTaskIdFromLocation();
+      if (savedTaskId) {
+        setCurrentTaskId(savedTaskId);
+      }
+    }, []);
 
     React.useEffect(function () {
       if (!currentTaskId) return undefined;
+      writeTaskIdToLocation(currentTaskId);
       const timer = window.setInterval(async function () {
         try {
           const payload = await fetchJson("/api/file-comparison/task/" + currentTaskId + "/status");
@@ -72,10 +124,148 @@
           message.error(error.message);
         }
       }, 2000);
+      fetchJson("/api/file-comparison/task/" + currentTaskId + "/status")
+        .then(setTaskPayload)
+        .catch(function () {
+          window.sessionStorage.removeItem("fileComparison.currentTaskId");
+          writeTaskIdToLocation("");
+        });
       return function () {
         window.clearInterval(timer);
       };
-    }, [currentTaskId, message]);
+    }, [currentTaskId, message, pollVersion]);
+
+    const fileOptions = React.useMemo(function () {
+      return ((scanPayload && scanPayload.files) || []).map(function (file) {
+        return { label: file.label, value: file.path };
+      });
+    }, [scanPayload]);
+
+    const governance = (taskPayload && taskPayload.governance_summary) || {};
+
+    function clearCurrentTask() {
+      setCurrentTaskId("");
+      setTaskPayload(null);
+      window.sessionStorage.removeItem("fileComparison.currentTaskId");
+      writeTaskIdToLocation("");
+    }
+
+    function updatePair(pairId, patch) {
+      setEditablePairs(function (prev) {
+        return prev.map(function (pair) {
+          if (pair.pair_id !== pairId) return pair;
+          const nextPair = Object.assign({}, pair, patch);
+          if (patch.old_path) nextPair.old_label = fileLabelFromPath(patch.old_path);
+          if (patch.new_path) nextPair.new_label = fileLabelFromPath(patch.new_path);
+          return nextPair;
+        });
+      });
+    }
+
+    function swapPair(pairId) {
+      setEditablePairs(function (prev) {
+        return prev.map(function (pair) {
+          if (pair.pair_id !== pairId) return pair;
+          return Object.assign({}, pair, {
+            old_path: pair.new_path,
+            new_path: pair.old_path,
+            old_label: pair.new_label,
+            new_label: pair.old_label,
+          });
+        });
+      });
+    }
+
+    function removePair(pairId) {
+      setEditablePairs(function (prev) {
+        return prev.filter(function (pair) {
+          return pair.pair_id !== pairId;
+        });
+      });
+    }
+
+    function clearPairs() {
+      setEditablePairs([]);
+    }
+
+    async function refreshTask(taskId) {
+      const payload = await fetchJson("/api/file-comparison/task/" + taskId + "/status");
+      setTaskPayload(payload);
+      return payload;
+    }
+
+    async function copyText(text) {
+      if (!text) {
+        message.warning("没有可复制的内容。");
+        return;
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          textarea.setAttribute("readonly", "readonly");
+          textarea.style.position = "fixed";
+          textarea.style.left = "-9999px";
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+        }
+        message.success("已复制。");
+      } catch (error) {
+        message.error("复制失败，请手动选择路径复制。");
+      }
+    }
+
+    function addPair() {
+      const first = fileOptions[0] && fileOptions[0].value;
+      const second = fileOptions[1] && fileOptions[1].value;
+      setEditablePairs(function (prev) {
+        return prev.concat({
+          pair_id: "manual-" + Date.now(),
+          key: "手动配对",
+          old_path: first || "",
+          new_path: second || "",
+          old_label: fileLabelFromPath(first),
+          new_label: fileLabelFromPath(second),
+        });
+      });
+    }
+
+    async function rerunBatch(pairId, batchId) {
+      if (!currentTaskId || !pairId || !batchId) {
+        message.warning("缺少任务或批次信息。");
+        return;
+      }
+      const rerunKey = pairId + ":" + batchId;
+      setRerunningBatchIds(function (prev) {
+        return Object.assign({}, prev, { [rerunKey]: true });
+      });
+      try {
+        const payload = await fetchJson(
+          "/api/file-comparison/task/" + currentTaskId + "/pair/" + pairId + "/batch/" + batchId + "/rerun",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          }
+        );
+        setCurrentTaskId(payload.task_id);
+        setPollVersion(function (prev) { return prev + 1; });
+        await refreshTask(payload.task_id);
+        message.success("已重新发起 " + batchId + "。");
+      } catch (error) {
+        message.error(error.message);
+      } finally {
+        setRerunningBatchIds(function (prev) {
+          const next = Object.assign({}, prev);
+          delete next[rerunKey];
+          return next;
+        });
+      }
+    }
 
     const pairColumns = React.useMemo(function () {
       return [
@@ -83,14 +273,62 @@
           title: "主键",
           dataIndex: "key",
           key: "key",
-          render: function (value) {
-            return value || "未命名分组";
+          width: 180,
+          render: function (value, record) {
+            return html`<${Input}
+              size="small"
+              value=${value}
+              placeholder="主键"
+              onChange=${function (event) { updatePair(record.pair_id, { key: event.target.value }); }}
+            />`;
           },
         },
-        { title: "前文件", dataIndex: "old_label", key: "old_label" },
-        { title: "后文件", dataIndex: "new_label", key: "new_label" },
+        {
+          title: "修改前文件",
+          dataIndex: "old_path",
+          key: "old_path",
+          width: 320,
+          render: function (value, record) {
+            return html`<${Select}
+              size="small"
+              value=${value || undefined}
+              options=${fileOptions}
+              placeholder="选择修改前文件"
+              className="w-full"
+              onChange=${function (nextValue) { updatePair(record.pair_id, { old_path: nextValue }); }}
+            />`;
+          },
+        },
+        {
+          title: "修改后文件",
+          dataIndex: "new_path",
+          key: "new_path",
+          width: 320,
+          render: function (value, record) {
+            return html`<${Select}
+              size="small"
+              value=${value || undefined}
+              options=${fileOptions}
+              placeholder="选择修改后文件"
+              className="w-full"
+              onChange=${function (nextValue) { updatePair(record.pair_id, { new_path: nextValue }); }}
+            />`;
+          },
+        },
+        {
+          title: "操作",
+          key: "actions",
+          width: 170,
+          fixed: "right",
+          render: function (_, record) {
+            return html`<${Space} size=${4}>
+              <${Button} size="small" onClick=${function () { swapPair(record.pair_id); }}>交换<//>
+              <${Button} size="small" danger=${true} onClick=${function () { removePair(record.pair_id); }}>删除匹配<//>
+            <//>`;
+          },
+        },
       ];
-    }, []);
+    }, [fileOptions]);
 
     const taskColumns = React.useMemo(
       function () {
@@ -109,6 +347,23 @@
             key: "status",
             render: function (value) {
               return statusTag(value);
+            },
+          },
+          {
+            title: "批次",
+            key: "batches",
+            render: function (_, record) {
+              const total = (record.batches && record.batches.length) || 0;
+              const done = record.completed_batch_count || 0;
+              return total ? done + "/" + total : "-";
+            },
+          },
+          {
+            title: "耗时",
+            dataIndex: "duration_ms",
+            key: "duration_ms",
+            render: function (value) {
+              return formatDuration(value || 0);
             },
           },
           {
@@ -134,34 +389,106 @@
       [taskPayload]
     );
 
-    async function scanFolder(path) {
-      const targetPath = (path || folderPath).trim();
-      if (!targetPath) {
-        message.warning("请先输入或上传文件。");
-        return;
+    function renderBatchTable(record) {
+      const batches = record.batches || [];
+      if (!batches.length) {
+        return html`<${Text} type="secondary">还没有批次明细，任务开始后会自动出现。<//>`;
       }
-      setLoadingScan(true);
-      try {
-        const payload = await fetchJson("/api/file-comparison/scan-folder", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ folder_path: targetPath }),
-        });
-        setFolderPath(payload.folder_path || targetPath);
-        setScanPayload(payload);
-        message.success("扫描完成，共识别 " + payload.pairs.length + " 组候选文件对。");
-      } catch (error) {
-        message.error(error.message);
-      } finally {
-        setLoadingScan(false);
-      }
+      const columns = [
+        {
+          title: "批次",
+          dataIndex: "batch_id",
+          key: "batch_id",
+          width: 110,
+        },
+        {
+          title: "章节",
+          dataIndex: "chapter_range",
+          key: "chapter_range",
+          width: 180,
+          render: function (value) {
+            return (value || []).join("、") || "-";
+          },
+        },
+        {
+          title: "状态",
+          dataIndex: "status",
+          key: "status",
+          width: 110,
+          render: batchStatusTag,
+        },
+        {
+          title: "模型",
+          dataIndex: "provider",
+          key: "provider",
+          width: 130,
+          render: function (value) {
+            return value || "-";
+          },
+        },
+        {
+          title: "尝试",
+          dataIndex: "attempt_count",
+          key: "attempt_count",
+          width: 80,
+          render: function (value) {
+            return value || 0;
+          },
+        },
+        {
+          title: "耗时",
+          dataIndex: "total_duration_ms",
+          key: "total_duration_ms",
+          width: 100,
+          render: function (value, batch) {
+            return formatDuration(value || batch.duration_ms || 0);
+          },
+        },
+        {
+          title: "错误",
+          dataIndex: "error",
+          key: "error",
+          ellipsis: true,
+          render: function (value) {
+            return value ? html`<${Text} type="danger">${value}<//>` : html`<${Text} type="secondary">-<//>`;
+          },
+        },
+        {
+          title: "操作",
+          key: "action",
+          width: 110,
+          fixed: "right",
+          render: function (_, batch) {
+            const rerunKey = record.pair_id + ":" + batch.batch_id;
+            return html`<${Button}
+              size="small"
+              loading=${!!rerunningBatchIds[rerunKey]}
+              onClick=${function () { rerunBatch(record.pair_id, batch.batch_id); }}
+            >
+              重跑批次
+            <//>`;
+          },
+        },
+      ];
+      return html`
+        <${Table}
+          rowKey=${function (batch) { return batch.batch_id; }}
+          columns=${columns}
+          dataSource=${batches}
+          size="small"
+          pagination=${false}
+          scroll=${{ x: 980 }}
+        />
+      `;
     }
+
 
     async function uploadAndScan() {
       if (!uploadedFiles.length) {
         message.warning("先拖入文档再上传。");
         return;
       }
+      clearCurrentTask();
       const formData = new FormData();
       uploadedFiles.forEach(function (fileWrapper) {
         const fileObject = fileWrapper.originFileObj || fileWrapper;
@@ -179,8 +506,8 @@
         if (!response.ok) {
           throw new Error(payload.error || ("上传失败: " + response.status));
         }
-        setFolderPath(payload.folder_path);
         setScanPayload(payload);
+        setEditablePairs((payload.pairs || []).map(pairPayloadWithLabels));
         message.success("上传完成，已保存 " + payload.uploaded_count + " 个文件。");
       } catch (error) {
         message.error(error.message);
@@ -190,8 +517,19 @@
     }
 
     async function createTask() {
-      if (!folderPath.trim()) {
-        message.warning("请先扫描或上传一批文件。");
+      if (!scanPayload || !scanPayload.folder_path) {
+        message.warning("请先上传并匹配一批文件。");
+        return;
+      }
+      if (!editablePairs.length) {
+        message.warning("请先确认至少一组配对。");
+        return;
+      }
+      const invalidPair = editablePairs.find(function (pair) {
+        return !pair.old_path || !pair.new_path || pair.old_path === pair.new_path;
+      });
+      if (invalidPair) {
+        message.warning("请检查配对：修改前后文件不能为空，也不能相同。");
         return;
       }
       setLoadingTask(true);
@@ -199,7 +537,12 @@
         const payload = await fetchJson("/api/file-comparison/task", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ folder_path: folderPath.trim() }),
+          body: JSON.stringify({
+            folder_path: scanPayload.folder_path,
+            pairs: editablePairs.map(function (pair) {
+              return { key: pair.key, old_path: pair.old_path, new_path: pair.new_path };
+            }),
+          }),
         });
         setCurrentTaskId(payload.task_id);
         setTaskPayload(payload);
@@ -212,118 +555,198 @@
     }
 
     return html`
-      <${Layout} style=${{ minHeight: "100vh", background: "transparent" }}>
-        <${Header} style=${{ background: "transparent", padding: "20px 28px 0", height: "auto" }}>
-          <${Space} direction="vertical" size=${4}>
-            <${Title} level=${2} style=${{ margin: 0 }}>文件对照批处理<//>
-            <${Paragraph} type="secondary" style=${{ margin: 0 }}>
-              React + Ant Design 版批处理页面，支持拖拽上传、自动配对、发起生成与结果轮询。
-            <//>
-          <//>
-        <//>
-        <${Content} className="page-shell">
-          <${Row} gutter=${[18, 18]}>
-            <${Col} xs=${24} xl=${16}>
-              <${Card} className="hero-card" bordered=${false}>
-                <${Space} direction="vertical" size=${20} style=${{ width: "100%" }}>
-                  <div>
-                    <${Text} strong>上传文件或直接填写本地目录<//>
-                    <${Paragraph} type="secondary" style=${{ marginBottom: 0, marginTop: 6 }}>
-                      推荐把前后版本的 .doc / .docx 直接拖进来，系统会在服务端创建临时目录并自动扫描配对。
-                    <//>
+      <main className="page-shell">
+        <section className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <${Title} level=${4} className="!mb-0">文件对照批处理<//>
+            <${Text} type="secondary">上传文件、确认配对、生成结果、下载文档<//>
+          </div>
+          ${currentTaskId
+            ? html`<${Space} size=${6}>
+                <${Tag} color="processing">当前任务：${currentTaskId}<//>
+                <${Button} size="small" onClick=${clearCurrentTask}>清空当前任务<//>
+              <//>`
+            : null}
+        </section>
+
+        <div className="workflow-grid">
+          <${Card} size="small" className="dense-card upload-card" bordered=${false}>
+            <div className="upload-panel">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <${Text} strong>上传文件<//>
+                      <${Paragraph} type="secondary" className="!mb-0 !text-xs">
+                        支持 .doc / .docx，上传区已压缩，配对可在下方调整。
+                      <//>
+                    </div>
                   </div>
-                  <${Dragger}
-                    className="drop-zone"
-                    multiple=${true}
-                    accept=".doc,.docx"
-                    beforeUpload=${function (file) {
-                      setUploadedFiles(function (prev) {
-                        const exists = prev.some(function (item) {
-                          return item.uid === file.uid;
+
+                    <${Dragger}
+                      className="compact-upload"
+                      multiple=${true}
+                      accept=".doc,.docx"
+                      showUploadList=${false}
+                      beforeUpload=${function (file) {
+                        clearCurrentTask();
+                        setUploadedFiles(function (prev) {
+                          const exists = prev.some(function (item) {
+                            return item.uid === file.uid;
+                          });
+                          return exists ? prev : prev.concat(file);
                         });
-                        return exists ? prev : prev.concat(file);
-                      });
-                      return false;
-                    }}
-                    onRemove=${function (file) {
-                      setUploadedFiles(function (prev) {
-                        return prev.filter(function (item) {
-                          return item.uid !== file.uid;
+                        return false;
+                      }}
+                      onRemove=${function (file) {
+                        setUploadedFiles(function (prev) {
+                          return prev.filter(function (item) {
+                            return item.uid !== file.uid;
+                          });
                         });
-                      });
-                    }}
-                    fileList=${uploadedFiles}
-                  >
-                    <p className="ant-upload-drag-icon">
-                      <span style=${{ fontSize: "36px", color: "#1677ff" }}>+</span>
-                    </p>
-                    <p className="ant-upload-text">拖拽 Word 文档到这里，或点击选择文件</p>
-                    <p className="ant-upload-hint">支持一次拖入多份文档，上传后会自动按去掉月份后的主键配对。</p>
-                  <//>
-                  <${Space} wrap=${true}>
-                    <${Button} type="primary" loading=${uploading} onClick=${uploadAndScan}>上传并扫描<//>
-                    <${Button} loading=${loadingScan} onClick=${function () { scanFolder(); }}>扫描当前目录<//>
-                    <${Button} type="primary" ghost=${true} loading=${loadingTask} onClick=${createTask}>一键发起生成<//>
-                  <//>
-                  <${Input}
-                    value=${folderPath}
-                    onChange=${function (event) { setFolderPath(event.target.value); }}
-                    placeholder="输入服务端可访问的绝对路径，或先用拖拽上传"
-                    size="large"
-                  />
-                  ${scanPayload && scanPayload.folder_path
-                    ? html`<${Alert} type="info" showIcon=${true} message=${"当前扫描目录：" + scanPayload.folder_path} />`
-                    : null}
-                <//>
-              <//>
-            <//>
-            <${Col} xs=${24} xl=${8}>
-              <${Row} gutter=${[16, 16]}>
-                <${Col} span=${12}>
-                  <${Card}><${Statistic} title="候选文件对" value=${(scanPayload && scanPayload.pairs && scanPayload.pairs.length) || 0} /><//>
-                <//>
-                <${Col} span=${12}>
-                  <${Card}><${Statistic} title="上传文件数" value=${uploadedFiles.length} /><//>
-                <//>
-                <${Col} span=${24}>
-                  <${Card}>
-                    <${Statistic} title="任务状态" value=${(taskPayload && taskPayload.status) || "未开始"} />
-                    <${Divider} style=${{ margin: "16px 0" }} />
-                    <${Space} size=${24}>
-                      <${Statistic} title="成功" value=${(taskPayload && taskPayload.success_count) || 0} />
-                      <${Statistic} title="失败" value=${(taskPayload && taskPayload.failed_count) || 0} />
+                      }}
+                      fileList=${uploadedFiles}
+                    >
+                      <p className="ant-upload-drag-icon">
+                        <span className="text-xl text-blue-600">+</span>
+                      </p>
+                      <p className="ant-upload-text">拖拽或点击选择 Word 文档</p>
+                      <p className="ant-upload-hint">上传后点击匹配，配对可人工修改。</p>
                     <//>
-                  <//>
-                <//>
-              <//>
-            <//>
+
+                    <div className="selected-file-list">
+                      ${uploadedFiles.length
+                        ? uploadedFiles.map(function (file) {
+                            return html`
+                              <div className="selected-file-row" key=${file.uid || file.name}>
+                                <span className="selected-file-name" title=${file.name}>${file.name}<//>
+                                <button
+                                  type="button"
+                                  className="selected-file-remove"
+                                  title="移除文件"
+                                  onClick=${function () {
+                                    setUploadedFiles(function (prev) {
+                                      return prev.filter(function (item) {
+                                        return item.uid !== file.uid;
+                                      });
+                                    });
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            `;
+                          })
+                        : html`<div className="flex h-full items-center justify-center text-xs text-slate-400">已选择文件会显示在这里</div>`}
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <${Text} type="secondary" className="!text-xs">
+                        已选择 ${uploadedFiles.length} 个文件，点击匹配后生成下方配对预览。
+                      <//>
+                      <${Button}
+                        size="small"
+                        type="primary"
+                        loading=${uploading}
+                        disabled=${!uploadedFiles.length}
+                        onClick=${uploadAndScan}
+                      >
+                        上传并匹配
+                      <//>
+                    </div>
+
+                    ${scanPayload && scanPayload.folder_path
+                      ? html`
+                        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1">
+                          <${Text} type="secondary" className="min-w-0 flex-1 truncate !text-xs">
+                            已上传目录：${scanPayload.folder_path}
+                          <//>
+                          <${Button}
+                            size="small"
+                            onClick=${function () { copyText(scanPayload.folder_path); }}
+                          >
+                            复制
+                          <//>
+                        </div>
+                      `
+                      : null}
+            </div>
           <//>
-          <${Row} gutter=${[18, 18]} style=${{ marginTop: 2 }}>
-            <${Col} span=${24}>
-              <${Card} title="配对预览" bordered=${false}>
-                <${Table}
-                  rowKey=${function (record) { return record.pair_id; }}
-                  columns=${pairColumns}
-                  dataSource=${(scanPayload && scanPayload.pairs) || []}
-                  pagination=${false}
-                  locale=${{ emptyText: "尚未扫描或未找到可配对文件" }}
-                />
+
+          <${Card}
+            size="small"
+            title="配对预览"
+            className="dense-card pair-preview-card"
+            bordered=${false}
+            extra=${html`<${Space} size=${6}>
+              <${Button} size="small" disabled=${!fileOptions.length} onClick=${addPair}>新增配对<//>
+              <${Button} size="small" danger=${true} disabled=${!editablePairs.length} onClick=${clearPairs}>清空配对<//>
+              <${Button}
+                size="small"
+                type="primary"
+                loading=${loadingTask}
+                disabled=${!scanPayload || !editablePairs.length}
+                onClick=${createTask}
+              >
+                发起生成
               <//>
-            <//>
-            <${Col} span=${24}>
-              <${Card} title="任务状态" bordered=${false}>
-                <${Table}
-                  rowKey=${function (record) { return record.pair_id; }}
-                  columns=${taskColumns}
-                  dataSource=${(taskPayload && taskPayload.pairs) || []}
-                  pagination=${false}
-                  locale=${{ emptyText: "尚未发起任务" }}
-                />
-              <//>
-            <//>
+            <//>`}
+          >
+            <${Table}
+                rowKey=${function (record) { return record.pair_id; }}
+                columns=${pairColumns}
+                dataSource=${editablePairs}
+                size="small"
+                pagination=${false}
+                scroll=${{ x: 990 }}
+                locale=${{ emptyText: "尚未匹配或未找到可配对文件" }}
+              />
           <//>
-        <//>
-      <//>
+
+          <${Card} size="small" title="任务状态" className="dense-card task-status-card" bordered=${false}>
+                <div className="task-progress-summary">
+                  <div className="task-progress-item">
+                    <span className="task-progress-label">任务状态</span>
+                    <span className="task-progress-value">${statusTag((taskPayload && taskPayload.status) || "未开始")}</span>
+                  </div>
+                  <div className="task-progress-item">
+                    <span className="task-progress-label">文件对</span>
+                    <span className="task-progress-value">${(scanPayload && scanPayload.pairs && scanPayload.pairs.length) || 0}</span>
+                  </div>
+                  <div className="task-progress-item">
+                    <span className="task-progress-label">已确认</span>
+                    <span className="task-progress-value">${editablePairs.length}</span>
+                  </div>
+                  <div className="task-progress-item">
+                    <span className="task-progress-label">批次进度</span>
+                    <span className="task-progress-value">${(governance.completed_batch_count || 0) + "/" + (governance.total_batch_count || 0)}</span>
+                  </div>
+                  <div className="task-progress-item">
+                    <span className="task-progress-label">当前模型</span>
+                    <span className="task-progress-value">${governance.current_provider || "-"}</span>
+                  </div>
+                  <div className="task-progress-item">
+                    <span className="task-progress-label">总耗时</span>
+                    <span className="task-progress-value">${formatDuration((taskPayload && taskPayload.duration_ms) || 0)}</span>
+                  </div>
+                </div>
+                <div className="mb-2 flex flex-wrap gap-1">
+                  <${Tag}>当前批次 ${governance.current_batch_id || "-"}<//>
+                  <${Tag}>模型失败 ${(governance.provider_failure_count || 0)}<//>
+                  <${Tag}>结果修复 ${(governance.repair_count || 0)}<//>
+                  <${Tag}>规则回退 ${(governance.fallback_count || 0)}<//>
+                  <${Tag} color=${taskPayload && taskPayload.failed_count ? "error" : "default"}>失败数量 ${(taskPayload && taskPayload.failed_count) || 0}<//>
+                </div>
+                <${Table}
+                    rowKey=${function (record) { return record.pair_id; }}
+                    columns=${taskColumns}
+                    dataSource=${(taskPayload && taskPayload.pairs) || []}
+                    size="small"
+                    pagination=${false}
+                    expandable=${{ expandedRowRender: renderBatchTable, rowExpandable: function (record) { return !!(record.batches && record.batches.length); } }}
+                    locale=${{ emptyText: "尚未发起任务" }}
+                  />
+          <//>
+        </div>
+      </main>
     `;
   }
 
@@ -331,10 +754,15 @@
     return html`
       <${ConfigProvider}
         theme=${{
+          algorithm: theme && theme.compactAlgorithm ? theme.compactAlgorithm : undefined,
           token: {
             colorPrimary: "#1677ff",
-            borderRadius: 16,
+            borderRadius: 10,
             fontFamily: '"PingFang SC", "Hiragino Sans GB", sans-serif',
+          },
+          components: {
+            Card: { headerFontSize: 14 },
+            Table: { cellFontSizeSM: 12 },
           },
         }}
       >

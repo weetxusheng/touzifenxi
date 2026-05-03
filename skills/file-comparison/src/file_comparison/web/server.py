@@ -5,18 +5,155 @@ from __future__ import annotations
 import json
 import mimetypes
 import tempfile
-from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from email.parser import BytesParser
 from email.policy import default
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from ..compare.engine import TaskManager, scan_folder_for_pairs
+from ..compare.models import PairMatch
 from ..runtime.config import FileComparisonRuntimeConfig, load_file_comparison_runtime_config
 from ..runtime.settings import ensure_directories, resolve_paths
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+def list_word_files(folder_path: Path) -> list[dict[str, str]]:
+    """列出目录中可参与配对的 Word 文件。"""
+    return [
+        {"label": path.name, "path": str(path)}
+        for path in sorted(folder_path.iterdir())
+        if path.is_file() and path.suffix.lower() in {".doc", ".docx"} and not path.name.startswith(".~")
+    ]
+
+
+def pair_to_payload(pair: PairMatch) -> dict[str, str]:
+    """把 PairMatch 转成前端可编辑的 JSON 结构。"""
+    return {
+        "pair_id": pair.pair_id,
+        "key": pair.key,
+        "old_label": pair.old_label,
+        "new_label": pair.new_label,
+        "old_path": str(pair.old_path),
+        "new_path": str(pair.new_path),
+    }
+
+
+def hydrate_status_from_checkpoints(run_dir: Path, payload: dict) -> dict:
+    """用最新 pair checkpoint 补充页面轮询状态，提升运行中可观测性。"""
+    pairs = payload.get("pairs", [])
+    if not isinstance(pairs, list):
+        return payload
+    all_batches: list[dict] = []
+    for pair in pairs:
+        if not isinstance(pair, dict):
+            continue
+        pair_id = str(pair.get("pair_id", "")).strip()
+        checkpoint_path = run_dir / "checkpoints" / f"pair_{pair_id}_checkpoint.json"
+        if not pair_id or not checkpoint_path.exists():
+            continue
+        try:
+            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        entries = checkpoint.get("entries", [])
+        if not isinstance(entries, list):
+            continue
+        batches = [batch_payload_from_checkpoint_entry(entry) for entry in entries if isinstance(entry, dict)]
+        pair["batches"] = batches
+        pair["completed_batch_count"] = sum(1 for batch in batches if batch["status"] == "success")
+        pair["failed_batch_count"] = sum(1 for batch in batches if batch["status"] not in {"success", "pending"})
+        all_batches.extend(batches)
+    payload["governance_summary"] = build_governance_summary(all_batches, payload.get("governance_summary", {}))
+    return payload
+
+
+def batch_payload_from_checkpoint_entry(entry: dict) -> dict:
+    """把 checkpoint entry 归一成前端 batch 摘要。"""
+    context = entry.get("request_context", {}) if isinstance(entry.get("request_context"), dict) else {}
+    error = entry.get("error", {}) if isinstance(entry.get("error"), dict) else {}
+    return {
+        "batch_id": str(entry.get("entry_id", "")),
+        "status": str(entry.get("status", "")),
+        "chapter_range": list(context.get("chapter_range", [])),
+        "attempt_count": int(entry.get("attempt_count", 0) or 0),
+        "provider": str(entry.get("provider", "")),
+        "error": str(error.get("message", "")),
+        "duration_ms": int(entry.get("duration_ms", 0) or 0),
+        "total_duration_ms": int(entry.get("total_duration_ms", 0) or 0),
+        "provider_available": bool(entry.get("provider_available", True)),
+        "call_status": str(entry.get("call_status", "")),
+        "repair_used": bool(entry.get("repair_used", False)),
+        "fallback_name": str(entry.get("fallback_name", "")),
+        "resume_from": str(entry.get("resume_from", "")),
+    }
+
+
+def build_governance_summary(batches: list[dict], existing: dict) -> dict:
+    """基于最新 batch 摘要重算页面治理统计。"""
+    if not batches:
+        return existing if isinstance(existing, dict) else {}
+    current_batch = next((batch for batch in batches if batch.get("status") not in {"success", "aborted"}), batches[-1])
+    return {
+        "current_batch_id": current_batch.get("batch_id", ""),
+        "current_provider": current_batch.get("provider", ""),
+        "current_call_status": current_batch.get("call_status", ""),
+        "completed_batch_count": sum(1 for batch in batches if batch.get("status") == "success"),
+        "failed_batch_count": sum(1 for batch in batches if batch.get("status") not in {"success", "pending"}),
+        "provider_failure_count": sum(
+            1
+            for batch in batches
+            if batch.get("provider") and not batch.get("provider_available") and batch.get("provider") != "fallback-rule"
+        ),
+        "repair_count": sum(1 for batch in batches if batch.get("repair_used")),
+        "fallback_count": sum(1 for batch in batches if batch.get("fallback_name")),
+        "total_batch_count": len(batches),
+    }
+
+
+def pair_has_fallback_diagnostic(run_dir: Path, pair_id: str) -> bool:
+    """判断文件对是否包含本地 fallback 诊断结果；包含则禁止下载正式产物。"""
+    llm_dir = run_dir / "pairs" / pair_id / "llm"
+    if not llm_dir.exists():
+        return False
+    for final_status_path in llm_dir.glob("batch-*/final_status.json"):
+        try:
+            final_status = json.loads(final_status_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if not isinstance(final_status, dict):
+            continue
+        status = str(final_status.get("status", "")).strip()
+        provider = str(final_status.get("provider", "")).strip()
+        fallback = str(final_status.get("fallback", "")).strip()
+        if status == "fallback_succeeded" or provider == "fallback-rule" or fallback:
+            return True
+    return False
+
+
+def resolve_pair_artifact_path(run_dir: Path, pair_id: str, kind: str) -> Path | None:
+    """按 pair 记录或输出目录解析正式产物路径，兼容中文动态文件名。"""
+    suffix_by_kind = {"docx": ".docx", "doc": ".doc"}
+    suffix = suffix_by_kind.get(kind)
+    if suffix is None:
+        return None
+    pair_dir = run_dir / "pairs" / pair_id
+    pair_json_path = pair_dir / "pair.json"
+    if pair_json_path.exists():
+        try:
+            pair_payload = json.loads(pair_json_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pair_payload = {}
+        recorded_path = Path(str(pair_payload.get(f"{kind}_path", ""))) if isinstance(pair_payload, dict) else Path("")
+        if str(recorded_path) and recorded_path.exists() and recorded_path.suffix.lower() == suffix:
+            return recorded_path
+    output_dir = pair_dir / "outputs"
+    candidates = [path for path in output_dir.glob(f"*{suffix}") if path.is_file()]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: path.stat().st_mtime)
 
 
 class FileComparisonServer(ThreadingHTTPServer):
@@ -55,7 +192,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             if not status_path.exists():
                 self._send_json({"error": "task not found"}, status=404)
                 return
-            self._send_json(json.loads(status_path.read_text(encoding="utf-8")))
+            payload = json.loads(status_path.read_text(encoding="utf-8"))
+            self._send_json(hydrate_status_from_checkpoints(status_path.parent, payload))
             return
         if parsed.path.startswith("/api/file-comparison/task/") and parsed.path.endswith("/pairs"):
             task_id = parsed.path.split("/")[4]
@@ -71,9 +209,12 @@ class RequestHandler(BaseHTTPRequestHandler):
             task_id = parts[3]
             pair_id = parts[5]
             kind = parts[6]
-            filename = "comparison.docx" if kind == "docx" else "comparison.doc"
-            artifact_path = self.server.paths.runs_root / task_id / "pairs" / pair_id / "outputs" / filename
-            if not artifact_path.exists():
+            run_dir = self.server.paths.runs_root / task_id
+            if pair_has_fallback_diagnostic(run_dir, pair_id):
+                self._send_json({"error": "该结果包含本地 fallback 诊断内容，禁止作为正式文档下载"}, status=409)
+                return
+            artifact_path = resolve_pair_artifact_path(run_dir, pair_id, kind)
+            if artifact_path is None:
                 self._send_json({"error": "artifact not found"}, status=404)
                 return
             self._send_file(artifact_path)
@@ -102,17 +243,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                     "folder_path": str(folder_path),
                     "uploaded_count": len(saved_files),
                     "uploaded_files": saved_files,
-                    "pairs": [
-                        {
-                            "pair_id": pair.pair_id,
-                            "key": pair.key,
-                            "old_label": pair.old_label,
-                            "new_label": pair.new_label,
-                            "old_path": str(pair.old_path),
-                            "new_path": str(pair.new_path),
-                        }
-                        for pair in pairs
-                    ],
+                    "files": list_word_files(folder_path),
+                    "pairs": [pair_to_payload(pair) for pair in pairs],
                 },
                 status=201,
             )
@@ -126,17 +258,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_json(
                 {
                     "folder_path": str(folder_path),
-                    "pairs": [
-                        {
-                            "pair_id": pair.pair_id,
-                            "key": pair.key,
-                            "old_label": pair.old_label,
-                            "new_label": pair.new_label,
-                            "old_path": str(pair.old_path),
-                            "new_path": str(pair.new_path),
-                        }
-                        for pair in pairs
-                    ],
+                    "files": list_word_files(folder_path),
+                    "pairs": [pair_to_payload(pair) for pair in pairs],
                 }
             )
             return
@@ -145,7 +268,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             folder_path = self._resolve_folder_path(payload)
             if folder_path is None:
                 return
-            manifest = self.server.task_manager.create_task(folder_path)
+            pairs = self._resolve_pairs(payload, folder_path)
+            if pairs is None:
+                return
+            manifest = self.server.task_manager.create_task(folder_path, pairs=pairs)
             self._send_json(
                 {
                     "task_id": manifest.task_id,
@@ -166,6 +292,27 @@ class RequestHandler(BaseHTTPRequestHandler):
                 },
                 status=201,
             )
+            return
+        if parsed.path.startswith("/api/file-comparison/task/") and parsed.path.endswith("/rerun"):
+            parts = parsed.path.strip("/").split("/")
+            if len(parts) != 9 or parts[4] != "pair" or parts[6] != "batch":
+                self._send_json({"error": "rerun path 格式不正确"}, status=400)
+                return
+            task_id = parts[3]
+            pair_id = parts[5]
+            batch_id = parts[7]
+            try:
+                payload = self.server.task_manager.rerun_batch(task_id, pair_id, batch_id)
+            except FileNotFoundError as exc:
+                self._send_json({"error": str(exc)}, status=404)
+                return
+            except RuntimeError as exc:
+                self._send_json({"error": str(exc)}, status=409)
+                return
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+                return
+            self._send_json(payload, status=202)
             return
         self._send_json({"error": "not found"}, status=404)
 
@@ -191,12 +338,48 @@ class RequestHandler(BaseHTTPRequestHandler):
             return None
         return folder_path
 
+    def _resolve_pairs(self, payload, folder_path: Path) -> list[PairMatch] | None:
+        """校验前端传回的人工确认配对；未传时退回自动扫描。"""
+        raw_pairs = payload.get("pairs")
+        if raw_pairs is None:
+            return scan_folder_for_pairs(folder_path, self.server.runtime_config.pairing.month_pattern)
+        if not isinstance(raw_pairs, list) or not raw_pairs:
+            self._send_json({"error": "至少需要一组文件配对"}, status=400)
+            return None
+        pairs: list[PairMatch] = []
+        for index, item in enumerate(raw_pairs, start=1):
+            if not isinstance(item, dict):
+                self._send_json({"error": "pairs 格式不正确"}, status=400)
+                return None
+            old_path = Path(str(item.get("old_path", ""))).expanduser().resolve()
+            new_path = Path(str(item.get("new_path", ""))).expanduser().resolve()
+            if not old_path.exists() or not old_path.is_file() or not new_path.exists() or not new_path.is_file():
+                self._send_json({"error": f"配对文件不存在: {old_path} / {new_path}"}, status=400)
+                return None
+            if old_path == new_path:
+                self._send_json({"error": "同一组配对的前后文件不能相同"}, status=400)
+                return None
+            pairs.append(
+                PairMatch(
+                    pair_id=f"pair-{index:03d}",
+                    key=str(item.get("key", "")).strip() or old_path.stem,
+                    old_path=old_path,
+                    new_path=new_path,
+                    old_label=old_path.name,
+                    new_label=new_path.name,
+                )
+            )
+        return pairs
+
     def _send_json(self, payload, *, status=200):
         """以 JSON 形式返回响应。"""
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(body)
 
@@ -206,6 +389,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(body)
 
@@ -216,8 +402,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         content_type, _ = mimetypes.guess_type(str(path))
         self.send_header("Content-Type", content_type or "application/octet-stream")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         if path.suffix.lower() in {".doc", ".docx"}:
-            self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
+            ascii_name = path.name.encode("ascii", "ignore").decode("ascii") or f"download{path.suffix}"
+            self.send_header("Content-Disposition", f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(path.name)}")
         self.end_headers()
         self.wfile.write(body)
 

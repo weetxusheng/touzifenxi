@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .config import FileComparisonRuntimeConfig, load_file_comparison_runtime_config, project_root
+from .config import load_file_comparison_runtime_config, project_root
 
 
 @dataclass(frozen=True, slots=True)

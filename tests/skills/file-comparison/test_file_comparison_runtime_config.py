@@ -12,9 +12,15 @@ def test_load_runtime_config_uses_defaults(tmp_path):
 
     assert config.llm_mode == "rule"
     assert config.llm.chapter_batch_size == 4
+    assert config.llm.chapter_batch_char_limit == 10000
+    assert config.llm.oversized_chapter_batch_size == 2
+    assert config.llm.max_compare_units_per_batch == 4
+    assert config.llm.max_compare_unit_chars == 10000
+    assert config.llm.failure_cooldown_seconds == 40.0
     assert config.execution.per_pair_max_workers == 2
     assert config.llm.task_routing.enabled is True
     assert config.llm.task_routing.batch_compare == ("minimax", "kimi-code", "deepseek-ark")
+    assert config.compare.skip_section_patterns == ("签署页", "签字页", "盖章页", "签章页")
     assert config.paths.output_root == "output/file-comparison/runs"
     assert config.ui.poll_interval_seconds == 2.0
 
@@ -120,6 +126,7 @@ def test_load_runtime_config_supports_c114_style_sections(tmp_path):
     assert config.execution.per_pair_max_workers == 3
     assert config.llm.providers[0].honor_retry_after is False
     assert config.llm.providers[0].jitter_seconds == 1.25
+    assert config.llm.providers[0].failure_cooldown_seconds == 40.0
     assert config.llm.providers[0].max_concurrency == 2
     assert config.llm.providers[1].max_concurrency == 4
     assert config.llm.providers[2].provider == "deepseek-ark"

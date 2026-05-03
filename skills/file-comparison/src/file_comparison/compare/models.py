@@ -53,8 +53,21 @@ class ChapterBatch:
 
     batch_id: str
     chapter_numbers: tuple[str, ...]
-    old_sections: tuple[Section, ...]
-    new_sections: tuple[Section, ...]
+    old_sections: tuple[Section, ...] = ()
+    new_sections: tuple[Section, ...] = ()
+    compare_units: tuple["CompareUnit", ...] = ()
+
+
+@dataclass(slots=True)
+class CompareUnit:
+    """表示发送给模型的单个条目级差异单元。"""
+
+    unit_id: str
+    chapter_number: str
+    chapter_title: str
+    subchapter: str
+    old_text: str
+    new_text: str
 
 
 @dataclass(slots=True)

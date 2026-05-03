@@ -12,6 +12,14 @@ THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", re.S | re.I)
 CODE_FENCE_RE = re.compile(r"```(?:json)?\s*|\s*```", re.I)
 OBJECT_WRAPPER_KEYS = ("analysis", "result", "output", "data", "response", "payload")
 OBJECT_META_KEYS = ("usage", "meta", "metadata", "id", "request_id", "model", "provider")
+LEGACY_SUBSECTION_REQUIRED_KEYS = (
+    "subchapter",
+    "old_text",
+    "new_text",
+    "change_type",
+    "numbering_only",
+    "fully_equal_lines",
+)
 
 class ResponseParseError(ValueError):
     """Raised when the model output cannot be parsed into the expected schema."""
@@ -33,6 +41,39 @@ def parse_response_payload(response: dict[str, Any]) -> dict[str, Any]:
 
 def validate_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """校验模型返回是否满足 file-comparison 的最小结构约束。"""
+    units = payload.get("units")
+    if isinstance(units, list):
+        return validate_unit_decision_payload(payload)
+    return validate_legacy_chapter_payload(payload)
+
+
+def validate_unit_decision_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """校验新版 compare unit 变更判定结构。"""
+    required = FILE_COMPARISON_SCHEMA["schema"]["properties"]["units"]["items"]["required"]
+    for unit in payload.get("units", []):
+        if not isinstance(unit, dict):
+            raise ResponseParseError("unit entry must be an object")
+        for key in required:
+            if key not in unit:
+                raise ResponseParseError(f"unit missing required field: {key}")
+        unit["unit_id"] = str(unit.get("unit_id", "")).strip()
+        unit["chapter"] = str(unit.get("chapter", "")).strip()
+        unit["subchapter"] = str(unit.get("subchapter", "")).strip()
+        unit["change_type"] = str(unit.get("change_type", "")).strip()
+        unit["display_strategy"] = str(unit.get("display_strategy", "")).strip()
+        unit["numbering_only"] = bool(unit.get("numbering_only"))
+        unit["unchanged_lines"] = normalize_string_list(unit.get("unchanged_lines"))
+        unit["old_focus_text"] = str(unit.get("old_focus_text", "")).strip()
+        unit["new_focus_text"] = str(unit.get("new_focus_text", "")).strip()
+        try:
+            unit["confidence"] = float(unit.get("confidence", 0))
+        except (TypeError, ValueError):
+            unit["confidence"] = 0.0
+    return payload
+
+
+def validate_legacy_chapter_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """校验旧版章节到最终行的结构，兼容历史 run 和旧 provider 输出。"""
     chapters = payload.get("chapters")
     if not isinstance(chapters, list):
         raise ResponseParseError("payload missing chapters")
@@ -42,7 +83,7 @@ def validate_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(chapter["subsections"], list):
             raise ResponseParseError("subsections must be a list")
         for subsection in chapter["subsections"]:
-            for key in FILE_COMPARISON_SCHEMA["schema"]["properties"]["chapters"]["items"]["properties"]["subsections"]["items"]["required"]:
+            for key in LEGACY_SUBSECTION_REQUIRED_KEYS:
                 if key not in subsection:
                     raise ResponseParseError(f"subsection missing required field: {key}")
             subsection["fully_equal_lines"] = normalize_string_list(subsection.get("fully_equal_lines"))

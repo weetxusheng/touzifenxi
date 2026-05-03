@@ -11,7 +11,6 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-
 VALID_BATCH_STATUSES = (
     "pending",
     "success",
@@ -113,6 +112,10 @@ class PairCheckpointStore:
         request_context: dict[str, Any] | None = None,
         duration_ms: int | None = None,
         provider_available: bool | None = None,
+        call_status: str = "",
+        repair_used: bool = False,
+        fallback_name: str = "",
+        resume_from: str = "",
     ) -> None:
         """追加一次 batch 尝试结果，并更新汇总状态。"""
         normalized = str(status).strip() or "pending"
@@ -134,8 +137,12 @@ class PairCheckpointStore:
                 {
                     "attempt_index": attempt_count,
                     "status": normalized,
+                    "call_status": call_status,
                     "provider": current_provider,
                     "provider_available": current_provider_available,
+                    "repair_used": bool(repair_used),
+                    "fallback_name": fallback_name,
+                    "resume_from": resume_from,
                     "duration_ms": current_duration_ms,
                     "request_context": request_context or (previous.get("request_context") if previous else {}),
                     "result": result,
@@ -146,9 +153,13 @@ class PairCheckpointStore:
             self._entries[entry_id] = {
                 "entry_id": entry_id,
                 "status": normalized,
+                "call_status": call_status,
                 "attempt_count": attempt_count,
                 "provider": current_provider,
                 "provider_available": current_provider_available,
+                "repair_used": bool(repair_used),
+                "fallback_name": fallback_name,
+                "resume_from": resume_from,
                 "last_updated_at": utc_now_iso(),
                 "request_context": request_context or (previous.get("request_context") if previous else {}),
                 "result": result,
@@ -163,6 +174,18 @@ class PairCheckpointStore:
         """返回已成功完成的 batch 标识集合。"""
         with self._lock:
             return {entry_id for entry_id, entry in self._entries.items() if str(entry.get("status")) == "success"}
+
+    def remove_entry(self, entry_id: str) -> bool:
+        """移除指定 batch 的 checkpoint entry，用于单批次重跑。"""
+        normalized_entry_id = str(entry_id).strip()
+        if not normalized_entry_id:
+            return False
+        with self._lock:
+            existed = normalized_entry_id in self._entries
+            if existed:
+                self._entries.pop(normalized_entry_id, None)
+                self._refresh_metadata(save=True)
+            return existed
 
     def payload(self) -> dict[str, Any]:
         """返回可安全序列化的 checkpoint 副本。"""

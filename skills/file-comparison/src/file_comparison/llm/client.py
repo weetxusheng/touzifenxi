@@ -64,6 +64,7 @@ class OpenAIResponsesClient:
         self._provider_semaphores = create_provider_semaphores(self.providers)
         self._rate_limit_lock = threading.Lock()
         self._last_request_started_at_by_provider = {provider.provider: 0.0 for provider in self.providers}
+        self._next_allowed_at_by_provider = {provider.provider: 0.0 for provider in self.providers}
 
     def build_request_payload(
         self,
@@ -82,6 +83,17 @@ class OpenAIResponsesClient:
             {"number": section.number, "title": section.title, "body": section.body}
             for section in batch.new_sections
         ]
+        compare_units = [
+            {
+                "unit_id": unit.unit_id,
+                "chapter_number": unit.chapter_number,
+                "chapter_title": unit.chapter_title,
+                "subchapter": unit.subchapter,
+                "old_text": unit.old_text,
+                "new_text": unit.new_text,
+            }
+            for unit in getattr(batch, "compare_units", ())
+        ]
         return build_compare_request_payload(
             selected_provider.provider,
             model=selected_provider.model,
@@ -90,9 +102,14 @@ class OpenAIResponsesClient:
             strict=FILE_COMPARISON_SCHEMA["strict"],
             instructions=(
                 "你是文件修订对照助手。请只返回 JSON。"
-                "按章节比较旧版和新版，识别需要展示的变更条目。"
-                "如果某条仅编号变化、正文完全一致，则 numbering_only=true。"
-                "如果某个小行在左右完全一致，则把该行写入 fully_equal_lines。"
+                "请对输入 compare_units 做变更判定，不要直接生成最终对照表内容。"
+                "每个 unit 只判断真实变化类型、展示策略、编号是否只是顺延、哪些小行实际未变。"
+                "old_focus_text/new_focus_text 只作为变化锚点和排查线索，不会作为最终展示文本；如果不确定可留空。"
+                "如果某条仅编号变化、正文完全一致，则 numbering_only=true 且 display_strategy=skip。"
+                "如果 old_text 和 new_text 都有正文，只是中间删除或新增了几个词句，必须返回 change_type=replace，"
+                "display_strategy=compare_changed_only，不能返回 delete_item 或 add_item。"
+                "如果删除一项导致后续编号上移，请返回 change_type=delete_item、display_strategy=delete_old_only，"
+                "并把后续未变正文写入 unchanged_lines。"
             ),
             input_payload={
                 "pair_id": pair_id,
@@ -100,6 +117,7 @@ class OpenAIResponsesClient:
                 "chapter_numbers": list(batch.chapter_numbers),
                 "old_sections": old_sections,
                 "new_sections": new_sections,
+                "compare_units": compare_units,
             },
         )
 
@@ -108,7 +126,12 @@ class OpenAIResponsesClient:
         return self.providers
 
     def post(self, payload: dict[str, Any], *, provider_config: LLMProviderConfig | None = None) -> dict[str, Any]:
-        """向指定 provider 发起请求，并在 provider 内部完成基础设施重试。"""
+        """向指定 provider 发起请求，并返回归一化响应。"""
+        _raw_body, normalized_body = self.post_with_raw(payload, provider_config=provider_config)
+        return normalized_body
+
+    def post_with_raw(self, payload: dict[str, Any], *, provider_config: LLMProviderConfig | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+        """向指定 provider 发起请求，并同时返回原始响应和归一化响应。"""
         selected_provider = provider_config or self.providers[0]
         api_key = resolve_provider_api_key(selected_provider)
         if not api_key:
@@ -135,7 +158,7 @@ class OpenAIResponsesClient:
                         raw_body = response.read().decode("utf-8")
                 body = json.loads(raw_body)
                 self.current_provider_name = selected_provider.provider
-                return normalize_provider_response(selected_provider.provider, body)
+                return body, normalize_provider_response(selected_provider.provider, body)
             except HTTPError as error:
                 detail = error.read().decode("utf-8", errors="ignore")
                 infrastructure_error, message, retry_after_seconds = classify_http_error(selected_provider.provider, error, detail)
@@ -146,6 +169,7 @@ class OpenAIResponsesClient:
                     retry_class=classify_retry_class(infrastructure_error=infrastructure_error),
                     retry_after_seconds=retry_after_seconds,
                 )
+                self.record_provider_unavailable(selected_provider, reason=last_error.retry_class)
                 if not self._retry_classifier.should_retry(
                     last_error.retry_class,
                     attempt_index=attempt,
@@ -159,6 +183,7 @@ class OpenAIResponsesClient:
                     infrastructure_error=False,
                     retry_class="fatal",
                 )
+                self.record_provider_unavailable(selected_provider, reason="fatal")
                 raise last_error from error
             except (URLError, socket.timeout, TimeoutError, ConnectionResetError) as error:
                 last_error = ProviderRequestError(
@@ -167,6 +192,7 @@ class OpenAIResponsesClient:
                     infrastructure_error=True,
                     retry_class="infra",
                 )
+                self.record_provider_unavailable(selected_provider, reason="infra")
                 if not self._retry_classifier.should_retry(
                     "infra",
                     attempt_index=attempt,
@@ -199,15 +225,25 @@ class OpenAIResponsesClient:
         """把单次响应体以 JSON 形式落盘。"""
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    def _respect_min_interval(self, provider_config: LLMProviderConfig) -> None:
-        """按 provider 的最小发起间隔限制请求节奏。"""
-        min_interval_seconds = provider_config.min_interval_seconds
-        if min_interval_seconds <= 0:
+    def record_provider_unavailable(self, provider_config: LLMProviderConfig, *, reason: str = "") -> None:
+        """记录 provider 本次不可用，并设置下一次同 provider 请求的冷却时间。"""
+        cooldown_seconds = provider_config.failure_cooldown_seconds
+        if cooldown_seconds <= 0:
             return
+        with self._rate_limit_lock:
+            next_allowed_at = time.time() + cooldown_seconds
+            current_next_allowed_at = self._next_allowed_at_by_provider.get(provider_config.provider, 0.0)
+            self._next_allowed_at_by_provider[provider_config.provider] = max(current_next_allowed_at, next_allowed_at)
+
+    def _respect_min_interval(self, provider_config: LLMProviderConfig) -> None:
+        """按 provider 的最小发起间隔和失败冷却限制请求节奏。"""
+        min_interval_seconds = provider_config.min_interval_seconds
         with self._rate_limit_lock:
             now = time.time()
             last_started_at = self._last_request_started_at_by_provider.get(provider_config.provider, 0.0)
-            wait_seconds = max(0.0, last_started_at + min_interval_seconds - now)
+            next_allowed_at = self._next_allowed_at_by_provider.get(provider_config.provider, 0.0)
+            wait_until = max(last_started_at + min_interval_seconds, next_allowed_at)
+            wait_seconds = max(0.0, wait_until - now)
             scheduled_started_at = now + wait_seconds
             self._last_request_started_at_by_provider[provider_config.provider] = scheduled_started_at
         if wait_seconds > 0:

@@ -23,13 +23,16 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
   - `kimi-code`
   - `deepseek-ark`
 - 默认 `chapter_batch_size = 4`
+- 默认单批正文超过 `chapter_batch_char_limit = 10000` 字符时，先按 `oversized_chapter_batch_size = 2` 个一级章节重新拆分；如果 2 章仍超限，继续拆到单章
+- 默认单批超过 `max_compare_units_per_batch = 4` 个条目级 compare unit 时，继续按 unit 边界拆分
+- 默认单个 compare unit 超过 `max_compare_unit_chars = 10000` 字符时，按行/段落边界拆成多个 part 分批请求
 - 默认每个文件对内部并行：
   - `execution.per_pair_max_workers = 2`
 - 默认开启 `batch` 级首发轮转：
   - `batch-001 -> minimax`
   - `batch-002 -> kimi-code`
   - `batch-003 -> deepseek-ark`
-- provider 链全失败后自动回退到本地规则 diff
+- provider 链全失败后只写本地诊断 fallback，不生成正式对照文档
 
 ## 输入语义
 
@@ -72,7 +75,7 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
   - `HTTPS_PROXY`
   - `ALL_PROXY`
   - `SSL_CERT_FILE`
-- 若模型返回结构不完整，运行目录里的 `request*.json / response*.json / parsed*.json / error.txt` 是第一现场。
+- 若模型返回结构不完整，运行目录里的 `timeline.json / final_status.json / request.attempt-*.json / response.raw.attempt-*.json / response.normalized.attempt-*.json / parsed.attempt-*.json` 是第一现场。
 
 ## 输出产物
 
@@ -83,11 +86,14 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
   - `status.json`
   - `checkpoints/task_checkpoint.json`
   - `checkpoints/pair_<pair_id>_checkpoint.json`
-  - `pairs/<pair_id>/llm/batch-xxx/request*.json`
-  - `pairs/<pair_id>/llm/batch-xxx/response*.json`
-  - `pairs/<pair_id>/llm/batch-xxx/parsed*.json`
-  - `pairs/<pair_id>/outputs/comparison.docx`
-  - `pairs/<pair_id>/outputs/comparison.doc`
+  - `pairs/<pair_id>/llm/batch-xxx/timeline.json`
+  - `pairs/<pair_id>/llm/batch-xxx/final_status.json`
+  - `pairs/<pair_id>/llm/batch-xxx/request.attempt-*.json`
+  - `pairs/<pair_id>/llm/batch-xxx/response.raw.attempt-*.json`
+  - `pairs/<pair_id>/llm/batch-xxx/response.normalized.attempt-*.json`
+  - `pairs/<pair_id>/llm/batch-xxx/parsed.attempt-*.json`
+  - `pairs/<pair_id>/outputs/<前文件名> 与 <后文件名> 对照表 <YYYYMMDD_HHMMSS>.docx`
+  - `pairs/<pair_id>/outputs/<前文件名> 与 <后文件名> 对照表 <YYYYMMDD_HHMMSS>.doc`
 
 ## 目录说明
 
@@ -107,12 +113,21 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 ## 结果规则
 
 - 发送给模型前先做本地预处理，只保留疑似变更块
+- 模型只返回 compare unit 级变更判定，不直接生成最终对照表左右列内容
+- 程序按 `unit_id` 回查原始 compare unit，再生成最终对照行和 Word 样式
+- 默认剔除或裁剪签署页、签字页、盖章页、签章页等非正文尾页
 - 完全一致的小行不展示
 - 仅编号变化不展示
 - 左侧删除内容使用红色删除线
 - 右侧变更内容使用蓝色强调
 - provider 返回异常时记录 attempt 历史与耗时
+- provider 返回不可用后，同一个 provider 默认冷却 `40` 秒再发下一次请求，其它 provider 不受影响
 - 页面轮询只读取 `status.json` 和 checkpoint 摘要
+- 页面任务状态支持展开文件对查看 batch 明细；点击单个 batch 的“重跑批次”会清理该 batch 过程文件与 checkpoint entry，再复用其它成功 batch 恢复生成
+
+完整处理逻辑见：
+
+- `docs/PROCESSING_REQUIREMENTS.md`
 
 ## 分发约束
 
@@ -123,4 +138,5 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 - 若修改 provider 链、脚本入口、checkpoint 契约、输出目录或配置项说明，必须同步更新：
   - `SKILL.md`
   - `config/README.md`
+  - `docs/PROCESSING_REQUIREMENTS.md`
   - `agents/agent.yaml`

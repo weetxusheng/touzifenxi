@@ -36,5 +36,8 @@ data/**
 # Skill local runtime files
 skills/.skills_store_lock.json
 skills/websearch/config/runtime.local.json
+skills/file-comparison/config/runtime.local.json
 skills/websearch/output/**
 !skills/websearch/output/.gitkeep
+skills/file-comparison/output/**
+!skills/file-comparison/output/.gitkeep

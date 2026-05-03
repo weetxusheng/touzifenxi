@@ -7,45 +7,60 @@ FILE_COMPARISON_SCHEMA = {
     "schema": {
         "type": "object",
         "additionalProperties": False,
-        "required": ["chapters"],
+        "required": ["units"],
         "properties": {
-            "chapters": {
+            "units": {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "additionalProperties": False,
-                    "required": ["chapter", "subsections"],
+                    "required": [
+                        "unit_id",
+                        "chapter",
+                        "subchapter",
+                        "change_type",
+                        "display_strategy",
+                        "numbering_only",
+                        "unchanged_lines",
+                        "old_focus_text",
+                        "new_focus_text",
+                        "confidence",
+                    ],
                     "properties": {
+                        "unit_id": {"type": "string"},
                         "chapter": {"type": "string"},
-                        "subsections": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "additionalProperties": False,
-                                "required": [
-                                    "subchapter",
-                                    "old_text",
-                                    "new_text",
-                                    "change_type",
-                                    "numbering_only",
-                                    "fully_equal_lines",
-                                ],
-                                "properties": {
-                                    "subchapter": {"type": "string"},
-                                    "old_text": {"type": "string"},
-                                    "new_text": {"type": "string"},
-                                    "change_type": {
-                                        "type": "string",
-                                        "enum": ["replace", "add", "delete"],
-                                    },
-                                    "numbering_only": {"type": "boolean"},
-                                    "fully_equal_lines": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                    },
-                                },
-                            },
+                        "subchapter": {"type": "string"},
+                        "change_type": {
+                            "type": "string",
+                            "enum": [
+                                "replace",
+                                "rewrite",
+                                "add",
+                                "delete",
+                                "add_item",
+                                "delete_item",
+                                "numbering_only",
+                                "equal",
+                            ],
                         },
+                        "display_strategy": {
+                            "type": "string",
+                            "enum": [
+                                "compare_changed_only",
+                                "whole_replace",
+                                "delete_old_only",
+                                "add_new_only",
+                                "skip",
+                            ],
+                        },
+                        "numbering_only": {"type": "boolean"},
+                        "unchanged_lines": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "old_focus_text": {"type": "string"},
+                        "new_focus_text": {"type": "string"},
+                        "confidence": {"type": "number"},
                     },
                 },
             }

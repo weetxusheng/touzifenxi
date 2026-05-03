@@ -1,0 +1,199 @@
+"""基于已有 file-comparison run 数据重新生成 Word 对照表，不调用模型。"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from file_comparison.compare.chunking import (  # noqa: E402
+    build_compare_units_for_llm,
+    build_rows,
+    group_compare_units_into_batches,
+)
+from file_comparison.compare.engine import (  # noqa: E402
+    build_output_document_paths,
+    normalize_product_name_rows,
+    rows_from_llm_payload,
+    validate_complete_batch_results,
+)
+from file_comparison.compare.extractor import extract_fund_name_or_empty, extract_text  # noqa: E402
+from file_comparison.compare.models import ComparisonRow, PairMatch, Section  # noqa: E402
+from file_comparison.compare.writer import convert_docx_to_doc, write_docx  # noqa: E402
+from file_comparison.runtime.config import load_file_comparison_runtime_config  # noqa: E402
+from file_comparison.runtime.recovery import decide_batch_recovery  # noqa: E402
+from file_comparison.runtime.settings import resolve_paths  # noqa: E402
+
+
+def read_json_object(path: Path) -> dict[str, Any]:
+    """读取 JSON 对象；文件缺失、损坏或不是对象时抛出明确异常。"""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"缺少文件: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON 格式错误: {path}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"JSON 根节点必须是对象: {path}")
+    return payload
+
+
+def resolve_run_dir(value: str) -> Path:
+    """把 task_id 或 run 目录解析成绝对路径。"""
+    candidate = Path(value).expanduser()
+    if candidate.exists():
+        return candidate.resolve()
+    paths = resolve_paths(ROOT)
+    run_dir = paths.runs_root / value
+    if run_dir.exists():
+        return run_dir.resolve()
+    raise FileNotFoundError(f"未找到 run 目录或 task_id: {value}")
+
+
+def load_sections(path: Path) -> list[Section]:
+    """从 extracted/*_sections.json 读取章节列表。"""
+    payload = read_json_object(path)
+    sections = payload.get("sections")
+    if not isinstance(sections, list):
+        raise ValueError(f"缺少 sections 数组: {path}")
+    return [
+        Section(
+            number=str(item.get("number", "")),
+            title=str(item.get("title", "")),
+            body=str(item.get("body", "")),
+        )
+        for item in sections
+        if isinstance(item, dict)
+    ]
+
+
+def load_pair_match(pair_dir: Path) -> PairMatch:
+    """从 pair.json 读取文件对元数据。"""
+    payload = read_json_object(pair_dir / "pair.json")
+    return PairMatch(
+        pair_id=str(payload.get("pair_id", pair_dir.name)),
+        key=str(payload.get("key", pair_dir.name)),
+        old_path=Path(str(payload.get("old_path", ""))),
+        new_path=Path(str(payload.get("new_path", ""))),
+        old_label=str(payload.get("old_label", "")),
+        new_label=str(payload.get("new_label", "")),
+    )
+
+
+def read_fund_name(path: Path, fallback: str) -> str:
+    """优先从源文档识别基金名称，失败时退回文件名。"""
+    if path.exists():
+        try:
+            return extract_fund_name_or_empty(extract_text(path)) or fallback
+        except Exception:  # noqa: BLE001
+            return fallback
+    return fallback
+
+
+def rows_from_stored_batches(pair_dir: Path, old_sections: list[Section], new_sections: list[Section]) -> list[ComparisonRow]:
+    """复用已有模型解析结果与 fallback 状态生成 rows，不发起任何请求。"""
+    runtime_config = load_file_comparison_runtime_config(ROOT)
+    compare_units, _summaries = build_compare_units_for_llm(old_sections, new_sections)
+    batches = group_compare_units_into_batches(
+        compare_units,
+        runtime_config.llm.chapter_batch_size,
+        max_batch_chars=runtime_config.llm.chapter_batch_char_limit,
+        oversized_batch_size=runtime_config.llm.oversized_chapter_batch_size,
+        max_compare_units_per_batch=runtime_config.llm.max_compare_units_per_batch,
+        max_compare_unit_chars=runtime_config.llm.max_compare_unit_chars,
+    )
+    llm_dir = pair_dir / "llm"
+    batch_results: dict[str, list[ComparisonRow]] = {}
+    for batch in batches:
+        batch_dir = llm_dir / batch.batch_id
+        recovery = decide_batch_recovery(batch_dir)
+        if recovery.action in {"reuse_parsed", "reuse_repair"} and recovery.payload is not None:
+            batch_results[batch.batch_id] = rows_from_llm_payload(recovery.payload, compare_units=batch.compare_units)
+            continue
+        raise RuntimeError(f"{batch.batch_id} 没有可复用的模型解析结果；本地 fallback 不允许生成正式文档")
+    validate_complete_batch_results(batches=batches, batch_results=batch_results, llm_dir=llm_dir)
+    rows: list[ComparisonRow] = []
+    for batch in batches:
+        rows.extend(batch_results[batch.batch_id])
+    return rows
+
+
+def rows_from_current_local_rules(old_sections: list[Section], new_sections: list[Section]) -> list[ComparisonRow]:
+    """用当前本地 diff 与后处理规则重新生成 rows，完全忽略已有模型结果。"""
+    return build_rows(old_sections, new_sections)
+
+
+def output_paths(pair_dir: Path, *, pair: PairMatch, overwrite: bool, timestamp: str | None = None) -> tuple[Path, Path]:
+    """根据是否覆盖决定本次重新渲染的输出文件路径。"""
+    output_dir = pair_dir / "outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if overwrite:
+        existing_docx = next(output_dir.glob("*.docx"), None)
+        existing_doc = next(output_dir.glob("*.doc"), None)
+        if existing_docx and existing_doc:
+            return existing_docx, existing_doc
+    return build_output_document_paths(pair, output_dir, timestamp=timestamp or datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+
+def rerender_pair(pair_dir: Path, *, mode: str, overwrite: bool) -> dict[str, Any]:
+    """重新渲染一个 pair 的 Word 输出，并返回摘要。"""
+    pair = load_pair_match(pair_dir)
+    old_sections = load_sections(pair_dir / "extracted" / "old_sections.json")
+    new_sections = load_sections(pair_dir / "extracted" / "new_sections.json")
+    if mode == "stored":
+        rows = rows_from_stored_batches(pair_dir, old_sections, new_sections)
+    elif mode == "local":
+        rows = rows_from_current_local_rules(old_sections, new_sections)
+    else:
+        raise ValueError(f"未知模式: {mode}")
+    old_name = read_fund_name(pair.old_path, pair.old_path.stem or pair.old_label or "旧版")
+    new_name = read_fund_name(pair.new_path, pair.new_path.stem or pair.new_label or "新版")
+    rows = normalize_product_name_rows(rows, old_name, new_name)
+    docx_path, doc_path = output_paths(pair_dir, pair=pair, overwrite=overwrite)
+    write_docx(rows, docx_path, old_name, new_name)
+    convert_docx_to_doc(docx_path, doc_path)
+    return {
+        "pair_id": pair.pair_id,
+        "mode": mode,
+        "row_count": len(rows),
+        "docx_path": str(docx_path),
+        "doc_path": str(doc_path),
+    }
+
+
+def pair_dirs_for_run(run_dir: Path, pair_id: str) -> list[Path]:
+    """根据 pair_id 参数返回需要重渲染的 pair 目录列表。"""
+    pairs_root = run_dir / "pairs"
+    if pair_id:
+        pair_dir = pairs_root / pair_id
+        if not pair_dir.exists():
+            raise FileNotFoundError(f"未找到 pair: {pair_id}")
+        return [pair_dir]
+    return sorted(path for path in pairs_root.iterdir() if path.is_dir() and (path / "pair.json").exists())
+
+
+def main() -> None:
+    """解析命令行参数并执行已有 run 的离线重渲染。"""
+    parser = argparse.ArgumentParser(description="基于已有 file-comparison run 数据重新生成 Word，不调用模型")
+    parser.add_argument("run", help="run 目录绝对路径，或 task_id，例如 20260428-180153")
+    parser.add_argument("--pair-id", default="", help="只重渲染指定 pair，例如 pair-001；默认重渲染全部 pair")
+    parser.add_argument("--mode", choices=["stored", "local"], default="stored", help="stored 复用已有模型结果；local 使用当前本地规则")
+    parser.add_argument("--overwrite", action="store_true", help="覆盖 outputs/comparison.docx；默认写 timestamp 文件")
+    args = parser.parse_args()
+
+    run_dir = resolve_run_dir(args.run)
+    results = [
+        rerender_pair(pair_dir, mode=args.mode, overwrite=args.overwrite)
+        for pair_dir in pair_dirs_for_run(run_dir, args.pair_id)
+    ]
+    print(json.dumps({"run_dir": str(run_dir), "results": results}, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()

@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-
 TaskStatus = Literal["pending", "running", "partial_failed", "completed", "failed", "aborted"]
 PairStatus = Literal["pending", "extracting", "ready_for_llm", "llm_running", "postprocessing", "rendering", "completed", "failed"]
 BatchStatus = Literal["pending", "success", "error", "parse_error", "postprocess_error", "aborted"]
@@ -25,6 +24,10 @@ class BatchManifest:
     duration_ms: int = 0
     total_duration_ms: int = 0
     provider_available: bool = True
+    call_status: str = ""
+    repair_used: bool = False
+    fallback_name: str = ""
+    resume_from: str = ""
 
 
 @dataclass(frozen=True, slots=True)

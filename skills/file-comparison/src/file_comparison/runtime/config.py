@@ -25,6 +25,7 @@ class LLMProviderConfig:
     honor_retry_after: bool
     jitter_seconds: float
     min_interval_seconds: float
+    failure_cooldown_seconds: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +34,10 @@ class LLMRuntimeConfig:
 
     providers: tuple[LLMProviderConfig, ...]
     chapter_batch_size: int
+    chapter_batch_char_limit: int
+    oversized_chapter_batch_size: int
+    max_compare_units_per_batch: int
+    max_compare_unit_chars: int
     parse_max_attempts: int
     infra_max_attempts: int
     postprocess_max_attempts: int
@@ -104,6 +109,11 @@ class LLMRuntimeConfig:
         """兼容旧代码读取最小请求间隔。"""
         return self.primary.min_interval_seconds
 
+    @property
+    def failure_cooldown_seconds(self) -> float:
+        """兼容旧代码读取失败后的 provider 冷却秒数。"""
+        return self.primary.failure_cooldown_seconds
+
 
 @dataclass(frozen=True, slots=True)
 class PathsRuntimeConfig:
@@ -116,6 +126,13 @@ class PathsRuntimeConfig:
 class ExecutionRuntimeConfig:
     """描述文件对照任务内部的并行执行参数。"""
     per_pair_max_workers: int
+
+
+@dataclass(frozen=True, slots=True)
+class CompareRuntimeConfig:
+    """描述对比前的业务过滤与清洗规则。"""
+
+    skip_section_patterns: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,6 +162,7 @@ class FileComparisonRuntimeConfig:
     llm_mode: str
     llm: LLMRuntimeConfig
     execution: ExecutionRuntimeConfig
+    compare: CompareRuntimeConfig
     paths: PathsRuntimeConfig
     pairing: PairingRuntimeConfig
     ui: UIRuntimeConfig
@@ -210,6 +228,7 @@ def default_runtime_payload() -> dict[str, Any]:
         "max_retries": 2,
         "retry_backoff_seconds": 2.0,
         "min_interval_seconds": 2.0,
+        "failure_cooldown_seconds": 40.0,
     }
     providers = [
         dict(primary_provider),
@@ -223,6 +242,7 @@ def default_runtime_payload() -> dict[str, Any]:
             "max_retries": 2,
             "retry_backoff_seconds": 2.0,
             "min_interval_seconds": 2.0,
+            "failure_cooldown_seconds": 40.0,
         },
         {
             "provider": "deepseek-ark",
@@ -234,6 +254,7 @@ def default_runtime_payload() -> dict[str, Any]:
             "max_retries": 2,
             "retry_backoff_seconds": 2.0,
             "min_interval_seconds": 2.0,
+            "failure_cooldown_seconds": 40.0,
         },
     ]
     return {
@@ -242,6 +263,10 @@ def default_runtime_payload() -> dict[str, Any]:
             **primary_provider,
             "providers": providers,
             "chapter_batch_size": 4,
+            "chapter_batch_char_limit": 10000,
+            "oversized_chapter_batch_size": 2,
+            "max_compare_units_per_batch": 4,
+            "max_compare_unit_chars": 10000,
             "retry": {
                 "honor_retry_after": True,
                 "jitter_seconds": 0.5,
@@ -268,6 +293,14 @@ def default_runtime_payload() -> dict[str, Any]:
         "execution": {
             "per_pair_max_workers": 2,
         },
+        "compare": {
+            "skip_section_patterns": [
+                "签署页",
+                "签字页",
+                "盖章页",
+                "签章页",
+            ],
+        },
         "paths": {
             "output_mode": "skill",
             "output_root": "output/file-comparison/runs",
@@ -290,6 +323,7 @@ def load_file_comparison_runtime_config(base_path: Path | None = None) -> FileCo
     llm = config["llm"]
     raw_llm = raw_config.get("llm", {}) if isinstance(raw_config.get("llm", {}), dict) else {}
     execution = config.get("execution", {})
+    compare = config.get("compare", {})
     ui = config["ui"]
     paths = config["paths"]
     pairing = config["pairing"]
@@ -326,6 +360,10 @@ def load_file_comparison_runtime_config(base_path: Path | None = None) -> FileCo
         llm=LLMRuntimeConfig(
             providers=providers,
             chapter_batch_size=max(1, int(llm.get("chapter_batch_size", 2))),
+            chapter_batch_char_limit=max(0, int(llm.get("chapter_batch_char_limit", 10000))),
+            oversized_chapter_batch_size=max(1, int(llm.get("oversized_chapter_batch_size", 2))),
+            max_compare_units_per_batch=max(0, int(llm.get("max_compare_units_per_batch", 4))),
+            max_compare_unit_chars=max(0, int(llm.get("max_compare_unit_chars", 10000))),
             parse_max_attempts=max(1, int(raw_retry_classifier.get("parse_max_attempts", llm.get("parse_max_attempts", 3)))),
             infra_max_attempts=max(1, int(raw_retry_classifier.get("infra_max_attempts", llm.get("infra_max_attempts", 3)))),
             postprocess_max_attempts=max(1, int(raw_retry_classifier.get("postprocess_max_attempts", llm.get("postprocess_max_attempts", 2)))),
@@ -334,6 +372,13 @@ def load_file_comparison_runtime_config(base_path: Path | None = None) -> FileCo
         ),
         execution=ExecutionRuntimeConfig(
             per_pair_max_workers=max(1, int(execution.get("per_pair_max_workers", 2))),
+        ),
+        compare=CompareRuntimeConfig(
+            skip_section_patterns=tuple(
+                str(item).strip()
+                for item in compare.get("skip_section_patterns", ["签署页", "签字页", "盖章页", "签章页"])
+                if str(item).strip()
+            ),
         ),
         paths=PathsRuntimeConfig(
             output_mode=str(paths.get("output_mode", "project")).strip() or "project",
@@ -382,6 +427,7 @@ def _build_provider_config(
         honor_retry_after=bool(payload.get("honor_retry_after", retry_payload.get("honor_retry_after", True))),
         jitter_seconds=max(0.0, float(payload.get("jitter_seconds", retry_payload.get("jitter_seconds", 0.5)))),
         min_interval_seconds=max(0.0, float(payload.get("min_interval_seconds", 0.0))),
+        failure_cooldown_seconds=max(0.0, float(payload.get("failure_cooldown_seconds", 40.0))),
     )
 
 
@@ -416,6 +462,7 @@ def _merge_legacy_provider_fields(provider_payload: dict[str, Any], llm_payload:
         "max_retries",
         "retry_backoff_seconds",
         "min_interval_seconds",
+        "failure_cooldown_seconds",
     ):
         if key in llm_payload:
             merged[key] = llm_payload[key]

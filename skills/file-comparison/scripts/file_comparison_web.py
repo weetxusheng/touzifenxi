@@ -6,7 +6,6 @@ import argparse
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -27,6 +26,7 @@ def main() -> None:
             llm_mode=config.llm_mode,
             llm=config.llm,
             execution=config.execution,
+            compare=config.compare,
             paths=config.paths,
             pairing=config.pairing,
             ui=config.ui.__class__(
@@ -40,6 +40,7 @@ def main() -> None:
             llm_mode=config.llm_mode,
             llm=config.llm,
             execution=config.execution,
+            compare=config.compare,
             paths=config.paths,
             pairing=config.pairing,
             ui=config.ui.__class__(

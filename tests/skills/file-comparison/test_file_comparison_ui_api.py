@@ -1,6 +1,7 @@
 import json
 import threading
 import uuid
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import pytest
@@ -42,12 +43,33 @@ def request_multipart(url: str, *, files: list[tuple[str, bytes]]) -> tuple[int,
         return response.status, json.loads(response.read().decode("utf-8"))
 
 
+def request_json_allow_error(url: str, *, method: str = "GET", payload: dict | None = None) -> tuple[int, dict]:
+    data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = Request(url, data=data, method=method, headers={"Content-Type": "application/json"})
+    try:
+        with urlopen(request) as response:  # noqa: S310
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        return exc.code, json.loads(exc.read().decode("utf-8"))
+
+
+def request_bytes(url: str) -> tuple[int, bytes, str]:
+    request = Request(url, method="GET")
+    with urlopen(request) as response:  # noqa: S310
+        return response.status, response.read(), response.headers.get("Content-Disposition", "")
+
+
 class FakeTaskManager:
     def __init__(self, manifest: TaskManifest) -> None:
         self.manifest = manifest
 
-    def create_task(self, folder_path):
+    def create_task(self, folder_path, pairs=None):
+        self.pairs = pairs
         return self.manifest
+
+    def rerun_batch(self, task_id, pair_id, batch_id):
+        self.rerun_args = (task_id, pair_id, batch_id)
+        return {"task_id": task_id, "pair_id": pair_id, "batch_id": batch_id, "status": "running"}
 
 
 def test_scan_folder_and_task_status_endpoints(tmp_path):
@@ -107,8 +129,22 @@ def test_scan_folder_and_task_status_endpoints(tmp_path):
         status, scan_payload = request_json(f"{base_url}/api/file-comparison/scan-folder", method="POST", payload={"folder_path": str(folder)})
         assert status == 200
         assert scan_payload["pairs"][0]["old_label"] == "基金合同_3月.docx"
+        assert scan_payload["files"][0]["label"] == "基金合同_3月.docx"
 
-        status, task_payload = request_json(f"{base_url}/api/file-comparison/task", method="POST", payload={"folder_path": str(folder)})
+        status, task_payload = request_json(
+            f"{base_url}/api/file-comparison/task",
+            method="POST",
+            payload={
+                "folder_path": str(folder),
+                "pairs": [
+                    {
+                        "key": "人工确认配对",
+                        "old_path": str(folder / "基金合同_3月.docx"),
+                        "new_path": str(folder / "基金合同_6月.docx"),
+                    }
+                ],
+            },
+        )
         assert status == 201
         assert task_payload["task_id"] == "task-001"
         assert task_payload["pairs"][0]["pair_id"] == "pair-001"
@@ -122,6 +158,45 @@ def test_scan_folder_and_task_status_endpoints(tmp_path):
         status, pairs_payload = request_json(f"{base_url}/api/file-comparison/task/task-001/pairs")
         assert status == 200
         assert pairs_payload["pairs"][0]["pair_id"] == "pair-001"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_rerun_batch_endpoint_starts_single_batch_rerun(tmp_path):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    try:
+        server = create_app(runtime_config)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    fake_manager = FakeTaskManager(
+        TaskManifest(
+            task_id="task-001",
+            run_dir=(server.paths.runs_root / "task-001"),
+            status="pending",
+            poll_interval_seconds=2.0,
+            pair_count=1,
+            success_count=0,
+            failed_count=0,
+        )
+    )
+    server.task_manager = fake_manager
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json(
+            f"{base_url}/api/file-comparison/task/task-001/pair/pair-001/batch/batch-003/rerun",
+            method="POST",
+            payload={},
+        )
+        assert status == 202
+        assert payload["status"] == "running"
+        assert payload["batch_id"] == "batch-003"
+        assert fake_manager.rerun_args == ("task-001", "pair-001", "batch-003")
     finally:
         server.shutdown()
         server.server_close()
@@ -149,8 +224,69 @@ def test_upload_files_endpoint_saves_files_and_returns_pairs(tmp_path):
         )
         assert status == 201
         assert payload["uploaded_count"] == 2
+        assert len(payload["files"]) == 2
         assert payload["pairs"][0]["old_label"] == "基金合同_3月.docx"
         assert payload["pairs"][0]["new_label"] == "基金合同_6月.docx"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_artifact_download_blocks_fallback_only_document(tmp_path):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    try:
+        server = create_app(runtime_config)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    artifact_dir = server.paths.runs_root / "task-001" / "pairs" / "pair-001" / "outputs"
+    artifact_dir.mkdir(parents=True)
+    (artifact_dir / "comparison.docx").write_bytes(b"diagnostic-doc")
+    batch_dir = server.paths.runs_root / "task-001" / "pairs" / "pair-001" / "llm" / "batch-001"
+    batch_dir.mkdir(parents=True)
+    (batch_dir / "final_status.json").write_text(
+        json.dumps({"status": "fallback_succeeded", "fallback": "compare-units"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json_allow_error(
+            f"{base_url}/api/file-comparison/task/task-001/artifact/pair-001/docx"
+        )
+        assert status == 409
+        assert "fallback" in payload["error"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_artifact_download_serves_chinese_named_output(tmp_path):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    try:
+        server = create_app(runtime_config)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    artifact_dir = server.paths.runs_root / "task-001" / "pairs" / "pair-001" / "outputs"
+    artifact_dir.mkdir(parents=True)
+    artifact_name = "基金合同_3月 与 基金合同_6月 对照表 20260501_101530.docx"
+    (artifact_dir / artifact_name).write_bytes(b"official-doc")
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, body, disposition = request_bytes(f"{base_url}/api/file-comparison/task/task-001/artifact/pair-001/docx")
+        assert status == 200
+        assert body == b"official-doc"
+        assert "filename*=UTF-8''" in disposition
     finally:
         server.shutdown()
         server.server_close()
