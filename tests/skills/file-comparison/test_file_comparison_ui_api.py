@@ -9,6 +9,7 @@ import pytest
 from file_comparison.runtime.config import load_file_comparison_runtime_config, write_runtime_config
 from file_comparison.runtime.execution import PairManifest, TaskManifest
 from file_comparison.runtime.settings import resolve_paths
+from file_comparison.web import server as server_module
 from file_comparison.web.server import create_app
 
 
@@ -60,8 +61,15 @@ def request_bytes(url: str) -> tuple[int, bytes, str]:
 
 
 class FakeTaskManager:
-    def __init__(self, manifest: TaskManifest) -> None:
-        self.manifest = manifest
+    manifest_template: TaskManifest | None = None
+
+    def __init__(self, manifest: TaskManifest, paths=None) -> None:
+        if isinstance(manifest, TaskManifest):
+            self.manifest = manifest
+        elif self.manifest_template is not None:
+            self.manifest = self.manifest_template
+        else:
+            raise TypeError("FakeTaskManager requires a TaskManifest template")
 
     def create_task(self, folder_path, pairs=None):
         self.pairs = pairs
@@ -72,23 +80,21 @@ class FakeTaskManager:
         return {"task_id": task_id, "pair_id": pair_id, "batch_id": batch_id, "status": "running"}
 
 
-def test_scan_folder_and_task_status_endpoints(tmp_path):
-    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
-    runtime_config = load_file_comparison_runtime_config(tmp_path)
-    folder = tmp_path / "docs"
-    folder.mkdir()
-    (folder / "基金合同_3月.docx").write_text("", encoding="utf-8")
-    (folder / "基金合同_6月.docx").write_text("", encoding="utf-8")
+class CapturingTaskManager:
+    """记录创建任务时实际使用的运行配置，方便验证配置热加载。"""
 
-    try:
-        server = create_app(runtime_config)
-    except PermissionError as exc:
-        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
-    server.paths = resolve_paths(tmp_path)
-    server.task_manager = FakeTaskManager(
-        TaskManifest(
-            task_id="task-001",
-            run_dir=(server.paths.runs_root / "task-001"),
+    created_configs = []
+
+    def __init__(self, runtime_config, paths) -> None:
+        self.runtime_config = runtime_config
+        self.paths = paths
+
+    def create_task(self, folder_path, pairs=None):
+        CapturingTaskManager.created_configs.append(self.runtime_config)
+        pair = pairs[0]
+        return TaskManifest(
+            task_id="task-reload",
+            run_dir=(self.paths.runs_root / "task-reload"),
             status="pending",
             poll_interval_seconds=2.0,
             pair_count=1,
@@ -96,15 +102,49 @@ def test_scan_folder_and_task_status_endpoints(tmp_path):
             failed_count=0,
             pairs=(
                 PairManifest(
-                    pair_id="pair-001",
-                    key="基金合同",
-                    old_path=str(folder / "基金合同_3月.docx"),
-                    new_path=str(folder / "基金合同_6月.docx"),
+                    pair_id=pair.pair_id,
+                    key=pair.key,
+                    old_path=str(pair.old_path),
+                    new_path=str(pair.new_path),
                     status="pending",
                 ),
             ),
         )
+
+
+def test_scan_folder_and_task_status_endpoints(tmp_path, monkeypatch):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    folder = tmp_path / "docs"
+    folder.mkdir()
+    (folder / "基金合同_3月.docx").write_text("", encoding="utf-8")
+    (folder / "基金合同_6月.docx").write_text("", encoding="utf-8")
+
+    paths = resolve_paths(tmp_path)
+    FakeTaskManager.manifest_template = TaskManifest(
+        task_id="task-001",
+        run_dir=(paths.runs_root / "task-001"),
+        status="pending",
+        poll_interval_seconds=2.0,
+        pair_count=1,
+        success_count=0,
+        failed_count=0,
+        pairs=(
+            PairManifest(
+                pair_id="pair-001",
+                key="基金合同",
+                old_path=str(folder / "基金合同_3月.docx"),
+                new_path=str(folder / "基金合同_6月.docx"),
+                status="pending",
+            ),
+        ),
     )
+    monkeypatch.setattr(server_module, "TaskManager", FakeTaskManager)
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = paths
     status_dir = server.paths.runs_root / "task-001"
     status_dir.mkdir(parents=True, exist_ok=True)
     (status_dir / "status.json").write_text(
@@ -164,11 +204,133 @@ def test_scan_folder_and_task_status_endpoints(tmp_path):
         thread.join(timeout=2)
 
 
+def test_create_task_reloads_runtime_config_before_starting(tmp_path, monkeypatch):
+    write_runtime_config(
+        tmp_path,
+        {
+            "llm": {
+                "providers": [
+                    {
+                        "provider": "minimax",
+                        "model": "MiniMax-M2.7",
+                        "api_key": "",
+                        "api_key_env": "MINIMAX_API_KEY",
+                        "base_url": "https://api.minimaxi.com/v1",
+                    }
+                ],
+                "task_routing": {"batch_compare": ["minimax"]},
+            },
+            "paths": {"output_root": str(tmp_path / "runs")},
+            "ui": {"port": 0},
+        },
+    )
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    folder = tmp_path / "docs"
+    folder.mkdir()
+    old_file = folder / "基金合同_3月.docx"
+    new_file = folder / "基金合同_6月.docx"
+    old_file.write_text("", encoding="utf-8")
+    new_file.write_text("", encoding="utf-8")
+    CapturingTaskManager.created_configs = []
+    monkeypatch.setattr(server_module, "TaskManager", CapturingTaskManager)
+
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    write_runtime_config(
+        tmp_path,
+        {
+            "llm": {
+                "providers": [
+                    {
+                        "provider": "deepseek",
+                        "model": "deepseek-v4-flash",
+                        "api_key": "",
+                        "api_key_env": "DEEPSEEK_API_KEY",
+                        "base_url": "https://api.deepseek.com",
+                    }
+                ],
+                "task_routing": {"batch_compare": ["deepseek"]},
+            },
+        },
+    )
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json(
+            f"{base_url}/api/file-comparison/task",
+            method="POST",
+            payload={
+                "folder_path": str(folder),
+                "pairs": [
+                    {
+                        "key": "人工确认配对",
+                        "old_path": str(old_file),
+                        "new_path": str(new_file),
+                    }
+                ],
+            },
+        )
+        assert status == 201
+        assert payload["task_id"] == "task-reload"
+        assert CapturingTaskManager.created_configs[-1].llm.primary.provider == "deepseek"
+        assert CapturingTaskManager.created_configs[-1].llm.primary.model == "deepseek-v4-flash"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_create_task_reports_runtime_config_reload_error(tmp_path):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    folder = tmp_path / "docs"
+    folder.mkdir()
+    old_file = folder / "基金合同_3月.docx"
+    new_file = folder / "基金合同_6月.docx"
+    old_file.write_text("", encoding="utf-8")
+    new_file.write_text("", encoding="utf-8")
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    (tmp_path / "config" / "runtime.local.json").write_text('{"llm": ', encoding="utf-8")
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json_allow_error(
+            f"{base_url}/api/file-comparison/task",
+            method="POST",
+            payload={
+                "folder_path": str(folder),
+                "pairs": [
+                    {
+                        "key": "人工确认配对",
+                        "old_path": str(old_file),
+                        "new_path": str(new_file),
+                    }
+                ],
+            },
+        )
+        assert status == 400
+        assert "运行配置读取失败" in payload["error"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
 def test_rerun_batch_endpoint_starts_single_batch_rerun(tmp_path):
     write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
     runtime_config = load_file_comparison_runtime_config(tmp_path)
     try:
-        server = create_app(runtime_config)
+        server = create_app(runtime_config, config_base_path=tmp_path)
     except PermissionError as exc:
         pytest.skip(f"socket bind not permitted in sandbox: {exc}")
     server.paths = resolve_paths(tmp_path)
@@ -207,7 +369,7 @@ def test_upload_files_endpoint_saves_files_and_returns_pairs(tmp_path):
     write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
     runtime_config = load_file_comparison_runtime_config(tmp_path)
     try:
-        server = create_app(runtime_config)
+        server = create_app(runtime_config, config_base_path=tmp_path)
     except PermissionError as exc:
         pytest.skip(f"socket bind not permitted in sandbox: {exc}")
     server.paths = resolve_paths(tmp_path)
@@ -237,7 +399,7 @@ def test_artifact_download_blocks_fallback_only_document(tmp_path):
     write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
     runtime_config = load_file_comparison_runtime_config(tmp_path)
     try:
-        server = create_app(runtime_config)
+        server = create_app(runtime_config, config_base_path=tmp_path)
     except PermissionError as exc:
         pytest.skip(f"socket bind not permitted in sandbox: {exc}")
     server.paths = resolve_paths(tmp_path)
@@ -270,7 +432,7 @@ def test_artifact_download_serves_chinese_named_output(tmp_path):
     write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
     runtime_config = load_file_comparison_runtime_config(tmp_path)
     try:
-        server = create_app(runtime_config)
+        server = create_app(runtime_config, config_base_path=tmp_path)
     except PermissionError as exc:
         pytest.skip(f"socket bind not permitted in sandbox: {exc}")
     server.paths = resolve_paths(tmp_path)

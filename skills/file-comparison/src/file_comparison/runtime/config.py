@@ -190,7 +190,7 @@ def read_runtime_config(base_path: Path | None = None) -> dict[str, Any]:
     path = runtime_local_path(base_path)
     if not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(_strip_json_comments(path.read_text(encoding="utf-8")))
 
 
 def write_runtime_config(base_path: Path | None, updates: dict[str, Any]) -> Path:
@@ -217,7 +217,7 @@ def initialize_runtime_config(base_path: Path | None = None, *, overwrite: bool 
 
 
 def default_runtime_payload() -> dict[str, Any]:
-    """返回 file-comparison skill 的默认三模型运行模板。"""
+    """返回 file-comparison skill 的默认多模型运行模板。"""
     primary_provider = {
         "provider": "minimax",
         "model": "MiniMax-M2.7",
@@ -256,6 +256,18 @@ def default_runtime_payload() -> dict[str, Any]:
             "min_interval_seconds": 2.0,
             "failure_cooldown_seconds": 40.0,
         },
+        {
+            "provider": "deepseek",
+            "model": "deepseek-v4-flash",
+            "api_key": "",
+            "api_key_env": "DEEPSEEK_API_KEY",
+            "base_url": "https://api.deepseek.com",
+            "timeout_seconds": 180.0,
+            "max_retries": 2,
+            "retry_backoff_seconds": 2.0,
+            "min_interval_seconds": 2.0,
+            "failure_cooldown_seconds": 40.0,
+        },
     ]
     return {
         "llm_mode": "rule",
@@ -283,6 +295,7 @@ def default_runtime_payload() -> dict[str, Any]:
                     "minimax": 1,
                     "kimi-code": 1,
                     "deepseek-ark": 1,
+                    "deepseek": 1,
                 },
             },
             "task_routing": {
@@ -467,6 +480,47 @@ def _merge_legacy_provider_fields(provider_payload: dict[str, Any], llm_payload:
         if key in llm_payload:
             merged[key] = llm_payload[key]
     return merged
+
+
+def _strip_json_comments(text: str) -> str:
+    """移除 JSONC 风格注释，同时保留字符串字面量里的斜杠内容。"""
+    result: list[str] = []
+    index = 0
+    in_string = False
+    escaped = False
+    while index < len(text):
+        char = text[index]
+        next_char = text[index + 1] if index + 1 < len(text) else ""
+        if in_string:
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+        if char == '"':
+            in_string = True
+            result.append(char)
+            index += 1
+            continue
+        if char == "/" and next_char == "/":
+            index += 2
+            while index < len(text) and text[index] not in "\r\n":
+                index += 1
+            continue
+        if char == "/" and next_char == "*":
+            index += 2
+            while index + 1 < len(text) and not (text[index] == "*" and text[index + 1] == "/"):
+                result.append("\n" if text[index] in "\r\n" else " ")
+                index += 1
+            index += 2 if index + 1 < len(text) else 0
+            continue
+        result.append(char)
+        index += 1
+    return "".join(result)
 
 
 def _deep_merge(base: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:

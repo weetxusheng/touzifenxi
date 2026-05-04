@@ -1645,6 +1645,7 @@ def test_provider_endpoint_uses_chat_completions_for_minimax():
     assert provider_endpoint("openai-responses", "https://api.openai.com") == "https://api.openai.com/v1/responses"
     assert provider_endpoint("kimi-code", "https://api.kimi.com/coding") == "https://api.kimi.com/coding/v1/messages"
     assert provider_endpoint("deepseek-ark", "https://ark.cn-beijing.volces.com/api/v3") == "https://ark.cn-beijing.volces.com/api/v3/responses"
+    assert provider_endpoint("deepseek", "https://api.deepseek.com") == "https://api.deepseek.com/chat/completions"
 
 
 def test_build_request_payload_uses_chat_completions_shape_for_minimax(tmp_path):
@@ -1679,6 +1680,50 @@ def test_build_request_payload_uses_chat_completions_shape_for_minimax(tmp_path)
     assert "messages" in payload
     assert payload["response_format"] == {"type": "json_object"}
     assert "text" not in payload
+
+
+def test_build_request_payload_uses_fast_deepseek_flash_without_thinking(tmp_path):
+    write_runtime_config(
+        tmp_path,
+        {
+            "llm_mode": "responses",
+            "llm": {
+                "providers": [
+                    {
+                        "provider": "deepseek",
+                        "model": "deepseek-v4-flash",
+                        "api_key": "secret",
+                        "base_url": "https://api.deepseek.com",
+                    }
+                ]
+            },
+        },
+    )
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    client = OpenAIResponsesClient(runtime_config)
+    batch = type(
+        "Batch",
+        (),
+        {
+            "batch_id": "batch-001",
+            "chapter_numbers": ("第一部分",),
+            "old_sections": (Section(number="第一部分", title="第一部分  前言", body="旧"),),
+            "new_sections": (Section(number="第一部分", title="第一部分  前言", body="新"),),
+        },
+    )()
+
+    payload = client.build_request_payload(
+        pair_id="pair-001",
+        batch=batch,
+        provider_config=runtime_config.llm.providers[0],
+    )
+
+    assert payload["model"] == "deepseek-v4-flash"
+    assert payload["messages"][0]["role"] == "system"
+    assert payload["messages"][1]["role"] == "user"
+    assert payload["response_format"] == {"type": "json_object"}
+    assert "reasoning_effort" not in payload
+    assert payload["thinking"] == {"type": "disabled"}
 
 
 def test_provider_failure_cools_down_next_same_provider_request(tmp_path, monkeypatch):

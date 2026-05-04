@@ -93,7 +93,7 @@ def build_compare_request_payload(
         "输入数据如下：\n"
         f"{json.dumps(input_payload, ensure_ascii=False, indent=2)}"
     )
-    return {
+    payload = {
         "model": model,
         "messages": [
             {"role": "system", "content": instructions},
@@ -102,6 +102,9 @@ def build_compare_request_payload(
         "response_format": {"type": "json_object"},
         "temperature": 0.2,
     }
+    if normalized_provider == "deepseek":
+        payload["thinking"] = {"type": "disabled"}
+    return payload
 
 
 def normalize_provider_response(provider: str, body: dict[str, Any]) -> dict[str, Any]:

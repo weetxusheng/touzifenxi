@@ -19,7 +19,7 @@ def test_load_runtime_config_uses_defaults(tmp_path):
     assert config.llm.failure_cooldown_seconds == 40.0
     assert config.execution.per_pair_max_workers == 2
     assert config.llm.task_routing.enabled is True
-    assert config.llm.task_routing.batch_compare == ("minimax", "kimi-code", "deepseek-ark")
+    assert config.llm.task_routing.batch_compare == ("minimax", "kimi-code", "deepseek-ark", "deepseek")
     assert config.compare.skip_section_patterns == ("签署页", "签字页", "盖章页", "签章页")
     assert config.paths.output_root == "output/file-comparison/runs"
     assert config.ui.poll_interval_seconds == 2.0
@@ -44,6 +44,40 @@ def test_initialize_and_write_runtime_config(tmp_path):
     assert config.llm.model == "gpt-test"
     assert config.llm.chapter_batch_size == 4
     assert config.ui.port == 9911
+
+
+def test_load_runtime_config_allows_jsonc_comments(tmp_path):
+    config_path = tmp_path / "config" / "runtime.local.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(
+        """
+        {
+          // 保留给后续切换模型用
+          "llm_mode": "responses",
+          "llm": {
+            "chapter_batch_size": 6,
+            "task_routing": {
+              "batch_compare": [
+                // "minimax",
+                "deepseek" // 当前只跑 DeepSeek
+              ]
+            }
+          },
+          /*
+           * 页面端口也允许临时注释说明。
+           */
+          "ui": {"port": 9988}
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    config = load_file_comparison_runtime_config(tmp_path)
+
+    assert config.llm_mode == "responses"
+    assert config.llm.chapter_batch_size == 6
+    assert config.llm.task_routing.batch_compare == ("deepseek",)
+    assert config.ui.port == 9988
 
 
 def test_load_runtime_config_supports_multiple_providers(tmp_path):

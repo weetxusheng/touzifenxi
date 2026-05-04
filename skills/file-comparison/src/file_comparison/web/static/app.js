@@ -581,61 +581,67 @@
                     </div>
                   </div>
 
-                    <${Dragger}
-                      className="compact-upload"
-                      multiple=${true}
-                      accept=".doc,.docx"
-                      showUploadList=${false}
-                      beforeUpload=${function (file) {
-                        clearCurrentTask();
-                        setUploadedFiles(function (prev) {
-                          const exists = prev.some(function (item) {
-                            return item.uid === file.uid;
+                    <div className="upload-body-grid">
+                      <${Dragger}
+                        className="compact-upload"
+                        multiple=${true}
+                        accept=".doc,.docx"
+                        showUploadList=${false}
+                        beforeUpload=${function (file) {
+                          clearCurrentTask();
+                          setUploadedFiles(function (prev) {
+                            const exists = prev.some(function (item) {
+                              return item.uid === file.uid;
+                            });
+                            return exists ? prev : prev.concat(file);
                           });
-                          return exists ? prev : prev.concat(file);
-                        });
-                        return false;
-                      }}
-                      onRemove=${function (file) {
-                        setUploadedFiles(function (prev) {
-                          return prev.filter(function (item) {
-                            return item.uid !== file.uid;
+                          return false;
+                        }}
+                        onRemove=${function (file) {
+                          setUploadedFiles(function (prev) {
+                            return prev.filter(function (item) {
+                              return item.uid !== file.uid;
+                            });
                           });
-                        });
-                      }}
-                      fileList=${uploadedFiles}
-                    >
-                      <p className="ant-upload-drag-icon">
-                        <span className="text-xl text-blue-600">+</span>
-                      </p>
-                      <p className="ant-upload-text">拖拽或点击选择 Word 文档</p>
-                      <p className="ant-upload-hint">上传后点击匹配，配对可人工修改。</p>
-                    <//>
+                        }}
+                        fileList=${uploadedFiles}
+                      >
+                        <p className="ant-upload-drag-icon">
+                          <span className="text-xl text-blue-600">+</span>
+                        </p>
+                        <p className="ant-upload-text">拖拽或点击选择 Word 文档</p>
+                        <p className="ant-upload-hint">右侧会同步显示已选择文件。</p>
+                      <//>
 
-                    <div className="selected-file-list">
-                      ${uploadedFiles.length
-                        ? uploadedFiles.map(function (file) {
-                            return html`
-                              <div className="selected-file-row" key=${file.uid || file.name}>
-                                <span className="selected-file-name" title=${file.name}>${file.name}<//>
-                                <button
-                                  type="button"
-                                  className="selected-file-remove"
-                                  title="移除文件"
-                                  onClick=${function () {
-                                    setUploadedFiles(function (prev) {
-                                      return prev.filter(function (item) {
-                                        return item.uid !== file.uid;
+                      <div className="selected-file-list">
+                        <div className="selected-file-list-title">
+                          <span>上传列表</span>
+                          <span>已选择 ${uploadedFiles.length} 个</span>
+                        </div>
+                        ${uploadedFiles.length
+                          ? uploadedFiles.map(function (file) {
+                              return html`
+                                <div className="selected-file-row" key=${file.uid || file.name}>
+                                  <span className="selected-file-name" title=${file.name}>${file.name}<//>
+                                  <button
+                                    type="button"
+                                    className="selected-file-remove"
+                                    title="移除文件"
+                                    onClick=${function () {
+                                      setUploadedFiles(function (prev) {
+                                        return prev.filter(function (item) {
+                                          return item.uid !== file.uid;
+                                        });
                                       });
-                                    });
-                                  }}
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            `;
-                          })
-                        : html`<div className="flex h-full items-center justify-center text-xs text-slate-400">已选择文件会显示在这里</div>`}
+                                    }}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              `;
+                            })
+                          : html`<div className="flex h-[104px] items-center justify-center text-xs text-slate-400">已选择文件会显示在这里</div>`}
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -649,7 +655,7 @@
                         disabled=${!uploadedFiles.length}
                         onClick=${uploadAndScan}
                       >
-                        上传并匹配
+                        文件匹配
                       <//>
                     </div>
 
@@ -729,11 +735,11 @@
                   </div>
                 </div>
                 <div className="mb-2 flex flex-wrap gap-1">
-                  <${Tag}>当前批次 ${governance.current_batch_id || "-"}<//>
-                  <${Tag}>模型失败 ${(governance.provider_failure_count || 0)}<//>
-                  <${Tag}>结果修复 ${(governance.repair_count || 0)}<//>
-                  <${Tag}>规则回退 ${(governance.fallback_count || 0)}<//>
-                  <${Tag} color=${taskPayload && taskPayload.failed_count ? "error" : "default"}>失败数量 ${(taskPayload && taskPayload.failed_count) || 0}<//>
+                  <${Tag} color="processing">当前批次 ${governance.current_batch_id || "-"}<//>
+                  <${Tag} color=${governance.provider_failure_count ? "error" : "default"}>模型失败 ${(governance.provider_failure_count || 0)}<//>
+                  <${Tag} color=${governance.repair_count ? "warning" : "gold"}>结果修复 ${(governance.repair_count || 0)}<//>
+                  <${Tag} color=${governance.fallback_count ? "purple" : "geekblue"}>规则回退 ${(governance.fallback_count || 0)}<//>
+                  <${Tag} color=${taskPayload && taskPayload.failed_count ? "error" : "success"}>失败数量 ${(taskPayload && taskPayload.failed_count) || 0}<//>
                 </div>
                 <${Table}
                     rowKey=${function (record) { return record.pair_id; }}

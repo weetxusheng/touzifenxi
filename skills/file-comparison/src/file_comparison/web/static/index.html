@@ -55,14 +55,32 @@
       flex-direction: column;
     }
     .upload-panel {
-      min-height: 248px;
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
+    .upload-body-grid {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+    .upload-body-grid .compact-upload {
+      height: 100%;
+      min-height: 148px;
+    }
+    .upload-body-grid .compact-upload .ant-upload,
+    .upload-body-grid .compact-upload .ant-upload-drag,
+    .upload-body-grid .compact-upload .ant-upload-btn {
+      height: 100%;
+    }
+    .upload-body-grid .compact-upload .ant-upload-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .compact-upload .ant-upload {
       padding: 10px 12px !important;
-      min-height: 142px;
     }
     .compact-upload .ant-upload-drag-icon {
       margin-bottom: 0 !important;
@@ -79,14 +97,22 @@
       display: none;
     }
     .selected-file-list {
-      flex: 1;
-      min-height: 96px;
-      max-height: 132px;
-      overflow: auto;
+      min-height: 148px;
+      height: 100%;
       border: 1px solid #eef2f7;
       border-radius: 10px;
       background: #f8fafc;
       padding: 6px;
+    }
+    .selected-file-list-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      padding: 0 2px;
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.2;
     }
     .selected-file-row {
       display: flex;
@@ -152,6 +178,15 @@
       .task-progress-summary {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
+      .upload-body-grid {
+        grid-template-columns: 1fr;
+      }
+      .upload-body-grid .compact-upload {
+        min-height: 132px;
+      }
+      .selected-file-list {
+        min-height: 104px;
+      }
     }
     @media (max-width: 640px) {
       .task-progress-summary {
@@ -176,6 +211,6 @@
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/antd@5/dist/antd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
-  <script src="/static/app.js?v=20260429-flow-1"></script>
+  <script src="/static/app.js?v=20260504-upload-side-list"></script>
 </body>
 </html>

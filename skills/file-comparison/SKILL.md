@@ -22,6 +22,7 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
   - `minimax`
   - `kimi-code`
   - `deepseek-ark`
+  - `deepseek`
 - 默认 `chapter_batch_size = 4`
 - 默认单批正文超过 `chapter_batch_char_limit = 10000` 字符时，先按 `oversized_chapter_batch_size = 2` 个一级章节重新拆分；如果 2 章仍超限，继续拆到单章
 - 默认单批超过 `max_compare_units_per_batch = 4` 个条目级 compare unit 时，继续按 unit 边界拆分
@@ -32,6 +33,7 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
   - `batch-001 -> minimax`
   - `batch-002 -> kimi-code`
   - `batch-003 -> deepseek-ark`
+  - `batch-004 -> deepseek`
 - provider 链全失败后只写本地诊断 fallback，不生成正式对照文档
 
 ## 输入语义
@@ -70,6 +72,7 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
   - `MINIMAX_API_KEY`
   - `KIMI_CODE_API_KEY`
   - `ARK_API_KEY`
+  - `DEEPSEEK_API_KEY`
 - 若报网络、超时、SSL 或代理错误，先检查：
   - `HTTP_PROXY`
   - `HTTPS_PROXY`

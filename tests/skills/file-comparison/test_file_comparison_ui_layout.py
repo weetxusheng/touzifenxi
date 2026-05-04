@@ -9,5 +9,7 @@ def test_file_comparison_page_uses_single_flow_layout():
 
     assert "workflow-grid" in index_html
     assert "workflow-grid" in app_js
+    assert "upload-body-grid" in index_html
+    assert "upload-body-grid" in app_js
     assert "task-progress-summary" in app_js
     assert "Statistic" not in app_js

@@ -33,6 +33,7 @@
   - `minimax`
   - `kimi-code`
   - `deepseek-ark`
+  - `deepseek`
 
 每个 provider 支持：
 
@@ -138,3 +139,4 @@
   - `MINIMAX_API_KEY`
   - `KIMI_CODE_API_KEY`
   - `ARK_API_KEY`
+  - `DEEPSEEK_API_KEY`

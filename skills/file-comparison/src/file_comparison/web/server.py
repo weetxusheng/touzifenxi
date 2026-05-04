@@ -18,6 +18,7 @@ from ..runtime.config import FileComparisonRuntimeConfig, load_file_comparison_r
 from ..runtime.settings import ensure_directories, resolve_paths
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+SKILL_ROOT = Path(__file__).resolve().parents[3]
 
 
 def list_word_files(folder_path: Path) -> list[dict[str, str]]:
@@ -159,13 +160,31 @@ def resolve_pair_artifact_path(run_dir: Path, pair_id: str, kind: str) -> Path |
 class FileComparisonServer(ThreadingHTTPServer):
     """持有运行配置、任务管理器和路径约定的 HTTP 服务实例。"""
 
-    def __init__(self, server_address, RequestHandlerClass, *, runtime_config: FileComparisonRuntimeConfig) -> None:
+    def __init__(
+        self,
+        server_address,
+        RequestHandlerClass,
+        *,
+        runtime_config: FileComparisonRuntimeConfig,
+        config_base_path: Path | None = None,
+    ) -> None:
         """初始化页面服务并准备运行目录。"""
         super().__init__(server_address, RequestHandlerClass)
+        self.config_base_path = config_base_path or SKILL_ROOT
+        self.apply_runtime_config(runtime_config)
+
+    def apply_runtime_config(self, runtime_config: FileComparisonRuntimeConfig) -> None:
+        """应用运行配置并重建路径与任务管理器。"""
         self.runtime_config = runtime_config
-        self.paths = resolve_paths()
+        self.paths = resolve_paths(self.config_base_path)
         ensure_directories(self.paths)
         self.task_manager = TaskManager(runtime_config, self.paths)
+
+    def reload_runtime_config(self) -> FileComparisonRuntimeConfig:
+        """从本地配置文件重新加载运行配置，供新任务启动前热更新。"""
+        runtime_config = load_file_comparison_runtime_config(self.config_base_path)
+        self.apply_runtime_config(runtime_config)
+        return runtime_config
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -265,6 +284,11 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/file-comparison/task":
             payload = self._read_json_body()
+            try:
+                self.server.reload_runtime_config()
+            except (OSError, TypeError, ValueError) as exc:
+                self._send_json({"error": f"运行配置读取失败，请检查 runtime.local.json: {exc}"}, status=400)
+                return
             folder_path = self._resolve_folder_path(payload)
             if folder_path is None:
                 return
@@ -435,7 +459,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         return files
 
 
-def create_app(runtime_config: FileComparisonRuntimeConfig | None = None) -> FileComparisonServer:
+def create_app(
+    runtime_config: FileComparisonRuntimeConfig | None = None,
+    *,
+    config_base_path: Path | None = None,
+) -> FileComparisonServer:
     """按当前配置创建一个可直接启动的页面服务实例。"""
-    config = runtime_config or load_file_comparison_runtime_config()
-    return FileComparisonServer((config.ui.host, config.ui.port), RequestHandler, runtime_config=config)
+    config = runtime_config or load_file_comparison_runtime_config(config_base_path)
+    return FileComparisonServer(
+        (config.ui.host, config.ui.port),
+        RequestHandler,
+        runtime_config=config,
+        config_base_path=config_base_path,
+    )

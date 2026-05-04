@@ -58,6 +58,18 @@
         "retry_backoff_seconds": 2.0,
         "min_interval_seconds": 2.0,
         "failure_cooldown_seconds": 40.0
+      },
+      {
+        "provider": "deepseek",
+        "model": "deepseek-v4-flash",
+        "api_key": "",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "base_url": "https://api.deepseek.com",
+        "timeout_seconds": 180.0,
+        "max_retries": 2,
+        "retry_backoff_seconds": 2.0,
+        "min_interval_seconds": 2.0,
+        "failure_cooldown_seconds": 40.0
       }
     ],
     "chapter_batch_size": 4,
@@ -80,7 +92,8 @@
       "providers": {
         "minimax": 1,
         "kimi-code": 1,
-        "deepseek-ark": 1
+        "deepseek-ark": 1,
+        "deepseek": 1
       }
     },
     "task_routing": {
@@ -88,7 +101,8 @@
       "batch_compare": [
         "minimax",
         "kimi-code",
-        "deepseek-ark"
+        "deepseek-ark",
+        "deepseek"
       ]
     }
   },
