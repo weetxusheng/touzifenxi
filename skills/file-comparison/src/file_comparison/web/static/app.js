@@ -22,6 +22,8 @@
   const Paragraph = Typography.Paragraph;
   const Text = Typography.Text;
   const Dragger = Upload.Dragger;
+  const DEFAULT_POLL_INTERVAL_SECONDS = 5;
+  const TERMINAL_TASK_STATUSES = ["completed", "failed", "partial_failed", "aborted"];
 
   async function fetchJson(url, options) {
     const response = await fetch(url, options || {});
@@ -62,6 +64,22 @@
     return String(path || "").split("/").pop() || "";
   }
 
+  function pollIntervalMsFromPayload(payload) {
+    const seconds = Number((payload && payload.poll_interval_seconds) || DEFAULT_POLL_INTERVAL_SECONDS);
+    return Math.max(1000, seconds * 1000);
+  }
+
+  function providerLabelFromList(providers, fallbackProvider) {
+    const values = (providers || []).filter(Boolean);
+    if (!values.length && fallbackProvider) values.push(fallbackProvider);
+    return values.length ? values.join(" / ") : "-";
+  }
+
+  function batchProgress(done, planned, batches) {
+    const total = planned || ((batches && batches.length) || 0);
+    return total ? (done || 0) + "/" + total : "-";
+  }
+
   function readTaskIdFromLocation() {
     const params = new URLSearchParams(window.location.search);
     return params.get("task_id") || "";
@@ -99,6 +117,7 @@
     const [loadingTask, setLoadingTask] = React.useState(false);
     const [uploading, setUploading] = React.useState(false);
     const [rerunningBatchIds, setRerunningBatchIds] = React.useState({});
+    const [rerenderingPairIds, setRerenderingPairIds] = React.useState({});
     const [pollVersion, setPollVersion] = React.useState(0);
 
     React.useEffect(function () {
@@ -112,18 +131,19 @@
     React.useEffect(function () {
       if (!currentTaskId) return undefined;
       writeTaskIdToLocation(currentTaskId);
+      const pollIntervalMs = pollIntervalMsFromPayload(taskPayload);
       const timer = window.setInterval(async function () {
         try {
           const payload = await fetchJson("/api/file-comparison/task/" + currentTaskId + "/status");
           setTaskPayload(payload);
-          if (["completed", "failed", "partial_failed", "aborted"].indexOf(payload.status) >= 0) {
+          if (TERMINAL_TASK_STATUSES.indexOf(payload.status) >= 0) {
             window.clearInterval(timer);
           }
         } catch (error) {
           window.clearInterval(timer);
           message.error(error.message);
         }
-      }, 2000);
+      }, pollIntervalMs);
       fetchJson("/api/file-comparison/task/" + currentTaskId + "/status")
         .then(setTaskPayload)
         .catch(function () {
@@ -133,7 +153,7 @@
       return function () {
         window.clearInterval(timer);
       };
-    }, [currentTaskId, message, pollVersion]);
+    }, [currentTaskId, message, pollVersion, taskPayload && taskPayload.poll_interval_seconds]);
 
     const fileOptions = React.useMemo(function () {
       return ((scanPayload && scanPayload.files) || []).map(function (file) {
@@ -142,6 +162,8 @@
     }, [scanPayload]);
 
     const governance = (taskPayload && taskPayload.governance_summary) || {};
+    const plannedBatchCount = governance.planned_batch_count || governance.total_batch_count || 0;
+    const activeProviderLabel = providerLabelFromList(governance.active_providers, governance.current_provider);
 
     function clearCurrentTask() {
       setCurrentTaskId("");
@@ -267,13 +289,50 @@
       }
     }
 
+    function canRerenderDocx(record) {
+      const completedBatchCount = Number((record && record.completed_batch_count) || 0);
+      const plannedBatchCount = Number((record && record.planned_batch_count) || 0);
+      const allPlannedBatchesSucceeded = plannedBatchCount > 0 && completedBatchCount >= plannedBatchCount;
+      return !!(taskPayload && currentTaskId && record && !record.download_blocked && (record.status === "completed" || allPlannedBatchesSucceeded));
+    }
+
+    async function rerenderDocx(pairId) {
+      if (!currentTaskId || !pairId) {
+        message.warning("缺少任务或文件对信息。");
+        return;
+      }
+      setRerenderingPairIds(function (prev) {
+        return Object.assign({}, prev, { [pairId]: true });
+      });
+      try {
+        await fetchJson(
+          "/api/file-comparison/task/" + currentTaskId + "/pair/" + pairId + "/rerender-docx",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}",
+          }
+        );
+        await refreshTask(currentTaskId);
+        message.success("已基于完成批次重新生成 DOCX。");
+      } catch (error) {
+        message.error(error.message);
+      } finally {
+        setRerenderingPairIds(function (prev) {
+          const next = Object.assign({}, prev);
+          delete next[pairId];
+          return next;
+        });
+      }
+    }
+
     const pairColumns = React.useMemo(function () {
       return [
         {
           title: "主键",
           dataIndex: "key",
           key: "key",
-          width: 180,
+          width: 120,
           render: function (value, record) {
             return html`<${Input}
               size="small"
@@ -287,7 +346,7 @@
           title: "修改前文件",
           dataIndex: "old_path",
           key: "old_path",
-          width: 320,
+          width: 250,
           render: function (value, record) {
             return html`<${Select}
               size="small"
@@ -303,7 +362,7 @@
           title: "修改后文件",
           dataIndex: "new_path",
           key: "new_path",
-          width: 320,
+          width: 250,
           render: function (value, record) {
             return html`<${Select}
               size="small"
@@ -318,10 +377,9 @@
         {
           title: "操作",
           key: "actions",
-          width: 170,
-          fixed: "right",
+          width: 110,
           render: function (_, record) {
-            return html`<${Space} size=${4}>
+            return html`<${Space} direction="vertical" size=${2}>
               <${Button} size="small" onClick=${function () { swapPair(record.pair_id); }}>交换<//>
               <${Button} size="small" danger=${true} onClick=${function () { removePair(record.pair_id); }}>删除匹配<//>
             <//>`;
@@ -334,17 +392,27 @@
       function () {
         return [
           {
-            title: "文件对",
-            dataIndex: "key",
-            key: "key",
-            render: function (value) {
-              return value || "未命名分组";
+            title: "文件",
+            key: "file_names",
+            width: 320,
+            render: function (_, record) {
+              return html`
+                <div className="flex flex-col gap-1">
+                  <div className="text-xs text-slate-500 break-all">
+                    修改前文件：${record.old_label || fileLabelFromPath(record.old_path) || "-"}
+                  </div>
+                  <div className="text-xs text-slate-500 break-all">
+                    修改后文件：${record.new_label || fileLabelFromPath(record.new_path) || "-"}
+                  </div>
+                </div>
+              `;
             },
           },
           {
-            title: "状态",
+            title: "任务状态",
             dataIndex: "status",
             key: "status",
+            width: 92,
             render: function (value) {
               return statusTag(value);
             },
@@ -352,16 +420,16 @@
           {
             title: "批次",
             key: "batches",
+            width: 78,
             render: function (_, record) {
-              const total = (record.batches && record.batches.length) || 0;
-              const done = record.completed_batch_count || 0;
-              return total ? done + "/" + total : "-";
+              return batchProgress(record.completed_batch_count, record.planned_batch_count, record.batches);
             },
           },
           {
             title: "耗时",
             dataIndex: "duration_ms",
             key: "duration_ms",
+            width: 86,
             render: function (value) {
               return formatDuration(value || 0);
             },
@@ -369,11 +437,43 @@
           {
             title: "结果",
             key: "result",
+            width: 160,
             render: function (_, record) {
-              if (!record.docx_path || !taskPayload) {
+              if (!taskPayload) {
                 return html`<${Text} type="secondary">等待生成<//>`;
               }
-              return html`<a href=${"/api/file-comparison/task/" + taskPayload.task_id + "/artifact/" + record.pair_id + "/docx"}>docx</a>`;
+              if (record.download_blocked) {
+                return html`<${Text} type="danger">包含规则回退诊断，禁止下载正式文档<//>`;
+              }
+              const rerenderAvailable = canRerenderDocx(record);
+              const docxAvailable = record.docx_available || record.docx_path;
+              if (!docxAvailable && !rerenderAvailable) {
+                return html`<${Text} type="secondary">等待生成<//>`;
+              }
+              return html`
+                <${Space} size=${6} wrap=${true}>
+                  ${docxAvailable
+                    ? html`<${Button}
+                        size="small"
+                        type="primary"
+                        href=${"/api/file-comparison/task/" + taskPayload.task_id + "/artifact/" + record.pair_id + "/docx"}
+                      >
+                        下载 DOCX
+                      <//>`
+                    : null}
+                  <${Space} size=${6}>
+                    ${rerenderAvailable
+                      ? html`<${Button}
+                          size="small"
+                          loading=${!!rerenderingPairIds[record.pair_id]}
+                          onClick=${function () { rerenderDocx(record.pair_id); }}
+                        >
+                          重新生成 DOCX
+                        <//>`
+                      : null}
+                  <//>
+                <//>
+              `;
             },
           },
           {
@@ -381,12 +481,14 @@
             dataIndex: "error",
             key: "error",
             render: function (value) {
-              return value ? html`<${Text} type="danger">${value}<//>` : html`<${Text} type="secondary">-<//>`;
+              return value
+                ? html`<${Text} type="danger" className="break-all">${value}<//>`
+                : html`<${Text} type="secondary">-<//>`;
             },
           },
         ];
       },
-      [taskPayload]
+      [currentTaskId, rerenderingPairIds, taskPayload]
     );
 
     function renderBatchTable(record) {
@@ -416,15 +518,6 @@
           key: "status",
           width: 110,
           render: batchStatusTag,
-        },
-        {
-          title: "模型",
-          dataIndex: "provider",
-          key: "provider",
-          width: 130,
-          render: function (value) {
-            return value || "-";
-          },
         },
         {
           title: "尝试",
@@ -702,7 +795,7 @@
                 dataSource=${editablePairs}
                 size="small"
                 pagination=${false}
-                scroll=${{ x: 990 }}
+                tableLayout="fixed"
                 locale=${{ emptyText: "尚未匹配或未找到可配对文件" }}
               />
           <//>
@@ -714,20 +807,16 @@
                     <span className="task-progress-value">${statusTag((taskPayload && taskPayload.status) || "未开始")}</span>
                   </div>
                   <div className="task-progress-item">
-                    <span className="task-progress-label">文件对</span>
-                    <span className="task-progress-value">${(scanPayload && scanPayload.pairs && scanPayload.pairs.length) || 0}</span>
-                  </div>
-                  <div className="task-progress-item">
-                    <span className="task-progress-label">已确认</span>
-                    <span className="task-progress-value">${editablePairs.length}</span>
+                    <span className="task-progress-label">文件对进度</span>
+                    <span className="task-progress-value">${((taskPayload && taskPayload.completed_pair_count) || 0) + "/" + ((taskPayload && taskPayload.pair_count) || 0)}</span>
                   </div>
                   <div className="task-progress-item">
                     <span className="task-progress-label">批次进度</span>
-                    <span className="task-progress-value">${(governance.completed_batch_count || 0) + "/" + (governance.total_batch_count || 0)}</span>
+                    <span className="task-progress-value">${(governance.completed_batch_count || 0) + "/" + plannedBatchCount}</span>
                   </div>
                   <div className="task-progress-item">
-                    <span className="task-progress-label">当前模型</span>
-                    <span className="task-progress-value">${governance.current_provider || "-"}</span>
+                    <span className="task-progress-label">活跃模型</span>
+                    <span className="task-progress-value">${activeProviderLabel}</span>
                   </div>
                   <div className="task-progress-item">
                     <span className="task-progress-label">总耗时</span>
@@ -735,11 +824,10 @@
                   </div>
                 </div>
                 <div className="mb-2 flex flex-wrap gap-1">
-                  <${Tag} color="processing">当前批次 ${governance.current_batch_id || "-"}<//>
                   <${Tag} color=${governance.provider_failure_count ? "error" : "default"}>模型失败 ${(governance.provider_failure_count || 0)}<//>
                   <${Tag} color=${governance.repair_count ? "warning" : "gold"}>结果修复 ${(governance.repair_count || 0)}<//>
                   <${Tag} color=${governance.fallback_count ? "purple" : "geekblue"}>规则回退 ${(governance.fallback_count || 0)}<//>
-                  <${Tag} color=${taskPayload && taskPayload.failed_count ? "error" : "success"}>失败数量 ${(taskPayload && taskPayload.failed_count) || 0}<//>
+                  <${Tag} color=${taskPayload && taskPayload.failed_pair_count ? "error" : "success"}>失败文件对 ${(taskPayload && taskPayload.failed_pair_count) || 0}<//>
                 </div>
                 <${Table}
                     rowKey=${function (record) { return record.pair_id; }}
@@ -747,6 +835,7 @@
                     dataSource=${(taskPayload && taskPayload.pairs) || []}
                     size="small"
                     pagination=${false}
+                    tableLayout="fixed"
                     expandable=${{ expandedRowRender: renderBatchTable, rowExpandable: function (record) { return !!(record.batches && record.batches.length); } }}
                     locale=${{ emptyText: "尚未发起任务" }}
                   />

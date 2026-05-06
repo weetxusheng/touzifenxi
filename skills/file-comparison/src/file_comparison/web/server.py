@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import tempfile
+from datetime import datetime
 from email.parser import BytesParser
 from email.policy import default
 from http import HTTPStatus
@@ -14,11 +15,15 @@ from urllib.parse import quote, urlparse
 
 from ..compare.engine import TaskManager, scan_folder_for_pairs
 from ..compare.models import PairMatch
+from ..compare.rerender import rerender_pair
+from ..runtime.checkpoint import atomic_write_json
 from ..runtime.config import FileComparisonRuntimeConfig, load_file_comparison_runtime_config
+from ..runtime.execution import PairManifest, task_status_from_pairs
 from ..runtime.settings import ensure_directories, resolve_paths
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 SKILL_ROOT = Path(__file__).resolve().parents[3]
+TERMINAL_TASK_STATUSES = {"completed", "failed", "partial_failed", "aborted"}
 
 
 def list_word_files(folder_path: Path) -> list[dict[str, str]]:
@@ -46,14 +51,23 @@ def hydrate_status_from_checkpoints(run_dir: Path, payload: dict) -> dict:
     """用最新 pair checkpoint 补充页面轮询状态，提升运行中可观测性。"""
     pairs = payload.get("pairs", [])
     if not isinstance(pairs, list):
-        return payload
+        return refresh_running_duration(payload)
     all_batches: list[dict] = []
+    planned_batch_count = 0
     for pair in pairs:
         if not isinstance(pair, dict):
             continue
         pair_id = str(pair.get("pair_id", "")).strip()
+        hydrate_pair_artifacts(run_dir, pair)
+        pair_planned_batch_count = planned_batch_count_from_batch_plan(run_dir, pair_id)
+        if pair_planned_batch_count <= 0:
+            pair_planned_batch_count = int(pair.get("planned_batch_count", 0) or len(pair.get("batches", []) or []))
+        pair["planned_batch_count"] = pair_planned_batch_count
+        planned_batch_count += pair_planned_batch_count
         checkpoint_path = run_dir / "checkpoints" / f"pair_{pair_id}_checkpoint.json"
         if not pair_id or not checkpoint_path.exists():
+            pair_batches = pair.get("batches", []) if isinstance(pair.get("batches"), list) else []
+            all_batches.extend(pair_batches)
             continue
         try:
             checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
@@ -66,9 +80,91 @@ def hydrate_status_from_checkpoints(run_dir: Path, payload: dict) -> dict:
         pair["batches"] = batches
         pair["completed_batch_count"] = sum(1 for batch in batches if batch["status"] == "success")
         pair["failed_batch_count"] = sum(1 for batch in batches if batch["status"] not in {"success", "pending"})
+        pair["current_provider"] = current_provider_from_batches(batches)
+        pair["active_providers"] = active_providers_from_batches(batches)
         all_batches.extend(batches)
-    payload["governance_summary"] = build_governance_summary(all_batches, payload.get("governance_summary", {}))
-    return payload
+    payload["pair_count"] = int(payload.get("pair_count", 0) or len(pairs))
+    payload["completed_pair_count"] = sum(1 for pair in pairs if pair.get("status") == "completed")
+    payload["failed_pair_count"] = sum(1 for pair in pairs if pair.get("status") == "failed")
+    payload["governance_summary"] = build_governance_summary(
+        all_batches,
+        payload.get("governance_summary", {}),
+        planned_batch_count=planned_batch_count,
+    )
+    return refresh_running_duration(payload)
+
+
+def planned_batch_count_from_batch_plan(run_dir: Path, pair_id: str) -> int:
+    """从 batch_plan.json 读取稳定的计划批次数。"""
+    if not pair_id:
+        return 0
+    batch_plan_path = run_dir / "pairs" / pair_id / "extracted" / "batch_plan.json"
+    if not batch_plan_path.exists():
+        return 0
+    try:
+        payload = json.loads(batch_plan_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return 0
+    batches = payload.get("batches", [])
+    return len(batches) if isinstance(batches, list) else 0
+
+
+def hydrate_pair_artifacts(run_dir: Path, pair: dict) -> None:
+    """补齐 pair.json 里的产物路径、耗时和下载可用性。"""
+    pair_id = str(pair.get("pair_id", "")).strip()
+    if not pair_id:
+        return
+    pair_json_path = run_dir / "pairs" / pair_id / "pair.json"
+    if pair_json_path.exists():
+        try:
+            pair_payload = json.loads(pair_json_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pair_payload = {}
+        if isinstance(pair_payload, dict):
+            for key in (
+                "key",
+                "old_path",
+                "new_path",
+                "old_label",
+                "new_label",
+                "status",
+                "docx_path",
+                "doc_path",
+                "error",
+                "duration_ms",
+                "completed_batch_count",
+                "failed_batch_count",
+                "planned_batch_count",
+            ):
+                value = pair_payload.get(key)
+                if value not in (None, ""):
+                    pair[key] = value
+    pair["docx_available"] = resolve_pair_artifact_path(run_dir, pair_id, "docx") is not None
+    pair["doc_available"] = resolve_pair_artifact_path(run_dir, pair_id, "doc") is not None
+    pair["download_blocked"] = pair_has_fallback_diagnostic(run_dir, pair_id)
+
+
+def current_provider_from_batches(batches: list[dict]) -> str:
+    """从批次列表推导当前或最近一次使用的模型。"""
+    if not batches:
+        return ""
+    current_batch = next((batch for batch in batches if batch.get("status") not in {"success", "aborted"}), batches[-1])
+    return str(current_batch.get("provider", "")).strip()
+
+
+def active_providers_from_batches(batches: list[dict]) -> list[str]:
+    """返回当前仍在进行或最近有活动的 provider 列表。"""
+    active: list[str] = []
+    for batch in batches:
+        provider = str(batch.get("provider", "")).strip()
+        if not provider or batch.get("status") in {"success", "aborted"}:
+            continue
+        if provider not in active:
+            active.append(provider)
+    if active:
+        return active
+    provider = current_provider_from_batches(batches)
+    return [provider] if provider else []
 
 
 def batch_payload_from_checkpoint_entry(entry: dict) -> dict:
@@ -92,14 +188,23 @@ def batch_payload_from_checkpoint_entry(entry: dict) -> dict:
     }
 
 
-def build_governance_summary(batches: list[dict], existing: dict) -> dict:
+def build_governance_summary(batches: list[dict], existing: dict, *, planned_batch_count: int = 0) -> dict:
     """基于最新 batch 摘要重算页面治理统计。"""
+    existing = existing if isinstance(existing, dict) else {}
     if not batches:
-        return existing if isinstance(existing, dict) else {}
+        planned_batch_count = planned_batch_count or int(existing.get("planned_batch_count", existing.get("total_batch_count", 0)) or 0)
+        return {
+            **existing,
+            "planned_batch_count": planned_batch_count,
+            "total_batch_count": planned_batch_count,
+        }
     current_batch = next((batch for batch in batches if batch.get("status") not in {"success", "aborted"}), batches[-1])
+    planned_batch_count = planned_batch_count or int(existing.get("planned_batch_count", existing.get("total_batch_count", len(batches))) or len(batches))
+    active_providers = active_providers_from_batches(batches)
     return {
         "current_batch_id": current_batch.get("batch_id", ""),
         "current_provider": current_batch.get("provider", ""),
+        "active_providers": active_providers,
         "current_call_status": current_batch.get("call_status", ""),
         "completed_batch_count": sum(1 for batch in batches if batch.get("status") == "success"),
         "failed_batch_count": sum(1 for batch in batches if batch.get("status") not in {"success", "pending"}),
@@ -110,8 +215,29 @@ def build_governance_summary(batches: list[dict], existing: dict) -> dict:
         ),
         "repair_count": sum(1 for batch in batches if batch.get("repair_used")),
         "fallback_count": sum(1 for batch in batches if batch.get("fallback_name")),
-        "total_batch_count": len(batches),
+        "planned_batch_count": planned_batch_count,
+        "total_batch_count": planned_batch_count,
     }
+
+
+def refresh_running_duration(payload: dict) -> dict:
+    """运行中状态按 started_at 实时刷新耗时，终态保留落盘耗时。"""
+    now = datetime.now().astimezone()
+    payload["updated_at"] = now.isoformat()
+    if str(payload.get("status", "")) in TERMINAL_TASK_STATUSES:
+        return payload
+    started_at = str(payload.get("started_at", "")).strip()
+    if not started_at:
+        return payload
+    try:
+        started = datetime.fromisoformat(started_at)
+    except ValueError:
+        return payload
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=now.tzinfo)
+    duration_ms = max(int(payload.get("duration_ms", 0) or 0), int((now - started).total_seconds() * 1000))
+    payload["duration_ms"] = duration_ms
+    return payload
 
 
 def pair_has_fallback_diagnostic(run_dir: Path, pair_id: str) -> bool:
@@ -155,6 +281,75 @@ def resolve_pair_artifact_path(run_dir: Path, pair_id: str, kind: str) -> Path |
     if not candidates:
         return None
     return max(candidates, key=lambda path: path.stat().st_mtime)
+
+
+def update_pair_and_task_status_after_rerender(run_dir: Path, pair_id: str, rerender_payload: dict) -> None:
+    """在重生成 DOCX 成功后，同步清理 pair/task 级失败状态和错误信息。"""
+    pair_dir = run_dir / "pairs" / pair_id
+    pair_json_path = pair_dir / "pair.json"
+    if pair_json_path.exists():
+        try:
+            pair_payload = json.loads(pair_json_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pair_payload = {}
+        if isinstance(pair_payload, dict):
+            pair_payload["status"] = "completed"
+            pair_payload["error"] = ""
+            pair_payload["docx_path"] = str(rerender_payload.get("docx_path", "") or "")
+            pair_payload["doc_path"] = str(rerender_payload.get("doc_path", "") or "")
+            atomic_write_json(pair_json_path, pair_payload)
+
+    status_path = run_dir / "status.json"
+    if not status_path.exists():
+        return
+    try:
+        status_payload = json.loads(status_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return
+    pairs = status_payload.get("pairs", [])
+    if not isinstance(pairs, list):
+        return
+
+    updated_pairs: list[dict] = []
+    for pair in pairs:
+        if not isinstance(pair, dict):
+            continue
+        next_pair = dict(pair)
+        if str(next_pair.get("pair_id", "")).strip() == pair_id:
+            next_pair["status"] = "completed"
+            next_pair["error"] = ""
+            next_pair["docx_path"] = str(rerender_payload.get("docx_path", "") or "")
+            next_pair["doc_path"] = str(rerender_payload.get("doc_path", "") or "")
+            next_pair["docx_available"] = bool(next_pair["docx_path"])
+            next_pair["doc_available"] = bool(next_pair["doc_path"])
+        updated_pairs.append(next_pair)
+
+    pair_manifests = [
+        PairManifest(
+            pair_id=str(pair.get("pair_id", "")).strip(),
+            key=str(pair.get("key", "")).strip(),
+            old_path=str(pair.get("old_path", "")).strip(),
+            new_path=str(pair.get("new_path", "")).strip(),
+            status=str(pair.get("status", "pending")).strip() or "pending",
+            docx_path=str(pair.get("docx_path", "")).strip(),
+            doc_path=str(pair.get("doc_path", "")).strip(),
+            error=str(pair.get("error", "")).strip(),
+            duration_ms=int(pair.get("duration_ms", 0) or 0),
+            completed_batch_count=int(pair.get("completed_batch_count", 0) or 0),
+            failed_batch_count=int(pair.get("failed_batch_count", 0) or 0),
+            planned_batch_count=int(pair.get("planned_batch_count", 0) or 0),
+        )
+        for pair in updated_pairs
+    ]
+    completed_pair_count = sum(1 for pair in pair_manifests if pair.status == "completed")
+    failed_pair_count = sum(1 for pair in pair_manifests if pair.status == "failed")
+    status_payload["pairs"] = updated_pairs
+    status_payload["status"] = task_status_from_pairs(pair_manifests)
+    status_payload["success_count"] = completed_pair_count
+    status_payload["failed_count"] = failed_pair_count
+    status_payload["completed_pair_count"] = completed_pair_count
+    status_payload["failed_pair_count"] = failed_pair_count
+    atomic_write_json(status_path, status_payload)
 
 
 class FileComparisonServer(ThreadingHTTPServer):
@@ -316,6 +511,31 @@ class RequestHandler(BaseHTTPRequestHandler):
                 },
                 status=201,
             )
+            return
+        if parsed.path.startswith("/api/file-comparison/task/") and parsed.path.endswith("/rerender-docx"):
+            parts = parsed.path.strip("/").split("/")
+            if len(parts) != 7 or parts[4] != "pair":
+                self._send_json({"error": "rerender-docx path 格式不正确"}, status=400)
+                return
+            task_id = parts[3]
+            pair_id = parts[5]
+            pair_dir = self.server.paths.runs_root / task_id / "pairs" / pair_id
+            if not pair_dir.exists():
+                self._send_json({"error": f"pair not found: {pair_id}"}, status=404)
+                return
+            try:
+                payload = rerender_pair(pair_dir, mode="stored", overwrite=True)
+            except FileNotFoundError as exc:
+                self._send_json({"error": str(exc)}, status=404)
+                return
+            except RuntimeError as exc:
+                self._send_json({"error": str(exc)}, status=409)
+                return
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+                return
+            update_pair_and_task_status_after_rerender(self.server.paths.runs_root / task_id, pair_id, payload)
+            self._send_json({"task_id": task_id, **payload}, status=200)
             return
         if parsed.path.startswith("/api/file-comparison/task/") and parsed.path.endswith("/rerun"):
             parts = parsed.path.strip("/").split("/")

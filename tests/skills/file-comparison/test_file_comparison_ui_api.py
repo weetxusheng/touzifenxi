@@ -1,6 +1,7 @@
 import json
 import threading
 import uuid
+from datetime import datetime, timedelta
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -285,6 +286,143 @@ def test_create_task_reloads_runtime_config_before_starting(tmp_path, monkeypatc
         thread.join(timeout=2)
 
 
+def test_rerender_docx_clears_failed_pair_status_and_error(tmp_path, monkeypatch):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+
+    run_dir = server.paths.runs_root / "task-rerender"
+    pair_dir = run_dir / "pairs" / "pair-001"
+    outputs_dir = pair_dir / "outputs"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    docx_path = outputs_dir / "基金合同 对照表.docx"
+    doc_path = outputs_dir / "基金合同 对照表.doc"
+    docx_path.write_bytes(b"docx")
+    doc_path.write_bytes(b"doc")
+    (pair_dir / "pair.json").write_text(
+        json.dumps(
+            {
+                "pair_id": "pair-001",
+                "key": "基金合同",
+                "old_path": str(tmp_path / "old.docx"),
+                "new_path": str(tmp_path / "new.docx"),
+                "old_label": "基金合同_3月.docx",
+                "new_label": "基金合同_6月.docx",
+                "status": "failed",
+                "error": "DOCX 写出失败",
+                "docx_path": "",
+                "doc_path": "",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "status.json").write_text(
+        json.dumps(
+            {
+                "task_id": "task-rerender",
+                "run_dir": str(run_dir),
+                "status": "failed",
+                "duration_ms": 1234,
+                "poll_interval_seconds": 2.0,
+                "pair_count": 1,
+                "success_count": 0,
+                "failed_count": 1,
+                "completed_pair_count": 0,
+                "failed_pair_count": 1,
+                "pairs": [
+                    {
+                        "pair_id": "pair-001",
+                        "key": "基金合同",
+                        "status": "failed",
+                        "old_path": str(tmp_path / "old.docx"),
+                        "new_path": str(tmp_path / "new.docx"),
+                        "old_label": "基金合同_3月.docx",
+                        "new_label": "基金合同_6月.docx",
+                        "error": "DOCX 写出失败",
+                        "completed_batch_count": 3,
+                        "failed_batch_count": 0,
+                        "planned_batch_count": 3,
+                        "batches": [
+                            {
+                                "batch_id": "batch-001",
+                                "status": "success",
+                                "chapter_range": ["第一部分"],
+                                "attempt_count": 1,
+                                "provider": "minimax",
+                                "error": "",
+                                "duration_ms": 100,
+                                "total_duration_ms": 100,
+                                "provider_available": True,
+                                "call_status": "success",
+                                "repair_used": False,
+                                "fallback_name": "",
+                                "resume_from": "",
+                            }
+                        ],
+                    }
+                ],
+                "governance_summary": {
+                    "completed_batch_count": 1,
+                    "failed_batch_count": 0,
+                    "planned_batch_count": 1,
+                    "total_batch_count": 1,
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        server_module,
+        "rerender_pair",
+        lambda pair_dir, mode, overwrite: {
+            "pair_id": "pair-001",
+            "mode": mode,
+            "row_count": 5,
+            "docx_path": str(docx_path),
+            "doc_path": str(doc_path),
+        },
+    )
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, rerender_payload = request_json(
+            f"{base_url}/api/file-comparison/task/task-rerender/pair/pair-001/rerender-docx",
+            method="POST",
+            payload={},
+        )
+        assert status == 200
+        assert rerender_payload["pair_id"] == "pair-001"
+
+        status, status_payload = request_json(f"{base_url}/api/file-comparison/task/task-rerender/status")
+        assert status == 200
+        assert status_payload["status"] == "completed"
+        assert status_payload["failed_count"] == 0
+        assert status_payload["pairs"][0]["status"] == "completed"
+        assert status_payload["pairs"][0]["error"] == ""
+        assert status_payload["pairs"][0]["docx_path"] == str(docx_path)
+        assert status_payload["pairs"][0]["doc_path"] == str(doc_path)
+
+        stored_pair_payload = json.loads((pair_dir / "pair.json").read_text(encoding="utf-8"))
+        assert stored_pair_payload["status"] == "completed"
+        assert stored_pair_payload["error"] == ""
+        assert stored_pair_payload["docx_path"] == str(docx_path)
+        assert stored_pair_payload["doc_path"] == str(doc_path)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
 def test_create_task_reports_runtime_config_reload_error(tmp_path):
     write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
     runtime_config = load_file_comparison_runtime_config(tmp_path)
@@ -359,6 +497,48 @@ def test_rerun_batch_endpoint_starts_single_batch_rerun(tmp_path):
         assert payload["status"] == "running"
         assert payload["batch_id"] == "batch-003"
         assert fake_manager.rerun_args == ("task-001", "pair-001", "batch-003")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_rerender_docx_endpoint_reuses_stored_batches(tmp_path, monkeypatch):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    pair_dir = server.paths.runs_root / "task-001" / "pairs" / "pair-001"
+    pair_dir.mkdir(parents=True, exist_ok=True)
+    rerender_calls: list[tuple[str, str, bool]] = []
+
+    def fake_rerender(target_pair_dir, *, mode, overwrite):
+        rerender_calls.append((str(target_pair_dir), mode, overwrite))
+        return {
+            "pair_id": "pair-001",
+            "mode": mode,
+            "row_count": 3,
+            "docx_path": str(target_pair_dir / "outputs" / "comparison.docx"),
+            "doc_path": str(target_pair_dir / "outputs" / "comparison.doc"),
+        }
+
+    monkeypatch.setattr(server_module, "rerender_pair", fake_rerender)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json(
+            f"{base_url}/api/file-comparison/task/task-001/pair/pair-001/rerender-docx",
+            method="POST",
+            payload={},
+        )
+        assert status == 200
+        assert payload["pair_id"] == "pair-001"
+        assert payload["mode"] == "stored"
+        assert rerender_calls == [(str(pair_dir), "stored", True)]
     finally:
         server.shutdown()
         server.server_close()
@@ -449,6 +629,138 @@ def test_artifact_download_serves_chinese_named_output(tmp_path):
         assert status == 200
         assert body == b"official-doc"
         assert "filename*=UTF-8''" in disposition
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_status_hydration_uses_stable_planned_batch_count(tmp_path):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    run_dir = server.paths.runs_root / "task-001"
+    pair_dir = run_dir / "pairs" / "pair-001"
+    (pair_dir / "extracted").mkdir(parents=True)
+    (run_dir / "checkpoints").mkdir(parents=True)
+    (pair_dir / "extracted" / "batch_plan.json").write_text(
+        json.dumps(
+            {
+                "pair_id": "pair-001",
+                "batches": [
+                    {"batch_id": "batch-001"},
+                    {"batch_id": "batch-002"},
+                    {"batch_id": "batch-003"},
+                    {"batch_id": "batch-004"},
+                    {"batch_id": "batch-005"},
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "status.json").write_text(
+        json.dumps(
+            {
+                "task_id": "task-001",
+                "status": "running",
+                "duration_ms": 1,
+                "pair_count": 1,
+                "completed_pair_count": 0,
+                "failed_pair_count": 0,
+                "pairs": [{"pair_id": "pair-001", "key": "基金合同", "status": "llm_running"}],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (run_dir / "checkpoints" / "pair_pair-001_checkpoint.json").write_text(
+        json.dumps(
+            {
+                "pair_id": "pair-001",
+                "entries": [
+                    {
+                        "entry_id": "batch-001",
+                        "status": "success",
+                        "attempt_count": 1,
+                        "provider": "deepseek",
+                        "request_context": {"chapter_range": ["第一部分"]},
+                    },
+                    {
+                        "entry_id": "batch-002",
+                        "status": "error",
+                        "attempt_count": 2,
+                        "provider": "kimi-code",
+                        "provider_available": False,
+                        "error": {"message": "timeout"},
+                        "request_context": {"chapter_range": ["第二部分"]},
+                    },
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json(f"{base_url}/api/file-comparison/task/task-001/status")
+        assert status == 200
+        assert payload["governance_summary"]["completed_batch_count"] == 1
+        assert payload["governance_summary"]["planned_batch_count"] == 5
+        assert payload["governance_summary"]["total_batch_count"] == 5
+        assert payload["pairs"][0]["planned_batch_count"] == 5
+        assert payload["pairs"][0]["completed_batch_count"] == 1
+        assert payload["pairs"][0]["failed_batch_count"] == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_running_status_duration_is_recomputed_from_started_at(tmp_path):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    run_dir = server.paths.runs_root / "task-001"
+    run_dir.mkdir(parents=True)
+    started_at = (datetime.now().astimezone() - timedelta(seconds=3)).isoformat()
+    (run_dir / "status.json").write_text(
+        json.dumps(
+            {
+                "task_id": "task-001",
+                "status": "running",
+                "started_at": started_at,
+                "duration_ms": 1,
+                "pair_count": 1,
+                "completed_pair_count": 0,
+                "failed_pair_count": 0,
+                "pairs": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json(f"{base_url}/api/file-comparison/task/task-001/status")
+        assert status == 200
+        assert payload["duration_ms"] >= 2500
+        assert payload["started_at"] == started_at
+        assert payload["updated_at"]
     finally:
         server.shutdown()
         server.server_close()
