@@ -322,7 +322,7 @@ def default_runtime_payload() -> dict[str, Any]:
             "month_pattern": r"(?P<month>\d{1,2})月",
         },
         "ui": {
-            "poll_interval_seconds": 2.0,
+            "poll_interval_seconds": 5.0,
             "host": "127.0.0.1",
             "port": 8765,
         },
@@ -401,7 +401,7 @@ def load_file_comparison_runtime_config(base_path: Path | None = None) -> FileCo
             month_pattern=str(pairing.get("month_pattern", r"(?P<month>\d{1,2})月")).strip() or r"(?P<month>\d{1,2})月",
         ),
         ui=UIRuntimeConfig(
-            poll_interval_seconds=float(ui.get("poll_interval_seconds", 2.0)),
+            poll_interval_seconds=float(ui.get("poll_interval_seconds", 5.0)),
             host=str(ui.get("host", "127.0.0.1")).strip() or "127.0.0.1",
             port=int(ui.get("port", 8765)),
         ),

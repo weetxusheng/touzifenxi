@@ -15,8 +15,14 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 ## 默认行为
 
 - 默认正式入口有两个：
-  - `python scripts/file_comparison.py`
-  - `python scripts/file_comparison_web.py`
+  - `uv run python scripts/file_comparison.py`
+  - `uv run python scripts/file_comparison_web.py`
+- 本地开发辅助入口：
+  - `uv run python scripts/restart_file_comparison_web.py`
+  - `./scripts/restart_file_comparison_web.sh`
+- 三个正式脚本入口都会优先切到项目根目录的 `.venv` 解释器：
+  - 如果你误用系统 `python` 或 conda `python` 启动，脚本会自动 re-exec 到项目 `.venv/bin/python3`
+  - 推荐命令仍然是 `uv run python ...`，这样最直观，也最容易排查环境问题
 - 默认走 `llm_mode = responses`
 - 默认 provider 链：
   - `minimax`
@@ -41,6 +47,12 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 - 输入文件类型：
   - `.doc`
   - `.docx`
+- `.docx` 若保留了 Word 修订痕迹，当前抽取规则按“可见正文”处理：
+  - 插入修订内容会并入正文
+  - 删除修订内容不会并回正文
+- `.docx` 若使用 Word 自动编号，当前抽取规则会尽量恢复“Word 实际显示出来的编号”：
+  - 不只恢复编号样式，也会读取编号起始值
+  - 例如 Word 里显示为 `四、/五、/六、` 的条目，不会再误抽成 `1、/2、/3、`
 - 推荐输入文本结构：
   - 有明确一级章节，如 `第X部分`
   - 有明确二级或三级层级，如 `一、 / 1、 / （1）`
@@ -68,6 +80,9 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 
 ## 排障说明
 
+- 若看到 `缺少 python-docx，请使用项目 uv 环境启动 file-comparison 页面。`：
+  - 先用 `uv run python scripts/file_comparison_web.py`
+  - 如果你是直接执行脚本，当前版本也会自动切回项目 `.venv`，但推荐仍以 `uv run` 为准
 - 若页面可启动但模型请求始终失败，先检查：
   - `MINIMAX_API_KEY`
   - `KIMI_CODE_API_KEY`
@@ -127,6 +142,9 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 - provider 返回不可用后，同一个 provider 默认冷却 `40` 秒再发下一次请求，其它 provider 不受影响
 - 页面轮询只读取 `status.json` 和 checkpoint 摘要
 - 页面任务状态支持展开文件对查看 batch 明细；点击单个 batch 的“重跑批次”会清理该 batch 过程文件与 checkpoint entry，再复用其它成功 batch 恢复生成
+- 页面任务状态里，单个文件对在 `completed` 且不含 fallback 诊断时，可点击“重新生成 DOCX”
+  - 该按钮不会重新请求模型
+  - 它会直接复用该 pair 已落盘的成功 batch 解析结果，重新生成正式 `.docx/.doc`
 
 完整处理逻辑见：
 

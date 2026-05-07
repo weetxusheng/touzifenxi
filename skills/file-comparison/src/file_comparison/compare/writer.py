@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 from ..runtime.dependencies import ensure_python_docx_on_path
-from .chunking import first_line_matches_subchapter
+from .chunking import text_starts_with_subchapter
 from .models import ComparisonRow
 
 CHANGE_BLUE = "0070C0"
@@ -50,8 +50,7 @@ def display_text_with_subchapter(text: str, subchapter: str) -> str:
     """在必要时把子标题补回展示文本首行。"""
     if not subchapter or text in {"新增", "删除"}:
         return text
-    first_line = text.split("\n", 1)[0]
-    if first_line_matches_subchapter(first_line, subchapter):
+    if text_starts_with_subchapter(text, subchapter):
         return text
     return f"{subchapter}\n{text}"
 

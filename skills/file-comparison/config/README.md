@@ -10,6 +10,18 @@
   - 本机实际运行配置
   - 由用户复制模板后填写
 
+## 推荐启动方式
+
+- 页面入口推荐使用：
+  - `uv run python scripts/file_comparison_web.py`
+- 单次对照推荐使用：
+  - `uv run python scripts/file_comparison.py --old <旧文件> --new <新文件> --docx-output <输出路径>`
+- 当前三个正式入口脚本会优先切到项目根目录 `.venv`：
+  - `scripts/file_comparison.py`
+  - `scripts/file_comparison_web.py`
+  - `scripts/rerender_from_run.py`
+- 如果误用系统 `python` 或 conda `python` 启动，上述脚本会自动 re-exec 到项目 `.venv/bin/python3`
+
 ## 关键字段
 
 ### `execution`
@@ -129,6 +141,7 @@
 ### `ui`
 
 - `poll_interval_seconds`
+  - 页面轮询间隔，默认 `5` 秒；发起任务后会立即拉取一次状态，终态后停止轮询。
 - `host`
 - `port`
 

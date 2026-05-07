@@ -31,6 +31,7 @@ class NumberingLevel:
 
     num_format: str
     level_text: str
+    start_value: int = 1
 
 
 @dataclass(slots=True)

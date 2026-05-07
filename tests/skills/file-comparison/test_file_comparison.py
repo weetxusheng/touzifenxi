@@ -1,6 +1,8 @@
 import importlib.util
 import sys
 from pathlib import Path
+from xml.etree import ElementTree as ET
+from zipfile import ZipFile
 
 import pytest
 
@@ -15,6 +17,135 @@ def load_module():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def build_revision_docx(path: Path) -> None:
+    from docx import Document
+
+    namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    document = Document()
+    document.add_paragraph("第一部分  前言")
+    document.add_paragraph("三、总则")
+    document.add_paragraph("1、保留句。")
+    document.add_paragraph("占位段落")
+    document.save(path)
+
+    with ZipFile(path) as archive:
+        document_xml = archive.read("word/document.xml")
+        files = {name: archive.read(name) for name in archive.namelist() if name != "word/document.xml"}
+
+    root = ET.fromstring(document_xml)
+    body = root.find(f"{{{namespace}}}body")
+    assert body is not None
+    paragraphs = body.findall(f"{{{namespace}}}p")
+    target = paragraphs[-1]
+    for child in list(target):
+        target.remove(child)
+
+    paragraph_properties = ET.SubElement(target, f"{{{namespace}}}pPr")
+    ET.SubElement(paragraph_properties, f"{{{namespace}}}spacing", {f"{{{namespace}}}line": "360"})
+
+    keep_run = ET.SubElement(target, f"{{{namespace}}}r")
+    keep_text = ET.SubElement(keep_run, f"{{{namespace}}}t")
+    keep_text.text = "2、原有句。"
+
+    inserted = ET.SubElement(
+        target,
+        f"{{{namespace}}}ins",
+        {
+            f"{{{namespace}}}id": "56",
+            f"{{{namespace}}}author": "tester",
+            f"{{{namespace}}}date": "2020-08-18T19:44:00Z",
+        },
+    )
+    inserted_run = ET.SubElement(inserted, f"{{{namespace}}}r")
+    inserted_text = ET.SubElement(inserted_run, f"{{{namespace}}}t")
+    inserted_text.text = "本基金可根据法律法规和基金合同的约定参与转融通证券出借业务。"
+
+    deleted = ET.SubElement(
+        target,
+        f"{{{namespace}}}del",
+        {
+            f"{{{namespace}}}id": "57",
+            f"{{{namespace}}}author": "tester",
+            f"{{{namespace}}}date": "2020-08-18T19:45:00Z",
+        },
+    )
+    deleted_run = ET.SubElement(deleted, f"{{{namespace}}}r")
+    deleted_text = ET.SubElement(deleted_run, f"{{{namespace}}}delText")
+    deleted_text.text = "这句删除内容不应回到正文。"
+
+    updated_xml = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+    with ZipFile(path, "w") as archive:
+        archive.writestr("word/document.xml", updated_xml)
+        for name, content in files.items():
+            archive.writestr(name, content)
+
+
+def build_chinese_counting_start_docx(path: Path, *, start: int) -> None:
+    from docx import Document
+
+    namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    document = Document()
+    document.add_paragraph("第一部分  前言")
+    document.add_paragraph("三、总则")
+    document.add_paragraph("基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息。")
+    document.add_paragraph("本基金可根据法律法规和基金合同的约定参与转融通证券出借业务。")
+    document.add_paragraph("本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。")
+    document.save(path)
+
+    with ZipFile(path) as archive:
+        document_xml = archive.read("word/document.xml")
+        numbering_xml = archive.read("word/numbering.xml")
+        files = {
+            name: archive.read(name)
+            for name in archive.namelist()
+            if name not in {"word/document.xml", "word/numbering.xml"}
+        }
+
+    document_root = ET.fromstring(document_xml)
+    body = document_root.find(f"{{{namespace}}}body")
+    assert body is not None
+    paragraphs = body.findall(f"{{{namespace}}}p")
+
+    for paragraph in paragraphs[2:5]:
+        paragraph_properties = paragraph.find(f"{{{namespace}}}pPr")
+        if paragraph_properties is None:
+            paragraph_properties = ET.Element(f"{{{namespace}}}pPr")
+            paragraph.insert(0, paragraph_properties)
+        num_pr = paragraph_properties.find(f"{{{namespace}}}numPr")
+        if num_pr is None:
+            num_pr = ET.Element(f"{{{namespace}}}numPr")
+            paragraph_properties.insert(0, num_pr)
+        ilvl = num_pr.find(f"{{{namespace}}}ilvl")
+        if ilvl is None:
+            ilvl = ET.SubElement(num_pr, f"{{{namespace}}}ilvl")
+        ilvl.set(f"{{{namespace}}}val", "0")
+        num_id = num_pr.find(f"{{{namespace}}}numId")
+        if num_id is None:
+            num_id = ET.SubElement(num_pr, f"{{{namespace}}}numId")
+        num_id.set(f"{{{namespace}}}val", "99")
+
+    numbering_root = ET.fromstring(numbering_xml)
+    abstract = ET.SubElement(numbering_root, f"{{{namespace}}}abstractNum")
+    abstract.set(f"{{{namespace}}}abstractNumId", "99")
+    level = ET.SubElement(abstract, f"{{{namespace}}}lvl")
+    level.set(f"{{{namespace}}}ilvl", "0")
+    ET.SubElement(level, f"{{{namespace}}}start").set(f"{{{namespace}}}val", str(start))
+    ET.SubElement(level, f"{{{namespace}}}numFmt").set(f"{{{namespace}}}val", "chineseCounting")
+    ET.SubElement(level, f"{{{namespace}}}lvlText").set(f"{{{namespace}}}val", "%1、")
+
+    num = ET.SubElement(numbering_root, f"{{{namespace}}}num")
+    num.set(f"{{{namespace}}}numId", "99")
+    ET.SubElement(num, f"{{{namespace}}}abstractNumId").set(f"{{{namespace}}}val", "99")
+
+    updated_document_xml = ET.tostring(document_root, encoding="utf-8", xml_declaration=True)
+    updated_numbering_xml = ET.tostring(numbering_root, encoding="utf-8", xml_declaration=True)
+    with ZipFile(path, "w") as archive:
+        archive.writestr("word/document.xml", updated_document_xml)
+        archive.writestr("word/numbering.xml", updated_numbering_xml)
+        for name, content in files.items():
+            archive.writestr(name, content)
 
 
 def test_split_sections_handles_page_breaks_and_toc_numbers():
@@ -39,6 +170,34 @@ def test_split_sections_handles_page_breaks_and_toc_numbers():
     assert sections[1].title == "第二部分  释义"
     assert "旧内容" in sections[0].body
     assert "新内容" in sections[1].body
+
+
+def test_extract_docx_text_includes_inserted_revisions_but_ignores_deleted_revisions(tmp_path):
+    load_module()
+    from file_comparison.compare.extractor import extract_docx_text
+
+    docx_path = tmp_path / "revision.docx"
+
+    build_revision_docx(docx_path)
+    text = extract_docx_text(docx_path)
+
+    assert "本基金可根据法律法规和基金合同的约定参与转融通证券出借业务。" in text
+    assert "这句删除内容不应回到正文。" not in text
+    assert "2、原有句。" in text
+
+
+def test_extract_docx_text_respects_word_numbering_start_value(tmp_path):
+    load_module()
+    from file_comparison.compare.extractor import extract_docx_text
+
+    docx_path = tmp_path / "numbering-start.docx"
+
+    build_chinese_counting_start_docx(docx_path, start=4)
+    text = extract_docx_text(docx_path)
+
+    assert "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息。" in text
+    assert "五、本基金可根据法律法规和基金合同的约定参与转融通证券出借业务。" in text
+    assert "六、本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。" in text
 
 
 def test_build_rows_splits_multiple_second_level_changes():
@@ -86,6 +245,7 @@ def test_format_number_label_handles_word_decimal_list():
     module = load_module()
 
     assert module.format_number_label("decimal", "%1、", [3]) == "3、"
+    assert module.format_number_label("chineseCounting", "%1、", [4]) == "四、"
 
 
 def test_output_document_paths_use_two_source_file_names(tmp_path):
@@ -532,6 +692,153 @@ def test_build_compare_units_groups_numbered_items_when_chinese_second_level_exi
     assert "（24）募集失败时退还基金认购人；" in units[0].old_text
 
 
+def test_build_compare_units_aligns_shifted_leaf_numbered_items_by_content():
+    module = load_module()
+    old_sections = [
+        module.Section(
+            number="第一部分",
+            title="第一部分  前言",
+            body="\n".join(
+                [
+                    "第一部分  前言",
+                    "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
+                    "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
+                    "五、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
+                    "六、本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。",
+                ]
+            ),
+        )
+    ]
+    new_sections = [
+        module.Section(
+            number="第一部分",
+            title="第一部分  前言",
+            body="\n".join(
+                [
+                    "第一部分  前言",
+                    "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
+                    "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
+                    "五、本基金可根据法律法规和基金合同的约定参与转融通证券出借业务，可能存在流动性风险、市场风险和信用风险等转融通业务特有风险。",
+                    "六、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
+                ]
+            ),
+        )
+    ]
+
+    units, _summaries = module.build_compare_units_for_llm(old_sections, new_sections)
+
+    first_part_units = [unit for unit in units if unit.chapter_number == "第一部分"]
+
+    assert [unit.subchapter for unit in first_part_units] == ["五、", "六、"]
+    assert first_part_units[0].old_text == "新增"
+    assert first_part_units[0].new_text == "五、本基金可根据法律法规和基金合同的约定参与转融通证券出借业务，可能存在流动性风险、市场风险和信用风险等转融通业务特有风险。"
+    assert first_part_units[1].old_text == "六、本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。"
+    assert first_part_units[1].new_text == "删除"
+    assert all("本基金按照中国法律法规成立并运作" not in unit.new_text for unit in first_part_units)
+
+
+def test_build_compare_units_keeps_parenthesized_chinese_headings_as_separate_context():
+    module = load_module()
+    old_sections = [
+        module.Section(
+            number="第七部分",
+            title="第七部分 基金合同当事人及权利义务",
+            body="\n".join(
+                [
+                    "第七部分 基金合同当事人及权利义务",
+                    "一、基金管理人",
+                    "（一）基金管理人简况",
+                    "名称：创金合信基金管理有限公司",
+                    "法定代表人：刘学民",
+                    "联系电话：0755-23838000",
+                    "（二）基金管理人的权利与义务",
+                    "1、根据《基金法》及其他有关规定，基金管理人的权利包括但不限于：",
+                    "（17）制订和调整有关基金认购、申购、赎回等业务规则；",
+                ]
+            ),
+        )
+    ]
+    new_sections = [
+        module.Section(
+            number="第七部分",
+            title="第七部分 基金合同当事人及权利义务",
+            body="\n".join(
+                [
+                    "第七部分 基金合同当事人及权利义务",
+                    "一、基金管理人",
+                    "（一）基金管理人简况",
+                    "名称：创金合信基金管理有限公司",
+                    "法定代表人：钱龙海",
+                    "联系电话：0755-23838000",
+                    "（二）基金管理人的权利与义务",
+                    "1、根据《基金法》及其他有关规定，基金管理人的权利包括但不限于：",
+                    "（17）制订和调整有关基金申购、赎回等业务规则；",
+                ]
+            ),
+        )
+    ]
+
+    units, _summaries = module.build_compare_units_for_llm(old_sections, new_sections)
+
+    assert [unit.subchapter for unit in units] == [
+        "一、基金管理人\n（一）基金管理人简况",
+        "一、基金管理人\n（二）基金管理人的权利与义务",
+    ]
+    assert units[0].old_text.startswith("一、基金管理人\n（一）基金管理人简况\n")
+    assert "法定代表人：刘学民" in units[0].old_text
+    assert "名称：创金合信基金管理有限公司" not in units[0].old_text
+    assert units[1].old_text.startswith("一、基金管理人\n（二）基金管理人的权利与义务\n")
+    assert "（17）制订和调整有关基金认购、申购、赎回等业务规则；" in units[1].old_text
+
+
+def test_build_compare_units_aligns_renumbered_parenthesized_chinese_headings():
+    module = load_module()
+    old_sections = [
+        module.Section(
+            number="第十八部分",
+            title="第十八部分  基金的信息披露",
+            body="\n".join(
+                [
+                    "第十八部分  基金的信息披露",
+                    "五、公开披露的基金信息",
+                    "（二）基金份额发售公告",
+                    "基金管理人应当就基金份额发售的具体事宜编制基金份额发售公告。",
+                    "（三）《基金合同》生效公告",
+                    "基金管理人应当在收到中国证监会确认文件的次日公告。",
+                    "（四）基金净值信息",
+                    "《基金合同》生效后，每周披露一次基金份额净值和各类基金份额累计净值。",
+                ]
+            ),
+        )
+    ]
+    new_sections = [
+        module.Section(
+            number="第十八部分",
+            title="第十八部分  基金的信息披露",
+            body="\n".join(
+                [
+                    "第十八部分  基金的信息披露",
+                    "五、公开披露的基金信息",
+                    "（二）基金净值信息",
+                    "《基金合同》生效后，每周披露一次各类基金份额净值和基金份额累计净值。",
+                ]
+            ),
+        )
+    ]
+
+    units, _summaries = module.build_compare_units_for_llm(old_sections, new_sections)
+    net_value_units = [unit for unit in units if "基金净值信息" in unit.subchapter]
+
+    assert len(net_value_units) == 1
+    assert net_value_units[0].subchapter == "五、公开披露的基金信息\n（二）基金净值信息"
+    assert net_value_units[0].old_text != "新增"
+    assert net_value_units[0].new_text != "删除"
+    assert "\n（四）基金净值信息\n" in net_value_units[0].old_text
+    assert "\n（二）基金净值信息\n" in net_value_units[0].new_text
+    assert "基金份额净值和各类基金份额累计净值" in net_value_units[0].old_text
+    assert "各类基金份额净值和基金份额累计净值" in net_value_units[0].new_text
+
+
 def test_group_compare_units_into_batches_uses_chapter_count_limit():
     module = load_module()
     units = [
@@ -942,6 +1249,14 @@ def test_display_text_includes_subchapter_when_body_does_not():
         "8、基金产品资料概要：指旧概要",
         "7、基金产品资料概要：",
     ) == "8、基金产品资料概要：指旧概要"
+    assert module.display_text_with_subchapter(
+        "一、基金管理人\n（一）基金管理人简况\n法定代表人：刘学民",
+        "一、基金管理人\n（一）基金管理人简况",
+    ) == "一、基金管理人\n（一）基金管理人简况\n法定代表人：刘学民"
+    assert module.display_text_with_subchapter(
+        "五、公开披露的基金信息\n（四）基金净值信息\n旧正文",
+        "五、公开披露的基金信息\n（二）基金净值信息",
+    ) == "五、公开披露的基金信息\n（四）基金净值信息\n旧正文"
 
 
 def test_write_docx_hides_subchapter_column_and_merges_same_chapter(tmp_path):

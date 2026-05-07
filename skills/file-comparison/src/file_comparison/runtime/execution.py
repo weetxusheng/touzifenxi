@@ -46,6 +46,7 @@ class PairManifest:
     duration_ms: int = 0
     completed_batch_count: int = 0
     failed_batch_count: int = 0
+    planned_batch_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +65,9 @@ class TaskManifest:
     duration_ms: int = 0
     completed_pair_count: int = 0
     failed_pair_count: int = 0
+    started_at: str = ""
+    updated_at: str = ""
+    planned_batch_count: int = 0
 
 
 def task_status_from_pairs(pairs: list[PairManifest]) -> TaskStatus:

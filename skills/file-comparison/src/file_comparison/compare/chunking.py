@@ -12,14 +12,16 @@ from .models import ChapterBatch, CompareUnit, ComparisonRow, Section
 
 INNER_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、|（(?:[一二三四五六七八九十]+|\d+)）)")
 CHINESE_HEADING_RE = re.compile(r"^[一二三四五六七八九十]+、")
-DISPLAY_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、)")
+PAREN_CHINESE_HEADING_RE = re.compile(r"^（[一二三四五六七八九十]+）")
+DISPLAY_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、|（[一二三四五六七八九十]+）)")
 DECIMAL_HEADING_RE = re.compile(r"^\d+、")
+CHINESE_CONTEXT_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|（[一二三四五六七八九十]+）)")
 
 
 def active_display_heading_re(lines: list[str]) -> re.Pattern[str]:
     """返回当前章节用于切分表格二级内容的标题规则。"""
     if any(CHINESE_HEADING_RE.match(line) for line in lines):
-        return CHINESE_HEADING_RE
+        return CHINESE_CONTEXT_HEADING_RE
     return DISPLAY_HEADING_RE
 OMITTED_EQUAL_MARKER = "……"
 
@@ -62,6 +64,8 @@ def subchapter_info(text: str) -> SubchapterInfo | None:
     lines = clean_lines(text)
     if not lines:
         return None
+    if len(lines) >= 2 and CHINESE_HEADING_RE.match(lines[0]) and PAREN_CHINESE_HEADING_RE.match(lines[1]):
+        return SubchapterInfo(label=f"{lines[0]}\n{lines[1]}", consume_line=True)
     match = DISPLAY_HEADING_RE.match(lines[0])
     if not match:
         return None
@@ -82,6 +86,9 @@ def remove_first_inner_heading(text: str, *, consume_line: bool = True) -> str:
     if not consume_line:
         return text
     lines = clean_lines(text)
+    if len(lines) >= 2 and CHINESE_HEADING_RE.match(lines[0]) and PAREN_CHINESE_HEADING_RE.match(lines[1]):
+        lines = lines[2:]
+        return "\n".join(lines).strip()
     if lines and DISPLAY_HEADING_RE.match(lines[0]):
         lines = lines[1:]
     return "\n".join(lines).strip()
@@ -108,7 +115,18 @@ def split_blocks(lines: list[str]) -> list[list[str]]:
     blocks: list[list[str]] = []
     current: list[str] = []
     heading_re = active_display_heading_re(lines)
+    parent_heading = ""
     for line in lines:
+        if CHINESE_HEADING_RE.match(line):
+            blocks.append(current)
+            current = [line]
+            parent_heading = line
+            continue
+        if PAREN_CHINESE_HEADING_RE.match(line) and heading_re.match(line):
+            if current:
+                blocks.append(current)
+            current = [parent_heading, line] if parent_heading else [line]
+            continue
         if heading_re.match(line) and current:
             blocks.append(current)
             current = [line]
@@ -116,7 +134,7 @@ def split_blocks(lines: list[str]) -> list[list[str]]:
         current.append(line)
     if current:
         blocks.append(current)
-    return blocks
+    return [block for block in blocks if block]
 
 
 def block_label(block: str) -> str:
@@ -128,10 +146,21 @@ def block_label(block: str) -> str:
     return first_line
 
 
+def is_generic_numbering_label(label: str) -> bool:
+    """判断标签是否只剩下纯编号前缀，没有保留正文语义。"""
+    lines = clean_lines(label)
+    return bool(lines) and all(bool(INNER_HEADING_RE.fullmatch(line.strip())) for line in lines)
+
+
 def block_match_key(block: str) -> str:
     """返回用于左右文本块对齐的归一化键。"""
-    label = block_label(block)
-    key = INNER_HEADING_RE.sub("", label, count=1).strip()
+    info = subchapter_info(block)
+    block_lines = clean_lines(block)
+    if info is not None and not info.consume_line and is_generic_numbering_label(info.label) and block_lines:
+        key = line_content_key(block_lines[0]).strip()
+        return key or block_lines[0]
+    label = info.label if info is not None else block_label(block)
+    key = "\n".join(line_content_key(line) for line in clean_lines(label)).strip()
     return key or label
 
 
@@ -168,10 +197,26 @@ def first_line_matches_subchapter(first_line: str, subchapter: str) -> bool:
     return bool(subchapter_key and first_key.startswith(subchapter_key))
 
 
+def text_starts_with_subchapter(text: str, subchapter: str) -> bool:
+    """判断正文开头是否已经包含完整二级标题，支持多行标题。"""
+    if text.startswith(subchapter):
+        return True
+    text_lines = clean_lines(text)
+    subchapter_lines = clean_lines(subchapter)
+    if not subchapter_lines or len(text_lines) < len(subchapter_lines):
+        return False
+    for text_line, subchapter_line in zip(text_lines, subchapter_lines):
+        if not first_line_matches_subchapter(text_line, subchapter_line):
+            return False
+    return True
+
+
 def _display_heading_kind(text: str) -> str:
     """返回可展示标题的编号类型。"""
     if CHINESE_HEADING_RE.match(text):
         return "chinese"
+    if PAREN_CHINESE_HEADING_RE.match(text):
+        return "paren_chinese"
     if DECIMAL_HEADING_RE.match(text):
         return "decimal"
     return ""
@@ -194,17 +239,17 @@ def remove_fully_equal_lines(old_text: str, new_text: str) -> tuple[str, str]:
             has_previous_change = bool(old_changed or new_changed)
             has_later_change = any(later_tag != "equal" for later_tag, *_rest in opcodes[index + 1 :])
             has_omitted_content = any(line.strip() for line in old_lines[i1:i2]) or any(line.strip() for line in new_lines[j1:j2])
-            equal_context_lines = [
-                line
-                for line in old_lines[i1:i2]
-                if DISPLAY_HEADING_RE.match(line.strip())
+            equal_context_pairs = [
+                (old_line, new_line)
+                for old_line, new_line in zip(old_lines[i1:i2], new_lines[j1:j2])
+                if DISPLAY_HEADING_RE.match(old_line.strip()) or DISPLAY_HEADING_RE.match(new_line.strip())
             ]
-            if equal_context_lines and has_later_change:
-                for line in equal_context_lines:
-                    if not old_changed or old_changed[-1] != line:
-                        old_changed.append(line)
-                    if not new_changed or new_changed[-1] != line:
-                        new_changed.append(line)
+            if equal_context_pairs and has_later_change:
+                for old_line, new_line in equal_context_pairs:
+                    if not old_changed or old_changed[-1] != old_line:
+                        old_changed.append(old_line)
+                    if not new_changed or new_changed[-1] != new_line:
+                        new_changed.append(new_line)
                 continue
             if has_previous_change and has_later_change and has_omitted_content:
                 if old_changed and old_changed[-1] != OMITTED_EQUAL_MARKER:
@@ -367,8 +412,7 @@ def row_display_text(text: str, subchapter: str) -> str:
     """把对照行还原成适合再次发送给模型的展示文本。"""
     if not subchapter or text in {"新增", "删除"}:
         return text
-    first_line = text.split("\n", 1)[0]
-    if first_line_matches_subchapter(first_line, subchapter):
+    if text_starts_with_subchapter(text, subchapter):
         return text
     return f"{subchapter}\n{text}"
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from datetime import datetime
@@ -44,6 +45,7 @@ from file_comparison.compare.writer import (  # noqa: E402
     write_docx,
 )
 from file_comparison.runtime.config import load_file_comparison_runtime_config  # noqa: E402
+from file_comparison.runtime.python_env import maybe_reexec_into_project_python  # noqa: E402
 
 __all__ = (
     "CompareUnit",
@@ -149,4 +151,11 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    maybe_reexec_into_project_python(
+        skill_root=ROOT,
+        script_path=Path(__file__).resolve(),
+        argv=sys.argv[1:],
+        current_executable=sys.executable,
+        execv=os.execv,
+    )
     main()

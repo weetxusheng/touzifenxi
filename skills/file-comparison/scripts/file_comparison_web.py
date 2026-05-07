@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -10,7 +11,19 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from file_comparison.runtime.config import load_file_comparison_runtime_config  # noqa: E402
+from file_comparison.runtime.python_env import maybe_reexec_into_project_python  # noqa: E402
 from file_comparison.web.server import create_app  # noqa: E402
+
+
+def ensure_project_python_runtime() -> None:
+    """若当前不是项目 `.venv` 解释器，则切回统一运行环境。"""
+    maybe_reexec_into_project_python(
+        skill_root=ROOT,
+        script_path=Path(__file__).resolve(),
+        argv=sys.argv[1:],
+        current_executable=sys.executable,
+        execv=os.execv,
+    )
 
 
 def main() -> None:
@@ -61,4 +74,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    ensure_project_python_runtime()
     main()

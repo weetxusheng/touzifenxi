@@ -22,7 +22,7 @@ def test_load_runtime_config_uses_defaults(tmp_path):
     assert config.llm.task_routing.batch_compare == ("minimax", "kimi-code", "deepseek-ark", "deepseek")
     assert config.compare.skip_section_patterns == ("签署页", "签字页", "盖章页", "签章页")
     assert config.paths.output_root == "output/file-comparison/runs"
-    assert config.ui.poll_interval_seconds == 2.0
+    assert config.ui.poll_interval_seconds == 5.0
 
 
 def test_initialize_and_write_runtime_config(tmp_path):

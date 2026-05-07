@@ -1,42 +1,42 @@
 {
-  "llm_mode": "responses",
+  "llm_mode": "responses", // 运行模式：responses=走大模型结构化比对；rule=只走本地规则，不调用模型
   "execution": {
-    "per_pair_max_workers": 2
+    "per_pair_max_workers": 2 // 单个文件对内部允许并行处理的 batch 数；越大越快，但更占模型并发
   },
   "compare": {
     "skip_section_patterns": [
-      "签署页",
+      "签署页", // 章节标题或正文命中这些关键词时，会整章跳过或从命中处裁掉尾部
       "签字页",
       "盖章页",
       "签章页"
     ]
   },
   "llm": {
-    "provider": "minimax",
-    "model": "MiniMax-M2.7",
-    "api_key": "",
-    "api_key_env": "MINIMAX_API_KEY",
-    "base_url": "https://api.minimaxi.com/v1",
-    "timeout_seconds": 180.0,
-    "max_retries": 2,
-    "retry_backoff_seconds": 2.0,
-    "min_interval_seconds": 2.0,
-    "failure_cooldown_seconds": 40.0,
+    "provider": "minimax", // 兼容旧配置的“首选 provider”快捷字段；建议与 providers[0].provider 保持一致
+    "model": "MiniMax-M2.7", // 兼容旧配置的“首选模型”快捷字段；建议与 providers[0].model 保持一致
+    "api_key": "", // 兼容旧配置的明文 API key；正式分发建议留空，改用 api_key_env
+    "api_key_env": "MINIMAX_API_KEY", // 当 api_key 为空时，从这个环境变量读取首选 provider 的 key
+    "base_url": "https://api.minimaxi.com/v1", // 首选 provider 的接口基础地址
+    "timeout_seconds": 180.0, // 单次模型请求超时秒数
+    "max_retries": 2, // provider 自身 HTTP/SDK 层允许的重试次数
+    "retry_backoff_seconds": 2.0, // provider 自身重试的基础退避秒数
+    "min_interval_seconds": 2.0, // 同一 provider 两次正常请求之间的最小间隔
+    "failure_cooldown_seconds": 40.0, // 某 provider 失败后进入冷却的秒数；冷却期间优先换其他 provider
     "providers": [
       {
-        "provider": "minimax",
-        "model": "MiniMax-M2.7",
-        "api_key": "",
-        "api_key_env": "MINIMAX_API_KEY",
-        "base_url": "https://api.minimaxi.com/v1",
-        "timeout_seconds": 180.0,
-        "max_retries": 2,
-        "retry_backoff_seconds": 2.0,
-        "min_interval_seconds": 2.0,
-        "failure_cooldown_seconds": 40.0
+        "provider": "minimax", // provider 名称；要和 task_routing / concurrency.providers 的键保持一致
+        "model": "MiniMax-M2.7", // 实际调用的模型名
+        "api_key": "", // 明文 key；可留空，留空时走 api_key_env
+        "api_key_env": "MINIMAX_API_KEY", // 环境变量名
+        "base_url": "https://api.minimaxi.com/v1", // 接口基础地址
+        "timeout_seconds": 180.0, // 单次调用超时秒数
+        "max_retries": 2, // provider 自己的重试次数
+        "retry_backoff_seconds": 2.0, // provider 自己的退避秒数
+        "min_interval_seconds": 2.0, // 同一 provider 请求节流间隔
+        "failure_cooldown_seconds": 40.0 // 该 provider 失败后的冷却秒数
       },
       {
-        "provider": "kimi-code",
+        "provider": "kimi-code", // 第二顺位 provider；当前 skill 常用于 failover
         "model": "kimi-for-coding",
         "api_key": "",
         "api_key_env": "KIMI_CODE_API_KEY",
@@ -48,7 +48,7 @@
         "failure_cooldown_seconds": 40.0
       },
       {
-        "provider": "deepseek-ark",
+        "provider": "deepseek-ark", // 通过火山方舟代理的 DeepSeek provider
         "model": "ep-20260415114137-55jp7",
         "api_key": "",
         "api_key_env": "ARK_API_KEY",
@@ -60,7 +60,7 @@
         "failure_cooldown_seconds": 40.0
       },
       {
-        "provider": "deepseek",
+        "provider": "deepseek", // 直连 DeepSeek 官方接口
         "model": "deepseek-v4-flash",
         "api_key": "",
         "api_key_env": "DEEPSEEK_API_KEY",
@@ -72,34 +72,34 @@
         "failure_cooldown_seconds": 40.0
       }
     ],
-    "chapter_batch_size": 4,
-    "chapter_batch_char_limit": 10000,
-    "oversized_chapter_batch_size": 2,
-    "max_compare_units_per_batch": 4,
-    "max_compare_unit_chars": 10000,
+    "chapter_batch_size": 4, // 默认每批送模型的一级章节数
+    "chapter_batch_char_limit": 10000, // 单个 batch 左右正文合计字符上限；超过会自动缩小 batch
+    "oversized_chapter_batch_size": 2, // 超大 batch 缩小后的一级章节数；2 章仍超限则继续拆到单章
+    "max_compare_units_per_batch": 4, // 单个 batch 允许的最大 compare unit 数；防止模型返回过长被截断
+    "max_compare_unit_chars": 10000, // 单个 compare unit 左右正文合计字符上限；超过会拆 part-001/002
     "retry": {
-      "honor_retry_after": true,
-      "jitter_seconds": 0.5
+      "honor_retry_after": true, // provider 返回 Retry-After 时是否优先遵守
+      "jitter_seconds": 0.5 // 每次退避时增加的随机抖动秒数，避免并发雪崩
     },
     "retry_classifier": {
-      "parse_max_attempts": 2,
-      "infra_max_attempts": 2,
-      "postprocess_max_attempts": 2,
-      "fatal_max_attempts": 1
+      "parse_max_attempts": 2, // 解析失败最多允许累计多少次后进入 fallback 判断
+      "infra_max_attempts": 2, // 基础设施失败的每-provider 基础次数；实际总次数会乘 provider 数
+      "postprocess_max_attempts": 2, // 后处理失败（如模型误判整项删除/新增）最多累计多少次
+      "fatal_max_attempts": 1 // 致命错误最多允许多少次
     },
     "concurrency": {
-      "default": 1,
+      "default": 1, // provider 默认并发上限
       "providers": {
-        "minimax": 1,
+        "minimax": 1, // 对指定 provider 单独覆盖并发上限
         "kimi-code": 1,
         "deepseek-ark": 1,
         "deepseek": 1
       }
     },
     "task_routing": {
-      "enabled": true,
+      "enabled": true, // 是否开启 batch 首发轮转；开启后 batch-001/002/003 会从不同 provider 起跑
       "batch_compare": [
-        "minimax",
+        "minimax", // 首发轮转顺序；名称必须能在 llm.providers 里找到
         "kimi-code",
         "deepseek-ark",
         "deepseek"
@@ -107,15 +107,15 @@
     }
   },
   "paths": {
-    "output_mode": "skill",
-    "output_root": "output/file-comparison/runs"
+    "output_mode": "skill", // skill=输出到 skills/file-comparison/output/file-comparison；project=按 output_root 解析
+    "output_root": "output/file-comparison/runs" // 共享项目模式下的输出根目录；当前 skill 模式下主要作为文档化配置保留
   },
   "pairing": {
-    "month_pattern": "(?P<month>\\d{1,2})月"
+    "month_pattern": "(?P<month>\\d{1,2})月" // 从文件名提取月份的正则；必须包含名为 month 的捕获组
   },
   "ui": {
-    "poll_interval_seconds": 2.0,
-    "host": "127.0.0.1",
-    "port": 8765
+    "poll_interval_seconds": 5.0, // 前端轮询任务状态的间隔秒数
+    "host": "127.0.0.1", // 本地页面监听地址
+    "port": 8765 // 本地页面监听端口
   }
 }

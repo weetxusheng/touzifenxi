@@ -8,6 +8,7 @@ import shutil
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -1156,7 +1157,11 @@ def _record_checkpoint(
 
 def write_status_json(run_dir: Path, manifest: TaskManifest) -> None:
     """把任务当前状态写成页面轮询使用的 `status.json`。"""
+    previous_payload = _read_json_object(run_dir / "status.json")
+    started_at = manifest.started_at or str(previous_payload.get("started_at", "")).strip()
+    updated_at = manifest.updated_at or datetime.now().astimezone().isoformat()
     all_batches = [batch for pair in manifest.pairs for batch in pair.batches]
+    planned_batch_count = manifest.planned_batch_count or sum(pair.planned_batch_count or len(pair.batches) for pair in manifest.pairs)
     failed_provider_count = sum(
         1
         for batch in all_batches
@@ -1172,6 +1177,8 @@ def write_status_json(run_dir: Path, manifest: TaskManifest) -> None:
         "run_dir": str(manifest.run_dir),
         "status": manifest.status,
         "duration_ms": manifest.duration_ms,
+        "started_at": started_at,
+        "updated_at": updated_at,
         "poll_interval_seconds": manifest.poll_interval_seconds,
         "pair_count": manifest.pair_count,
         "success_count": manifest.success_count,
@@ -1183,11 +1190,12 @@ def write_status_json(run_dir: Path, manifest: TaskManifest) -> None:
             "current_provider": current_batch.provider if current_batch else "",
             "current_call_status": current_batch.call_status if current_batch else "",
             "completed_batch_count": sum(1 for batch in all_batches if batch.status == "success"),
-            "failed_batch_count": sum(1 for batch in all_batches if batch.status != "success"),
+            "failed_batch_count": sum(1 for batch in all_batches if batch.status not in {"success", "pending"}),
             "provider_failure_count": failed_provider_count,
             "repair_count": repair_count,
             "fallback_count": fallback_count,
-            "total_batch_count": len(all_batches),
+            "planned_batch_count": planned_batch_count,
+            "total_batch_count": planned_batch_count,
         },
         "pairs": [
             {
@@ -1202,6 +1210,9 @@ def write_status_json(run_dir: Path, manifest: TaskManifest) -> None:
                 "duration_ms": pair.duration_ms,
                 "completed_batch_count": pair.completed_batch_count,
                 "failed_batch_count": pair.failed_batch_count,
+                "planned_batch_count": pair.planned_batch_count or len(pair.batches),
+                "docx_available": bool(pair.docx_path and Path(pair.docx_path).exists()),
+                "doc_available": bool(pair.doc_path and Path(pair.doc_path).exists()),
                 "batches": [
                     {
                         "batch_id": batch.batch_id,
@@ -1240,6 +1251,7 @@ def run_task(
     paths = resolve_paths()
     run_dir = run_dir or prepare_run_dir(paths.runs_root)
     task_started_at = time.perf_counter()
+    task_started_wall_at = datetime.now().astimezone().isoformat()
     pairs = pairs or scan_folder_for_pairs(folder_path, runtime_config.pairing.month_pattern)
     task_id = run_dir.name
     task_store = TaskCheckpointStore.load_or_create(run_dir / "checkpoints" / "task_checkpoint.json", task_id=task_id)
@@ -1249,7 +1261,8 @@ def run_task(
             "task_id": task_id,
             "folder_path": str(folder_path),
             "pair_count": len(pairs),
-            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "generated_at": task_started_wall_at,
+            "started_at": task_started_wall_at,
         },
     )
     write_status_json(
@@ -1275,6 +1288,7 @@ def run_task(
                 for pair in pairs
             ),
             duration_ms=0,
+            started_at=task_started_wall_at,
         ),
     )
     pair_manifests: list[PairManifest] = []
@@ -1371,6 +1385,9 @@ def run_task(
                     + int(summary.get("parse_error", 0))
                     + int(summary.get("postprocess_error", 0))
                     + int(summary.get("aborted", 0)),
+                    "planned_batch_count": len(pair_payload["entries"]),
+                    "docx_available": result.docx_path.exists(),
+                    "doc_available": bool(result.doc_path and result.doc_path.exists()),
                 },
             )
             pair_duration_ms = int((time.perf_counter() - pair_started_at) * 1000)
@@ -1390,6 +1407,7 @@ def run_task(
                     + int(summary.get("parse_error", 0))
                     + int(summary.get("postprocess_error", 0))
                     + int(summary.get("aborted", 0)),
+                    planned_batch_count=len(pair_payload["entries"]),
                     batches=tuple(
                         BatchManifest(
                             batch_id=entry["entry_id"],
@@ -1483,6 +1501,7 @@ class TaskManager:
         """创建一个后台运行任务，并立即返回初始 manifest。"""
         run_dir = prepare_run_dir(self.paths.runs_root)
         task_id = run_dir.name
+        task_started_wall_at = datetime.now().astimezone().isoformat()
         pairs = pairs or scan_folder_for_pairs(folder_path, self.runtime_config.pairing.month_pattern)
         initial_manifest = TaskManifest(
             task_id=task_id,
@@ -1504,6 +1523,7 @@ class TaskManager:
                 )
                 for pair in pairs
             ),
+            started_at=task_started_wall_at,
         )
         atomic_write_json(
             run_dir / "task.json",
@@ -1511,7 +1531,8 @@ class TaskManager:
                 "task_id": task_id,
                 "folder_path": str(folder_path),
                 "pair_count": len(pairs),
-                "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "generated_at": task_started_wall_at,
+                "started_at": task_started_wall_at,
             },
         )
         write_status_json(run_dir, initial_manifest)
