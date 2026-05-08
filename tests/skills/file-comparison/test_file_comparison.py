@@ -445,8 +445,8 @@ def test_build_rows_omits_equal_lines_within_same_subchapter_block():
 
     assert len(rows) == 1
     assert rows[0].subchapter == "一、基本情况"
-    assert rows[0].old_text == "组织形式：有限责任公司\n……\n联系电话：0755-23838000"
-    assert rows[0].new_text == "组织形式：股份有限公司\n……\n联系电话：0755-23839000"
+    assert rows[0].old_text == "组织形式：有限责任公司\n......\n联系电话：0755-23838000"
+    assert rows[0].new_text == "组织形式：股份有限公司\n......\n联系电话：0755-23839000"
 
 
 def test_remove_fully_equal_lines_marks_omitted_middle_content():
@@ -456,8 +456,74 @@ def test_remove_fully_equal_lines_marks_omitted_middle_content():
 
     old_changed, new_changed = module.remove_fully_equal_lines(old_text, new_text)
 
-    assert old_changed == "旧变化一\n……\n旧变化二"
-    assert new_changed == "新变化一\n……\n新变化二"
+    assert old_changed == "旧变化一\n......\n旧变化二"
+    assert new_changed == "新变化一\n......\n新变化二"
+
+
+def test_remove_fully_equal_lines_omits_equal_numbered_clause_list():
+    module = load_module()
+    old_text = "\n".join(
+        [
+            "（七）临时报告",
+            "本基金发生重大事件，有关信息披露义务人应当在2日内编制临时报告书，并登载在指定报刊和指定网站上。",
+            "前款所称重大事件，是指可能对基金份额持有人权益或者基金份额的价格产生重大影响的下列事件：",
+            "1、基金份额持有人大会的召开及决定的事项；",
+            "2、《基金合同》终止、基金清算；",
+            "3、转换基金运作方式、基金合并；",
+            "21、发生涉及本基金申购、赎回事项调整或潜在影响投资者赎回等重大事项时；",
+            "22、基金份额的折算；",
+        ]
+    )
+    new_text = "\n".join(
+        [
+            "（七）临时报告",
+            "本基金发生重大事件，有关信息披露义务人应当在2日内编制临时报告书，并登载在规定报刊和规定网站上。",
+            "前款所称重大事件，是指可能对基金份额持有人权益或者基金份额的价格产生重大影响的下列事件：",
+            "1、基金份额持有人大会的召开及决定的事项；",
+            "2、《基金合同》终止、基金清算；",
+            "3、转换基金运作方式、基金合并；",
+            "21、发生涉及本基金申购、赎回事项调整或潜在影响投资者赎回等重大事项时；",
+            "22、基金管理人采用摆动定价机制进行估值；",
+            "23、基金份额的折算；",
+        ]
+    )
+
+    old_changed, new_changed = module.remove_fully_equal_lines(old_text, new_text)
+
+    assert old_changed == "\n".join(
+        [
+            "（七）临时报告",
+            "本基金发生重大事件，有关信息披露义务人应当在2日内编制临时报告书，并登载在指定报刊和指定网站上。",
+            "......",
+        ]
+    )
+    assert new_changed == "\n".join(
+        [
+            "（七）临时报告",
+            "本基金发生重大事件，有关信息披露义务人应当在2日内编制临时报告书，并登载在规定报刊和规定网站上。",
+            "......",
+            "22、基金管理人采用摆动定价机制进行估值；",
+        ]
+    )
+
+
+def test_remove_fully_equal_lines_keeps_long_single_line_changes_complete():
+    module = load_module()
+    old_text = (
+        "基金管理人可在不违反法律法规的情况下，对上述原则进行调整。"
+        "基金管理人必须在新规则开始实施前依照《信息披露办法》的有关规定在指定媒介上公告。"
+    )
+    new_text = (
+        "基金管理人可在不违反法律法规的情况下，对上述原则进行调整。"
+        "基金管理人必须在新规则开始实施前依照《信息披露办法》的有关规定在规定媒介上公告。"
+    )
+
+    old_changed, new_changed = module.remove_fully_equal_lines(old_text, new_text)
+
+    assert old_changed == old_text
+    assert new_changed == new_text
+    assert "......" not in old_changed
+    assert "......" not in new_changed
 
 
 def test_remove_fully_equal_lines_ignores_shifted_parenthesized_numbering():
@@ -554,48 +620,112 @@ def test_preprocess_sections_for_llm_marks_added_section_for_model():
     assert reduced_new[0].body.endswith("新增段落")
 
 
-def test_build_compare_units_for_llm_keeps_items_as_separate_units():
+def test_build_compare_blocks_for_llm_keeps_root_siblings_in_one_block():
     module = load_module()
     old_sections = [
         module.Section(
-            number="第三部分",
-            title="第三部分  基金的基本情况",
+            number="第一部分",
+            title="第一部分  前言",
             body="\n".join(
                 [
-                    "第三部分  基金的基本情况",
-                    "一、基金名称",
-                    "创金合信宜久来福3个月持有期混合型发起式基金中基金（FOF）",
-                    "三、基金的运作方式",
-                    "本基金对每份基金份额设置3个月的最短持有期。",
+                    "第一部分  前言",
+                    "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
+                    "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
+                    "五、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
+                    "六、本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。",
                 ]
             ),
         )
     ]
     new_sections = [
         module.Section(
-            number="第三部分",
-            title="第三部分  基金的基本情况",
+            number="第一部分",
+            title="第一部分  前言",
             body="\n".join(
                 [
-                    "第三部分  基金的基本情况",
-                    "一、基金名称",
-                    "创金合信宜久来福6个月持有期混合型发起式基金中基金（FOF）",
-                    "三、基金的运作方式",
-                    "本基金对每份基金份额设置6个月的最短持有期。",
+                    "第一部分  前言",
+                    "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
+                    "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
+                    "五、本基金可根据法律法规和基金合同的约定参与转融通证券出借业务，可能存在流动性风险、市场风险和信用风险等转融通业务特有风险。",
+                    "六、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
                 ]
             ),
         )
     ]
 
-    units, summaries = module.build_compare_units_for_llm(old_sections, new_sections)
+    blocks, summaries = module.build_compare_blocks_for_llm(old_sections, new_sections)
 
-    assert [unit.subchapter for unit in units] == ["一、基金名称", "三、基金的运作方式"]
-    assert units[0].old_text == "一、基金名称\n创金合信宜久来福3个月持有期混合型发起式基金中基金（FOF）"
-    assert units[0].new_text == "一、基金名称\n创金合信宜久来福6个月持有期混合型发起式基金中基金（FOF）"
-    assert summaries[0]["unit_count"] == 2
+    assert len(blocks) == 1
+    assert blocks[0].parent_path == ""
+    assert [item.item_id for item in blocks[0].old_items] == [
+        "第一部分-old-001",
+        "第一部分-old-002",
+        "第一部分-old-003",
+        "第一部分-old-004",
+    ]
+    assert [item.item_id for item in blocks[0].new_items] == [
+        "第一部分-new-001",
+        "第一部分-new-002",
+        "第一部分-new-003",
+        "第一部分-new-004",
+    ]
+    assert [item.text for item in blocks[0].old_items] == [
+        "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
+        "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
+        "五、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
+        "六、本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。",
+    ]
+    assert [item.text for item in blocks[0].new_items] == [
+        "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
+        "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
+        "五、本基金可根据法律法规和基金合同的约定参与转融通证券出借业务，可能存在流动性风险、市场风险和信用风险等转融通业务特有风险。",
+        "六、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
+    ]
+    assert summaries[0]["block_count"] == 1
 
 
-def test_build_compare_units_keeps_parenthesized_items_under_second_level_heading():
+def test_build_compare_blocks_keeps_long_numbered_root_clause_as_item_not_parent():
+    module = load_module()
+    old_sections = [
+        module.Section(
+            number="第一部分",
+            title="第一部分  前言",
+            body="\n".join(
+                [
+                    "第一部分  前言",
+                    "三、创金合信宜久来福3个月持有期混合型发起式基金中基金（FOF）由基金管理人依照《基金法》、基金合同及其他有关规定募集，并经中国证券监督管理委员会注册。",
+                    "中国证监会对本基金募集的注册，并不表明其对本基金的投资价值和市场前景做出实质性判断或保证，也不表明投资于本基金没有风险。",
+                    "基金管理人依照恪尽职守、诚实信用、谨慎勤勉的原则管理和运用基金财产，但不保证投资于本基金一定盈利，也不保证最低收益。",
+                ]
+            ),
+        )
+    ]
+    new_sections = [
+        module.Section(
+            number="第一部分",
+            title="第一部分  前言",
+            body="\n".join(
+                [
+                    "第一部分  前言",
+                    "三、创金合信宜久来福6个月持有期混合型发起式基金中基金（FOF）由创金合信宜久来福3个月持有期混合型发起式基金中基金（FOF）转型而来。",
+                    "中国证监会对本基金募集的注册，并不表明其对本基金的投资价值和市场前景做出实质性判断或保证，也不表明投资于本基金没有风险。",
+                    "基金管理人依照恪尽职守、诚实信用、谨慎勤勉的原则管理和运用基金财产，但不保证投资于本基金一定盈利，也不保证最低收益。",
+                ]
+            ),
+        )
+    ]
+
+    blocks, _summaries = module.build_compare_blocks_for_llm(old_sections, new_sections)
+
+    assert len(blocks) == 1
+    assert blocks[0].parent_path == ""
+    assert blocks[0].old_items[0].text.startswith("三、创金合信宜久来福3个月持有期")
+    assert blocks[0].new_items[0].text.startswith("三、创金合信宜久来福6个月持有期")
+    assert "中国证监会对本基金募集的注册" in blocks[0].old_items[0].text
+    assert "中国证监会对本基金募集的注册" in blocks[0].new_items[0].text
+
+
+def test_build_compare_blocks_groups_parenthesized_siblings_under_parent_heading():
     module = load_module()
     old_sections = [
         module.Section(
@@ -631,113 +761,27 @@ def test_build_compare_units_keeps_parenthesized_items_under_second_level_headin
         )
     ]
 
-    units, summaries = module.build_compare_units_for_llm(old_sections, new_sections)
+    blocks, summaries = module.build_compare_blocks_for_llm(old_sections, new_sections)
 
-    assert len(units) == 1
-    assert units[0].subchapter == "一、基金管理人"
-    assert units[0].old_text.startswith("一、基金管理人\n")
-    assert "（16）办理基金认购、申购业务；" in units[0].old_text
-    assert "（24）基金募集失败时退还认购人；" in units[0].old_text
-    assert all(not unit.subchapter.startswith("（") for unit in units)
-    assert summaries[0]["unit_count"] == 1
-
-
-def test_build_compare_units_groups_numbered_items_when_chinese_second_level_exists():
-    module = load_module()
-    old_sections = [
-        module.Section(
-            number="第七部分",
-            title="第七部分 基金合同当事人及权利义务",
-            body="\n".join(
-                [
-                    "第七部分 基金合同当事人及权利义务",
-                    "一、基金管理人",
-                    "1、基金管理人的权利包括但不限于：",
-                    "（16）办理基金认购、申购业务；",
-                    "2、基金管理人的义务包括但不限于：",
-                    "（8）计算基金份额认购、申购价格；",
-                    "（24）募集失败时退还基金认购人；",
-                    "二、基金托管人",
-                    "完全一致内容",
-                ]
-            ),
-        )
+    assert len(blocks) == 1
+    assert blocks[0].parent_path == "一、基金管理人"
+    assert [item.text for item in blocks[0].old_items] == [
+        "（15）完全一致内容；",
+        "（16）办理基金认购、申购业务；",
+        "（17）继续一致内容；",
+        "（24）基金募集失败时退还认购人；",
+        "（25）执行生效的基金份额持有人大会的决议；",
     ]
-    new_sections = [
-        module.Section(
-            number="第七部分",
-            title="第七部分 基金合同当事人及权利义务",
-            body="\n".join(
-                [
-                    "第七部分 基金合同当事人及权利义务",
-                    "一、基金管理人",
-                    "1、基金管理人的权利包括但不限于：",
-                    "（16）办理基金申购业务；",
-                    "2、基金管理人的义务包括但不限于：",
-                    "（8）计算基金份额申购价格；",
-                    "二、基金托管人",
-                    "完全一致内容",
-                ]
-            ),
-        )
+    assert [item.text for item in blocks[0].new_items] == [
+        "（15）完全一致内容；",
+        "（16）办理基金申购业务；",
+        "（17）继续一致内容；",
+        "（24）执行生效的基金份额持有人大会的决议；",
     ]
-
-    units, _summaries = module.build_compare_units_for_llm(old_sections, new_sections)
-
-    assert len(units) == 1
-    assert units[0].subchapter == "一、基金管理人"
-    assert units[0].old_text.startswith("一、基金管理人\n")
-    assert "1、基金管理人的权利包括但不限于：" in units[0].old_text
-    assert "2、基金管理人的义务包括但不限于：" in units[0].old_text
-    assert "（24）募集失败时退还基金认购人；" in units[0].old_text
+    assert summaries[0]["block_count"] == 1
 
 
-def test_build_compare_units_aligns_shifted_leaf_numbered_items_by_content():
-    module = load_module()
-    old_sections = [
-        module.Section(
-            number="第一部分",
-            title="第一部分  前言",
-            body="\n".join(
-                [
-                    "第一部分  前言",
-                    "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
-                    "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
-                    "五、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
-                    "六、本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。",
-                ]
-            ),
-        )
-    ]
-    new_sections = [
-        module.Section(
-            number="第一部分",
-            title="第一部分  前言",
-            body="\n".join(
-                [
-                    "第一部分  前言",
-                    "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
-                    "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
-                    "五、本基金可根据法律法规和基金合同的约定参与转融通证券出借业务，可能存在流动性风险、市场风险和信用风险等转融通业务特有风险。",
-                    "六、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
-                ]
-            ),
-        )
-    ]
-
-    units, _summaries = module.build_compare_units_for_llm(old_sections, new_sections)
-
-    first_part_units = [unit for unit in units if unit.chapter_number == "第一部分"]
-
-    assert [unit.subchapter for unit in first_part_units] == ["五、", "六、"]
-    assert first_part_units[0].old_text == "新增"
-    assert first_part_units[0].new_text == "五、本基金可根据法律法规和基金合同的约定参与转融通证券出借业务，可能存在流动性风险、市场风险和信用风险等转融通业务特有风险。"
-    assert first_part_units[1].old_text == "六、本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。"
-    assert first_part_units[1].new_text == "删除"
-    assert all("本基金按照中国法律法规成立并运作" not in unit.new_text for unit in first_part_units)
-
-
-def test_build_compare_units_keeps_parenthesized_chinese_headings_as_separate_context():
+def test_build_compare_blocks_creates_separate_blocks_for_parenthesized_chinese_subheads():
     module = load_module()
     old_sections = [
         module.Section(
@@ -778,187 +822,207 @@ def test_build_compare_units_keeps_parenthesized_chinese_headings_as_separate_co
         )
     ]
 
-    units, _summaries = module.build_compare_units_for_llm(old_sections, new_sections)
+    blocks, _summaries = module.build_compare_blocks_for_llm(old_sections, new_sections)
 
-    assert [unit.subchapter for unit in units] == [
-        "一、基金管理人\n（一）基金管理人简况",
-        "一、基金管理人\n（二）基金管理人的权利与义务",
+    assert [block.parent_path for block in blocks] == ["一、基金管理人"]
+    assert [item.text for item in blocks[0].old_items] == [
+        "（一）基金管理人简况\n名称：创金合信基金管理有限公司\n法定代表人：刘学民\n联系电话：0755-23838000",
+        "（二）基金管理人的权利与义务\n1、根据《基金法》及其他有关规定，基金管理人的权利包括但不限于：\n（17）制订和调整有关基金认购、申购、赎回等业务规则；",
     ]
-    assert units[0].old_text.startswith("一、基金管理人\n（一）基金管理人简况\n")
-    assert "法定代表人：刘学民" in units[0].old_text
-    assert "名称：创金合信基金管理有限公司" not in units[0].old_text
-    assert units[1].old_text.startswith("一、基金管理人\n（二）基金管理人的权利与义务\n")
-    assert "（17）制订和调整有关基金认购、申购、赎回等业务规则；" in units[1].old_text
+    assert [item.text for item in blocks[0].new_items] == [
+        "（一）基金管理人简况\n名称：创金合信基金管理有限公司\n法定代表人：钱龙海\n联系电话：0755-23838000",
+        "（二）基金管理人的权利与义务\n1、根据《基金法》及其他有关规定，基金管理人的权利包括但不限于：\n（17）制订和调整有关基金申购、赎回等业务规则；",
+    ]
 
 
-def test_build_compare_units_aligns_renumbered_parenthesized_chinese_headings():
+def test_build_compare_blocks_for_llm_skips_wholly_unchanged_chapter():
+    module = load_module()
+    section = module.Section(
+        number="第四部分",
+        title="第四部分  基金份额的发售",
+        body="\n".join(
+            [
+                "第四部分  基金份额的发售",
+                "一、基金份额的发售时间、发售方式、发售对象",
+                "本基金份额发售面值为人民币1.00元。",
+            ]
+        ),
+    )
+
+    blocks, summaries = module.build_compare_blocks_for_llm([section], [section])
+
+    assert blocks == []
+    assert summaries[0]["block_count"] == 0
+    assert summaries[0]["kept_for_llm"] is False
+    assert summaries[0]["reason"] == "unchanged"
+
+
+def test_build_compare_blocks_for_llm_keeps_only_changed_parent_blocks():
     module = load_module()
     old_sections = [
         module.Section(
-            number="第十八部分",
-            title="第十八部分  基金的信息披露",
+            number="第七部分",
+            title="第七部分 基金合同当事人及权利义务",
             body="\n".join(
                 [
-                    "第十八部分  基金的信息披露",
-                    "五、公开披露的基金信息",
-                    "（二）基金份额发售公告",
-                    "基金管理人应当就基金份额发售的具体事宜编制基金份额发售公告。",
-                    "（三）《基金合同》生效公告",
-                    "基金管理人应当在收到中国证监会确认文件的次日公告。",
-                    "（四）基金净值信息",
-                    "《基金合同》生效后，每周披露一次基金份额净值和各类基金份额累计净值。",
+                    "第七部分 基金合同当事人及权利义务",
+                    "一、基金管理人",
+                    "（一）基金管理人简况",
+                    "名称：创金合信基金管理有限公司",
+                    "法定代表人：刘学民",
+                    "（二）基金管理人的权利与义务",
+                    "（17）制订和调整有关基金认购、申购、赎回等业务规则；",
+                    "二、基金托管人",
+                    "（一）基金托管人简况",
+                    "名称：招商银行股份有限公司",
                 ]
             ),
         )
     ]
     new_sections = [
         module.Section(
-            number="第十八部分",
-            title="第十八部分  基金的信息披露",
+            number="第七部分",
+            title="第七部分 基金合同当事人及权利义务",
             body="\n".join(
                 [
-                    "第十八部分  基金的信息披露",
-                    "五、公开披露的基金信息",
-                    "（二）基金净值信息",
-                    "《基金合同》生效后，每周披露一次各类基金份额净值和基金份额累计净值。",
+                    "第七部分 基金合同当事人及权利义务",
+                    "一、基金管理人",
+                    "（一）基金管理人简况",
+                    "名称：创金合信基金管理有限公司",
+                    "法定代表人：钱龙海",
+                    "（二）基金管理人的权利与义务",
+                    "（17）制订和调整有关基金申购、赎回等业务规则；",
+                    "二、基金托管人",
+                    "（一）基金托管人简况",
+                    "名称：招商银行股份有限公司",
                 ]
             ),
         )
     ]
 
-    units, _summaries = module.build_compare_units_for_llm(old_sections, new_sections)
-    net_value_units = [unit for unit in units if "基金净值信息" in unit.subchapter]
+    blocks, summaries = module.build_compare_blocks_for_llm(old_sections, new_sections)
 
-    assert len(net_value_units) == 1
-    assert net_value_units[0].subchapter == "五、公开披露的基金信息\n（二）基金净值信息"
-    assert net_value_units[0].old_text != "新增"
-    assert net_value_units[0].new_text != "删除"
-    assert "\n（四）基金净值信息\n" in net_value_units[0].old_text
-    assert "\n（二）基金净值信息\n" in net_value_units[0].new_text
-    assert "基金份额净值和各类基金份额累计净值" in net_value_units[0].old_text
-    assert "各类基金份额净值和基金份额累计净值" in net_value_units[0].new_text
+    assert len(blocks) == 1
+    assert blocks[0].parent_path == "一、基金管理人"
+    assert summaries[0]["block_count"] == 1
+    assert summaries[0]["kept_for_llm"] is True
 
 
-def test_group_compare_units_into_batches_uses_chapter_count_limit():
+def test_build_compare_blocks_for_llm_aligns_parent_heading_after_insert():
     module = load_module()
-    units = [
-        module.CompareUnit("第一部分-unit-001", "第一部分", "第一部分  前言", "一、总则", "旧1", "新1"),
-        module.CompareUnit("第一部分-unit-002", "第一部分", "第一部分  前言", "二、范围", "旧2", "新2"),
-        module.CompareUnit("第二部分-unit-001", "第二部分", "第二部分  释义", "一、定义", "旧3", "新3"),
-        module.CompareUnit("第三部分-unit-001", "第三部分", "第三部分  基本情况", "一、基金名称", "旧4", "新4"),
+    old_sections = [
+        module.Section(
+            number="第六部分",
+            title="第六部分  基金份额的申购与赎回",
+            body="\n".join(
+                [
+                    "第六部分  基金份额的申购与赎回",
+                    "十六、其他",
+                    "1、在对基金份额持有人利益无实质不利影响的前提下，基金管理人经与基金托管人协商一致，可对基金份额进行折算，不需召开基金份额持有人大会审议。",
+                    "2、当技术条件成熟，本基金管理人在不违反法律法规且对基金份额持有人利益无实质不利影响的前提下，经与基金托管人协商一致，可根据具体情况对上述申购和赎回的安排进行补充和调整，或者开通本基金的外币申购和赎回。",
+                    "3、在法律法规允许且条件具备的情况下，基金管理人可受理基金份额持有人通过中国证监会认可的交易场所或者交易方式进行份额转让的申请并由登记机构办理基金份额的过户登记。",
+                ]
+            ),
+        )
+    ]
+    new_sections = [
+        module.Section(
+            number="第六部分",
+            title="第六部分  基金份额的申购与赎回",
+            body="\n".join(
+                [
+                    "第六部分  基金份额的申购与赎回",
+                    "十六、实施侧袋机制期间本基金的申购与赎回",
+                    "本基金实施侧袋机制的，本基金的申购和赎回安排详见招募说明书或相关公告。",
+                    "十七、其他",
+                    "1、在对基金份额持有人利益无实质不利影响的前提下，基金管理人经与基金托管人协商一致，可对基金份额进行折算，不需召开基金份额持有人大会审议。",
+                    "2、当技术条件成熟，本基金管理人在不违反法律法规且对基金份额持有人利益无实质不利影响的前提下，经与基金托管人协商一致，可根据具体情况对上述申购和赎回的安排进行补充和调整，或者开通本基金的外币申购和赎回。",
+                    "3、在法律法规允许且条件具备的情况下，基金管理人可受理基金份额持有人通过中国证监会认可的交易场所或者交易方式进行份额转让的申请并由登记机构办理基金份额的过户登记。",
+                ]
+            ),
+        )
     ]
 
-    batches = module.group_compare_units_into_batches(units, batch_size=2)
+    blocks, summaries = module.build_compare_blocks_for_llm(old_sections, new_sections)
+
+    assert [block.parent_path for block in blocks] == ["十六、实施侧袋机制期间本基金的申购与赎回"]
+    assert blocks[0].old_items == ()
+    assert [item.text for item in blocks[0].new_items] == [
+        "本基金实施侧袋机制的，本基金的申购和赎回安排详见招募说明书或相关公告。"
+    ]
+    assert summaries[0]["block_count"] == 1
+
+
+def test_group_compare_blocks_into_batches_uses_chapter_count_limit():
+    module = load_module()
+    blocks = [
+        module.CompareBlock(
+            block_id="第一部分-block-001",
+            chapter_number="第一部分",
+            chapter_title="第一部分  前言",
+            parent_path="",
+            old_items=(module.CompareBlockItem("old-1", "一、总则"),),
+            new_items=(module.CompareBlockItem("new-1", "一、总则"),),
+        ),
+        module.CompareBlock(
+            block_id="第二部分-block-001",
+            chapter_number="第二部分",
+            chapter_title="第二部分  释义",
+            parent_path="",
+            old_items=(module.CompareBlockItem("old-2", "1、定义A"),),
+            new_items=(module.CompareBlockItem("new-2", "1、定义B"),),
+        ),
+        module.CompareBlock(
+            block_id="第三部分-block-001",
+            chapter_number="第三部分",
+            chapter_title="第三部分  基金的基本情况",
+            parent_path="",
+            old_items=(module.CompareBlockItem("old-3", "一、基金名称\n旧名称"),),
+            new_items=(module.CompareBlockItem("new-3", "一、基金名称\n新名称"),),
+        ),
+    ]
+    batches = module.group_compare_blocks_into_batches(blocks, batch_size=2)
 
     assert [batch.batch_id for batch in batches] == ["batch-001", "batch-002"]
     assert batches[0].chapter_numbers == ("第一部分", "第二部分")
-    assert [unit.unit_id for unit in batches[0].compare_units] == [
-        "第一部分-unit-001",
-        "第一部分-unit-002",
-        "第二部分-unit-001",
+    assert [block.block_id for block in batches[0].compare_blocks] == [
+        "第一部分-block-001",
+        "第二部分-block-001",
     ]
     assert batches[1].chapter_numbers == ("第三部分",)
 
 
-def test_group_compare_units_splits_oversized_four_chapter_batch_into_two_chapters():
+def test_group_compare_blocks_keeps_same_chapter_together_above_limits():
     module = load_module()
-    units = [
-        module.CompareUnit("第一部分-unit-001", "第一部分", "第一部分  前言", "一、总则", "旧1" * 1200, "新1" * 1200),
-        module.CompareUnit("第二部分-unit-001", "第二部分", "第二部分  释义", "一、定义", "旧2" * 1200, "新2" * 1200),
-        module.CompareUnit("第三部分-unit-001", "第三部分", "第三部分  基本情况", "一、名称", "旧3" * 1200, "新3" * 1200),
-        module.CompareUnit("第四部分-unit-001", "第四部分", "第四部分  发售", "一、发售", "旧4" * 1200, "新4" * 1200),
-    ]
-
-    batches = module.group_compare_units_into_batches(
-        units,
-        batch_size=4,
-        max_batch_chars=10000,
-        oversized_batch_size=2,
-    )
-
-    assert [batch.batch_id for batch in batches] == ["batch-001", "batch-002"]
-    assert batches[0].chapter_numbers == ("第一部分", "第二部分")
-    assert batches[1].chapter_numbers == ("第三部分", "第四部分")
-
-
-def test_group_compare_units_splits_oversized_two_chapter_batch_to_single_chapters():
-    module = load_module()
-    units = [
-        module.CompareUnit("第一部分-unit-001", "第一部分", "第一部分  前言", "一、总则", "旧1" * 2000, "新1" * 2000),
-        module.CompareUnit("第二部分-unit-001", "第二部分", "第二部分  释义", "一、定义", "旧2" * 2000, "新2" * 2000),
-    ]
-
-    batches = module.group_compare_units_into_batches(
-        units,
-        batch_size=4,
-        max_batch_chars=10000,
-        oversized_batch_size=2,
-    )
-
-    assert [batch.batch_id for batch in batches] == ["batch-001", "batch-002"]
-    assert batches[0].chapter_numbers == ("第一部分",)
-    assert batches[1].chapter_numbers == ("第二部分",)
-
-
-def test_group_compare_units_splits_many_compare_units_inside_same_chapter():
-    module = load_module()
-    units = [
-        module.CompareUnit(
-            f"第二十四部分-unit-{index:03d}",
-            "第二十四部分",
-            "第二十四部分  基金合同内容摘要",
-            f"{index}、摘要",
-            f"旧{index}",
-            f"新{index}",
+    blocks = [
+        module.CompareBlock(
+            block_id=f"第六部分-block-{index:03d}",
+            chapter_number="第六部分",
+            chapter_title="第六部分  基金份额的申购与赎回",
+            parent_path=f"{index}、标题",
+            old_items=(module.CompareBlockItem(f"old-{index}", f"{index}、旧条目" + "甲" * 2400),),
+            new_items=(module.CompareBlockItem(f"new-{index}", f"{index}、新条目" + "乙" * 2400),),
         )
-        for index in range(1, 10)
+        for index in range(1, 5)
     ]
 
-    batches = module.group_compare_units_into_batches(
-        units,
+    batches = module.group_compare_blocks_into_batches(
+        blocks,
         batch_size=4,
         max_batch_chars=10000,
         oversized_batch_size=2,
-        max_compare_units_per_batch=4,
+        max_compare_blocks_per_batch=2,
+        max_compare_block_chars=10000,
     )
 
-    assert [batch.batch_id for batch in batches] == ["batch-001", "batch-002", "batch-003"]
-    assert [len(batch.compare_units) for batch in batches] == [4, 4, 1]
-    assert all(batch.chapter_numbers == ("第二十四部分",) for batch in batches)
-
-
-def test_group_compare_units_splits_oversized_single_unit_by_line_parts():
-    module = load_module()
-    old_lines = [f"旧第{index}行" + "甲" * 2000 for index in range(1, 5)]
-    new_lines = [f"新第{index}行" + "乙" * 2000 for index in range(1, 5)]
-    units = [
-        module.CompareUnit(
-            "第二十四部分-unit-001",
-            "第二十四部分",
-            "第二十四部分  基金合同内容摘要",
-            "二、基金份额持有人大会召集、议事及表决的程序和规则",
-            "\n".join(old_lines),
-            "\n".join(new_lines),
-        )
+    assert len(batches) == 1
+    assert batches[0].chapter_numbers == ("第六部分",)
+    assert [block.block_id for block in batches[0].compare_blocks] == [
+        "第六部分-block-001",
+        "第六部分-block-002",
+        "第六部分-block-003",
+        "第六部分-block-004",
     ]
-
-    batches = module.group_compare_units_into_batches(
-        units,
-        batch_size=4,
-        max_batch_chars=10000,
-        oversized_batch_size=2,
-        max_compare_units_per_batch=4,
-        max_compare_unit_chars=10000,
-    )
-
-    split_units = [unit for batch in batches for unit in batch.compare_units]
-    assert [unit.unit_id for unit in split_units] == [
-        "第二十四部分-unit-001-part-001",
-        "第二十四部分-unit-001-part-002",
-    ]
-    assert all(len(unit.old_text) + len(unit.new_text) <= 10000 for unit in split_units)
-    assert "\n".join(unit.old_text for unit in split_units) == "\n".join(old_lines)
-    assert "\n".join(unit.new_text for unit in split_units) == "\n".join(new_lines)
 
 
 def test_normalize_product_name_rows_moves_name_before_preface():

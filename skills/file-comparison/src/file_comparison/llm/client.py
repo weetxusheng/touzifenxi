@@ -83,16 +83,16 @@ class OpenAIResponsesClient:
             {"number": section.number, "title": section.title, "body": section.body}
             for section in batch.new_sections
         ]
-        compare_units = [
+        compare_blocks = [
             {
-                "unit_id": unit.unit_id,
-                "chapter_number": unit.chapter_number,
-                "chapter_title": unit.chapter_title,
-                "subchapter": unit.subchapter,
-                "old_text": unit.old_text,
-                "new_text": unit.new_text,
+                "block_id": block.block_id,
+                "chapter_number": block.chapter_number,
+                "chapter_title": block.chapter_title,
+                "parent_path": block.parent_path,
+                "old_items": [{"item_id": item.item_id, "text": item.text} for item in block.old_items],
+                "new_items": [{"item_id": item.item_id, "text": item.text} for item in block.new_items],
             }
-            for unit in getattr(batch, "compare_units", ())
+            for block in getattr(batch, "compare_blocks", ())
         ]
         return build_compare_request_payload(
             selected_provider.provider,
@@ -102,14 +102,21 @@ class OpenAIResponsesClient:
             strict=FILE_COMPARISON_SCHEMA["strict"],
             instructions=(
                 "你是文件修订对照助手。请只返回 JSON。"
-                "请对输入 compare_units 做变更判定，不要直接生成最终对照表内容。"
-                "每个 unit 只判断真实变化类型、展示策略、编号是否只是顺延、哪些小行实际未变。"
+                "请对输入 compare_blocks 做块内条目映射，不要直接生成最终对照表内容。"
+                "同一个 compare_blocks 内，只返回有实质文本变化的 sibling 条目操作。"
+                "不要假设相同编号就是同一条，必须按正文语义判断 old_items 与 new_items 的映射关系。"
+                "完全一致或仅编号顺延的条目不要返回；这类内容会由程序自动忽略。"
+                "如果插入一条导致后续顺延，只返回新增、删除或实质替换的条目，不要返回后续顺延条目。"
+                "每个 compare block 必须做覆盖检查：排除完全一致或仅编号顺延的匹配项后，"
+                "每个仍未被匹配的 old_item 必须返回 delete，每个仍未被匹配的 new_item 必须返回 add，"
+                "不要漏掉单侧独有条目。"
+                "定义项优先按冒号前的定义名称对齐；同名定义项即使编号变化也应优先匹配，"
+                "不同定义名称不要因为位置或编号相邻而强行 replace。"
+                "例如旧侧“基金份额发售公告”在新侧不存在，应返回 delete；"
+                "旧侧“基金产品资料概要”和新侧“基金产品资料概要”名称相同但编号变化，应按同一项判断。"
+                "如果定义项发生改名且重编号，由你判断它是 replace 还是 delete+add。"
+                "输出 operation 的 type 只使用 add、delete、replace。"
                 "old_focus_text/new_focus_text 只作为变化锚点和排查线索，不会作为最终展示文本；如果不确定可留空。"
-                "如果某条仅编号变化、正文完全一致，则 numbering_only=true 且 display_strategy=skip。"
-                "如果 old_text 和 new_text 都有正文，只是中间删除或新增了几个词句，必须返回 change_type=replace，"
-                "display_strategy=compare_changed_only，不能返回 delete_item 或 add_item。"
-                "如果删除一项导致后续编号上移，请返回 change_type=delete_item、display_strategy=delete_old_only，"
-                "并把后续未变正文写入 unchanged_lines。"
             ),
             input_payload={
                 "pair_id": pair_id,
@@ -117,7 +124,7 @@ class OpenAIResponsesClient:
                 "chapter_numbers": list(batch.chapter_numbers),
                 "old_sections": old_sections,
                 "new_sections": new_sections,
-                "compare_units": compare_units,
+                "compare_blocks": compare_blocks,
             },
         )
 

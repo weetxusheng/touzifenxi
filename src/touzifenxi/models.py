@@ -89,6 +89,8 @@ class RunResult:
     active_themes: List[str] = field(default_factory=list)
     bypass_count: int = 0
     candidate_decisions: List[dict] = field(default_factory=list)
+    data_quality_status: str = ""
+    data_quality_items: List[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

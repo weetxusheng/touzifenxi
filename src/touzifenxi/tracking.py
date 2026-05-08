@@ -66,7 +66,14 @@ def fetch_forward_returns(
             return None
         return float(forward_df.iloc[offset - 1]["close"])
 
+    def horizon_date(offset: int) -> str | None:
+        if len(forward_df) < offset:
+            return None
+        return str(forward_df.iloc[offset - 1]["date"])
+
     return {
+        "horizon_1d_date": horizon_date(1),
+        "horizon_1d_price": horizon_close(1),
         "horizon_1d": _compute_return(base_price, horizon_close(1)),
         "horizon_5d": _compute_return(base_price, horizon_close(5)),
         "horizon_20d": _compute_return(base_price, horizon_close(20)),

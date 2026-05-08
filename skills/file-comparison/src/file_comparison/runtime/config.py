@@ -36,8 +36,8 @@ class LLMRuntimeConfig:
     chapter_batch_size: int
     chapter_batch_char_limit: int
     oversized_chapter_batch_size: int
-    max_compare_units_per_batch: int
-    max_compare_unit_chars: int
+    max_compare_blocks_per_batch: int
+    max_compare_block_chars: int
     parse_max_attempts: int
     infra_max_attempts: int
     postprocess_max_attempts: int
@@ -113,6 +113,16 @@ class LLMRuntimeConfig:
     def failure_cooldown_seconds(self) -> float:
         """兼容旧代码读取失败后的 provider 冷却秒数。"""
         return self.primary.failure_cooldown_seconds
+
+    @property
+    def max_compare_units_per_batch(self) -> int:
+        """兼容旧代码读取旧 unit 批次上限字段。"""
+        return self.max_compare_blocks_per_batch
+
+    @property
+    def max_compare_unit_chars(self) -> int:
+        """兼容旧代码读取旧 unit 字符上限字段。"""
+        return self.max_compare_block_chars
 
 
 @dataclass(frozen=True, slots=True)
@@ -277,8 +287,8 @@ def default_runtime_payload() -> dict[str, Any]:
             "chapter_batch_size": 4,
             "chapter_batch_char_limit": 10000,
             "oversized_chapter_batch_size": 2,
-            "max_compare_units_per_batch": 4,
-            "max_compare_unit_chars": 10000,
+            "max_compare_blocks_per_batch": 4,
+            "max_compare_block_chars": 10000,
             "retry": {
                 "honor_retry_after": True,
                 "jitter_seconds": 0.5,
@@ -375,8 +385,24 @@ def load_file_comparison_runtime_config(base_path: Path | None = None) -> FileCo
             chapter_batch_size=max(1, int(llm.get("chapter_batch_size", 2))),
             chapter_batch_char_limit=max(0, int(llm.get("chapter_batch_char_limit", 10000))),
             oversized_chapter_batch_size=max(1, int(llm.get("oversized_chapter_batch_size", 2))),
-            max_compare_units_per_batch=max(0, int(llm.get("max_compare_units_per_batch", 4))),
-            max_compare_unit_chars=max(0, int(llm.get("max_compare_unit_chars", 10000))),
+            max_compare_blocks_per_batch=max(
+                0,
+                int(
+                    raw_llm.get(
+                        "max_compare_blocks_per_batch",
+                        raw_llm.get("max_compare_units_per_batch", llm.get("max_compare_blocks_per_batch", 4)),
+                    )
+                ),
+            ),
+            max_compare_block_chars=max(
+                0,
+                int(
+                    raw_llm.get(
+                        "max_compare_block_chars",
+                        raw_llm.get("max_compare_unit_chars", llm.get("max_compare_block_chars", 10000)),
+                    )
+                ),
+            ),
             parse_max_attempts=max(1, int(raw_retry_classifier.get("parse_max_attempts", llm.get("parse_max_attempts", 3)))),
             infra_max_attempts=max(1, int(raw_retry_classifier.get("infra_max_attempts", llm.get("infra_max_attempts", 3)))),
             postprocess_max_attempts=max(1, int(raw_retry_classifier.get("postprocess_max_attempts", llm.get("postprocess_max_attempts", 2)))),

@@ -277,6 +277,7 @@ def load_akshare_watchlist(
     lookback_days: int = 200,
     direct_connection: bool = True,
     use_eastmoney_valuation: bool = False,
+    refresh_financials: bool = True,
 ) -> tuple[str, List[StockIdea]]:
     try:
         import akshare as ak
@@ -331,17 +332,20 @@ def load_akshare_watchlist(
                 "event_score": float(item.get("event_score", 0.30)),
                 "fundamental_source": str(item.get("fundamental_source", "local_profile")),
             }
-            try:
-                financial_profile = _call_with_timeout(
-                    _call_with_retries,
-                    _fetch_financial_profile,
-                    ak,
-                    symbol,
-                    retries=2,
-                    delay=0.5,
-                    timeout_seconds=12.0,
-                )
-            except Exception:
+            if refresh_financials:
+                try:
+                    financial_profile = _call_with_timeout(
+                        _call_with_retries,
+                        _fetch_financial_profile,
+                        ak,
+                        symbol,
+                        retries=2,
+                        delay=0.5,
+                        timeout_seconds=12.0,
+                    )
+                except Exception:
+                    financial_profile = fallback_profile
+            else:
                 financial_profile = fallback_profile
             if str(financial_profile.get("fundamental_source", "local_profile")) == "local_profile":
                 financial_profile = fallback_profile

@@ -191,6 +191,7 @@ class InvestmentCommittee:
     def run(self, universe: List[StockIdea], top_n: int = 5, data_source: str = "sample") -> RunResult:
         style_view = self.style_agent.analyze(universe)
         recommendations: List[Recommendation] = []
+        quality_decisions: List[dict] = []
 
         for stock in universe:
             fundamental = self.fundamental_agent.score(stock, style_view)
@@ -242,7 +243,42 @@ class InvestmentCommittee:
                 )
             )
 
-        ranked = sorted(recommendations, key=lambda item: item.total_score, reverse=True)
+        real_financial_candidates = [
+            rec
+            for rec in recommendations
+            if rec.stock.factor_ready and rec.stock.financial_ready and rec.stock.fundamental_source != "local_profile"
+        ]
+        block_proxy_financial = len(real_financial_candidates) >= top_n
+        quality_filtered: List[Recommendation] = []
+        for rec in recommendations:
+            if not rec.stock.factor_ready:
+                quality_decisions.append(self._decision(rec, "quality_gate", "skipped", "stale_factor", "因子缺失或过期"))
+                continue
+            if block_proxy_financial and (
+                rec.stock.fundamental_source == "local_profile" or not rec.stock.financial_ready
+            ):
+                quality_decisions.append(
+                    self._decision(rec, "quality_gate", "skipped", "proxy_financial", "真实财务候选充足，代理/缺失/过期财务不进最终推荐")
+                )
+                continue
+            if rec.stock.fundamental_source == "local_profile" or not rec.stock.financial_ready:
+                rec.total_score = round(max(0.0, rec.total_score - 0.08), 4)
+                rec.risks.append("财务数据为代理、缺失或过期，已降权。")
+                quality_decisions.append(self._decision(rec, "quality_gate", "degraded", "proxy_financial", "财务数据为代理、缺失或过期"))
+            if not rec.stock.ready_pool:
+                rec.total_score = round(max(0.0, rec.total_score - 0.04), 4)
+                rec.risks.append("非 Ready Pool，数据完整度不足，已作为候补处理。")
+            if not rec.stock.industry_ready:
+                rec.total_score = round(max(0.0, rec.total_score - 0.03), 4)
+                rec.risks.append("缺少正式行业映射，已降权。")
+                quality_decisions.append(self._decision(rec, "quality_gate", "degraded", "missing_industry", "缺少正式行业映射"))
+            if abs(rec.stock.valuation_percentile - 0.5) < 0.000001:
+                rec.total_score = round(max(0.0, rec.total_score - 0.02), 4)
+                rec.risks.append("估值分位疑似默认中性值，已标记为代理估值。")
+                quality_decisions.append(self._decision(rec, "quality_gate", "degraded", "valuation_proxy", "估值分位为默认中性值"))
+            quality_filtered.append(rec)
+
+        ranked = sorted(quality_filtered, key=lambda item: item.total_score, reverse=True)
         selected, notes, decisions = self._portfolio_construction(ranked, top_n)
         return RunResult(
             style_view=style_view,
@@ -250,7 +286,7 @@ class InvestmentCommittee:
             universe_size=len(universe),
             data_source=data_source,
             portfolio_notes=notes,
-            candidate_decisions=decisions,
+            candidate_decisions=quality_decisions + decisions,
         )
 
 

@@ -35,9 +35,22 @@ def render_report(result: RunResult) -> str:
         f"- 风格置信度: `{result.style_view.confidence:.2f}`",
         f"- 风格说明: {result.style_view.reason}",
         "",
+        "## 数据健康",
+        "",
+        f"- 总体状态: `{result.data_quality_status or 'N/A'}`",
+    ]
+    for item in result.data_quality_items:
+        lines.append(
+            f"- {item.get('category', 'unknown')} / {item.get('name', 'unknown')}: "
+            f"`{item.get('status', 'missing')}`，{item.get('value_text', '')}，阈值: {item.get('threshold_text', '')}"
+        )
+    lines.extend(
+        [
+            "",
         "## 投委会约束",
         "",
-    ]
+        ]
+    )
     for note in result.portfolio_notes:
         lines.append(f"- {note}")
     lines.extend(

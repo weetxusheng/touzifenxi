@@ -95,12 +95,19 @@ CREATE TABLE IF NOT EXISTS market_snapshots (
 CREATE TABLE IF NOT EXISTS recommendation_returns (
     recommendation_id BIGINT PRIMARY KEY REFERENCES recommendations(id),
     base_price DOUBLE PRECISION NOT NULL,
+    horizon_1d_date DATE,
+    horizon_1d_price DOUBLE PRECISION,
     horizon_1d DOUBLE PRECISION,
     horizon_5d DOUBLE PRECISION,
     horizon_20d DOUBLE PRECISION,
     horizon_60d DOUBLE PRECISION,
+    review_note TEXT,
     updated_at TIMESTAMPTZ
 );
+
+ALTER TABLE recommendation_returns ADD COLUMN IF NOT EXISTS horizon_1d_date DATE;
+ALTER TABLE recommendation_returns ADD COLUMN IF NOT EXISTS horizon_1d_price DOUBLE PRECISION;
+ALTER TABLE recommendation_returns ADD COLUMN IF NOT EXISTS review_note TEXT;
 
 CREATE TABLE IF NOT EXISTS industry_dictionary (
     industry_name TEXT PRIMARY KEY,
@@ -170,6 +177,27 @@ CREATE TABLE IF NOT EXISTS sync_state (
     state_key TEXT PRIMARY KEY,
     state_value TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS data_quality_runs (
+    id BIGSERIAL PRIMARY KEY,
+    checked_at TIMESTAMPTZ NOT NULL,
+    context TEXT NOT NULL,
+    related_run_id BIGINT,
+    status TEXT NOT NULL,
+    summary_json JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS data_quality_items (
+    id BIGSERIAL PRIMARY KEY,
+    quality_run_id BIGINT NOT NULL REFERENCES data_quality_runs(id),
+    category TEXT NOT NULL,
+    item_name TEXT NOT NULL,
+    status TEXT NOT NULL,
+    value_text TEXT NOT NULL,
+    threshold_text TEXT NOT NULL,
+    detail_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS theme_events (
@@ -345,6 +373,8 @@ CREATE INDEX IF NOT EXISTS idx_research_runs_run_at ON research_runs(run_at);
 CREATE INDEX IF NOT EXISTS idx_theme_prefilter_runs_week_built ON theme_prefilter_runs(prefilter_week, built_at);
 CREATE INDEX IF NOT EXISTS idx_weekly_pool_members_run_ticker ON weekly_pool_members(run_id, ticker);
 CREATE INDEX IF NOT EXISTS idx_daily_factors_snapshot_ticker ON daily_factors(snapshot_date, ticker);
+CREATE INDEX IF NOT EXISTS idx_data_quality_runs_checked_at ON data_quality_runs(checked_at);
+CREATE INDEX IF NOT EXISTS idx_data_quality_items_run_category ON data_quality_items(quality_run_id, category);
 CREATE INDEX IF NOT EXISTS idx_theme_events_run_date_theme ON theme_events(run_id, event_date, theme_name);
 CREATE INDEX IF NOT EXISTS idx_candidate_decisions_run_ticker_stage ON candidate_decisions(run_id, ticker, decision_stage);
 CREATE INDEX IF NOT EXISTS idx_stock_pool_lifecycle_run_ticker ON stock_pool_lifecycle(run_id, ticker);

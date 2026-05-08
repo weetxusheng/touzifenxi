@@ -56,6 +56,7 @@ class ChapterBatch:
     chapter_numbers: tuple[str, ...]
     old_sections: tuple[Section, ...] = ()
     new_sections: tuple[Section, ...] = ()
+    compare_blocks: tuple["CompareBlock", ...] = ()
     compare_units: tuple["CompareUnit", ...] = ()
 
 
@@ -69,6 +70,26 @@ class CompareUnit:
     subchapter: str
     old_text: str
     new_text: str
+
+
+@dataclass(slots=True)
+class CompareBlockItem:
+    """表示块内单个同层条目。"""
+
+    item_id: str
+    text: str
+
+
+@dataclass(slots=True)
+class CompareBlock:
+    """表示发送给模型的父标题块级差异上下文。"""
+
+    block_id: str
+    chapter_number: str
+    chapter_title: str
+    parent_path: str
+    old_items: tuple[CompareBlockItem, ...] = ()
+    new_items: tuple[CompareBlockItem, ...] = ()
 
 
 @dataclass(slots=True)

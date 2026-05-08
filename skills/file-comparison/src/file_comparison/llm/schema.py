@@ -7,60 +7,46 @@ FILE_COMPARISON_SCHEMA = {
     "schema": {
         "type": "object",
         "additionalProperties": False,
-        "required": ["units"],
+        "required": ["blocks"],
         "properties": {
-            "units": {
+            "blocks": {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "additionalProperties": False,
-                    "required": [
-                        "unit_id",
-                        "chapter",
-                        "subchapter",
-                        "change_type",
-                        "display_strategy",
-                        "numbering_only",
-                        "unchanged_lines",
-                        "old_focus_text",
-                        "new_focus_text",
-                        "confidence",
-                    ],
+                    "required": ["block_id", "chapter", "parent_path", "operations"],
                     "properties": {
-                        "unit_id": {"type": "string"},
+                        "block_id": {"type": "string"},
                         "chapter": {"type": "string"},
-                        "subchapter": {"type": "string"},
-                        "change_type": {
-                            "type": "string",
-                            "enum": [
-                                "replace",
-                                "rewrite",
-                                "add",
-                                "delete",
-                                "add_item",
-                                "delete_item",
-                                "numbering_only",
-                                "equal",
-                            ],
-                        },
-                        "display_strategy": {
-                            "type": "string",
-                            "enum": [
-                                "compare_changed_only",
-                                "whole_replace",
-                                "delete_old_only",
-                                "add_new_only",
-                                "skip",
-                            ],
-                        },
-                        "numbering_only": {"type": "boolean"},
-                        "unchanged_lines": {
+                        "parent_path": {"type": "string"},
+                        "operations": {
                             "type": "array",
-                            "items": {"type": "string"},
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": [
+                                    "type",
+                                    "old_item_ids",
+                                    "new_item_ids",
+                                    "old_focus_text",
+                                    "new_focus_text",
+                                    "confidence",
+                                    "reason",
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": ["add", "delete", "replace"],
+                                    },
+                                    "old_item_ids": {"type": "array", "items": {"type": "string"}},
+                                    "new_item_ids": {"type": "array", "items": {"type": "string"}},
+                                    "old_focus_text": {"type": "string"},
+                                    "new_focus_text": {"type": "string"},
+                                    "confidence": {"type": "number"},
+                                    "reason": {"type": "string"},
+                                },
+                            },
                         },
-                        "old_focus_text": {"type": "string"},
-                        "new_focus_text": {"type": "string"},
-                        "confidence": {"type": "number"},
                     },
                 },
             }

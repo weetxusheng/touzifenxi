@@ -14,8 +14,8 @@ def test_load_runtime_config_uses_defaults(tmp_path):
     assert config.llm.chapter_batch_size == 4
     assert config.llm.chapter_batch_char_limit == 10000
     assert config.llm.oversized_chapter_batch_size == 2
-    assert config.llm.max_compare_units_per_batch == 4
-    assert config.llm.max_compare_unit_chars == 10000
+    assert config.llm.max_compare_blocks_per_batch == 4
+    assert config.llm.max_compare_block_chars == 10000
     assert config.llm.failure_cooldown_seconds == 40.0
     assert config.execution.per_pair_max_workers == 2
     assert config.llm.task_routing.enabled is True
@@ -44,6 +44,23 @@ def test_initialize_and_write_runtime_config(tmp_path):
     assert config.llm.model == "gpt-test"
     assert config.llm.chapter_batch_size == 4
     assert config.ui.port == 9911
+
+
+def test_load_runtime_config_reads_legacy_unit_limits_into_block_limits(tmp_path):
+    write_runtime_config(
+        tmp_path,
+        {
+            "llm": {
+                "max_compare_units_per_batch": 9,
+                "max_compare_unit_chars": 12345,
+            }
+        },
+    )
+
+    config = load_file_comparison_runtime_config(tmp_path)
+
+    assert config.llm.max_compare_blocks_per_batch == 9
+    assert config.llm.max_compare_block_chars == 12345
 
 
 def test_load_runtime_config_allows_jsonc_comments(tmp_path):

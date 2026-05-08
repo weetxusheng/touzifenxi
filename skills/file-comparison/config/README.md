@@ -116,19 +116,19 @@
 - 例如 `chapter_batch_size = 4` 时，如果某个 4 章节 batch 超过 `10000` 字符，会拆成 `2 + 2` 章节继续发送
 - 如果 2 章节 batch 仍超过 `10000` 字符，会继续拆到单章；单章自身超过阈值时不再切碎章节正文
 
-### `llm.max_compare_units_per_batch`
+### `llm.max_compare_blocks_per_batch`
 
-- 单个 batch 最多包含的条目级 compare unit 数量
+- 单个 batch 最多包含的块级 compare block 数量
 - 当前默认 `4`
-- 用于处理“字符数未超限，但模型输出 subsection 太多导致返回截断”的情况
-- 如果同一章节内有很多变化条目，会按原顺序拆成多个 batch，但每个 unit 自身不切碎
+- 用于处理“字符数未超限，但模型一次返回的 block 操作过多导致响应截断”的情况
+- 只允许在不同一级章节之间拆分；同一章节内即使超过该数量，也必须保持在同一个 batch
 
-### `llm.max_compare_unit_chars`
+### `llm.max_compare_block_chars`
 
-- 单个 compare unit 的左右正文合计字符数上限
+- 单个 compare block 的左右条目合计字符数上限
 - 当前默认 `10000`
-- 如果单个 unit 超过该值，会按行/段落边界拆成 `part-001 / part-002`
-- 拆分后的 part 会独立调用模型并按原顺序合并，避免单次返回 JSON 被截断
+- 历史兼容字段；当前主流程不再按该字段拆分单个 compare block
+- 同一章节和同一父标题块的结构完整性优先级高于字数限制
 
 ### `paths`
 

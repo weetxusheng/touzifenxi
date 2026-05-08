@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .committee import build_committee
+from .data_quality import expected_factor_date, run_data_quality_check
 from .market_data import (
     build_research_universe_from_rows,
     load_akshare_watchlist,
@@ -41,6 +42,7 @@ class DailyResearchPipeline:
         self.store = store
 
     def run(self, config: PipelineConfig) -> tuple[RunResult, Path | None, int]:
+        _, pre_quality = run_data_quality_check(self.store, context="run_before")
         theme_route_result = ThemeRouteResult(router_mode="fallback")
         if self._should_use_synced_universe(config):
             data_source, universe, ready_pool_size, fallback_pool_size, theme_route_result = self._load_synced_universe(config)
@@ -64,6 +66,17 @@ class DailyResearchPipeline:
         result.router_mode = theme_route_result.router_mode
         result.active_themes = theme_route_result.active_themes
         result.bypass_count = sum(1 for rec in result.recommendations if rec.stock.theme_bucket == "bypass")
+        result.data_quality_status = pre_quality.status
+        result.data_quality_items = [
+            {
+                "category": item.category,
+                "name": item.name,
+                "status": item.status,
+                "value_text": item.value_text,
+                "threshold_text": item.threshold_text,
+            }
+            for item in pre_quality.items
+        ]
         if result.router_mode == "theme":
             route_note = f"主题路由模式: theme，激活主题 {len(result.active_themes)} 个。"
         elif result.router_mode == "weekly_pool":
@@ -80,10 +93,11 @@ class DailyResearchPipeline:
         self.store.save_theme_router_data(run_id=run_id, universe=universe, events=theme_route_result.events)
         self.store.save_market_snapshots(run_id=run_id, universe=universe, data_source=data_source)
         self.store.save_daily_factors(
-            snapshot_date=datetime.now().date().isoformat(),
+            snapshot_date=self._factor_write_snapshot_date(data_source),
             universe=universe,
             data_source=data_source,
         )
+        run_data_quality_check(self.store, context="run_after", related_run_id=run_id)
         return result, report_path, run_id
 
     def sync_factors(self, config: PipelineConfig) -> tuple[str, int]:
@@ -97,13 +111,81 @@ class DailyResearchPipeline:
                 return "akshare", 0
             raise
         count = self.store.save_daily_factors(
-            snapshot_date=datetime.now().date().isoformat(),
+            snapshot_date=self._factor_write_snapshot_date(data_source),
             universe=universe,
             data_source=data_source,
         )
         return data_source, count
 
+    def sync_weekly_pool_factors(
+        self,
+        network_mode: str = "direct",
+        min_coverage: int = 45,
+        force: bool = False,
+        batch_size: int = 8,
+    ) -> dict[str, object]:
+        target_snapshot_date = expected_factor_date()[0]
+        weekly_rows = [dict(row) for row in self.store.get_latest_weekly_pool_rows(limit=50)]
+        if not weekly_rows:
+            raise RuntimeError("weekly pool missing; run build-weekly-pool first")
+
+        tickers = [str(row["ticker"]) for row in weekly_rows]
+        factor_map = self.store.get_factor_map(tickers, target_snapshot_date)
+        before_covered = len(factor_map)
+        missing_rows = [
+            row
+            for row in weekly_rows
+            if force or str(row["ticker"]) not in factor_map
+        ]
+        if before_covered >= min_coverage and not force:
+            _, quality = run_data_quality_check(self.store, context="sync_weekly_factors_skip")
+            return {
+                "target_snapshot_date": target_snapshot_date,
+                "pool_size": len(weekly_rows),
+                "before_covered": before_covered,
+                "after_covered": before_covered,
+                "synced_count": 0,
+                "data_source": "skip",
+                "quality_status": quality.status,
+            }
+
+        industry_map = self.store.get_stock_industry_map([str(row["ticker"]) for row in missing_rows])
+        financial_map = self.store.get_financial_profile_map([str(row["ticker"]) for row in missing_rows])
+        watchlist = build_research_universe_from_rows(
+            missing_rows,
+            industry_map=industry_map,
+            financial_map=financial_map,
+        )
+        synced_count = 0
+        data_sources: set[str] = set()
+        safe_batch_size = max(1, int(batch_size))
+        for start in range(0, len(watchlist), safe_batch_size):
+            batch = watchlist[start : start + safe_batch_size]
+            data_source, universe = load_akshare_watchlist(
+                watchlist=batch,
+                direct_connection=network_mode == "direct",
+                refresh_financials=False,
+            )
+            data_sources.add(data_source)
+            synced_count += self.store.save_daily_factors(
+                snapshot_date=target_snapshot_date,
+                universe=universe,
+                data_source=data_source,
+            )
+        after_covered = len(self.store.get_factor_map(tickers, target_snapshot_date))
+        _, quality = run_data_quality_check(self.store, context="sync_weekly_factors_after")
+        return {
+            "target_snapshot_date": target_snapshot_date,
+            "pool_size": len(weekly_rows),
+            "before_covered": before_covered,
+            "after_covered": after_covered,
+            "synced_count": synced_count,
+            "data_source": ",".join(sorted(data_sources)) if data_sources else "akshare",
+            "quality_status": quality.status,
+        }
+
     def build_weekly_pool(self, config: PipelineConfig) -> tuple[int, WeeklyPoolResult]:
+        run_data_quality_check(self.store, context="build_weekly_pool_before")
         result = build_weekly_pool(
             store=self.store,
             config_path=self.paths.theme_config_path,
@@ -114,9 +196,11 @@ class DailyResearchPipeline:
             wildcard_limit=10,
         )
         run_id = self.store.save_weekly_prefilter(result)
+        run_data_quality_check(self.store, context="build_weekly_pool_after", related_run_id=run_id)
         return run_id, result
 
     def refresh_weekly_pool(self, config: PipelineConfig, refresh_limit: int = 5, candidate_limit: int = 200) -> tuple[int, WeeklyPoolResult]:
+        run_data_quality_check(self.store, context="refresh_weekly_pool_before")
         result = refresh_weekly_pool(
             store=self.store,
             config_path=self.paths.theme_config_path,
@@ -126,6 +210,7 @@ class DailyResearchPipeline:
             candidate_limit=candidate_limit,
         )
         run_id = self.store.save_weekly_prefilter(result)
+        run_data_quality_check(self.store, context="refresh_weekly_pool_after", related_run_id=run_id)
         return run_id, result
 
     def _should_use_synced_universe(self, config: PipelineConfig) -> bool:
@@ -135,6 +220,15 @@ class DailyResearchPipeline:
             return True
         candidates = self.store.list_universe_candidates(UniverseFilter(limit=1))
         return bool(candidates)
+
+    def _factor_write_snapshot_date(self, data_source: str) -> str:
+        expected_snapshot = expected_factor_date()[0]
+        if data_source == "snapshot_cache":
+            latest_snapshot = self.store.get_latest_factor_snapshot_date()
+            if latest_snapshot and latest_snapshot <= expected_snapshot:
+                return latest_snapshot
+            return expected_snapshot
+        return expected_snapshot
 
     def _load_synced_universe(self, config: PipelineConfig, only_missing_factors: bool = False):
         if not only_missing_factors and config.use_weekly_pool:
@@ -171,7 +265,7 @@ class DailyResearchPipeline:
         universe_filter = UniverseFilter(limit=router_limit)
         universe_filter.offset = config.candidate_offset
         if only_missing_factors:
-            snapshot_date = datetime.now().date().isoformat()
+            snapshot_date = expected_factor_date()[0]
             candidate_rows = self.store.list_candidates_missing_factors(snapshot_date, universe_filter)
         else:
             candidate_rows = self.store.list_universe_candidates(universe_filter)

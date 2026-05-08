@@ -103,6 +103,28 @@ touzifenxi init-db
 - PostgreSQL 以“新系统起点”重新开始积累，不导入旧 SQLite 历史数据。
 - PostgreSQL 迁移脚手架在 `alembic/`，schema 文件在 `docs/postgresql_schema.sql`。
 
+安装/刷新每日自动化任务：
+
+```bash
+touzifenxi install-automation
+```
+
+查看自动化真实状态和最近日志：
+
+```bash
+touzifenxi automation-status
+```
+
+自动化说明：
+
+- macOS 后台任务使用 `launchd`，任务文件在 `~/Library/LaunchAgents/com.touzifenxi.daily-cycle.plist`。
+- 实际执行脚本在 `~/Library/Scripts/touzifenxi/run_daily_cycle.sh`。
+- 运行副本默认在 `~/Projects/touzifenxi-auto`，用于避开 macOS 对 `Documents` 目录的后台访问限制。
+- 日志默认写入 `~/Projects/touzifenxi-auto/runtime/daily-cycle-launchd.log` 和 `daily-cycle-launchd.err.log`。
+- 触发时间为周一到周五 `18:30/19:30/20:30/21:30/22:30/23:30`；脚本会加锁，且当天推荐和日因子已更新时不会重复生成推荐。
+- 即使当天推荐已更新，自动化仍会执行收益更新与数据健康检查，保证次日复盘和数据状态持续刷新。
+- 修改项目代码后，重新执行 `touzifenxi install-automation` 会刷新运行副本、脚本和 `launchd` 配置。
+
 ## 目录
 
 ```text

@@ -10,7 +10,7 @@ from typing import Any
 from ..runtime.config import load_file_comparison_runtime_config
 from ..runtime.recovery import decide_batch_recovery
 from ..runtime.settings import resolve_paths
-from .chunking import build_compare_units_for_llm, build_rows, group_compare_units_into_batches
+from .chunking import build_compare_blocks_for_llm, build_rows, group_compare_blocks_into_batches
 from .engine import (
     build_output_document_paths,
     normalize_product_name_rows,
@@ -92,14 +92,14 @@ def read_fund_name(path: Path, fallback: str) -> str:
 def rows_from_stored_batches(pair_dir: Path, old_sections: list[Section], new_sections: list[Section]) -> list[ComparisonRow]:
     """复用已有模型解析结果与 fallback 状态生成 rows，不发起任何请求。"""
     runtime_config = load_file_comparison_runtime_config(SKILL_ROOT)
-    compare_units, _summaries = build_compare_units_for_llm(old_sections, new_sections)
-    batches = group_compare_units_into_batches(
-        compare_units,
+    compare_blocks, _summaries = build_compare_blocks_for_llm(old_sections, new_sections)
+    batches = group_compare_blocks_into_batches(
+        compare_blocks,
         runtime_config.llm.chapter_batch_size,
         max_batch_chars=runtime_config.llm.chapter_batch_char_limit,
         oversized_batch_size=runtime_config.llm.oversized_chapter_batch_size,
-        max_compare_units_per_batch=runtime_config.llm.max_compare_units_per_batch,
-        max_compare_unit_chars=runtime_config.llm.max_compare_unit_chars,
+        max_compare_blocks_per_batch=runtime_config.llm.max_compare_blocks_per_batch,
+        max_compare_block_chars=runtime_config.llm.max_compare_block_chars,
     )
     llm_dir = pair_dir / "llm"
     batch_results: dict[str, list[ComparisonRow]] = {}
@@ -107,7 +107,7 @@ def rows_from_stored_batches(pair_dir: Path, old_sections: list[Section], new_se
         batch_dir = llm_dir / batch.batch_id
         recovery = decide_batch_recovery(batch_dir)
         if recovery.action in {"reuse_parsed", "reuse_repair"} and recovery.payload is not None:
-            batch_results[batch.batch_id] = rows_from_llm_payload(recovery.payload, compare_units=batch.compare_units)
+            batch_results[batch.batch_id] = rows_from_llm_payload(recovery.payload, compare_blocks=batch.compare_blocks)
             continue
         raise RuntimeError(f"{batch.batch_id} 没有可复用的模型解析结果；本地 fallback 不允许生成正式文档")
     validate_complete_batch_results(batches=batches, batch_results=batch_results, llm_dir=llm_dir)
@@ -127,8 +127,8 @@ def output_paths(pair_dir: Path, *, pair: PairMatch, overwrite: bool, timestamp:
     output_dir = pair_dir / "outputs"
     output_dir.mkdir(parents=True, exist_ok=True)
     if overwrite:
-        existing_docx = next(output_dir.glob("*.docx"), None)
-        existing_doc = next(output_dir.glob("*.doc"), None)
+        existing_docx = next((path for path in sorted(output_dir.glob("*.docx")) if not path.name.startswith(".~")), None)
+        existing_doc = next((path for path in sorted(output_dir.glob("*.doc")) if not path.name.startswith(".~")), None)
         if existing_docx and existing_doc:
             return existing_docx, existing_doc
     return build_output_document_paths(pair, output_dir, timestamp=timestamp or datetime.now().strftime("%Y%m%d_%H%M%S"))

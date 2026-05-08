@@ -82,7 +82,13 @@ def _load_dashboard_snapshot(paths: AppPaths, store: ResearchStore) -> dict[str,
     active_rule_versions = store.get_active_rule_versions()
     stock_lifecycle = store.get_stock_pool_lifecycle_summary(limit=20)
     theme_lifecycle = store.get_theme_lifecycle_summary(limit=20)
+    next_day_reviews = store.get_recent_next_day_reviews(limit=20)
     db_status = store.get_database_status()
+    data_quality = store.get_latest_data_quality_summary()
+    recommendation_evidence = {
+        str(rec["ticker"]): store.get_stock_evidence(str(rec["ticker"])).get("status", {})
+        for rec in latest_recommendations
+    }
     report_path = None
     with store.connect() as conn:
         row = conn.execute(
@@ -117,7 +123,10 @@ def _load_dashboard_snapshot(paths: AppPaths, store: ResearchStore) -> dict[str,
         "active_rule_versions": active_rule_versions,
         "stock_lifecycle": stock_lifecycle,
         "theme_lifecycle": theme_lifecycle,
+        "next_day_reviews": next_day_reviews,
         "db_status": db_status,
+        "data_quality": data_quality,
+        "recommendation_evidence": recommendation_evidence,
     }
 
 
@@ -137,7 +146,10 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
     active_rule_versions = snapshot["active_rule_versions"]
     stock_lifecycle = snapshot["stock_lifecycle"]
     theme_lifecycle = snapshot["theme_lifecycle"]
+    next_day_reviews = snapshot.get("next_day_reviews", [])
     db_status = snapshot["db_status"]
+    data_quality = snapshot["data_quality"]
+    recommendation_evidence = snapshot["recommendation_evidence"]
     latest_run = performance["latest_run"]
     latest_weekly_pool = performance["latest_weekly_pool"]
     ready_ratio = (
@@ -166,6 +178,7 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
 
     tabs = [
         ("overview", "总览"),
+        ("quality", "数据健康"),
         ("foundation", "底座池"),
         ("pool", "周度池"),
         ("recommendations", "日推结果"),
@@ -188,6 +201,29 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
           </div>
         </a>
         """
+
+    def status_badge(status: object) -> str:
+        text = str(status or "missing")
+        labels = {
+            "green": "正常",
+            "yellow": "注意",
+            "red": "异常",
+            "weak": "弱证据",
+            "real": "真实",
+            "stale": "过期",
+            "proxy": "代理",
+            "missing": "缺失",
+            "weak_evidence": "弱证据",
+        }
+        return f'<span class="status-badge status-{_esc(text)}">{_esc(labels.get(text, text))}</span>'
+
+    def stock_link(ticker: object, label: object | None = None) -> str:
+        ticker_text = str(ticker or "")
+        return f'<a class="mono-link" href="/stock?ticker={quote_plus(ticker_text)}">{_esc(label or ticker_text)}</a>'
+
+    def eastmoney_link(ticker: object) -> str:
+        ticker_text = str(ticker or "")
+        return f'<a class="event-link" href="{_esc(_eastmoney_stock_url(ticker_text))}" target="_blank" rel="noreferrer">东财</a>'
 
     theme_score_rows = ""
     if weekly_summary:
@@ -213,7 +249,7 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
         theme_detail_html = f"""
         <div class="card" style="margin-top:18px;">
           <h2>主题分详情 · {_esc(summary_item['theme_name'])}</h2>
-          <div class="subtitle">这里展示分数是怎么估算出来的。当前表现分来源：{_esc(summary_item['performance_source'])}。</div>
+          <div class="subtitle">这里展示分数是怎么估算出来的。当前表现分来源：{status_badge(summary_item['performance_source'])}。proxy 代表历史样本不足，暂用 ready_ratio 和阶段结构替代。</div>
           <table>
             <tbody>
               <tr><th>总分</th><td>{float(summary_item['total_score']):.4f}</td></tr>
@@ -230,13 +266,14 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
     pool_rows_html = "".join(
         f"""
         <tr>
-          <td><a class="mono-link" href="{_esc(_eastmoney_stock_url(str(row.get('ticker', ''))))}" target="_blank" rel="noreferrer">{_esc(row.get('ticker', ''))}</a></td>
-          <td><a class="name-link" href="{_esc(_eastmoney_stock_url(str(row.get('ticker', ''))))}" target="_blank" rel="noreferrer">{_esc(row.get('name', ''))}</a></td>
+          <td>{stock_link(row.get('ticker', ''))} {eastmoney_link(row.get('ticker', ''))}</td>
+          <td>{stock_link(row.get('ticker', ''), row.get('name', ''))}</td>
           <td>{_esc(row.get('prefilter_theme', 'wildcard') or 'wildcard')}</td>
           <td>{_esc(row.get('prefilter_bucket', ''))}</td>
           <td>{_esc(row.get('prefilter_source', ''))}</td>
-          <td>{'1' if row.get('ready_pool') else '0'}</td>
-          <td>{_esc(row.get('fundamental_source', ''))}</td>
+          <td>{status_badge('real' if row.get('ready_pool') else 'missing')}</td>
+          <td>{status_badge('proxy' if row.get('fundamental_source') == 'local_profile' else 'real')} {_esc(row.get('fundamental_source', ''))}</td>
+          <td>{status_badge('proxy' if abs(float(row.get('valuation_percentile', 0.5)) - 0.5) < 0.000001 else 'real')}</td>
           <td>{float(row.get('prefilter_score', 0.0)):.2f}</td>
         </tr>
         """
@@ -248,8 +285,9 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
         <div class="rec-item">
           <div class="rec-head">
             <span class="rank">#{int(rec['rank_no'])}</span>
-            <a class="ticker mono-link" href="{_esc(_eastmoney_stock_url(str(rec['ticker'])))}" target="_blank" rel="noreferrer">{_esc(rec['ticker'])}</a>
-            <a class="name name-link" href="{_esc(_eastmoney_stock_url(str(rec['ticker'])))}" target="_blank" rel="noreferrer">{_esc(rec['name'])}</a>
+            {stock_link(rec['ticker'])}
+            {stock_link(rec['ticker'], rec['name'])}
+            {eastmoney_link(rec['ticker'])}
             <span class="score">{float(rec['total_score']):.4f}</span>
           </div>
           <div class="rec-meta">
@@ -258,6 +296,10 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
             <span>分层: {_esc(rec['prefilter_bucket'] or rec['theme_bucket'])}</span>
             <span>Ready: {'1' if rec['ready_pool'] else '0'}</span>
             <span>基本面: {_esc(rec['fundamental_source'])}</span>
+            <span>财务: {status_badge(recommendation_evidence.get(str(rec['ticker']), {}).get('financial'))}</span>
+            <span>因子: {status_badge(recommendation_evidence.get(str(rec['ticker']), {}).get('factor'))}</span>
+            <span>估值: {status_badge(recommendation_evidence.get(str(rec['ticker']), {}).get('valuation'))}</span>
+            <span>事件: {status_badge(recommendation_evidence.get(str(rec['ticker']), {}).get('event'))}</span>
           </div>
           <div class="rec-reasons">{_esc('；'.join(rec['reasons']) if rec['reasons'] else 'N/A')}</div>
         </div>
@@ -295,6 +337,35 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
         for item in recent_events
     )
 
+    quality = data_quality or {
+        "id": "N/A",
+        "checked_at": "N/A",
+        "context": "N/A",
+        "status": "missing",
+        "summary": {},
+        "items": [],
+    }
+    quality_summary = quality.get("summary", {}) if isinstance(quality.get("summary", {}), dict) else {}
+    quality_items = quality.get("items", []) if isinstance(quality.get("items", []), list) else []
+    quality_item_rows = "".join(
+        f"""
+        <tr>
+          <td>{_esc(item.get('category', ''))}</td>
+          <td>{_esc(item.get('name', ''))}</td>
+          <td>{status_badge(item.get('status', 'missing'))}</td>
+          <td>{_esc(item.get('value_text', ''))}</td>
+          <td>{_esc(item.get('threshold_text', ''))}</td>
+        </tr>
+        """
+        for item in quality_items
+    )
+    quality_cards = f"""
+      {card("质量状态", str(quality.get("status", "missing")), f"context={quality.get('context', 'N/A')}")}
+      {card("最新因子日", str(quality_summary.get("latest_factor_snapshot", "N/A")), f"expected={quality_summary.get('expected_factor_date', 'N/A')}")}
+      {card("周度池可打分", f"{quality_summary.get('weekly_pool_factor_covered', 0)}/{quality_summary.get('weekly_pool_size', 0)}", "阈值: 45/50")}
+      {card("事件链接率", _format_pct(float(quality_summary.get("event_url_ratio", 0.0))), f"最近事件 {quality_summary.get('recent_event_count', 0)} 条")}
+    """
+
     flow_json = json.dumps(
         {
             "weekly_mode": latest_weekly_pool["build_mode"] if latest_weekly_pool else "N/A",
@@ -328,6 +399,17 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
         {metric_link("Ready Pool", str(coverage["ready_candidates"]), f"三层真实覆盖完整，当前占比 {_format_pct(ready_ratio)}", "foundation", "ready")}
         {metric_link("最新周度池", str(latest_weekly_pool["pool_size"]) if latest_weekly_pool else "0", f"本周最终可研究池，主题 {latest_weekly_pool['theme_count'] if latest_weekly_pool else 0} 个", "pool", "weekly")}
       </div>
+    </section>
+
+    <section class="card quality-strip">
+      <div class="quality-strip-head">
+        <div>
+          <h2>数据健康总览</h2>
+          <div class="subtitle">每次推荐前后都会落库检查：数据从哪来、新不新、哪些是代理或弱证据。</div>
+        </div>
+        <div>{status_badge(quality.get('status', 'missing'))}</div>
+      </div>
+      <div class="metrics quality-metrics">{quality_cards}</div>
     </section>
 
     <section class="grid">
@@ -373,15 +455,15 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
     foundation_rows_html = "".join(
         f"""
         <tr>
-          <td><a class="mono-link" href="{_esc(_eastmoney_stock_url(str(row.get('ticker', ''))))}" target="_blank" rel="noreferrer">{_esc(row.get('ticker', ''))}</a></td>
-          <td><a class="name-link" href="{_esc(_eastmoney_stock_url(str(row.get('ticker', ''))))}" target="_blank" rel="noreferrer">{_esc(row.get('name', ''))}</a></td>
+          <td>{stock_link(row.get('ticker', ''))} {eastmoney_link(row.get('ticker', ''))}</td>
+          <td>{stock_link(row.get('ticker', ''), row.get('name', ''))}</td>
           <td>{_esc(row.get('sector', row.get('board', '-')))}</td>
           <td>{_esc(row.get('board', '-'))}</td>
-          <td>{'1' if row.get('ready_pool') else '0'}</td>
-          <td>{'1' if row.get('industry_ready') else '0'}</td>
-          <td>{'1' if row.get('financial_ready') else '0'}</td>
-          <td>{'1' if row.get('factor_ready') else '0'}</td>
-          <td>{_esc(row.get('fundamental_source', '-'))}</td>
+          <td>{status_badge('real' if row.get('ready_pool') else 'missing')}</td>
+          <td>{status_badge('real' if row.get('industry_ready') else 'missing')}</td>
+          <td>{status_badge('real' if row.get('financial_ready') else ('proxy' if row.get('fundamental_source') == 'local_profile' else 'stale'))}</td>
+          <td>{status_badge('real' if row.get('factor_ready') else 'missing')}</td>
+          <td>{status_badge('proxy' if row.get('fundamental_source') == 'local_profile' else 'real')} {_esc(row.get('fundamental_source', '-'))}</td>
           <td>{float(row.get('amount', 0.0)) / 100000000:.2f}亿</td>
         </tr>
         """
@@ -436,6 +518,7 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
             <th>来源</th>
             <th>Ready</th>
             <th>基本面</th>
+            <th>估值状态</th>
             <th>预筛分</th>
           </tr>
         </thead>
@@ -447,8 +530,30 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
     recommendations_section = f"""
     <section class="card">
       <h2>最新前 5 推荐</h2>
-      <div class="subtitle">这是最终输出页，保留阶段、主题、ready 状态和理由。</div>
+      <div class="subtitle">这是最终输出页，保留阶段、主题、ready 状态、证据标签和理由。点击代码或名称进入本地证据页。</div>
       {recommendation_rows}
+    </section>
+    """
+
+    quality_section = f"""
+    <section class="stack">
+      <div class="card">
+        <h2>数据健康</h2>
+        <div class="subtitle">
+          最近检查 #{_esc(quality.get('id', 'N/A'))}，
+          时间 {_esc(quality.get('checked_at', 'N/A'))}，
+          场景 {_esc(quality.get('context', 'N/A'))}。
+        </div>
+        <div class="metrics quality-metrics">{quality_cards}</div>
+      </div>
+      <div class="card">
+        <h2>检查项</h2>
+        <div class="subtitle">红色代表推荐前必须关注；代理和弱证据不会伪装成真实来源。</div>
+        <table>
+          <thead><tr><th>类别</th><th>检查项</th><th>状态</th><th>当前值</th><th>阈值</th></tr></thead>
+          <tbody>{quality_item_rows}</tbody>
+        </table>
+      </div>
     </section>
     """
 
@@ -574,6 +679,23 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
         """
         for row in theme_lifecycle
     )
+    next_day_review_rows = "".join(
+        f"""
+        <tr>
+          <td>{_esc(row['run_id'])}</td>
+          <td>{_esc(row['run_at'])}</td>
+          <td>{stock_link(row['ticker'])} {eastmoney_link(row['ticker'])}</td>
+          <td>{_esc(row['name'])}</td>
+          <td>{float(row['base_price']):.2f}</td>
+          <td>{_esc(row.get('horizon_1d_date') or 'N/A')}</td>
+          <td>{'N/A' if row.get('horizon_1d_price') is None else f"{float(row['horizon_1d_price']):.2f}"}</td>
+          <td>{float(row['horizon_1d']):.2%}</td>
+          <td>{status_badge('green' if float(row['horizon_1d']) > 0 else 'red' if float(row['horizon_1d']) < 0 else 'yellow')} {_esc(row.get('review_note') or '')}</td>
+          <td>{_esc(row.get('prefilter_theme') or 'N/A')}</td>
+        </tr>
+        """
+        for row in next_day_reviews
+    )
     tracking_section = f"""
     <section class="stack">
       <div class="card">
@@ -610,6 +732,14 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
         </table>
       </div>
       <div class="card">
+        <h2>次日推荐复盘</h2>
+        <div class="subtitle">每天推荐后的次日收盘价、次日收益和涨跌标签会在这里沉淀，方便观察胜率和亏损来源。</div>
+        <table>
+          <thead><tr><th>Run</th><th>推荐时间</th><th>代码</th><th>名称</th><th>推荐价</th><th>次日</th><th>次日收盘</th><th>1D</th><th>复盘</th><th>主题</th></tr></thead>
+          <tbody>{next_day_review_rows}</tbody>
+        </table>
+      </div>
+      <div class="card">
         <h2>股票生命周期</h2>
         <div class="subtitle">每只票第几次入池、是否还在池中、连续停留了多久，这里都会累计起来。</div>
         <table>
@@ -630,6 +760,7 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
 
     sections = {
         "overview": overview_section,
+        "quality": quality_section,
         "foundation": foundation_section,
         "pool": pool_section,
         "recommendations": recommendations_section,
@@ -910,13 +1041,57 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
       color: var(--muted);
       font-size: 13px;
     }}
+    .quality-strip {{
+      margin-bottom: 18px;
+    }}
+    .quality-strip-head {{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }}
+    .quality-metrics {{
+      grid-template-columns: repeat(4, 1fr);
+    }}
+    .status-badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      border: 1px solid rgba(31,42,45,0.12);
+      background: rgba(255,255,255,0.65);
+      white-space: nowrap;
+    }}
+    .status-green, .status-real {{
+      color: #1f6f3a;
+      background: rgba(45,122,70,0.12);
+      border-color: rgba(45,122,70,0.28);
+    }}
+    .status-yellow, .status-proxy, .status-stale {{
+      color: #7a5200;
+      background: rgba(185,126,0,0.13);
+      border-color: rgba(185,126,0,0.28);
+    }}
+    .status-red, .status-missing {{
+      color: #8f2d19;
+      background: rgba(169,71,43,0.13);
+      border-color: rgba(169,71,43,0.30);
+    }}
+    .status-weak, .status-weak_evidence {{
+      color: #6a4b00;
+      background: rgba(120,96,28,0.12);
+      border-color: rgba(120,96,28,0.26);
+    }}
     @media (max-width: 1000px) {{
       .hero, .grid {{ grid-template-columns: 1fr; }}
       .flow {{ grid-template-columns: 1fr 1fr; }}
-      .metrics {{ grid-template-columns: 1fr 1fr; }}
+      .metrics, .quality-metrics {{ grid-template-columns: 1fr 1fr; }}
     }}
     @media (max-width: 640px) {{
-      .flow, .metrics {{ grid-template-columns: 1fr; }}
+      .flow, .metrics, .quality-metrics {{ grid-template-columns: 1fr; }}
       h1 {{ font-size: 28px; }}
     }}
   </style>
@@ -939,6 +1114,186 @@ def _render_dashboard(snapshot: dict[str, object], active_tab: str, selected_the
 """
 
 
+def _render_stock_evidence_page(store: ResearchStore, ticker: str) -> str:
+    store.init_db()
+    evidence = store.get_stock_evidence(ticker)
+
+    def status_badge(status: object) -> str:
+        text = str(status or "missing")
+        labels = {
+            "real": "真实",
+            "stale": "过期",
+            "proxy": "代理",
+            "missing": "缺失",
+            "weak_evidence": "弱证据",
+            "green": "正常",
+            "yellow": "注意",
+            "red": "异常",
+        }
+        return f'<span class="status-badge status-{_esc(text)}">{_esc(labels.get(text, text))}</span>'
+
+    def table_from_dict(row: dict[str, object] | None, fields: list[tuple[str, str]]) -> str:
+        if not row:
+            return "<p class=\"subtitle\">暂无记录。</p>"
+        body = "".join(
+            f"<tr><th>{_esc(label)}</th><td>{_esc(row.get(key, ''))}</td></tr>"
+            for key, label in fields
+        )
+        return f"<table><tbody>{body}</tbody></table>"
+
+    universe = evidence.get("universe")
+    factor = evidence.get("factor")
+    financial = evidence.get("financial")
+    industry = evidence.get("industry")
+    weekly = evidence.get("weekly")
+    recommendation = evidence.get("recommendation")
+    status = evidence.get("status", {}) if isinstance(evidence.get("status", {}), dict) else {}
+    display_name = ""
+    if isinstance(universe, dict):
+        display_name = str(universe.get("name", ""))
+    if not display_name and isinstance(recommendation, dict):
+        display_name = str(recommendation.get("name", ""))
+
+    agent_rows = "".join(
+        f"""
+        <tr>
+          <td>{_esc(row.get('agent_name', ''))}</td>
+          <td>{float(row.get('score', 0.0)):.4f}</td>
+          <td>{_esc(row.get('reason', ''))}</td>
+        </tr>
+        """
+        for row in evidence.get("agent_scores", [])
+    )
+    decision_rows = "".join(
+        f"""
+        <tr>
+          <td>{_esc(row.get('created_at', ''))}</td>
+          <td>{_esc(row.get('decision_stage', ''))}</td>
+          <td>{_esc(row.get('decision', ''))}</td>
+          <td>{_esc(row.get('reason_code', ''))}</td>
+          <td>{_esc(row.get('reason_text', ''))}</td>
+        </tr>
+        """
+        for row in evidence.get("decisions", [])
+    )
+    event_rows = "".join(
+        f"""
+        <tr>
+          <td>{_esc(row.get('event_date', ''))}</td>
+          <td>{_esc(row.get('theme_name', ''))}</td>
+          <td>{_esc(row.get('source_type', ''))}</td>
+          <td>{status_badge('real' if row.get('source_url') else 'weak_evidence')}</td>
+          <td><a class="event-link" href="{_esc(_event_link(row))}" target="_blank" rel="noreferrer">{_esc(row.get('title', ''))}</a></td>
+        </tr>
+        """
+        for row in evidence.get("events", [])
+    )
+
+    return f"""<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{_esc(ticker)} 证据链</title>
+  <style>
+    body {{
+      margin: 0;
+      font-family: Georgia, "Songti SC", "STSong", serif;
+      color: #1f2a2d;
+      background: #f4efe6;
+    }}
+    .wrap {{ max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }}
+    .card {{
+      background: #fffaf1;
+      border: 1px solid #d8cbb4;
+      border-radius: 22px;
+      box-shadow: 0 18px 50px rgba(77, 53, 24, 0.08);
+      padding: 20px;
+      margin-bottom: 18px;
+    }}
+    .top {{ display:flex; justify-content:space-between; gap:16px; align-items:flex-start; flex-wrap:wrap; }}
+    h1, h2 {{ margin: 0 0 12px; }}
+    .subtitle {{ color:#69777a; line-height:1.6; }}
+    .grid {{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:18px; }}
+    table {{ width:100%; border-collapse:collapse; font-size:13px; }}
+    th, td {{ text-align:left; padding:10px 8px; border-bottom:1px solid rgba(216,203,180,0.7); vertical-align:top; }}
+    th {{ color:#69777a; font-weight:600; width:160px; }}
+    .mono-link, .event-link {{ color:#1c5660; text-decoration:none; }}
+    .mono-link:hover, .event-link:hover {{ text-decoration:underline; }}
+    .status-badge {{
+      display:inline-flex; border-radius:999px; padding:3px 9px; font-size:12px;
+      border:1px solid rgba(31,42,45,0.12); background:rgba(255,255,255,0.65); white-space:nowrap;
+    }}
+    .status-real, .status-green {{ color:#1f6f3a; background:rgba(45,122,70,0.12); border-color:rgba(45,122,70,0.28); }}
+    .status-proxy, .status-stale, .status-yellow {{ color:#7a5200; background:rgba(185,126,0,0.13); border-color:rgba(185,126,0,0.28); }}
+    .status-missing, .status-red {{ color:#8f2d19; background:rgba(169,71,43,0.13); border-color:rgba(169,71,43,0.30); }}
+    .status-weak_evidence {{ color:#6a4b00; background:rgba(120,96,28,0.12); border-color:rgba(120,96,28,0.26); }}
+    @media (max-width: 850px) {{ .grid {{ grid-template-columns:1fr; }} }}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card top">
+      <div>
+        <h1>{_esc(ticker)} {_esc(display_name)}</h1>
+        <div class="subtitle">单票证据页：行情、财务、行业、主题事件、Agent 分数和投委会决策记录集中展示。</div>
+      </div>
+      <div>
+        <a class="event-link" href="/">返回 Dashboard</a>
+        &nbsp;|&nbsp;
+        <a class="event-link" href="{_esc(_eastmoney_stock_url(ticker))}" target="_blank" rel="noreferrer">打开东方财富</a>
+      </div>
+    </div>
+    <div class="card">
+      <h2>证据状态</h2>
+      <p>
+        行情 {status_badge(status.get('factor'))}
+        财务 {status_badge(status.get('financial'))}
+        行业 {status_badge(status.get('industry'))}
+        估值 {status_badge(status.get('valuation'))}
+        事件 {status_badge(status.get('event'))}
+      </p>
+    </div>
+    <section class="grid">
+      <div class="card">
+        <h2>行情来源</h2>
+        {table_from_dict(factor if isinstance(factor, dict) else None, [('snapshot_date', '快照日期'), ('data_source', '行情来源'), ('synced_at', '同步时间'), ('last_price', '最新价'), ('valuation_percentile', '估值分位'), ('momentum_20d', '20日动量'), ('relative_strength', '相对强度')])}
+      </div>
+      <div class="card">
+        <h2>财务来源</h2>
+        {table_from_dict(financial if isinstance(financial, dict) else None, [('fundamental_source', '财务来源'), ('report_period', '财报期'), ('synced_at', '同步时间'), ('earnings_growth', '利润增速'), ('revenue_growth', '营收增速'), ('roe', 'ROE'), ('valuation_percentile', '估值分位')])}
+      </div>
+      <div class="card">
+        <h2>行业映射</h2>
+        {table_from_dict(industry if isinstance(industry, dict) else None, [('source', '行业来源'), ('synced_at', '同步时间'), ('industry_standard', '行业标准'), ('sector_lv1', '一级'), ('sector_lv2', '二级'), ('sector_lv3', '三级')])}
+      </div>
+      <div class="card">
+        <h2>周度池归属</h2>
+        {table_from_dict(weekly if isinstance(weekly, dict) else None, [('prefilter_week', '周次'), ('build_mode', '建池模式'), ('prefilter_theme', '主题'), ('prefilter_bucket', '分层'), ('prefilter_source', '来源'), ('prefilter_score', '预筛分')])}
+      </div>
+    </section>
+    <div class="card">
+      <h2>最近推荐记录</h2>
+      {table_from_dict(recommendation if isinstance(recommendation, dict) else None, [('run_at', '运行时间'), ('run_data_source', '运行数据源'), ('rank_no', '排名'), ('stage', '阶段'), ('total_score', '总分'), ('prefilter_theme', '周度主题'), ('prefilter_bucket', '池内分层'), ('reasons', '理由'), ('risks', '风险')])}
+    </div>
+    <div class="card">
+      <h2>Agent 分数</h2>
+      <table><thead><tr><th>Agent</th><th>分数</th><th>理由</th></tr></thead><tbody>{agent_rows}</tbody></table>
+    </div>
+    <div class="card">
+      <h2>投委会决策记录</h2>
+      <table><thead><tr><th>时间</th><th>阶段</th><th>决策</th><th>原因码</th><th>原因</th></tr></thead><tbody>{decision_rows}</tbody></table>
+    </div>
+    <div class="card">
+      <h2>主题事件证据</h2>
+      <table><thead><tr><th>日期</th><th>主题</th><th>来源</th><th>链接状态</th><th>内容链接</th></tr></thead><tbody>{event_rows}</tbody></table>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+
 def serve_dashboard(host: str = "127.0.0.1", port: int = 8787) -> None:
     paths = resolve_paths()
     store = ResearchStore(paths.db_path, database_url=paths.database_url)
@@ -946,16 +1301,39 @@ def serve_dashboard(host: str = "127.0.0.1", port: int = 8787) -> None:
     class Handler(BaseHTTPRequestHandler):
         def _serve_dashboard(self, body_only: bool) -> None:
             parsed = urlparse(self.path)
+            query = parse_qs(parsed.query)
+            if parsed.path == "/stock":
+                ticker = query.get("ticker", [""])[0]
+                if not ticker:
+                    self.send_error(400, "ticker is required")
+                    return
+                try:
+                    body = _render_stock_evidence_page(store, ticker).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    if not body_only:
+                        self.wfile.write(body)
+                    return
+                except Exception as exc:
+                    body = f"<h1>Stock Evidence Error</h1><pre>{_esc(exc)}</pre>".encode("utf-8")
+                    self.send_response(500)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    if not body_only:
+                        self.wfile.write(body)
+                    return
             if parsed.path not in {"/", "/index.html"}:
                 self.send_error(404, "Not Found")
                 return
-            query = parse_qs(parsed.query)
             try:
                 snapshot = _load_dashboard_snapshot(paths, store)
                 active_tab = query.get("tab", ["overview"])[0]
                 selected_theme = query.get("theme", [""])[0]
                 foundation_view = query.get("view", ["candidate"])[0]
-                if active_tab not in {"overview", "foundation", "pool", "recommendations", "events", "runs", "tracking"}:
+                if active_tab not in {"overview", "quality", "foundation", "pool", "recommendations", "events", "runs", "tracking"}:
                     active_tab = "overview"
                 if foundation_view not in {"master", "candidate", "ready", "weekly"}:
                     foundation_view = "candidate"

@@ -16,9 +16,11 @@ if __name__ == "file_comparison":
 
 from file_comparison.compare.chunking import (  # noqa: E402
     OMITTED_EQUAL_MARKER,
+    build_compare_blocks_for_llm,
     build_compare_units_for_llm,
     build_comparison_row,
     build_section_rows,
+    group_compare_blocks_into_batches,
     group_compare_units_into_batches,
     preprocess_sections_for_llm,
     remove_fully_equal_lines,
@@ -36,7 +38,13 @@ from file_comparison.compare.extractor import (  # noqa: E402
     format_number_label,
     split_sections,
 )
-from file_comparison.compare.models import CompareUnit, ComparisonRow, PairMatch  # noqa: E402
+from file_comparison.compare.models import (  # noqa: E402
+    CompareBlock,
+    CompareBlockItem,
+    CompareUnit,
+    ComparisonRow,
+    PairMatch,
+)
 from file_comparison.compare.writer import (  # noqa: E402
     build_new_revision_paragraphs,
     build_old_revision_paragraphs,
@@ -49,12 +57,15 @@ from file_comparison.runtime.python_env import maybe_reexec_into_project_python 
 
 __all__ = (
     "CompareUnit",
+    "CompareBlock",
+    "CompareBlockItem",
     "ComparisonRow",
     "PairMatch",
     "Section",
     "apply_section_skip_rules",
     "build_output_document_paths",
     "build_output_document_stem",
+    "build_compare_blocks_for_llm",
     "build_compare_units_for_llm",
     "build_comparison_row",
     "build_new_revision_paragraphs",
@@ -64,6 +75,7 @@ __all__ = (
     "display_text_with_subchapter",
     "extract_fund_name_or_empty",
     "format_number_label",
+    "group_compare_blocks_into_batches",
     "group_compare_units_into_batches",
     "main",
     "month_label",

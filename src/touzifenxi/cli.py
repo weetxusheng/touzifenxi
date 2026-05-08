@@ -20,6 +20,33 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("init-db", help="Initialize SQLite storage.")
     subparsers.add_parser("paths", help="Show important system paths.")
     subparsers.add_parser("db-info", help="Show active/configured database backend status.")
+    install_automation_parser = subparsers.add_parser(
+        "install-automation", help="Install or refresh the macOS launchd daily-cycle automation."
+    )
+    install_automation_parser.add_argument(
+        "--runtime-root",
+        default=None,
+        help="Safe runtime copy outside protected folders. Defaults to ~/Projects/touzifenxi-auto.",
+    )
+    install_automation_parser.add_argument(
+        "--no-load",
+        action="store_true",
+        help="Write runtime/script/plist but do not load the launchd job.",
+    )
+    install_automation_parser.add_argument(
+        "--no-kickstart",
+        action="store_true",
+        help="Do not immediately kickstart the launchd job after loading it.",
+    )
+    automation_status_parser = subparsers.add_parser(
+        "automation-status", help="Show launchd automation status, paths, and recent logs."
+    )
+    automation_status_parser.add_argument(
+        "--runtime-root",
+        default=None,
+        help="Runtime root to inspect. Defaults to ~/Projects/touzifenxi-auto.",
+    )
+    automation_status_parser.add_argument("--tail", type=int, default=30, help="Number of recent log lines to show.")
     migrate_parser = subparsers.add_parser(
         "migrate-to-postgres", help="Migrate all SQLite history into the configured PostgreSQL database."
     )
@@ -32,6 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_web_parser.add_argument("--host", default="127.0.0.1", help="Host to bind the local dashboard server.")
     serve_web_parser.add_argument("--port", type=int, default=8787, help="Port to bind the local dashboard server.")
     subparsers.add_parser("performance", help="Show recommendation performance coverage and basic win-rate stats.")
+    subparsers.add_parser("data-quality", help="Run data source/freshness/proxy health checks and persist the result.")
     validate_skill_parser = subparsers.add_parser(
         "validate-skill", help="Validate one skill directory against the project packaging rules."
     )
@@ -154,6 +182,32 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Sync from the full filtered candidate pool instead of only missing factor rows.",
     )
+    sync_weekly_factors_parser = subparsers.add_parser(
+        "sync-weekly-factors", help="Sync latest daily factors for the current weekly 50-stock pool first."
+    )
+    sync_weekly_factors_parser.add_argument(
+        "--network-mode",
+        choices=["direct", "inherit"],
+        default="direct",
+        help="Use direct connection for market data or inherit system proxy settings.",
+    )
+    sync_weekly_factors_parser.add_argument(
+        "--min-coverage",
+        type=int,
+        default=45,
+        help="Do not refetch when weekly-pool latest-factor coverage already reaches this count.",
+    )
+    sync_weekly_factors_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Refetch all weekly-pool members even when coverage is already sufficient.",
+    )
+    sync_weekly_factors_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=8,
+        help="Number of weekly-pool stocks to fetch per save batch.",
+    )
     sync_foundation_parser = subparsers.add_parser(
         "sync-foundation", help="Batch sync industries, financials, and daily factors for the candidate pool."
     )
@@ -232,6 +286,27 @@ def build_parser() -> argparse.ArgumentParser:
         "update-returns", help="Update forward returns for stored recommendations."
     )
     update_returns_parser.add_argument(
+        "--network-mode",
+        choices=["direct", "inherit"],
+        default="direct",
+        help="Use direct connection for market data or inherit system proxy settings.",
+    )
+    update_returns_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum due recommendations to update in this invocation.",
+    )
+    review_1d_parser = subparsers.add_parser(
+        "review-1d", help="Show next-day price review for recent recommendations."
+    )
+    review_1d_parser.add_argument("--limit", type=int, default=20, help="Maximum recommendation rows to display.")
+    review_1d_parser.add_argument(
+        "--update-first",
+        action="store_true",
+        help="Run update-returns before showing the review.",
+    )
+    review_1d_parser.add_argument(
         "--network-mode",
         choices=["direct", "inherit"],
         default="direct",
@@ -331,6 +406,59 @@ def main() -> None:
         print(f"sqlite_url: {status['sqlite_url']}")
         print(f"postgres_schema_sql: {status['postgres_schema_sql']}")
         print(f"table_count: {status['table_count']}")
+        return
+
+    if args.command == "install-automation":
+        from .automation import install_daily_cycle_automation
+
+        result = install_daily_cycle_automation(
+            paths.project_root,
+            runtime_root=args.runtime_root,
+            load=not args.no_load,
+            kickstart=not args.no_kickstart,
+        )
+        print("automation_label: com.touzifenxi.daily-cycle")
+        print(f"source_root: {result.paths.source_root}")
+        print(f"runtime_root: {result.paths.runtime_root}")
+        print(f"runner_path: {result.paths.runner_path}")
+        print(f"plist_path: {result.paths.plist_path}")
+        print(f"stdout_log: {result.paths.stdout_log_path}")
+        print(f"stderr_log: {result.paths.stderr_log_path}")
+        print(f"copied_runtime: {int(result.copied_runtime)}")
+        print(f"launchd_loaded: {int(result.loaded)}")
+        print(f"kickstarted: {int(result.kickstarted)}")
+        if result.commands:
+            print("launchd_commands:")
+            for command in result.commands:
+                print(f"- {command}")
+        return
+
+    if args.command == "automation-status":
+        from .automation import default_automation_paths, get_automation_status
+
+        automation_paths = default_automation_paths(paths.project_root, runtime_root=args.runtime_root)
+        status = get_automation_status(automation_paths, tail_lines=args.tail)
+        launchd = status["launchd"]
+        print(f"automation_label: {status['label']}")
+        print(f"source_root: {status['source_root']}")
+        print(f"runtime_root: {status['runtime_root']}")
+        print(f"runner_path: {status['runner_path']}")
+        print(f"plist_path: {status['plist_path']}")
+        print(f"stdout_log: {status['stdout_log_path']}")
+        print(f"stderr_log: {status['stderr_log_path']}")
+        print(
+            "launchd: "
+            f"state={launchd.get('state', 'unknown')} | runs={launchd.get('runs', 'N/A')} | "
+            f"last_exit_code={launchd.get('last_exit_code', 'N/A')}"
+        )
+        if launchd.get("error"):
+            print(f"launchd_error: {launchd['error']}")
+        print("stdout_tail:")
+        for line in status["stdout_tail"]:
+            print(f"  {line}")
+        print("stderr_tail:")
+        for line in status["stderr_tail"]:
+            print(f"  {line}")
         return
 
     if args.command == "validate-skill":
@@ -439,9 +567,18 @@ def main() -> None:
     if args.command == "performance":
         store.init_db()
         summary = store.get_performance_summary()
+        data_quality = store.get_latest_data_quality_summary()
         print(f"研究运行数: {summary['runs']}")
         print(f"推荐记录数: {summary['recommendations']}")
         print(f"待更新收益记录: {summary['pending_returns']}")
+        if data_quality:
+            quality_summary = data_quality.get("summary", {})
+            print(
+                f"数据健康: status={data_quality['status']} | checked_at={data_quality['checked_at']} | "
+                f"context={data_quality['context']} | factor_date={quality_summary.get('latest_factor_snapshot', 'N/A')} | "
+                f"weekly_factor={quality_summary.get('weekly_pool_factor_covered', 0)}/{quality_summary.get('weekly_pool_size', 0)} | "
+                f"event_url_ratio={float(quality_summary.get('event_url_ratio', 0.0)):.2%}"
+            )
         print(
             f"收益状态: updatable={summary['return_status']['updatable']} | "
             f"waiting={summary['return_status']['waiting']} | "
@@ -526,6 +663,23 @@ def main() -> None:
                 f"ready_pool={run['ready_pool_size']} | fallback_pool={run['fallback_pool_size']} | coverage={run['coverage_ratio']:.2%} | "
                 f"router_mode={run['router_mode']} | active_themes={run['active_theme_count']} | bypass={run['bypass_count']}"
             )
+        return
+
+    if args.command == "data-quality":
+        from .data_quality import run_data_quality_check
+
+        store.init_db()
+        quality_run_id, result = run_data_quality_check(store, context="manual_cli")
+        print(f"data_quality_run_id: {quality_run_id}")
+        print(f"status: {result.status}")
+        print(
+            f"summary: factor_date={result.summary.get('latest_factor_snapshot', 'N/A')} | "
+            f"weekly_factor={result.summary.get('weekly_pool_factor_covered', 0)}/{result.summary.get('weekly_pool_size', 0)} | "
+            f"weekly_real_financial={result.summary.get('weekly_pool_real_financial', 0)}/{result.summary.get('weekly_pool_size', 0)} | "
+            f"event_url_ratio={float(result.summary.get('event_url_ratio', 0.0)):.2%}"
+        )
+        for item in result.items:
+            print(f"- {item.category}/{item.name}: {item.status} | {item.value_text} | threshold={item.threshold_text}")
         return
 
     if args.command == "coverage":
@@ -692,6 +846,23 @@ def main() -> None:
         print(f"日因子已同步: {count} | data_source: {data_source}")
         return
 
+    if args.command == "sync-weekly-factors":
+        store.init_db()
+        pipeline = DailyResearchPipeline(paths=paths, store=store)
+        result = pipeline.sync_weekly_pool_factors(
+            network_mode=args.network_mode,
+            min_coverage=args.min_coverage,
+            force=args.force,
+            batch_size=args.batch_size,
+        )
+        print(
+            f"周度池日因子同步: target={result['target_snapshot_date']} | "
+            f"coverage={result['before_covered']}->{result['after_covered']}/{result['pool_size']} | "
+            f"synced={result['synced_count']} | data_source={result['data_source']} | "
+            f"quality={result['quality_status']}"
+        )
+        return
+
     if args.command == "sync-foundation":
         store.init_db()
         pipeline = DailyResearchPipeline(paths=paths, store=store)
@@ -761,6 +932,8 @@ def main() -> None:
                 horizon_5d=returns["horizon_5d"],
                 horizon_20d=returns["horizon_20d"],
                 horizon_60d=returns["horizon_60d"],
+                horizon_1d_date=returns.get("horizon_1d_date"),
+                horizon_1d_price=returns.get("horizon_1d_price"),
             )
             updated_returns += 1
 
@@ -843,6 +1016,11 @@ def main() -> None:
             weekly_run_id = int(latest_weekly_pool["id"])
             weekly_result = None
 
+        weekly_factor_sync = pipeline.sync_weekly_pool_factors(
+            network_mode=args.network_mode,
+            min_coverage=45,
+        )
+
         result, report_path, run_id = pipeline.run(
             PipelineConfig(
                 data_source="akshare",
@@ -872,6 +1050,11 @@ def main() -> None:
             f"factors={total_factors} | factor_source={factor_source}"
         )
         print(f"周度池: id={weekly_run_id}")
+        print(
+            f"周度池日因子: target={weekly_factor_sync['target_snapshot_date']} | "
+            f"coverage={weekly_factor_sync['before_covered']}->{weekly_factor_sync['after_covered']}/{weekly_factor_sync['pool_size']} | "
+            f"synced={weekly_factor_sync['synced_count']} | source={weekly_factor_sync['data_source']}"
+        )
         if weekly_result is not None:
             if refresh_today:
                 print(
@@ -920,7 +1103,7 @@ def main() -> None:
 
     if args.command == "update-returns":
         store.init_db()
-        pending = store.get_due_return_updates()
+        pending = store.get_due_return_updates(limit=args.limit)
         updated = 0
         for recommendation_id, ticker, run_at, base_price in pending:
             returns = fetch_forward_returns(
@@ -935,9 +1118,56 @@ def main() -> None:
                 horizon_5d=returns["horizon_5d"],
                 horizon_20d=returns["horizon_20d"],
                 horizon_60d=returns["horizon_60d"],
+                horizon_1d_date=returns.get("horizon_1d_date"),
+                horizon_1d_price=returns.get("horizon_1d_price"),
             )
             updated += 1
         print(f"收益更新完成: {updated}")
+        return
+
+    if args.command == "review-1d":
+        store.init_db()
+        if args.update_first:
+            pending = store.get_due_return_updates()
+            updated = 0
+            for recommendation_id, ticker, run_at, base_price in pending:
+                returns = fetch_forward_returns(
+                    ticker=ticker,
+                    run_date=run_at,
+                    base_price=base_price,
+                    network_mode=args.network_mode,
+                )
+                store.update_recommendation_returns(
+                    recommendation_id=recommendation_id,
+                    horizon_1d=returns["horizon_1d"],
+                    horizon_5d=returns["horizon_5d"],
+                    horizon_20d=returns["horizon_20d"],
+                    horizon_60d=returns["horizon_60d"],
+                    horizon_1d_date=returns.get("horizon_1d_date"),
+                    horizon_1d_price=returns.get("horizon_1d_price"),
+                )
+                updated += 1
+            print(f"收益更新完成: {updated}")
+        rows = store.get_recent_next_day_reviews(limit=args.limit)
+        if not rows:
+            print("暂无可复盘的次日价格记录。")
+            return
+        wins = sum(1 for row in rows if float(row["horizon_1d"]) > 0)
+        print(f"次日复盘: rows={len(rows)} | up={wins} | down_or_flat={len(rows) - wins} | win_rate={wins / len(rows):.2%}")
+        current_run_id = None
+        for row in rows:
+            if current_run_id != row["run_id"]:
+                current_run_id = row["run_id"]
+                print(f"Run {row['run_id']} | 推荐时间 {row['run_at']}")
+            ret = float(row["horizon_1d"])
+            price = "N/A" if row["horizon_1d_price"] is None else f"{float(row['horizon_1d_price']):.2f}"
+            review_note = row["review_note"] or ("次日上涨" if ret > 0 else "次日下跌" if ret < 0 else "次日持平")
+            print(
+                f"- #{row['rank_no']} {row['ticker']} {row['name']} | base={row['base_price']:.2f} | "
+                f"next_date={row['horizon_1d_date'] or 'N/A'} | next_close={price} | "
+                f"1d={ret:.2%} | {review_note} | "
+                f"theme={row['prefilter_theme'] or 'N/A'} | bucket={row['prefilter_bucket'] or 'N/A'}"
+            )
         return
 
     if args.command == "list-candidates":
@@ -1022,6 +1252,17 @@ def main() -> None:
                         f"周度池刷新: id={weekly_run_id} | week={weekly_result.prefilter_week} | "
                         f"added={weekly_result.refresh_added} | removed={weekly_result.refresh_removed}"
                     )
+        weekly_factor_sync = None
+        if not args.disable_weekly_pool and args.data_source in {"akshare", "auto"}:
+            weekly_factor_sync = pipeline.sync_weekly_pool_factors(
+                network_mode=args.network_mode,
+                min_coverage=45,
+            )
+            print(
+                f"周度池日因子: target={weekly_factor_sync['target_snapshot_date']} | "
+                f"coverage={weekly_factor_sync['before_covered']}->{weekly_factor_sync['after_covered']}/{weekly_factor_sync['pool_size']} | "
+                f"synced={weekly_factor_sync['synced_count']} | source={weekly_factor_sync['data_source']}"
+            )
         top_n = args.top_n or 5
         result, report_path, run_id = pipeline.run(
             PipelineConfig(
@@ -1051,6 +1292,7 @@ def main() -> None:
             f"主题路由: mode={result.router_mode} | active_themes={','.join(result.active_themes) if result.active_themes else 'N/A'} | "
             f"bypass_count={result.bypass_count}"
         )
+        print(f"数据健康: {result.data_quality_status or 'N/A'}")
         if args.data_source in {"akshare", "auto"}:
             entry_mode = "weekly_pool" if not args.disable_weekly_pool else "synced_universe_debug"
             print(f"研究入口: {entry_mode}")
@@ -1066,10 +1308,27 @@ def main() -> None:
         print("")
         print(f"每日推荐前 {top_n}:")
         for index, rec in enumerate(recommendations, start=1):
+            evidence = store.get_stock_evidence(rec.stock.ticker)
+            evidence_status = evidence.get("status", {})
+            factor = evidence.get("factor") if isinstance(evidence.get("factor"), dict) else {}
+            financial = evidence.get("financial") if isinstance(evidence.get("financial"), dict) else {}
+            industry = evidence.get("industry") if isinstance(evidence.get("industry"), dict) else {}
             print(
                 f"{index}. {rec.stock.ticker} {rec.stock.name} | 综合得分: {rec.total_score:.4f} | 阶段: {rec.stage} | 现价: {rec.stock.last_price:.2f}"
             )
             print(f"   基本面数据源: {rec.stock.fundamental_source}")
+            print(
+                f"   证据状态: factor={evidence_status.get('factor', 'missing')} | "
+                f"financial={evidence_status.get('financial', 'missing')} | "
+                f"industry={evidence_status.get('industry', 'missing')} | "
+                f"valuation={evidence_status.get('valuation', 'missing')} | "
+                f"event={evidence_status.get('event', 'missing')}"
+            )
+            print(
+                f"   来源明细: 行情={factor.get('data_source', rec.stock.data_source)} / 快照={factor.get('snapshot_date', 'N/A')} / 同步={factor.get('synced_at', 'N/A')} | "
+                f"财务={financial.get('fundamental_source', rec.stock.fundamental_source)} / 财报期={financial.get('report_period', 'N/A')} / 同步={financial.get('synced_at', 'N/A')} | "
+                f"行业={industry.get('source', 'N/A')} / 同步={industry.get('synced_at', 'N/A')}"
+            )
             print(
                 f"   行业映射: {'formal' if rec.stock.industry_ready else 'fallback'} | Ready Pool: {int(rec.stock.ready_pool)}"
             )

@@ -18,8 +18,21 @@ class FallbackResult:
     error: str = ""
 
 
+def rows_from_compare_blocks(batch: ChapterBatch) -> list[ComparisonRow]:
+    """把块级 diff 上下文转换为本地兜底对照行。"""
+    return [
+        ComparisonRow(
+            chapter=block.chapter_title,
+            subchapter=block.parent_path,
+            old_text="\n".join(item.text for item in block.old_items).strip() or "新增",
+            new_text="\n".join(item.text for item in block.new_items).strip() or "删除",
+        )
+        for block in batch.compare_blocks
+    ]
+
+
 def rows_from_compare_units(batch: ChapterBatch) -> list[ComparisonRow]:
-    """把条目级 diff 单元转换为本地兜底对照行。"""
+    """兼容旧 unit 结构的 fallback。"""
     return [
         ComparisonRow(
             chapter=unit.chapter_title,
@@ -33,6 +46,9 @@ def rows_from_compare_units(batch: ChapterBatch) -> list[ComparisonRow]:
 
 def run_batch_fallback(batch: ChapterBatch) -> FallbackResult:
     """按 compare-units 优先、规则 diff 次之的顺序执行 fallback。"""
+    if batch.compare_blocks:
+        rows = rows_from_compare_blocks(batch)
+        return FallbackResult(name="compare-blocks", rows=rows, success=bool(rows))
     if batch.compare_units:
         rows = rows_from_compare_units(batch)
         return FallbackResult(name="compare-units", rows=rows, success=bool(rows))

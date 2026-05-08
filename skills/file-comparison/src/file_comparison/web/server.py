@@ -59,14 +59,16 @@ def hydrate_status_from_checkpoints(run_dir: Path, payload: dict) -> dict:
             continue
         pair_id = str(pair.get("pair_id", "")).strip()
         hydrate_pair_artifacts(run_dir, pair)
-        pair_planned_batch_count = planned_batch_count_from_batch_plan(run_dir, pair_id)
+        planned_batches = planned_batch_payloads_from_batch_plan(run_dir, pair_id)
+        pair_planned_batch_count = len(planned_batches)
         if pair_planned_batch_count <= 0:
             pair_planned_batch_count = int(pair.get("planned_batch_count", 0) or len(pair.get("batches", []) or []))
         pair["planned_batch_count"] = pair_planned_batch_count
         planned_batch_count += pair_planned_batch_count
         checkpoint_path = run_dir / "checkpoints" / f"pair_{pair_id}_checkpoint.json"
         if not pair_id or not checkpoint_path.exists():
-            pair_batches = pair.get("batches", []) if isinstance(pair.get("batches"), list) else []
+            pair_batches = planned_batches or (pair.get("batches", []) if isinstance(pair.get("batches"), list) else [])
+            pair["batches"] = pair_batches
             all_batches.extend(pair_batches)
             continue
         try:
@@ -76,7 +78,8 @@ def hydrate_status_from_checkpoints(run_dir: Path, payload: dict) -> dict:
         entries = checkpoint.get("entries", [])
         if not isinstance(entries, list):
             continue
-        batches = [batch_payload_from_checkpoint_entry(entry) for entry in entries if isinstance(entry, dict)]
+        checkpoint_batches = [batch_payload_from_checkpoint_entry(entry) for entry in entries if isinstance(entry, dict)]
+        batches = merge_planned_and_checkpoint_batches(planned_batches, checkpoint_batches)
         pair["batches"] = batches
         pair["completed_batch_count"] = sum(1 for batch in batches if batch["status"] == "success")
         pair["failed_batch_count"] = sum(1 for batch in batches if batch["status"] not in {"success", "pending"})
@@ -94,19 +97,68 @@ def hydrate_status_from_checkpoints(run_dir: Path, payload: dict) -> dict:
     return refresh_running_duration(payload)
 
 
-def planned_batch_count_from_batch_plan(run_dir: Path, pair_id: str) -> int:
-    """从 batch_plan.json 读取稳定的计划批次数。"""
+def planned_batch_payloads_from_batch_plan(run_dir: Path, pair_id: str) -> list[dict]:
+    """从 batch_plan.json 读取完整计划批次骨架。"""
     if not pair_id:
-        return 0
+        return []
     batch_plan_path = run_dir / "pairs" / pair_id / "extracted" / "batch_plan.json"
     if not batch_plan_path.exists():
-        return 0
+        return []
     try:
         payload = json.loads(batch_plan_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return 0
+        return []
     batches = payload.get("batches", [])
-    return len(batches) if isinstance(batches, list) else 0
+    if not isinstance(batches, list):
+        return []
+    planned_batches: list[dict] = []
+    for index, batch in enumerate(batches, start=1):
+        if not isinstance(batch, dict):
+            continue
+        batch_id = str(batch.get("batch_id", "") or f"batch-{index:03d}").strip()
+        planned_batches.append(
+            {
+                "batch_id": batch_id,
+                "status": "pending",
+                "chapter_range": list(batch.get("chapter_numbers", [])) if isinstance(batch.get("chapter_numbers"), list) else [],
+                "attempt_count": 0,
+                "provider": "",
+                "error": "",
+                "duration_ms": 0,
+                "total_duration_ms": 0,
+                "provider_available": True,
+                "call_status": "",
+                "repair_used": False,
+                "fallback_name": "",
+                "resume_from": "",
+            }
+        )
+    return planned_batches
+
+
+def planned_batch_count_from_batch_plan(run_dir: Path, pair_id: str) -> int:
+    """从 batch_plan.json 读取稳定的计划批次数。"""
+    return len(planned_batch_payloads_from_batch_plan(run_dir, pair_id))
+
+
+def merge_planned_and_checkpoint_batches(planned_batches: list[dict], checkpoint_batches: list[dict]) -> list[dict]:
+    """以计划批次为完整骨架，用 checkpoint 状态覆盖已执行批次。"""
+    if not planned_batches:
+        return checkpoint_batches
+    checkpoint_by_id = {str(batch.get("batch_id", "")).strip(): batch for batch in checkpoint_batches}
+    merged: list[dict] = []
+    seen: set[str] = set()
+    for planned_batch in planned_batches:
+        batch_id = str(planned_batch.get("batch_id", "")).strip()
+        checkpoint_batch = checkpoint_by_id.get(batch_id)
+        if checkpoint_batch is not None:
+            merged.append({**planned_batch, **checkpoint_batch})
+            seen.add(batch_id)
+            continue
+        merged.append(planned_batch)
+        seen.add(batch_id)
+    merged.extend(batch for batch in checkpoint_batches if str(batch.get("batch_id", "")).strip() not in seen)
+    return merged
 
 
 def hydrate_pair_artifacts(run_dir: Path, pair: dict) -> None:

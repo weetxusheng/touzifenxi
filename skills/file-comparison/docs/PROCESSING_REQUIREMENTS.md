@@ -17,8 +17,8 @@
 4. 前置规则清洗：剔除或裁剪不参与正文对比的内容。
 5. 前置 diff：只保留发生变化的章节、条目和行。
 6. LLM 批次识别：按章节批次发送给模型，默认每批 `chapter_batch_size = 4` 个一级章节；如果单批正文超过 `chapter_batch_char_limit = 10000` 字符，自动改为每批 `oversized_chapter_batch_size = 2` 个一级章节。
-7. 模型结果解析：模型返回 compare unit 级变更判定，系统校验 JSON schema、修复可修复结构问题、记录失败。
-8. 回退处理：模型不可用时优先使用 compare-units，再回退到原始规则 diff。
+7. 模型结果解析：模型返回 compare block 级操作集，系统校验 JSON schema、修复可修复结构问题、记录失败。
+8. 回退处理：模型不可用时优先使用 compare-blocks，再回退到原始规则 diff。
 9. 后置清洗：过滤纯编号变化、完全一致小行、重复基金名称行。
 10. Word 渲染：按对照表样式输出 `.docx/.doc`。
 11. 过程落盘：保存请求、响应、解析、修复、checkpoint、状态和预处理摘要。
@@ -42,7 +42,10 @@
   - 该规则只针对 `.docx` XML 抽取；`.doc` 仍按 `textutil` 转文本结果为准。
 - `（一）基金管理人简况`、`（二）基金管理人的权利与义务` 这类中文括号标题属于结构标题，必须作为二级上下文分隔保留。
 - `（16）`、`（24）` 这类数字括号条款属于正文条款编号，默认不作为独立分隔层级，避免基金权利义务条款被切碎。
+- `三、基金由管理人依照...募集` 这类中文编号长句属于正文条款，不得当作父标题；它和后续续写段落必须作为同一个 root sibling 条目送给模型。
 - 标题对齐时忽略行首编号，只用标题正文匹配；例如旧版 `（一）基金管理人简况` 与新版 `（二）基金管理人简况` 应识别为同一内容块。
+- 父标题对齐也必须忽略行首编号，只用标题正文匹配；例如旧版 `十六、其他` 与新版 `十七、其他` 应识别为同一父标题块。
+- 如果新文在同级父标题中插入一节导致后续父标题编号顺延，Python 预处理必须把顺延后的原父标题合并到同一 compare block；若块内正文完全一致，则不送模型、不展示。
 - 最终展示时必须保留左右原始编号，不允许为了对齐而把新版标题强行改成旧版编号，或把旧版标题强行改成新版编号。
 - 多行二级标题（例如 `一、基金管理人` + `（一）基金管理人简况`）如果已经出现在正文开头，渲染时不得再次补一遍，避免标题重复。
 - 多行二级标题中各行编号都要参与归一化匹配；例如 `五、公开披露的基金信息 / （四）基金净值信息` 与 `五、公开披露的基金信息 / （二）基金净值信息` 应按同一小节对照展示，但左右列仍保留各自原编号。
@@ -69,7 +72,10 @@
 - 完全相同章节不进入 LLM。
 - 同一章节内只保留有变化的二级条目或小项。
 - 同一个条目内，完全一致的小行默认不展示。
-- 如果相同行位于两个变化块中间，会保留 `……` 作为省略标记，表示中间内容仍存在但无变化。
+- 如果相同行位于两个变化块中间，会保留 `......` 作为省略标记，表示中间内容仍存在但无变化。
+- `......` 只用于多行或多条目之间省略连续未变化内容，不用于截断单句或单个条目内部的前后文。
+- `1、2、3、...` 这类普通数字条款如果正文未变化，应按连续未变化内容省略，不得因为看起来像标题而整段保留。
+- 如果同一行或同一条目里只有局部词句变化，最终左右列仍保留完整原文；具体改动点由 Word 写出层用局部样式标注。
 - 仅编号变化不展示，例如旧版 `（25）` 变成新版 `（24）`，但正文不变时跳过。
 - 如果一个结构标题编号发生顺延但标题正文和块内正文完全不变，可以按“仅编号变化”过滤；如果块内正文也发生变化，则展示该块，并保留左右各自的原始结构标题。
 
@@ -79,39 +85,42 @@
 
 - `llm_mode = responses` 时启用模型。
 - `llm_mode = rule` 时只走本地规则。
-- 模型输入不是整份文档，而是前置 diff 后的 compare units。
-- 模型输出不是最终对照表内容，而是每个 compare unit 的变更判定结果；最终左右展示内容由程序回查原始 compare unit 后生成。
-- `old_focus_text/new_focus_text` 只作为变化锚点和排查线索，禁止替代最终左右列正文；最终正文必须保留原始 compare unit 的上下文，再按明确规则剔除真实未变小行。
-- 模型返回的 `chapter/subchapter` 只作辅助，最终章节名与二级标题优先使用本地 compare unit 的完整标题，避免模型把 `第二部分 释义` 截短成 `第二部分`。
-- 模型返回的 `unchanged_lines` 只允许用于删除/新增项里的编号顺延清洗；普通 `replace/rewrite` 不允许用该字段裁剪结构性上下文。
-- 如果模型把条目误判为 `delete_item/add_item`，但本地 compare unit 的左右两侧都有正文，则判定为 `postprocess_error`，记录错误并切换下一个 provider 重试；禁止代码静默兜底改写为正式结果。
+- 模型输入不是整份文档，而是前置切分后的 compare blocks。
+- 每个 compare block 对应“同一父标题下的一组 sibling 条目”，Python 只保留结构上下文，不提前配对 old/new。
+- compare block 内的 `old_items` 与 `new_items` 使用左右独立的 item id 序列；旧侧从 `old-001` 起，新侧从 `new-001` 起，不允许新侧编号接在旧侧编号之后。
+- 模型输出不是最终对照表内容，而是每个 compare block 的 `operations` 操作集；最终左右展示内容由程序按 `block_id + item_id` 回查原始条目后生成。
+- `old_focus_text/new_focus_text` 只作为变化锚点和排查线索，禁止替代最终左右列正文。
+- 模型返回的 `chapter/parent_path` 只作辅助，最终章节名与父标题优先使用本地 compare block 的完整标题，避免模型把 `第二部分 释义` 截短成 `第二部分`。
+- 模型必须对每个 compare block 做覆盖检查：排除完全一致或仅编号顺延的匹配项后，未匹配的旧侧条目必须返回 `delete`，未匹配的新侧条目必须返回 `add`，不得漏掉单侧独有条目。
+- 定义项优先按冒号前的定义名称对齐；例如旧侧 `基金份额发售公告` 在新侧不存在时应返回删除，旧侧 `基金产品资料概要` 与新侧同名定义项即使编号变化也应作为同一项判断。
+- 后处理会再次执行覆盖检查：模型漏报的未覆盖旧侧条目会补 `delete`，未覆盖新侧条目会补 `add`；能被完全一致或仅编号顺延条目解释的未覆盖项不会展示。
 
 ### 模型输出结构
 
-- 顶层字段为 `units`。
-- 每个 unit 必须包含：
-  - `unit_id`：对应输入 compare unit 的标识，程序用它回查原始旧文和新文。
+- 顶层字段为 `blocks`。
+- 每个 block 必须包含：
+  - `block_id`：对应输入 compare block 的标识，程序用它回查原始 old/new sibling 条目。
   - `chapter`：所属一级章节。
-  - `subchapter`：所属二级标题或条目标题。
-  - `change_type`：真实变化类型，例如 `replace`、`rewrite`、`add_item`、`delete_item`、`numbering_only`。
-  - `display_strategy`：展示策略，例如 `compare_changed_only`、`whole_replace`、`delete_old_only`、`add_new_only`、`skip`。
-  - `numbering_only`：如果只是编号变化则为 `true`。
-  - `unchanged_lines`：同一 unit 中实际未变的小行；编号上移时可不带原编号，程序会忽略行首编号比对。
+  - `parent_path`：所属父标题路径。
+  - `operations`：块内操作集。
+- 每个 operation 必须包含：
+  - `type`：`match`、`renumber_only`、`add`、`delete`、`replace` 之一。
+  - `old_item_ids` / `new_item_ids`：引用输入 block 中的条目 id。
   - `old_focus_text` / `new_focus_text`：真正变化的锚点短句；可为空，程序会回查原文。
   - `confidence`：模型对判定的置信度。
+  - `reason`：简短判断理由，便于排障。
 - 模型不得直接生成最终 Word 表格左右列内容。
-- 对“删除一项导致后续编号上移”的场景，模型应返回 `change_type = delete_item`、`display_strategy = delete_old_only`，并把后续未变正文写入 `unchanged_lines`。
-- 系统仍兼容旧版 `chapters/subsections` 解析，用于历史 run 和旧响应修复，但新请求 schema 只要求 `units`。
+- 对“插入一项导致后续编号顺延”的场景，模型应拆成 `add + renumber_only/match`，而不是把整段误判成单条 `replace`。
+- 系统仍兼容旧版 `chapters/subsections` 和 `units` 解析，用于历史 run 和旧响应修复，但新请求 schema 只要求 `blocks`。
 
 ### 批次策略
 
 - 默认每次发送 `chapter_batch_size = 4` 个一级章节。
 - 单个 batch 的左右正文合计字符数超过 `chapter_batch_char_limit = 10000` 时，先按 `oversized_chapter_batch_size = 2` 个一级章节重新拆分。
 - 如果 2 个一级章节仍超过阈值，继续拆到单章；单章自身超过阈值时不再继续切小，避免把同一章节内容切碎导致模型误判。
-- 单个 batch 的 compare unit 数超过 `max_compare_units_per_batch = 4` 时，会按 unit 顺序继续拆分，避免模型需要一次性输出过多 subsection 而截断。
-- compare unit 拆分只拆条目边界，不切碎同一个 unit 的正文。
-- 单个 compare unit 的左右正文合计字符数超过 `max_compare_unit_chars = 10000` 时，会按行/段落边界拆成 `part-001 / part-002` 等多个 part。
-- unit part 独立调用模型、独立落盘，并按原始 part 顺序合并；如果单行本身超过阈值，保留整行不做硬切字。
+- 单个 batch 的 compare block 数超过 `max_compare_blocks_per_batch = 4` 时，只允许在不同一级章节之间拆分；同一章节内的 compare blocks 必须保持在同一 batch。
+- `max_compare_block_chars` 作为历史兼容配置保留，但当前主流程不再把单个 compare block 拆成 part；同一章节、同一父标题块的结构完整性优先级高于字数限制。
+- 如果单章自身超过字符阈值，仍保持单章完整发送，避免父标题顺延、新增插入、后续正文一致等关系被跨 batch 切断。
 - 单个文件对内部默认并行 `execution.per_pair_max_workers = 2` 个 batch。
 - batch 的最终结果按原始 batch 顺序合并，不按完成时间排序。
 
@@ -138,7 +147,7 @@
 - 可修复的 JSON/结构问题会进入 repair 流程。
 - fatal 错误不重试。
 - 正式对照文档只允许使用 `final_status.json` 指向的模型成功解析文件，例如 `parsed.attempt-02.kimi-code.json`，或成功修复后的结构化结果。
-- 本地 `compare-units` / `rule` fallback 仅用于诊断排查，必须写入 `fallback.diagnostic.json`，不得标记为成功，不得进入正式 rows，不得生成正式 `comparison.docx`。
+- 本地 `compare-blocks` / `rule` fallback 仅用于诊断排查，必须写入 `fallback.diagnostic.json`，不得标记为成功，不得进入正式 rows，不得生成正式 `comparison.docx`。
 - 如果任一 batch 只有 fallback 诊断结果而没有模型可用结果，整个文件对必须失败，避免把本地推断内容误当作模型识别结论。
 
 ### 过程文件
@@ -251,7 +260,7 @@
 ### 过程排查
 
 - `extracted/preprocess_summary.json` 用于查看前置压缩、签署页裁剪、发送字符数。
-- `extracted/compare_units.json` 用于查看实际送模型的差异单元。
+- `extracted/compare_blocks.json` 用于查看实际送模型的块级上下文。
 - `extracted/batch_plan.json` 用于查看 batch 拆分。
 - `llm/batch-xxx/timeline.json` 用于查看模型调用过程。
 - `llm/batch-xxx/final_status.json` 用于查看 batch 最终状态。

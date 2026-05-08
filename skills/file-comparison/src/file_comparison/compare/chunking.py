@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from .extractor import clean_lines, full_body_without_title
-from .models import ChapterBatch, CompareUnit, ComparisonRow, Section
+from .models import ChapterBatch, CompareBlock, CompareBlockItem, CompareUnit, ComparisonRow, Section
 
 INNER_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、|（(?:[一二三四五六七八九十]+|\d+)）)")
 CHINESE_HEADING_RE = re.compile(r"^[一二三四五六七八九十]+、")
@@ -16,6 +16,7 @@ PAREN_CHINESE_HEADING_RE = re.compile(r"^（[一二三四五六七八九十]+）
 DISPLAY_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、|（[一二三四五六七八九十]+）)")
 DECIMAL_HEADING_RE = re.compile(r"^\d+、")
 CHINESE_CONTEXT_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|（[一二三四五六七八九十]+）)")
+MAX_PARENT_HEADING_CHARS = 40
 
 
 def active_display_heading_re(lines: list[str]) -> re.Pattern[str]:
@@ -23,7 +24,9 @@ def active_display_heading_re(lines: list[str]) -> re.Pattern[str]:
     if any(CHINESE_HEADING_RE.match(line) for line in lines):
         return CHINESE_CONTEXT_HEADING_RE
     return DISPLAY_HEADING_RE
-OMITTED_EQUAL_MARKER = "……"
+
+
+OMITTED_EQUAL_MARKER = "......"
 
 
 def heading_context(lines: list[str], index: int) -> str | None:
@@ -46,7 +49,7 @@ def format_chunk(lines: list[str], start: int, end: int) -> str:
 
 def join_chunks(chunks: Iterable[str]) -> str:
     """把多个文本块按省略分隔符合并成一个展示块。"""
-    return "\n……\n".join(chunk for chunk in chunks if chunk.strip())
+    return f"\n{OMITTED_EQUAL_MARKER}\n".join(chunk for chunk in chunks if chunk.strip())
 
 
 @dataclass(slots=True)
@@ -222,6 +225,18 @@ def _display_heading_kind(text: str) -> str:
     return ""
 
 
+def is_preservable_equal_context_line(line: str) -> bool:
+    """判断 equal 块中的行是否应作为结构上下文保留。"""
+    stripped = line.strip()
+    return bool(CHINESE_HEADING_RE.match(stripped) or PAREN_CHINESE_HEADING_RE.match(stripped))
+
+
+def is_structural_parent_heading(line: str) -> bool:
+    """判断中文编号行是否更像结构父标题，而不是正文长条款。"""
+    stripped = line.strip()
+    return bool(CHINESE_HEADING_RE.match(stripped) and len(stripped) <= MAX_PARENT_HEADING_CHARS)
+
+
 def remove_fully_equal_lines(old_text: str, new_text: str) -> tuple[str, str]:
     """移除左右文本中正文一致的内容，只保留真实差异行。"""
     if old_text in {"新增", "删除"} or new_text in {"新增", "删除"}:
@@ -242,7 +257,7 @@ def remove_fully_equal_lines(old_text: str, new_text: str) -> tuple[str, str]:
             equal_context_pairs = [
                 (old_line, new_line)
                 for old_line, new_line in zip(old_lines[i1:i2], new_lines[j1:j2])
-                if DISPLAY_HEADING_RE.match(old_line.strip()) or DISPLAY_HEADING_RE.match(new_line.strip())
+                if is_preservable_equal_context_line(old_line) or is_preservable_equal_context_line(new_line)
             ]
             if equal_context_pairs and has_later_change:
                 for old_line, new_line in equal_context_pairs:
@@ -408,6 +423,172 @@ def build_name_row(old_sections: dict[str, Section], new_sections: dict[str, Sec
     return ComparisonRow(chapter="第三部分  基金的基本情况", subchapter="一、基金名称", old_text=old_name, new_text=new_name)
 
 
+def body_lines_without_title(section: Section) -> list[str]:
+    """返回章节正文行，去掉与标题重复的首行。"""
+    lines = clean_lines(section.body)
+    if lines and lines[0] == section.title:
+        return lines[1:]
+    return lines
+
+
+def _item_text_from_block_lines(block_lines: list[str]) -> tuple[str, str]:
+    """把块行规整成 parent_path 和 item_text。"""
+    if not block_lines:
+        return "", ""
+    if len(block_lines) >= 2 and is_structural_parent_heading(block_lines[0]) and PAREN_CHINESE_HEADING_RE.match(block_lines[1]):
+        return block_lines[0], "\n".join(block_lines[1:]).strip()
+    return "", "\n".join(block_lines).strip()
+
+
+def section_items_for_blocks(section: Section) -> list[tuple[str, str]]:
+    """把章节拆成送模条目，保留同层顺序与原始文本。"""
+    lines = body_lines_without_title(section)
+    if not lines:
+        return []
+    blocks = split_blocks(lines)
+    if not blocks:
+        return []
+    items: list[tuple[str, str]] = []
+    for index, block in enumerate(blocks):
+        if len(block) == 1 and is_structural_parent_heading(block[0]):
+            next_block = blocks[index + 1] if index + 1 < len(blocks) else None
+            if next_block and len(next_block) >= 2 and next_block[0] == block[0]:
+                continue
+        if len(block) >= 2 and is_structural_parent_heading(block[0]):
+            if PAREN_CHINESE_HEADING_RE.match(block[1]):
+                items.append((block[0], "\n".join(block[1:]).strip()))
+                continue
+            current_nested: list[str] = []
+            nested_items: list[list[str]] = []
+            for line in block[1:]:
+                if INNER_HEADING_RE.match(line) and current_nested:
+                    nested_items.append(current_nested)
+                    current_nested = [line]
+                    continue
+                current_nested.append(line)
+            if current_nested:
+                nested_items.append(current_nested)
+            if nested_items:
+                for nested_block in nested_items:
+                    items.append((block[0], "\n".join(nested_block).strip()))
+                continue
+        items.append(_item_text_from_block_lines(block))
+    if items and all(not parent_path for parent_path, _text in items):
+        return items
+    return [(parent_path, text) for parent_path, text in items if text]
+
+
+@dataclass(slots=True)
+class ParentPathGroup:
+    """表示忽略编号后对齐的一组父标题。"""
+
+    key: str
+    display_path: str
+
+
+def parent_path_match_key(parent_path: str) -> str:
+    """返回父标题匹配键，允许“十六、其他”与“十七、其他”对齐。"""
+    lines = clean_lines(parent_path)
+    if not lines:
+        return ""
+    return "\n".join(line_content_key(line) for line in lines).strip()
+
+
+def ordered_parent_groups(old_items: list[tuple[str, str]], new_items: list[tuple[str, str]]) -> list[ParentPathGroup]:
+    """按新版优先的出现顺序返回父标题语义分组。"""
+    paths_by_key: dict[str, str] = {}
+    ordered_keys: list[str] = []
+    for parent_path, _text in [*new_items, *old_items]:
+        key = parent_path_match_key(parent_path)
+        if key not in paths_by_key:
+            paths_by_key[key] = parent_path
+            ordered_keys.append(key)
+    return [ParentPathGroup(key=key, display_path=paths_by_key[key]) for key in ordered_keys]
+
+
+def block_item_texts(items: tuple[CompareBlockItem, ...]) -> tuple[str, ...]:
+    """返回 block 内条目文本序列，用于判断 block 是否完全未变。"""
+    return tuple(item.text for item in items)
+
+
+def build_compare_blocks_for_llm(
+    old_sections: list[Section],
+    new_sections: list[Section],
+) -> tuple[list[CompareBlock], list[dict[str, object]]]:
+    """把章节差异拆成父标题块级上下文。"""
+    old_by_number = {section.number: section for section in old_sections}
+    new_by_number = {section.number: section for section in new_sections}
+    ordered_numbers: list[str] = []
+    for section in old_sections + new_sections:
+        if section.number not in ordered_numbers:
+            ordered_numbers.append(section.number)
+
+    compare_blocks: list[CompareBlock] = []
+    chapter_summaries: list[dict[str, object]] = []
+    for number in ordered_numbers:
+        old_section = old_by_number.get(number)
+        new_section = new_by_number.get(number)
+        chapter_title = old_section.title if old_section is not None else new_section.title
+        old_items = section_items_for_blocks(old_section) if old_section is not None else []
+        new_items = section_items_for_blocks(new_section) if new_section is not None else []
+        parent_groups = ordered_parent_groups(old_items, new_items)
+        chapter_blocks: list[CompareBlock] = []
+        old_item_sequence = 1
+        new_item_sequence = 1
+        for block_index, parent_group in enumerate(parent_groups, start=1):
+            old_block_items = tuple(
+                CompareBlockItem(item_id=f"{number}-old-{old_item_sequence + index:03d}", text=text)
+                for index, (_path, text) in enumerate(
+                    item for item in old_items if parent_path_match_key(item[0]) == parent_group.key
+                )
+            )
+            old_item_sequence += len(old_block_items)
+            new_block_items = tuple(
+                CompareBlockItem(item_id=f"{number}-new-{new_item_sequence + index:03d}", text=text)
+                for index, (_path, text) in enumerate(
+                    item for item in new_items if parent_path_match_key(item[0]) == parent_group.key
+                )
+            )
+            new_item_sequence += len(new_block_items)
+            if not old_block_items and not new_block_items:
+                continue
+            if block_item_texts(old_block_items) == block_item_texts(new_block_items):
+                continue
+            chapter_blocks.append(
+                CompareBlock(
+                    block_id=f"{number}-block-{block_index:03d}",
+                    chapter_number=number,
+                    chapter_title=chapter_title,
+                    parent_path=parent_group.display_path,
+                    old_items=old_block_items,
+                    new_items=new_block_items,
+                )
+            )
+        compare_blocks.extend(chapter_blocks)
+        chapter_summaries.append(
+            {
+                "chapter_number": number,
+                "chapter_title": chapter_title,
+                "original_old_chars": len(old_section.body) if old_section is not None else 0,
+                "original_new_chars": len(new_section.body) if new_section is not None else 0,
+                "block_count": len(chapter_blocks),
+                "sent_old_chars": sum(sum(len(item.text) for item in block.old_items) for block in chapter_blocks),
+                "sent_new_chars": sum(sum(len(item.text) for item in block.new_items) for block in chapter_blocks),
+                "kept_for_llm": bool(chapter_blocks),
+                "reason": (
+                    "added"
+                    if old_section is None and new_section is not None
+                    else "deleted"
+                    if new_section is None and old_section is not None
+                    else "changed"
+                    if chapter_blocks
+                    else "unchanged"
+                ),
+            }
+        )
+    return compare_blocks, chapter_summaries
+
+
 def row_display_text(text: str, subchapter: str) -> str:
     """把对照行还原成适合再次发送给模型的展示文本。"""
     if not subchapter or text in {"新增", "删除"}:
@@ -538,6 +719,223 @@ def preprocess_sections_for_llm(
         reduced_old.append(candidate_old)
         reduced_new.append(candidate_new)
     return reduced_old, reduced_new
+
+
+def compare_block_chars(block: CompareBlock) -> int:
+    """计算单个 compare block 的左右文本总字符数。"""
+    return sum(len(item.text) for item in block.old_items) + sum(len(item.text) for item in block.new_items)
+
+
+def split_compare_block_by_items(block: CompareBlock, *, max_compare_block_chars: int) -> list[CompareBlock]:
+    """按 sibling 边界拆分单个过长 block。"""
+    old_items = list(block.old_items)
+    new_items = list(block.new_items)
+    chunk_pairs: list[tuple[list[CompareBlockItem], list[CompareBlockItem]]] = []
+    current_old: list[CompareBlockItem] = []
+    current_new: list[CompareBlockItem] = []
+    current_chars = 0
+    item_count = max(len(old_items), len(new_items))
+    for index in range(item_count):
+        old_item = old_items[index] if index < len(old_items) else None
+        new_item = new_items[index] if index < len(new_items) else None
+        pair_chars = (len(old_item.text) if old_item else 0) + (len(new_item.text) if new_item else 0)
+        if current_old or current_new:
+            if current_chars + pair_chars > max_compare_block_chars:
+                chunk_pairs.append((current_old, current_new))
+                current_old = []
+                current_new = []
+                current_chars = 0
+        if old_item is not None:
+            current_old.append(old_item)
+        if new_item is not None:
+            current_new.append(new_item)
+        current_chars += pair_chars
+    if current_old or current_new:
+        chunk_pairs.append((current_old, current_new))
+    parts: list[CompareBlock] = []
+    for index, (old_chunk, new_chunk) in enumerate(chunk_pairs):
+        parts.append(
+            CompareBlock(
+                block_id=f"{block.block_id}-part-{index + 1:03d}",
+                chapter_number=block.chapter_number,
+                chapter_title=block.chapter_title,
+                parent_path=block.parent_path,
+                old_items=tuple(old_chunk),
+                new_items=tuple(new_chunk),
+            )
+        )
+    return parts
+
+
+def split_oversized_compare_blocks(
+    compare_blocks: list[CompareBlock],
+    *,
+    max_compare_block_chars: int,
+) -> list[CompareBlock]:
+    """把单个过长 compare block 按 sibling 边界拆成 part。"""
+    if max_compare_block_chars <= 0:
+        return compare_blocks
+    refined: list[CompareBlock] = []
+    for block in compare_blocks:
+        if compare_block_chars(block) <= max_compare_block_chars:
+            refined.append(block)
+            continue
+        refined.extend(split_compare_block_by_items(block, max_compare_block_chars=max_compare_block_chars))
+    return refined
+
+
+def _group_blocks_by_chapter_limit(compare_blocks: list[CompareBlock], batch_size: int) -> list[ChapterBatch]:
+    """按章节数量上限把 compare blocks 分组。"""
+    batches: list[ChapterBatch] = []
+    current_blocks: list[CompareBlock] = []
+    current_numbers: list[str] = []
+    current_seen_numbers: set[str] = set()
+    for block in compare_blocks:
+        block_is_new_chapter = block.chapter_number not in current_seen_numbers
+        if current_blocks and block_is_new_chapter and len(current_seen_numbers) >= batch_size:
+            batches.append(
+                ChapterBatch(
+                    batch_id="",
+                    chapter_numbers=tuple(current_numbers),
+                    compare_blocks=tuple(current_blocks),
+                )
+            )
+            current_blocks = []
+            current_numbers = []
+            current_seen_numbers = set()
+        current_blocks.append(block)
+        if block.chapter_number not in current_seen_numbers:
+            current_seen_numbers.add(block.chapter_number)
+            current_numbers.append(block.chapter_number)
+    if current_blocks:
+        batches.append(
+            ChapterBatch(
+                batch_id="",
+                chapter_numbers=tuple(current_numbers),
+                compare_blocks=tuple(current_blocks),
+            )
+        )
+    return batches
+
+
+def batch_compare_block_chars(batch: ChapterBatch) -> int:
+    """计算 batch 中实际发送给模型的 block 总字符数。"""
+    return sum(compare_block_chars(block) for block in batch.compare_blocks)
+
+
+def split_oversized_compare_block_batch(
+    batch: ChapterBatch,
+    *,
+    max_batch_chars: int,
+    oversized_batch_size: int,
+) -> list[ChapterBatch]:
+    """递归拆分超长 block batch，优先按章节数收缩。"""
+    if max_batch_chars <= 0 or batch_compare_block_chars(batch) <= max_batch_chars or len(batch.chapter_numbers) <= 1:
+        return [batch]
+    next_batch_size = oversized_batch_size if len(batch.chapter_numbers) > oversized_batch_size else 1
+    split_batches = _group_blocks_by_chapter_limit(list(batch.compare_blocks), next_batch_size)
+    refined: list[ChapterBatch] = []
+    for split_batch in split_batches:
+        refined.extend(
+            split_oversized_compare_block_batch(
+                split_batch,
+                max_batch_chars=max_batch_chars,
+                oversized_batch_size=oversized_batch_size,
+            )
+        )
+    return refined
+
+
+def split_batches_by_compare_block_limit(
+    batches: list[ChapterBatch],
+    *,
+    max_compare_blocks_per_batch: int,
+) -> list[ChapterBatch]:
+    """按 compare block 数拆分 batch，但不拆开同一章节。"""
+    if max_compare_blocks_per_batch <= 0:
+        return batches
+    refined: list[ChapterBatch] = []
+    for batch in batches:
+        blocks = list(batch.compare_blocks)
+        if len(blocks) <= max_compare_blocks_per_batch:
+            refined.append(batch)
+            continue
+        chapter_groups: list[list[CompareBlock]] = []
+        for block in blocks:
+            if not chapter_groups or chapter_groups[-1][0].chapter_number != block.chapter_number:
+                chapter_groups.append([block])
+            else:
+                chapter_groups[-1].append(block)
+        current: list[CompareBlock] = []
+        for chapter_group in chapter_groups:
+            if current and len(current) + len(chapter_group) > max_compare_blocks_per_batch:
+                refined.append(
+                    ChapterBatch(
+                        batch_id="",
+                        chapter_numbers=tuple(dict.fromkeys(block.chapter_number for block in current)),
+                        compare_blocks=tuple(current),
+                    )
+                )
+                current = []
+            current.extend(chapter_group)
+        if current:
+            refined.append(
+                ChapterBatch(
+                    batch_id="",
+                    chapter_numbers=tuple(dict.fromkeys(block.chapter_number for block in current)),
+                    compare_blocks=tuple(current),
+                )
+            )
+    return refined
+
+
+def _renumber_block_batches(batches: list[ChapterBatch]) -> list[ChapterBatch]:
+    """为 block 批次重新生成稳定 batch 编号。"""
+    return [
+        ChapterBatch(
+            batch_id=f"batch-{index:03d}",
+            chapter_numbers=batch.chapter_numbers,
+            old_sections=batch.old_sections,
+            new_sections=batch.new_sections,
+            compare_blocks=batch.compare_blocks,
+        )
+        for index, batch in enumerate(batches, start=1)
+    ]
+
+
+def group_compare_blocks_into_batches(
+    compare_blocks: list[CompareBlock],
+    batch_size: int,
+    *,
+    max_batch_chars: int = 0,
+    oversized_batch_size: int = 2,
+    max_compare_blocks_per_batch: int = 0,
+    max_compare_block_chars: int = 0,
+) -> list[ChapterBatch]:
+    """按章节数、字符数和 block 数把 compare blocks 分批。"""
+    if batch_size <= 0:
+        raise ValueError("batch_size 必须大于 0")
+    if oversized_batch_size <= 0:
+        raise ValueError("oversized_batch_size 必须大于 0")
+    # 业务对照要求同一章节内的上下文不能因字数被拆散；max_compare_block_chars 仅保留为兼容配置。
+    initial_batches = _group_blocks_by_chapter_limit(compare_blocks, batch_size)
+    if max_batch_chars <= 0:
+        refined_batches = initial_batches
+    else:
+        refined_batches = []
+        for batch in initial_batches:
+            refined_batches.extend(
+                split_oversized_compare_block_batch(
+                    batch,
+                    max_batch_chars=max_batch_chars,
+                    oversized_batch_size=oversized_batch_size,
+                )
+            )
+    block_limited_batches = split_batches_by_compare_block_limit(
+        refined_batches,
+        max_compare_blocks_per_batch=max_compare_blocks_per_batch,
+    )
+    return _renumber_block_batches(block_limited_batches)
 
 
 def group_compare_units_into_batches(

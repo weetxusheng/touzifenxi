@@ -75,8 +75,8 @@
     "chapter_batch_size": 4, // 默认每批送模型的一级章节数
     "chapter_batch_char_limit": 10000, // 单个 batch 左右正文合计字符上限；超过会自动缩小 batch
     "oversized_chapter_batch_size": 2, // 超大 batch 缩小后的一级章节数；2 章仍超限则继续拆到单章
-    "max_compare_units_per_batch": 4, // 单个 batch 允许的最大 compare unit 数；防止模型返回过长被截断
-    "max_compare_unit_chars": 10000, // 单个 compare unit 左右正文合计字符上限；超过会拆 part-001/002
+    "max_compare_blocks_per_batch": 4, // 单个 batch 允许的最大 compare block 数；防止模型返回过长被截断
+    "max_compare_block_chars": 10000, // 单个 compare block 左右条目合计字符上限；超过会按 sibling 边界拆 part-001/002
     "retry": {
       "honor_retry_after": true, // provider 返回 Retry-After 时是否优先遵守
       "jitter_seconds": 0.5 // 每次退避时增加的随机抖动秒数，避免并发雪崩

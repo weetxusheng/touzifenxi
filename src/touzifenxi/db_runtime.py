@@ -23,6 +23,7 @@ INSERT_RETURNING_ID_TABLES = {
     "research_runs",
     "recommendations",
     "theme_prefilter_runs",
+    "data_quality_runs",
 }
 
 

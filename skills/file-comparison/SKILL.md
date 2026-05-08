@@ -31,8 +31,8 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
   - `deepseek`
 - 默认 `chapter_batch_size = 4`
 - 默认单批正文超过 `chapter_batch_char_limit = 10000` 字符时，先按 `oversized_chapter_batch_size = 2` 个一级章节重新拆分；如果 2 章仍超限，继续拆到单章
-- 默认单批超过 `max_compare_units_per_batch = 4` 个条目级 compare unit 时，继续按 unit 边界拆分
-- 默认单个 compare unit 超过 `max_compare_unit_chars = 10000` 字符时，按行/段落边界拆成多个 part 分批请求
+- 默认单批超过 `max_compare_blocks_per_batch = 4` 个块级 compare block 时，只在不同一级章节之间拆分；同一章节不拆开
+- `max_compare_block_chars` 保留为兼容配置；当前主流程不再把单个 compare block 拆成 part，同章结构完整性高于字数限制
 - 默认每个文件对内部并行：
   - `execution.per_pair_max_workers = 2`
 - 默认开启 `batch` 级首发轮转：
@@ -131,8 +131,10 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 ## 结果规则
 
 - 发送给模型前先做本地预处理，只保留疑似变更块
-- 模型只返回 compare unit 级变更判定，不直接生成最终对照表左右列内容
-- 程序按 `unit_id` 回查原始 compare unit，再生成最终对照行和 Word 样式
+- 父标题对齐时忽略行首编号；例如旧 `十六、其他` 与新 `十七、其他` 会按同一父标题块处理，正文完全一致时不送模型、不展示
+- 模型只返回 compare block 级操作集，不直接生成最终对照表左右列内容
+- 程序按 `block_id + item_id` 回查原始 compare block，再展开成最终对照行和 Word 样式
+- compare block 的 `old_items` 与 `new_items` 各自独立编号，分别从 `old-001`、`new-001` 开始
 - 默认剔除或裁剪签署页、签字页、盖章页、签章页等非正文尾页
 - 完全一致的小行不展示
 - 仅编号变化不展示

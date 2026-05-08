@@ -718,6 +718,20 @@ def test_status_hydration_uses_stable_planned_batch_count(tmp_path):
         assert payload["pairs"][0]["planned_batch_count"] == 5
         assert payload["pairs"][0]["completed_batch_count"] == 1
         assert payload["pairs"][0]["failed_batch_count"] == 1
+        assert [batch["batch_id"] for batch in payload["pairs"][0]["batches"]] == [
+            "batch-001",
+            "batch-002",
+            "batch-003",
+            "batch-004",
+            "batch-005",
+        ]
+        assert [batch["status"] for batch in payload["pairs"][0]["batches"]] == [
+            "success",
+            "error",
+            "pending",
+            "pending",
+            "pending",
+        ]
     finally:
         server.shutdown()
         server.server_close()

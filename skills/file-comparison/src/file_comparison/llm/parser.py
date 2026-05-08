@@ -41,10 +41,55 @@ def parse_response_payload(response: dict[str, Any]) -> dict[str, Any]:
 
 def validate_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """校验模型返回是否满足 file-comparison 的最小结构约束。"""
+    blocks = payload.get("blocks")
+    if isinstance(blocks, list):
+        return validate_block_operation_payload(payload)
     units = payload.get("units")
     if isinstance(units, list):
         return validate_unit_decision_payload(payload)
     return validate_legacy_chapter_payload(payload)
+
+
+def validate_block_operation_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """校验块级送模返回结构。"""
+    required = FILE_COMPARISON_SCHEMA["schema"]["properties"]["blocks"]["items"]["required"]
+    operation_required = FILE_COMPARISON_SCHEMA["schema"]["properties"]["blocks"]["items"]["properties"]["operations"]["items"]["required"]
+    for block in payload.get("blocks", []):
+        if not isinstance(block, dict):
+            raise ResponseParseError("block entry must be an object")
+        for key in required:
+            if key not in block:
+                raise ResponseParseError(f"block missing required field: {key}")
+        block["block_id"] = str(block.get("block_id", "")).strip()
+        block["chapter"] = str(block.get("chapter", "")).strip()
+        block["parent_path"] = str(block.get("parent_path", "")).strip()
+        operations = block.get("operations")
+        if not isinstance(operations, list):
+            raise ResponseParseError("block operations must be a list")
+        normalized_operations: list[dict[str, Any]] = []
+        for operation in operations:
+            if not isinstance(operation, dict):
+                raise ResponseParseError("block operation entry must be an object")
+            for key in operation_required:
+                if key not in operation:
+                    raise ResponseParseError(f"block operation missing required field: {key}")
+            try:
+                confidence = float(operation.get("confidence", 0))
+            except (TypeError, ValueError):
+                confidence = 0.0
+            normalized_operations.append(
+                {
+                    "type": str(operation.get("type", "")).strip(),
+                    "old_item_ids": normalize_string_list(operation.get("old_item_ids")),
+                    "new_item_ids": normalize_string_list(operation.get("new_item_ids")),
+                    "old_focus_text": str(operation.get("old_focus_text", "")).strip(),
+                    "new_focus_text": str(operation.get("new_focus_text", "")).strip(),
+                    "confidence": confidence,
+                    "reason": str(operation.get("reason", "")).strip(),
+                }
+            )
+        block["operations"] = normalized_operations
+    return payload
 
 
 def validate_unit_decision_payload(payload: dict[str, Any]) -> dict[str, Any]:

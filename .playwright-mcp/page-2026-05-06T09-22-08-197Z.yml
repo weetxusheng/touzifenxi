@@ -1,0 +1,100 @@
+- main [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - heading "文件对照批处理" [level=4] [ref=e7]
+      - text: 上传文件、确认配对、生成结果、下载文档
+    - generic [ref=e8]:
+      - generic [ref=e10]: 当前任务：20260506-164309
+      - button "清空当前任务" [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]: 清空当前任务
+  - generic [ref=e14]:
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - strong [ref=e21]: 上传文件
+        - generic [ref=e22]: 支持 .doc / .docx，上传区已压缩，配对可在下方调整。
+      - generic [ref=e23]:
+        - button "+ 拖拽或点击选择 Word 文档 右侧会同步显示已选择文件。" [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]:
+            - paragraph [ref=e28]: +
+            - paragraph [ref=e29]: 拖拽或点击选择 Word 文档
+            - paragraph [ref=e30]: 右侧会同步显示已选择文件。
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: 上传列表
+            - generic [ref=e34]: 已选择 0 个
+          - generic [ref=e35]: 已选择文件会显示在这里
+      - generic [ref=e36]:
+        - generic [ref=e37]: 已选择 0 个文件，点击匹配后生成下方配对预览。
+        - button "文件匹配" [disabled] [ref=e38]:
+          - generic: 文件匹配
+    - generic [ref=e39]:
+      - generic [ref=e41]:
+        - generic [ref=e42]: 配对预览
+        - generic [ref=e44]:
+          - button "新增配对" [disabled] [ref=e46]:
+            - generic: 新增配对
+          - button "清空配对" [disabled] [ref=e48]:
+            - generic: 清空配对
+          - button "发起生成" [disabled] [ref=e50]:
+            - generic: 发起生成
+      - table [ref=e58]:
+        - rowgroup [ref=e64]:
+          - row "主键 修改前文件 修改后文件 操作" [ref=e65]:
+            - columnheader "主键" [ref=e66]
+            - columnheader "修改前文件" [ref=e67]
+            - columnheader "修改后文件" [ref=e68]
+            - columnheader "操作" [ref=e69]
+        - rowgroup [ref=e70]:
+          - row "尚未匹配或未找到可配对文件" [ref=e71]:
+            - cell "尚未匹配或未找到可配对文件" [ref=e72]:
+              - generic [ref=e73]: 尚未匹配或未找到可配对文件
+    - generic [ref=e74]:
+      - generic [ref=e77]: 任务状态
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e81]: 任务状态
+            - generic [ref=e83]: 失败
+          - generic [ref=e84]:
+            - generic [ref=e85]: 文件对进度
+            - generic [ref=e86]: 0/1
+          - generic [ref=e87]:
+            - generic [ref=e88]: 批次进度
+            - generic [ref=e89]: 9/9
+          - generic [ref=e90]:
+            - generic [ref=e91]: 活跃模型
+            - generic [ref=e92]: deepseek
+          - generic [ref=e93]:
+            - generic [ref=e94]: 总耗时
+            - generic [ref=e95]: 10m 23s
+        - generic [ref=e96]:
+          - generic [ref=e97]: 模型失败 0
+          - generic [ref=e98]: 结果修复 0
+          - generic [ref=e99]: 规则回退 0
+          - generic [ref=e100]: 失败文件对 1
+        - table [ref=e107]:
+          - rowgroup [ref=e115]:
+            - row "文件 任务状态 批次 耗时 结果 错误" [ref=e116]:
+              - columnheader [ref=e117]
+              - columnheader "文件" [ref=e118]
+              - columnheader "任务状态" [ref=e119]
+              - columnheader "批次" [ref=e120]
+              - columnheader "耗时" [ref=e121]
+              - columnheader "结果" [ref=e122]
+              - columnheader "错误" [ref=e123]
+          - rowgroup [ref=e124]:
+            - row "Expand row 修改前文件：创金合信中证500指数增强型发起式证券投资基金基金合同（2019年11月修订）.docx 修改后文件：3 创金合信中证500指数增强型发起式证券投资基金基金合同（草案）-20200907.docx 失败 9/9 10m 23s 重新生成 DOCX 缺少 python-docx，请使用项目 uv 环境启动 file-comparison 页面。" [ref=e125]:
+              - cell "Expand row" [ref=e126]:
+                - button "Expand row" [ref=e127] [cursor=pointer]
+              - cell "修改前文件：创金合信中证500指数增强型发起式证券投资基金基金合同（2019年11月修订）.docx 修改后文件：3 创金合信中证500指数增强型发起式证券投资基金基金合同（草案）-20200907.docx" [ref=e128]:
+                - generic [ref=e129]:
+                  - generic [ref=e130]: 修改前文件：创金合信中证500指数增强型发起式证券投资基金基金合同（2019年11月修订）.docx
+                  - generic [ref=e131]: 修改后文件：3 创金合信中证500指数增强型发起式证券投资基金基金合同（草案）-20200907.docx
+              - cell "失败" [ref=e132]:
+                - generic [ref=e133]: 失败
+              - cell "9/9" [ref=e134]
+              - cell "10m 23s" [ref=e135]
+              - cell "重新生成 DOCX" [ref=e136]:
+                - button "重新生成 DOCX" [ref=e139] [cursor=pointer]:
+                  - generic [ref=e140]: 重新生成 DOCX
+              - cell "缺少 python-docx，请使用项目 uv 环境启动 file-comparison 页面。" [ref=e142]

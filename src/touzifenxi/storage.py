@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from ast import literal_eval
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -12,8 +13,8 @@ from .universe import UniverseSnapshot
 
 RULE_VERSION_SNAPSHOT = {
     "theme_prefilter": {"version": "v2.0", "notes": "weekly_50_pool + daily_refresh + theme_score_detail"},
-    "committee": {"version": "v2.0", "notes": "top3_themes_shortlist + theme_cap_2"},
-    "dashboard": {"version": "v1.2", "notes": "tabbed_dashboard + eastmoney_links + theme_score_drilldown"},
+    "committee": {"version": "v2.1", "notes": "top3_themes_shortlist + theme_cap_2 + data_quality_gate"},
+    "dashboard": {"version": "v1.3", "notes": "data_quality_tab + stock_evidence_page"},
 }
 
 
@@ -124,10 +125,13 @@ SCHEMA_STATEMENTS = [
     CREATE TABLE IF NOT EXISTS recommendation_returns (
         recommendation_id INTEGER PRIMARY KEY,
         base_price REAL NOT NULL,
+        horizon_1d_date TEXT,
+        horizon_1d_price REAL,
         horizon_1d REAL,
         horizon_5d REAL,
         horizon_20d REAL,
         horizon_60d REAL,
+        review_note TEXT,
         updated_at TEXT,
         FOREIGN KEY(recommendation_id) REFERENCES recommendations(id)
     )
@@ -205,6 +209,30 @@ SCHEMA_STATEMENTS = [
         state_key TEXT PRIMARY KEY,
         state_value TEXT NOT NULL,
         updated_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS data_quality_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        checked_at TEXT NOT NULL,
+        context TEXT NOT NULL,
+        related_run_id INTEGER,
+        status TEXT NOT NULL,
+        summary_json TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS data_quality_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        quality_run_id INTEGER NOT NULL,
+        category TEXT NOT NULL,
+        item_name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        value_text TEXT NOT NULL,
+        threshold_text TEXT NOT NULL,
+        detail_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(quality_run_id) REFERENCES data_quality_runs(id)
     )
     """,
     """
@@ -470,6 +498,46 @@ class ResearchStore:
             f"AND datetime({alias}.synced_at) < datetime('now', '-{self._financial_report_period_grace_days()} day')))"
         )
 
+    def _financial_row_ready(self, row: dict[str, object]) -> bool:
+        synced_at = str(row.get("synced_at") or "")
+        if not synced_at:
+            return False
+        try:
+            synced_dt = datetime.fromisoformat(synced_at.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if synced_dt.replace(tzinfo=None) < datetime.now() - timedelta(days=self._financial_profile_max_age_days()):
+            return False
+        return True
+
+    @staticmethod
+    def _normalize_json_text(value: object, default: str = "{}") -> str:
+        if value is None:
+            return default
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=False)
+        raw = str(value).strip()
+        if not raw:
+            return default
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            try:
+                parsed = literal_eval(raw)
+            except (ValueError, SyntaxError):
+                return default
+        if isinstance(parsed, (dict, list)):
+            return json.dumps(parsed, ensure_ascii=False)
+        return default
+
+    @classmethod
+    def _parse_json_detail(cls, value: object) -> dict[str, object]:
+        try:
+            parsed = json.loads(cls._normalize_json_text(value))
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+
     def init_db(self) -> None:
         if self.profile.active_backend == "postgresql":
             if not self.profile.configured_url:
@@ -514,6 +582,9 @@ class ResearchStore:
             self._ensure_column(conn, "research_runs", "rule_version_snapshot", "TEXT NOT NULL DEFAULT '{}'")
             self._ensure_column(conn, "theme_prefilter_runs", "rule_version_snapshot", "TEXT NOT NULL DEFAULT '{}'")
             self._ensure_column(conn, "candidate_decisions", "rule_version_snapshot", "TEXT NOT NULL DEFAULT '{}'")
+            self._ensure_column(conn, "recommendation_returns", "horizon_1d_date", "TEXT")
+            self._ensure_column(conn, "recommendation_returns", "horizon_1d_price", "REAL")
+            self._ensure_column(conn, "recommendation_returns", "review_note", "TEXT")
             conn.commit()
         self.save_rule_versions()
 
@@ -560,7 +631,7 @@ class ResearchStore:
                             item.valuation_score,
                             item.performance_score,
                             item.performance_source,
-                            item.detail_json,
+                            self._normalize_json_text(item.detail_json),
                             int(item.selected),
                         )
                         for item in result.theme_scores
@@ -692,6 +763,185 @@ class ResearchStore:
             "sqlite_url": self.profile.sqlite_url,
             "postgres_schema_sql": str(Path(__file__).resolve().parents[2] / "docs" / "postgresql_schema.sql"),
             "table_count": table_count,
+        }
+
+    def save_data_quality_result(self, result, related_run_id: int | None = None) -> int:
+        with self.connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO data_quality_runs (
+                    checked_at, context, related_run_id, status, summary_json
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    result.checked_at,
+                    result.context,
+                    related_run_id,
+                    result.status,
+                    json.dumps(result.summary, ensure_ascii=False),
+                ),
+            )
+            quality_run_id = int(cursor.lastrowid)
+            if result.items:
+                conn.executemany(
+                    """
+                    INSERT INTO data_quality_items (
+                        quality_run_id, category, item_name, status, value_text,
+                        threshold_text, detail_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        (
+                            quality_run_id,
+                            item.category,
+                            item.name,
+                            item.status,
+                            item.value_text,
+                            item.threshold_text,
+                            self._normalize_json_text(item.detail),
+                            result.checked_at,
+                        )
+                        for item in result.items
+                    ],
+                )
+            conn.commit()
+        return quality_run_id
+
+    def get_latest_data_quality_summary(self) -> dict[str, object] | None:
+        with self.connect() as conn:
+            conn.row_factory = sqlite3.Row
+            run = conn.execute(
+                """
+                SELECT id, checked_at, context, related_run_id, status, summary_json
+                FROM data_quality_runs
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if not run:
+                return None
+            items = conn.execute(
+                """
+                SELECT category, item_name, status, value_text, threshold_text, detail_json, created_at
+                FROM data_quality_items
+                WHERE quality_run_id = ?
+                ORDER BY category ASC, id ASC
+                """,
+                (int(run["id"]),),
+            ).fetchall()
+        raw_summary = run["summary_json"] or {}
+        if isinstance(raw_summary, dict):
+            summary = raw_summary
+        else:
+            try:
+                summary = json.loads(str(raw_summary or "{}"))
+            except json.JSONDecodeError:
+                summary = {}
+        return {
+            "id": int(run["id"]),
+            "checked_at": str(run["checked_at"]),
+            "context": str(run["context"]),
+            "related_run_id": int(run["related_run_id"]) if run["related_run_id"] is not None else None,
+            "status": str(run["status"]),
+            "summary": summary,
+            "items": [
+                {
+                    "category": str(item["category"]),
+                    "name": str(item["item_name"]),
+                    "status": str(item["status"]),
+                    "value_text": str(item["value_text"]),
+                    "threshold_text": str(item["threshold_text"]),
+                    "detail_json": self._normalize_json_text(item["detail_json"]),
+                    "created_at": str(item["created_at"]),
+                }
+                for item in items
+            ],
+        }
+
+    def get_universe_quality_snapshot(self) -> dict[str, object]:
+        with self.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) AS count, MAX(synced_at) AS latest_synced_at
+                FROM universe_stocks
+                """
+            ).fetchone()
+            source_rows = conn.execute(
+                """
+                SELECT source, COUNT(*)
+                FROM universe_stocks
+                GROUP BY source
+                ORDER BY COUNT(*) DESC
+                """
+            ).fetchall()
+        return {
+            "count": int(row[0] or 0),
+            "latest_synced_at": str(row[1] or ""),
+            "sources": {str(item[0]): int(item[1]) for item in source_rows},
+        }
+
+    def get_weekly_pool_quality_snapshot(self, tickers: list[str], snapshot_date: str) -> dict[str, int]:
+        if not tickers:
+            return {
+                "pool_size": 0,
+                "factor_covered": 0,
+                "real_financial": 0,
+                "financial_stale": 0,
+                "local_profile": 0,
+                "industry_covered": 0,
+            }
+        placeholders = ", ".join("?" for _ in tickers)
+        financial_ready = self._financial_ready_sql("fp")
+        with self.connect() as conn:
+            row = conn.execute(
+                f"""
+                SELECT
+                    COUNT(*) AS pool_size,
+                    SUM(CASE WHEN df.ticker IS NULL THEN 0 ELSE 1 END) AS factor_covered,
+                    SUM(CASE WHEN fp.ticker IS NOT NULL AND ({financial_ready}) = 1 AND fp.fundamental_source != 'local_profile' THEN 1 ELSE 0 END) AS real_financial,
+                    SUM(CASE WHEN fp.ticker IS NOT NULL AND ({financial_ready}) = 0 THEN 1 ELSE 0 END) AS financial_stale,
+                    SUM(CASE WHEN COALESCE(fp.fundamental_source, 'local_profile') = 'local_profile' THEN 1 ELSE 0 END) AS local_profile,
+                    SUM(CASE WHEN si.ticker IS NULL THEN 0 ELSE 1 END) AS industry_covered
+                FROM universe_stocks u
+                LEFT JOIN daily_factors df ON df.ticker = u.ticker AND df.snapshot_date = ?
+                LEFT JOIN financial_profiles fp ON fp.ticker = u.ticker
+                LEFT JOIN stock_industries si ON si.ticker = u.ticker
+                WHERE u.ticker IN ({placeholders})
+                """,
+                [snapshot_date, *tickers],
+            ).fetchone()
+        return {
+            "pool_size": int(row[0] or 0),
+            "factor_covered": int(row[1] or 0),
+            "real_financial": int(row[2] or 0),
+            "financial_stale": int(row[3] or 0),
+            "local_profile": int(row[4] or 0),
+            "industry_covered": int(row[5] or 0),
+        }
+
+    def get_recent_event_quality(self, days: int = 7) -> dict[str, object]:
+        if self.profile.active_backend == "postgresql":
+            where_clause = f"event_date >= CURRENT_DATE - INTERVAL '{int(days)} day'"
+        else:
+            where_clause = f"date(event_date) >= date('now', '-{int(days)} day')"
+        with self.connect() as conn:
+            row = conn.execute(
+                f"""
+                SELECT
+                    COUNT(*) AS event_count,
+                    SUM(CASE WHEN source_url IS NOT NULL AND source_url != '' THEN 1 ELSE 0 END) AS url_count,
+                    MAX(event_date) AS latest_event_date
+                FROM theme_events
+                WHERE {where_clause}
+                """
+            ).fetchone()
+        event_count = int(row[0] or 0)
+        url_count = int(row[1] or 0)
+        return {
+            "event_count": event_count,
+            "url_count": url_count,
+            "url_ratio": (url_count / event_count) if event_count else 0.0,
+            "latest_event_date": str(row[2] or ""),
         }
 
     def save_rule_versions(self) -> None:
@@ -915,7 +1165,7 @@ class ResearchStore:
         if not missing_horizons:
             return "completed"
         run_date = datetime.fromisoformat(run_at).date()
-        due_days = {"1d": 2, "5d": 8, "20d": 30, "60d": 90}
+        due_days = {"1d": 1, "5d": 8, "20d": 30, "60d": 90}
         next_missing = missing_horizons[0]
         due_date = run_date + timedelta(days=due_days[next_missing])
         if today < due_date:
@@ -924,7 +1174,7 @@ class ResearchStore:
             return "failed"
         return "updatable"
 
-    def get_due_return_updates(self) -> list[tuple[int, str, str, float]]:
+    def get_due_return_updates(self, limit: int | None = None) -> list[tuple[int, str, str, float]]:
         today = datetime.now().date()
         due_rows: list[tuple[int, str, str, float]] = []
         with self.connect() as conn:
@@ -935,6 +1185,7 @@ class ResearchStore:
                 FROM recommendation_returns rr
                 JOIN recommendations rec ON rec.id = rr.recommendation_id
                 JOIN research_runs runs ON runs.id = rec.run_id
+                ORDER BY runs.id DESC, rec.rank_no ASC
                 """
             ).fetchall()
         for row in rows:
@@ -955,6 +1206,8 @@ class ResearchStore:
             )
             if status == "updatable":
                 due_rows.append((int(row[0]), str(row[1]), str(row[2]), float(row[3])))
+                if limit is not None and len(due_rows) >= limit:
+                    break
         return due_rows
 
     def get_performance_summary(self) -> dict[str, object]:
@@ -1250,28 +1503,91 @@ class ResearchStore:
         horizon_5d: float | None,
         horizon_20d: float | None,
         horizon_60d: float | None,
+        horizon_1d_date: str | None = None,
+        horizon_1d_price: float | None = None,
     ) -> None:
+        review_note = None
+        if horizon_1d is not None:
+            review_note = "次日上涨" if horizon_1d > 0 else "次日下跌" if horizon_1d < 0 else "次日持平"
+        has_update = any(
+            item is not None
+            for item in [
+                horizon_1d,
+                horizon_5d,
+                horizon_20d,
+                horizon_60d,
+                horizon_1d_date,
+                horizon_1d_price,
+            ]
+        )
+        if not has_update:
+            return
         with self.connect() as conn:
             conn.execute(
                 """
                 UPDATE recommendation_returns
-                SET horizon_1d = COALESCE(?, horizon_1d),
+                SET horizon_1d_date = COALESCE(?, horizon_1d_date),
+                    horizon_1d_price = COALESCE(?, horizon_1d_price),
+                    horizon_1d = COALESCE(?, horizon_1d),
                     horizon_5d = COALESCE(?, horizon_5d),
                     horizon_20d = COALESCE(?, horizon_20d),
                     horizon_60d = COALESCE(?, horizon_60d),
+                    review_note = COALESCE(?, review_note),
                     updated_at = ?
                 WHERE recommendation_id = ?
                 """,
                 (
+                    horizon_1d_date,
+                    horizon_1d_price,
                     horizon_1d,
                     horizon_5d,
                     horizon_20d,
                     horizon_60d,
+                    review_note,
                     datetime.now().isoformat(timespec="seconds"),
                     recommendation_id,
                 ),
             )
             conn.commit()
+
+    def get_recent_next_day_reviews(self, limit: int = 20) -> list[dict[str, object]]:
+        with self.connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT rec.run_id, runs.run_at, rec.rank_no, rec.ticker, rec.name,
+                       rec.total_score, rec.stage, rec.prefilter_theme, rec.prefilter_bucket,
+                       rr.base_price, rr.horizon_1d_date, rr.horizon_1d_price, rr.horizon_1d,
+                       rr.review_note, rr.updated_at
+                FROM recommendations rec
+                JOIN research_runs runs ON runs.id = rec.run_id
+                JOIN recommendation_returns rr ON rr.recommendation_id = rec.id
+                WHERE rr.horizon_1d IS NOT NULL
+                ORDER BY rec.run_id DESC, rec.rank_no ASC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [
+            {
+                "run_id": int(row["run_id"]),
+                "run_at": str(row["run_at"]),
+                "rank_no": int(row["rank_no"]),
+                "ticker": str(row["ticker"]),
+                "name": str(row["name"]),
+                "total_score": float(row["total_score"]),
+                "stage": str(row["stage"]),
+                "prefilter_theme": str(row["prefilter_theme"] or ""),
+                "prefilter_bucket": str(row["prefilter_bucket"] or ""),
+                "base_price": float(row["base_price"]),
+                "horizon_1d_date": str(row["horizon_1d_date"] or ""),
+                "horizon_1d_price": float(row["horizon_1d_price"]) if row["horizon_1d_price"] is not None else None,
+                "horizon_1d": float(row["horizon_1d"]),
+                "review_note": str(row["review_note"] or ""),
+                "updated_at": str(row["updated_at"] or ""),
+            }
+            for row in rows
+        ]
 
     def list_universe_candidates(self, universe_filter: UniverseFilter) -> list[sqlite3.Row]:
         conditions = []
@@ -1414,6 +1730,11 @@ class ResearchStore:
             return {}
         snapshot_date = self.get_latest_factor_snapshot_date()
         if not snapshot_date:
+            return {}
+        return self.get_factor_map(tickers, snapshot_date)
+
+    def get_factor_map(self, tickers: list[str], snapshot_date: str) -> dict[str, sqlite3.Row]:
+        if not tickers or not snapshot_date:
             return {}
         placeholders = ", ".join("?" for _ in tickers)
         query = f"""
@@ -1601,7 +1922,7 @@ class ResearchStore:
                     "performance_score": float(row[4]),
                     "performance_source": str(row[5]),
                     "selected": bool(row[6]),
-                    "detail_json": str(row[7] or "{}"),
+                    "detail_json": self._normalize_json_text(row[7]),
                 }
                 for row in theme_rows
             ],
@@ -1721,6 +2042,153 @@ class ResearchStore:
                 }
             )
         return recommendations
+
+    def get_stock_evidence(self, ticker: str) -> dict[str, object]:
+        latest_snapshot = self.get_latest_factor_snapshot_date()
+        with self.connect() as conn:
+            conn.row_factory = sqlite3.Row
+            universe = conn.execute(
+                """
+                SELECT ticker, code, name, exchange, board, latest_price, change_percent,
+                       turnover_ratio, amount, is_st, is_suspended, source, synced_at
+                FROM universe_stocks
+                WHERE ticker = ?
+                """,
+                (ticker,),
+            ).fetchone()
+            factor = None
+            if latest_snapshot:
+                factor = conn.execute(
+                    """
+                    SELECT *
+                    FROM daily_factors
+                    WHERE ticker = ? AND snapshot_date = ?
+                    """,
+                    (ticker, latest_snapshot),
+                ).fetchone()
+            financial = conn.execute(
+                """
+                SELECT *
+                FROM financial_profiles
+                WHERE ticker = ?
+                """,
+                (ticker,),
+            ).fetchone()
+            industry = conn.execute(
+                """
+                SELECT *
+                FROM stock_industries
+                WHERE ticker = ?
+                """,
+                (ticker,),
+            ).fetchone()
+            weekly = conn.execute(
+                """
+                SELECT wpm.*, tpr.built_at, tpr.build_mode
+                FROM weekly_pool_members wpm
+                JOIN theme_prefilter_runs tpr ON tpr.id = wpm.run_id
+                WHERE wpm.ticker = ?
+                ORDER BY wpm.run_id DESC
+                LIMIT 1
+                """,
+                (ticker,),
+            ).fetchone()
+            recommendation = conn.execute(
+                """
+                SELECT rec.*, rr.run_at, rr.data_source AS run_data_source, rr.router_mode AS run_router_mode
+                FROM recommendations rec
+                JOIN research_runs rr ON rr.id = rec.run_id
+                WHERE rec.ticker = ?
+                ORDER BY rec.run_id DESC, rec.rank_no ASC
+                LIMIT 1
+                """,
+                (ticker,),
+            ).fetchone()
+            agent_scores = []
+            decisions = []
+            events = []
+            if recommendation:
+                agent_scores = conn.execute(
+                    """
+                    SELECT agent_name, score, reason
+                    FROM agent_scores
+                    WHERE recommendation_id = ?
+                    ORDER BY agent_name ASC
+                    """,
+                    (int(recommendation["id"]),),
+                ).fetchall()
+                decisions = conn.execute(
+                    """
+                    SELECT run_id, decision_stage, decision, reason_code, reason_text,
+                           theme_name, theme_bucket, total_score, stage, created_at
+                    FROM candidate_decisions
+                    WHERE ticker = ?
+                    ORDER BY id DESC
+                    LIMIT 20
+                    """,
+                    (ticker,),
+                ).fetchall()
+                theme_name = str(recommendation["prefilter_theme"] or recommendation["theme_name"] or "")
+                if theme_name:
+                    events = conn.execute(
+                        """
+                        SELECT run_id, event_date, theme_name, source_type, source_name, source_url, title, ticker, strength
+                        FROM theme_events
+                        WHERE ticker = ? OR theme_name = ?
+                        ORDER BY id DESC
+                        LIMIT 20
+                        """,
+                        (ticker, theme_name),
+                    ).fetchall()
+            if not events:
+                events = conn.execute(
+                    """
+                    SELECT run_id, event_date, theme_name, source_type, source_name, source_url, title, ticker, strength
+                    FROM theme_events
+                    WHERE ticker = ?
+                    ORDER BY id DESC
+                    LIMIT 20
+                    """,
+                    (ticker,),
+                ).fetchall()
+
+        def to_dict(row) -> dict[str, object] | None:
+            return dict(row) if row else None
+
+        financial_status = "missing"
+        if financial:
+            financial_status = "proxy" if str(financial["fundamental_source"]) == "local_profile" else "real"
+            if not bool(self._financial_row_ready(dict(financial))):
+                financial_status = "stale" if financial_status == "real" else financial_status
+        factor_status = "real" if factor else "missing"
+        industry_status = "real" if industry else "missing"
+        valuation_status = "proxy" if factor and abs(float(factor["valuation_percentile"]) - 0.5) < 0.000001 else "real" if factor else "missing"
+        event_status = "weak_evidence"
+        if events and any(str(row["source_url"] or "") for row in events):
+            event_status = "real"
+        elif not events:
+            event_status = "missing"
+
+        return {
+            "ticker": ticker,
+            "latest_snapshot": latest_snapshot,
+            "universe": to_dict(universe),
+            "factor": to_dict(factor),
+            "financial": to_dict(financial),
+            "industry": to_dict(industry),
+            "weekly": to_dict(weekly),
+            "recommendation": to_dict(recommendation),
+            "agent_scores": [dict(row) for row in agent_scores],
+            "decisions": [dict(row) for row in decisions],
+            "events": [dict(row) for row in events],
+            "status": {
+                "factor": factor_status,
+                "financial": financial_status,
+                "industry": industry_status,
+                "valuation": valuation_status,
+                "event": event_status,
+            },
+        }
 
     def get_recent_theme_events(self, limit: int = 20) -> list[dict[str, object]]:
         with self.connect() as conn:
@@ -1979,10 +2447,7 @@ class ResearchStore:
     def _save_theme_score_inputs(conn: sqlite3.Connection, run_id: int, theme_scores: list, created_at: str) -> None:
         rows = []
         for item in theme_scores:
-            try:
-                detail = json.loads(str(getattr(item, "detail_json", "{}")))
-            except json.JSONDecodeError:
-                detail = {}
+            detail = ResearchStore._parse_json_detail(getattr(item, "detail_json", "{}"))
             rows.append(
                 (
                     run_id,
@@ -2228,10 +2693,7 @@ class ResearchStore:
                 wildcard_count_map[theme_name] = wildcard_count_map.get(theme_name, 0) + 1
         writes = []
         for item in theme_scores:
-            try:
-                detail = json.loads(str(getattr(item, "detail_json", "{}")))
-            except json.JSONDecodeError:
-                detail = {}
+            detail = ResearchStore._parse_json_detail(getattr(item, "detail_json", "{}"))
             previous_runs = previous_map.get(item.theme_name, 0)
             writes.append(
                 (
