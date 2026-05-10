@@ -21,6 +21,7 @@ from .providers import (
     provider_endpoint,
     provider_headers,
 )
+from .instructions import load_compare_instructions
 from .retry import RetryClassifier, RetryClassifierConfig, classify_retry_class
 from .schema import FILE_COMPARISON_SCHEMA
 
@@ -48,10 +49,24 @@ class ProviderRequestError(RuntimeError):
 class OpenAIResponsesClient:
     """负责构造请求、执行 provider 内重试并返回归一化响应。"""
 
-    def __init__(self, runtime_config: FileComparisonRuntimeConfig) -> None:
-        """根据运行配置初始化 provider 链、限流器和退避分类器。"""
+    def __init__(
+        self,
+        runtime_config: FileComparisonRuntimeConfig,
+        *,
+        compare_instructions: str | None = None,
+        compare_instructions_path: Path | str | None = None,
+    ) -> None:
+        """根据运行配置初始化 provider 链、限流器和退避分类器。
+
+        compare_instructions 非空时直接使用；否则若 compare_instructions_path 非空则从该路径读取；
+        二者皆空时读取 skill 默认文件 prompts/compare-structured-instructions.md。
+        """
         self.runtime_config = runtime_config
         self.providers = runtime_config.llm.providers
+        self._compare_instructions_text = self._resolve_compare_instructions(
+            compare_instructions=compare_instructions,
+            compare_instructions_path=compare_instructions_path,
+        )
         self.current_provider_name = self.providers[0].provider
         self._retry_classifier = RetryClassifier(
             RetryClassifierConfig(
@@ -65,6 +80,18 @@ class OpenAIResponsesClient:
         self._rate_limit_lock = threading.Lock()
         self._last_request_started_at_by_provider = {provider.provider: 0.0 for provider in self.providers}
         self._next_allowed_at_by_provider = {provider.provider: 0.0 for provider in self.providers}
+
+    @staticmethod
+    def _resolve_compare_instructions(
+        *,
+        compare_instructions: str | None,
+        compare_instructions_path: Path | str | None,
+    ) -> str:
+        if compare_instructions is not None:
+            return compare_instructions
+        if compare_instructions_path is not None:
+            return load_compare_instructions(path=Path(compare_instructions_path))
+        return load_compare_instructions()
 
     def build_request_payload(
         self,
@@ -100,80 +127,7 @@ class OpenAIResponsesClient:
             schema_name=FILE_COMPARISON_SCHEMA["name"],
             schema=FILE_COMPARISON_SCHEMA["schema"],
             strict=FILE_COMPARISON_SCHEMA["strict"],
-            instructions=(
-                "你是文件修订对照助手。请只返回 JSON，不要输出 Markdown 或解释。\n\n"
-                "## 任务\n"
-                "- 输入包含 compare_blocks；每个 compare block 内有 old_items 和 new_items。\n"
-                "- 你负责在同一个 compare block 内完成条目映射，只输出有实质文本变化的操作。\n"
-                "- 不要直接生成最终对照表正文；程序会按 block_id + item_id 回查原文。\n\n"
-                "## 工作步骤\n"
-                "1. 对每个 compare block 建立覆盖清单，逐项扫描所有 old_items 和 new_items。\n"
-                "2. 先找完全一致或仅编号顺延的条目，这些条目不要输出。\n"
-                "3. 再按语义和定义名称匹配剩余条目，判断 replace、delete、add。\n"
-                "4. 输出前必须自检：所有非完全一致、非仅编号顺延的 old_item/new_item，"
-                "都必须出现在某个 operation 的 old_item_ids 或 new_item_ids 中。\n\n"
-                "## 匹配规则\n"
-                "- 不要假设相同编号就是同一条，也不要因为编号相邻就强行匹配。\n"
-                "- 如果插入或删除一条导致后续编号顺延，只输出真实新增、删除或实质替换的条目；不要输出后续纯顺延条目。\n"
-                "- 定义项必须优先按冒号或中文冒号前的定义名称对齐。例如“44、认购：...”的定义名称是“认购”。\n"
-                "- 同名定义项即使编号变化也优先匹配。\n"
-                "- 不同定义名称默认不要 replace；只有能判断为同一业务概念改名时，才允许 replace，否则按 delete + add 处理。\n\n"
-                "## 通用判断示例\n"
-                "- 旧侧“1、定义A：旧说明”在新侧没有同名或同义定义时，返回 delete；不能因为附近有相关但不同名的定义就跳过。\n"
-                "- 新侧“2、定义B：新说明”在旧侧没有同名或同义定义时，返回 add。\n"
-                "- 旧侧“3、定义C：旧说明”和新侧“3、定义C：新说明”名称相同但说明变化时，返回 replace。\n"
-                "- 旧侧“4、定义D：说明”和新侧“5、定义D：说明”名称相同、正文相同、只有编号变化时，不要输出。\n"
-                "- 旧侧“5、定义E：...”和新侧“5、定义F：...”名称不同，即使位置相同或正文有相似词，也默认拆成 delete + add；只有能证明是同一业务概念改名时才返回 replace。\n"
-                "- 新侧插入“6、条款G”导致后续条款编号顺延时，只输出“条款G”的 add；后续正文未变的顺延条目不要输出。\n\n"
-                "## 覆盖规则\n"
-                "- 每个 compare block 必须做覆盖检查。\n"
-                "- 排除完全一致或仅编号顺延的匹配项后，仍未匹配的 old_item 必须返回 delete。\n"
-                "- 排除完全一致或仅编号顺延的匹配项后，仍未匹配的 new_item 必须返回 add。\n"
-                "- 不允许省略单侧独有条目。\n\n"
-                "## 输出规则\n"
-                "- 顶层只返回 blocks。\n"
-                "- operation.type 只使用 add、delete、replace。\n"
-                "- old_focus_text/new_focus_text 只作为变化锚点和排查线索，不会作为最终展示文本；不确定可留空。\n\n"
-                "## 返回结构示例\n"
-                "{\n"
-                '  "blocks": [\n'
-                "    {\n"
-                '      "block_id": "输入中的 block_id",\n'
-                '      "chapter": "章节标题",\n'
-                '      "parent_path": "父标题路径",\n'
-                '      "operations": [\n'
-                "        {\n"
-                '          "type": "replace",\n'
-                '          "old_item_ids": ["old_item_id"],\n'
-                '          "new_item_ids": ["new_item_id"],\n'
-                '          "old_focus_text": "旧侧变化锚点",\n'
-                '          "new_focus_text": "新侧变化锚点",\n'
-                '          "confidence": 0.95,\n'
-                '          "reason": "简要说明判断依据"\n'
-                "        },\n"
-                "        {\n"
-                '          "type": "delete",\n'
-                '          "old_item_ids": ["old_item_id"],\n'
-                '          "new_item_ids": [],\n'
-                '          "old_focus_text": "旧侧删除锚点",\n'
-                '          "new_focus_text": "",\n'
-                '          "confidence": 0.95,\n'
-                '          "reason": "新侧无对应条目"\n'
-                "        },\n"
-                "        {\n"
-                '          "type": "add",\n'
-                '          "old_item_ids": [],\n'
-                '          "new_item_ids": ["new_item_id"],\n'
-                '          "old_focus_text": "",\n'
-                '          "new_focus_text": "新侧新增锚点",\n'
-                '          "confidence": 0.95,\n'
-                '          "reason": "旧侧无对应条目"\n'
-                "        }\n"
-                "      ]\n"
-                "    }\n"
-                "  ]\n"
-                "}"
-            ),
+            instructions=self._compare_instructions_text,
             input_payload={
                 "pair_id": pair_id,
                 "batch_id": batch.batch_id,
