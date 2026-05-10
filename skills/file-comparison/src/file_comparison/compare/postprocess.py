@@ -13,7 +13,7 @@ from .chunking import (
     strip_leading_numbering,
     text_starts_with_subchapter,
 )
-from .models import ComparisonRow
+from .models import ComparisonRow, Section
 
 PRODUCT_NAME_CHAPTER = "基金名称"
 
@@ -118,6 +118,7 @@ def coerce_shifted_clause_add_delete_to_replace(
     """将同章内「仅 new 的根块 add」与「高度相似正文的 delete」并为 replace，避免无/新增 + 连续删把「三」并进「一、二」。
 
     典型：第五部分 block-001 add(new-001) 与 block-004 delete(old-006) 实为修订，模型拆成 add+delete 时在此纠偏。
+    同块内「单删 + 单增」且高相似时的一行展示由 `merge_lone_delete_add_when_no_replace_in_block` 负责，不依赖本函数的相似度。
     """
     block_list = payload.get("blocks")
     if not isinstance(block_list, list) or not compare_blocks:
@@ -274,6 +275,81 @@ def _combine_deleted_run_old_text(run_rows: list[ComparisonRow]) -> str:
     return "\n".join(p for p in parts if p).strip()
 
 
+def _combine_added_run_new_text(run_rows: list[ComparisonRow]) -> str:
+    """合并连续「新增」占位行的右侧正文，规则与 `_combine_deleted_run_old_text` 对称。"""
+    parts: list[str] = []
+    last_subchapter: str | None = None
+    for row in run_rows:
+        sc = str(row.subchapter or "").strip()
+        body = str(row.new_text or "").strip()
+        if body in {"", "新增", "删除"}:
+            if body:
+                parts.append(body)
+            last_subchapter = None
+            continue
+        if sc:
+            if text_starts_with_subchapter(body, sc):
+                segment = body
+            else:
+                segment = f"{sc}\n{body}"
+            if last_subchapter == sc and parts:
+                parts.append(body)
+            else:
+                parts.append(segment)
+            last_subchapter = sc
+        else:
+            parts.append(body)
+            last_subchapter = None
+    return "\n".join(p for p in parts if p).strip()
+
+
+def _is_pure_delete_row(row: ComparisonRow) -> bool:
+    return str(row.new_text).strip() == "删除" and str(row.old_text).strip() not in ("", "新增", "删除")
+
+
+def _is_pure_add_row(row: ComparisonRow) -> bool:
+    return str(row.old_text).strip() == "新增" and str(row.new_text).strip() not in ("", "删除", "新增")
+
+
+def merge_pure_delete_and_add_runs(rows: list[ComparisonRow]) -> list[ComparisonRow]:
+    """同一章节内连续、且每行仅为「纯删除」或「纯新增」时，若同时含删与增则并为一行（不检验相似度）。
+
+    适用于整章/整段在模型侧只产出 delete 与 add、无 replace 的展示（如第四部分旧章整删 + 新侧一条说明）；
+    在 `merge_consecutive_delete_rows` 与 `insert_section_title_change_rows` 之后再执行。
+    """
+    if not rows:
+        return rows
+    out: list[ComparisonRow] = []
+    i = 0
+    while i < len(rows):
+        row = rows[i]
+        if not (_is_pure_delete_row(row) or _is_pure_add_row(row)):
+            out.append(row)
+            i += 1
+            continue
+        chapter = row.chapter
+        run: list[ComparisonRow] = []
+        while i < len(rows) and rows[i].chapter == chapter and (
+            _is_pure_delete_row(rows[i]) or _is_pure_add_row(rows[i])
+        ):
+            run.append(rows[i])
+            i += 1
+        del_rows = [r for r in run if _is_pure_delete_row(r)]
+        add_rows = [r for r in run if _is_pure_add_row(r)]
+        if del_rows and add_rows:
+            out.append(
+                ComparisonRow(
+                    chapter=chapter,
+                    subchapter="",
+                    old_text=_combine_deleted_run_old_text(del_rows),
+                    new_text=_combine_added_run_new_text(add_rows),
+                )
+            )
+        else:
+            out.extend(run)
+    return out
+
+
 def merge_consecutive_delete_rows(rows: list[ComparisonRow]) -> list[ComparisonRow]:
     """同一章节下连续「右侧为删除」合并为一行（小标题可不同），减少表格碎行与章节内不对齐感。"""
     if not rows:
@@ -304,6 +380,65 @@ def merge_consecutive_delete_rows(rows: list[ComparisonRow]) -> list[ComparisonR
                 new_text="删除",
             )
         )
+    return out
+
+
+def insert_section_title_change_rows(
+    rows: list[ComparisonRow],
+    *,
+    old_sections: list[Section],
+    new_sections: list[Section],
+) -> list[ComparisonRow]:
+    """同号章节在旧/新文档中 Section.title 不一致时，在该章节首条内容行前插入一行「旧题 | 新题」。
+
+    `CompareBlock.chapter_title` 与各行 `chapter` 列均取自旧版标题，模型批次里通常也不会单独报章节名变更；
+    本函数在合并 batch 行之后补足，使「第四部分 … 发售」→「第四部分 … 发售历史沿革」出现在同一数据行左右列。
+    """
+    if not rows or not old_sections or not new_sections:
+        return rows
+    old_by_number = {s.number: s for s in old_sections}
+    new_by_number = {s.number: s for s in new_sections}
+    changed: dict[str, tuple[str, str]] = {}
+    for number, old_sec in old_by_number.items():
+        new_sec = new_by_number.get(number)
+        if new_sec is None:
+            continue
+        o_title = old_sec.title.strip()
+        n_title = new_sec.title.strip()
+        if o_title != n_title:
+            changed[number] = (o_title, n_title)
+    if not changed:
+        return rows
+    title_to_number = {s.title.strip(): s.number for s in old_sections}
+    already_covered: set[str] = set()
+    for row in rows:
+        number = title_to_number.get(str(row.chapter).strip())
+        if not number or number not in changed:
+            continue
+        o_title, n_title = changed[number]
+        if str(row.old_text).strip() == o_title and str(row.new_text).strip() == n_title:
+            already_covered.add(number)
+    inserted: set[str] = set()
+    out: list[ComparisonRow] = []
+    for row in rows:
+        number = title_to_number.get(str(row.chapter).strip())
+        if (
+            number
+            and number in changed
+            and number not in already_covered
+            and number not in inserted
+        ):
+            o_title, n_title = changed[number]
+            out.append(
+                ComparisonRow(
+                    chapter=row.chapter,
+                    subchapter="",
+                    old_text=o_title,
+                    new_text=n_title,
+                )
+            )
+            inserted.add(number)
+        out.append(row)
     return out
 
 
@@ -971,6 +1106,77 @@ def insert_operation_by_source_order(
     operations.append(operation)
 
 
+def merge_lone_delete_add_when_no_replace_in_block(
+    operations: list[dict[str, Any]],
+    *,
+    old_by_id: dict[str, str],
+    new_by_id: dict[str, str],
+    global_old_by_id: dict[str, str],
+    global_new_by_id: dict[str, str],
+    similarity_threshold: float = 0.85,
+) -> list[dict[str, Any]]:
+    """同块内 substantive 恰好为「一条 delete + 一条 add」时，若两侧正文足够相似则并成一条 replace。
+
+    可与同块其它 replace 共存（典型：章节标题删+增与正文多条 replace 同批送模）。对照表上标题一行展示左右正文，
+    而不是「删除」+「新增」两行。须过相似度门槛，避免把无关删、增误并（如 normalize 分拆后误配，相似度约 0.18）。
+    """
+    if not operations:
+        return operations
+    substantive: list[tuple[int, dict[str, Any]]] = []
+    for i, op in enumerate(operations):
+        if not isinstance(op, dict):
+            continue
+        typ = str(op.get("type", "")).strip()
+        if typ in {"match", "renumber_only"}:
+            continue
+        substantive.append((i, op))
+    if not substantive:
+        return operations
+    deletes = [(i, op) for i, op in substantive if str(op.get("type", "")).strip() == "delete"]
+    adds = [(i, op) for i, op in substantive if str(op.get("type", "")).strip() == "add"]
+    if len(deletes) != 1 or len(adds) != 1:
+        return operations
+    di, dop = deletes[0]
+    ai, aop = adds[0]
+    del_ids = [str(x).strip() for x in dop.get("old_item_ids", []) if str(x).strip()]
+    add_ids = [str(x).strip() for x in aop.get("new_item_ids", []) if str(x).strip()]
+    old_text = _resolve_operation_item_texts(
+        del_ids, local_by_id=old_by_id, global_by_id=global_old_by_id
+    ).strip()
+    new_text = _resolve_operation_item_texts(
+        add_ids, local_by_id=new_by_id, global_by_id=global_new_by_id
+    ).strip()
+    if not old_text or not new_text:
+        return operations
+    if _clause_relocation_similarity(old_text, new_text) < similarity_threshold:
+        return operations
+    synthetic: dict[str, Any] = {
+        "type": "replace",
+        "old_item_ids": list(dop.get("old_item_ids", [])),
+        "new_item_ids": list(aop.get("new_item_ids", [])),
+        "old_focus_text": str(dop.get("old_focus_text", "") or ""),
+        "new_focus_text": str(aop.get("new_focus_text", "") or ""),
+        "confidence": min(
+            float(dop.get("confidence", 1.0) or 1.0),
+            float(aop.get("confidence", 1.0) or 1.0),
+        ),
+        "reason": str(dop.get("reason", "") or aop.get("reason", "") or "同块单删与单增合并为一行对照。"),
+    }
+    insert_at = min(di, ai)
+    rebuilt: list[dict[str, Any]] = []
+    inserted = False
+    for i, op in enumerate(operations):
+        if i == di or i == ai:
+            if not inserted and i == insert_at:
+                rebuilt.append(synthetic)
+                inserted = True
+            continue
+        rebuilt.append(op)
+    if not inserted:
+        rebuilt.append(synthetic)
+    return rebuilt
+
+
 def dedupe_block_operations(operations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """去掉模型重复引用同一组 item_id 产生的重复操作。"""
     deduped: list[dict[str, Any]] = []
@@ -999,7 +1205,18 @@ def rows_from_block_operations_payload(payload: dict[str, Any], compare_blocks: 
             continue
         old_items_by_id = {str(item.item_id): str(item.text).strip() for item in source_block.old_items}
         new_items_by_id = {str(item.item_id): str(item.text).strip() for item in source_block.new_items}
-        for operation in block_payload.get("operations", []):
+        raw_operations = block_payload.get("operations", [])
+        if not isinstance(raw_operations, list):
+            raw_operations = []
+        op_dicts = [op for op in raw_operations if isinstance(op, dict)]
+        operations = merge_lone_delete_add_when_no_replace_in_block(
+            op_dicts,
+            old_by_id=old_items_by_id,
+            new_by_id=new_items_by_id,
+            global_old_by_id=global_old_by_id,
+            global_new_by_id=global_new_by_id,
+        )
+        for operation in operations:
             operation_type = str(operation.get("type", "")).strip()
             if operation_type in {"match", "renumber_only"}:
                 continue

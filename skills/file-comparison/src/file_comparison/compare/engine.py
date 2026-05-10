@@ -34,7 +34,9 @@ from .pairing import (
     scan_folder_for_pairs,
 )
 from .postprocess import (
+    insert_section_title_change_rows,
     merge_consecutive_delete_rows,
+    merge_pure_delete_and_add_runs,
     normalize_block_operations_payload,
     normalize_product_name_rows,
     rows_from_block_operations_payload,
@@ -300,7 +302,13 @@ def compare_pair_with_llm(
     ordered_rows: list[ComparisonRow] = []
     for batch in batches:
         ordered_rows.extend(batch_results[batch.batch_id])
-    return merge_consecutive_delete_rows(ordered_rows)
+    merged = merge_consecutive_delete_rows(ordered_rows)
+    titled = insert_section_title_change_rows(
+        merged,
+        old_sections=list(old_sections),
+        new_sections=list(new_sections),
+    )
+    return merge_pure_delete_and_add_runs(titled)
 
 
 def validate_complete_batch_results(

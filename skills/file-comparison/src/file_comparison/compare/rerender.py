@@ -18,7 +18,12 @@ from .engine import (
 )
 from .extractor import extract_fund_name_or_empty, extract_text
 from .models import ComparisonRow, PairMatch, Section
-from .postprocess import merge_consecutive_delete_rows, rows_from_llm_payload
+from .postprocess import (
+    insert_section_title_change_rows,
+    merge_consecutive_delete_rows,
+    merge_pure_delete_and_add_runs,
+    rows_from_llm_payload,
+)
 from .writer import convert_docx_to_doc, write_docx
 
 SKILL_ROOT = Path(__file__).resolve().parents[3]
@@ -117,7 +122,13 @@ def rows_from_stored_batches(pair_dir: Path, old_sections: list[Section], new_se
     rows: list[ComparisonRow] = []
     for batch in batches:
         rows.extend(batch_results[batch.batch_id])
-    return merge_consecutive_delete_rows(rows)
+    merged = merge_consecutive_delete_rows(rows)
+    titled = insert_section_title_change_rows(
+        merged,
+        old_sections=old_sections,
+        new_sections=new_sections,
+    )
+    return merge_pure_delete_and_add_runs(titled)
 
 
 def rows_from_current_local_rules(old_sections: list[Section], new_sections: list[Section]) -> list[ComparisonRow]:
