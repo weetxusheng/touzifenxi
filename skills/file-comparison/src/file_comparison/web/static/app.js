@@ -106,6 +106,15 @@
     };
   }
 
+  /** Ant Design Upload 在 beforeUpload 里拿到的项可能是 File 本身，也可能包在 originFileObj 里。 */
+  function rawFileFromUploadEntry(fileWrapper) {
+    if (!fileWrapper) return null;
+    var candidate = fileWrapper.originFileObj != null ? fileWrapper.originFileObj : fileWrapper;
+    if (typeof File !== "undefined" && candidate instanceof File) return candidate;
+    if (typeof Blob !== "undefined" && candidate instanceof Blob) return candidate;
+    return null;
+  }
+
   function FileComparisonPage() {
     const app = App.useApp();
     const message = app.message;
@@ -119,9 +128,12 @@
     const [rerunningBatchIds, setRerunningBatchIds] = React.useState({});
     const [rerenderingPairIds, setRerenderingPairIds] = React.useState({});
     const [pollVersion, setPollVersion] = React.useState(0);
+    const initialUrlTaskIdRef = React.useRef(readTaskIdFromLocation());
+    const workspaceHydratedRef = React.useRef("");
 
     React.useEffect(function () {
       window.sessionStorage.removeItem("fileComparison.currentTaskId");
+      workspaceHydratedRef.current = "";
       const savedTaskId = readTaskIdFromLocation();
       if (savedTaskId) {
         setCurrentTaskId(savedTaskId);
@@ -145,7 +157,10 @@
         }
       }, pollIntervalMs);
       fetchJson("/api/file-comparison/task/" + currentTaskId + "/status")
-        .then(setTaskPayload)
+        .then(function (payload) {
+          setTaskPayload(payload);
+          tryHydrateWorkspaceFromStatus(payload, currentTaskId);
+        })
         .catch(function () {
           window.sessionStorage.removeItem("fileComparison.currentTaskId");
           writeTaskIdToLocation("");
@@ -166,6 +181,7 @@
     const activeProviderLabel = providerLabelFromList(governance.active_providers, governance.current_provider);
 
     function clearCurrentTask() {
+      workspaceHydratedRef.current = "";
       setCurrentTaskId("");
       setTaskPayload(null);
       window.sessionStorage.removeItem("fileComparison.currentTaskId");
@@ -208,6 +224,76 @@
 
     function clearPairs() {
       setEditablePairs([]);
+    }
+
+    function tryHydrateWorkspaceFromStatus(payload, taskIdFromEffect) {
+      var tid = String((payload && payload.task_id) || taskIdFromEffect || "").trim();
+      if (!tid) return;
+      if (workspaceHydratedRef.current === tid) return;
+      var urlTask = String(initialUrlTaskIdRef.current || "").trim();
+      if (!urlTask || urlTask !== tid) return;
+
+      workspaceHydratedRef.current = tid;
+
+      var folderPath = String((payload && payload.folder_path) || "").trim();
+      var files = (payload && payload.files) && Array.isArray(payload.files) ? payload.files.slice() : [];
+      var pairs = (payload && payload.pairs) || [];
+
+      if (pairs.length) {
+        setEditablePairs(pairs.map(pairPayloadWithLabels));
+      }
+
+      if (!folderPath && pairs.length) {
+        var seenPaths = {};
+        pairs.forEach(function (pair) {
+          [pair.old_path, pair.new_path].forEach(function (pathValue) {
+            var path = String(pathValue || "").trim();
+            if (!path || seenPaths[path]) return;
+            seenPaths[path] = true;
+            files.push({ label: fileLabelFromPath(path), path: path });
+          });
+        });
+        setScanPayload(null);
+        setUploadedFiles(
+          files.map(function (fileEntry, index) {
+            return {
+              uid: "restored-path-" + index + "-" + String(fileEntry.path),
+              name: fileEntry.label,
+              status: "done",
+            };
+          })
+        );
+        return;
+      }
+
+      if (folderPath && !files.length && pairs.length) {
+        var seenFallback = {};
+        pairs.forEach(function (pair) {
+          [pair.old_path, pair.new_path].forEach(function (pathValue) {
+            var path = String(pathValue || "").trim();
+            if (!path || seenFallback[path]) return;
+            seenFallback[path] = true;
+            files.push({ label: fileLabelFromPath(path), path: path });
+          });
+        });
+      }
+
+      if (folderPath) {
+        setScanPayload({
+          folder_path: folderPath,
+          files: files,
+          uploaded_count: files.length,
+        });
+        setUploadedFiles(
+          files.map(function (fileEntry, index) {
+            return {
+              uid: "restored-" + index + "-" + String(fileEntry.path),
+              name: fileEntry.label,
+              status: "done",
+            };
+          })
+        );
+      }
     }
 
     async function refreshTask(taskId) {
@@ -377,9 +463,9 @@
         {
           title: "操作",
           key: "actions",
-          width: 110,
+          width: 150,
           render: function (_, record) {
-            return html`<${Space} direction="vertical" size=${2}>
+            return html`<${Space} size=${4} wrap=${false}>
               <${Button} size="small" onClick=${function () { swapPair(record.pair_id); }}>交换<//>
               <${Button} size="small" danger=${true} onClick=${function () { removePair(record.pair_id); }}>删除匹配<//>
             <//>`;
@@ -581,12 +667,41 @@
         message.warning("先拖入文档再上传。");
         return;
       }
+      var hasLocalBlob = uploadedFiles.some(function (fileWrapper) {
+        return !!rawFileFromUploadEntry(fileWrapper);
+      });
+      if (!hasLocalBlob) {
+        if (!scanPayload || !scanPayload.folder_path) {
+          message.warning("本地文件句柄已丢失，请重新选择文件后再匹配。");
+          return;
+        }
+        setUploading(true);
+        try {
+          const payload = await fetchJson("/api/file-comparison/scan-folder", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folder_path: scanPayload.folder_path }),
+          });
+          setScanPayload(payload);
+          setEditablePairs((payload.pairs || []).map(pairPayloadWithLabels));
+          message.success("已根据目录重新扫描并生成配对建议。");
+        } catch (error) {
+          message.error(error.message);
+        } finally {
+          setUploading(false);
+        }
+        return;
+      }
       clearCurrentTask();
       const formData = new FormData();
       uploadedFiles.forEach(function (fileWrapper) {
-        const fileObject = fileWrapper.originFileObj || fileWrapper;
+        const fileObject = rawFileFromUploadEntry(fileWrapper);
         if (fileObject) {
-          formData.append("files", fileObject, fileObject.name || fileWrapper.name || "upload.docx");
+          formData.append(
+            "files",
+            fileObject,
+            (fileObject && fileObject.name) || fileWrapper.name || "upload.docx"
+          );
         }
       });
       setUploading(true);

@@ -657,29 +657,14 @@ def test_build_compare_blocks_for_llm_keeps_root_siblings_in_one_block():
 
     assert len(blocks) == 1
     assert blocks[0].parent_path == ""
-    assert [item.item_id for item in blocks[0].old_items] == [
-        "第一部分-old-001",
-        "第一部分-old-002",
-        "第一部分-old-003",
-        "第一部分-old-004",
-    ]
-    assert [item.item_id for item in blocks[0].new_items] == [
-        "第一部分-new-001",
-        "第一部分-new-002",
-        "第一部分-new-003",
-        "第一部分-new-004",
-    ]
+    # 去序号后「五、法律法规…」与「六、法律法规…」在邻域 5 内成对剔除，仅保留实质差异条目。
+    assert [item.item_id for item in blocks[0].old_items] == ["第一部分-old-004"]
+    assert [item.item_id for item in blocks[0].new_items] == ["第一部分-new-003"]
     assert [item.text for item in blocks[0].old_items] == [
-        "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
-        "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
-        "五、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
         "六、本基金合同关于基金产品资料概要的编制、披露及更新等内容，将不晚于2020年9月1日起执行。",
     ]
     assert [item.text for item in blocks[0].new_items] == [
-        "三、创金合信中证500指数增强型发起式证券投资基金由基金管理人依照《基金法》、基金合同及其他有关规定募集。",
-        "四、基金管理人、基金托管人在本基金合同之外披露涉及本基金的信息，其内容涉及界定基金合同当事人之间权利义务关系的，如与基金合同有冲突，以基金合同为准。",
         "五、本基金可根据法律法规和基金合同的约定参与转融通证券出借业务，可能存在流动性风险、市场风险和信用风险等转融通业务特有风险。",
-        "六、本基金按照中国法律法规成立并运作，若基金合同的内容与届时有效的法律法规的强制性规定不一致，应当以届时有效的法律法规的规定为准。",
     ]
     assert summaries[0]["block_count"] == 1
 
@@ -765,18 +750,13 @@ def test_build_compare_blocks_groups_parenthesized_siblings_under_parent_heading
 
     assert len(blocks) == 1
     assert blocks[0].parent_path == "一、基金管理人"
+    # （25）与新版（24）去序号后一致且在邻域内，成对剔除。
     assert [item.text for item in blocks[0].old_items] == [
-        "（15）完全一致内容；",
         "（16）办理基金认购、申购业务；",
-        "（17）继续一致内容；",
         "（24）基金募集失败时退还认购人；",
-        "（25）执行生效的基金份额持有人大会的决议；",
     ]
     assert [item.text for item in blocks[0].new_items] == [
-        "（15）完全一致内容；",
         "（16）办理基金申购业务；",
-        "（17）继续一致内容；",
-        "（24）执行生效的基金份额持有人大会的决议；",
     ]
     assert summaries[0]["block_count"] == 1
 
@@ -1371,3 +1351,84 @@ def test_write_docx_uses_compact_margins_and_chapter_column(tmp_path):
     assert round(document.sections[0].left_margin.cm, 1) == 1.0
     assert round(document.sections[0].right_margin.cm, 1) == 1.0
     assert round(table.columns[0].width.cm, 1) == 1.4
+
+
+def _chunking_module():
+    skill_src = PROJECT_ROOT / "skills" / "file-comparison" / "src"
+    path = str(skill_src)
+    if path not in sys.path:
+        sys.path.insert(0, path)
+    from file_comparison.compare import chunking
+
+    return chunking
+
+
+def test_filter_compare_block_items_by_stripped_numbering_identity_pairs_within_neighbor_window():
+    chunking = _chunking_module()
+    from file_comparison.compare.models import CompareBlockItem
+
+    old_items = (
+        CompareBlockItem("old-a", "4、基金份额：指同一正文。"),
+        CompareBlockItem("old-b", "5、另一条：旧。"),
+    )
+    new_items = (
+        CompareBlockItem("new-a", "6、基金份额：指同一正文。"),
+        CompareBlockItem("new-b", "7、另一条：新。"),
+    )
+    kept_old, kept_new = chunking.filter_compare_block_items_by_stripped_numbering_identity(old_items, new_items)
+    assert [item.text for item in kept_old] == ["5、另一条：旧。"]
+    assert [item.text for item in kept_new] == ["7、另一条：新。"]
+
+
+def test_filter_compare_block_items_by_stripped_numbering_identity_pairs_misaligned_within_window():
+    """邻域内下标不要求一致：去序号后相同且 |i-j|<=5 即可成对剔除。"""
+    chunking = _chunking_module()
+    from file_comparison.compare.models import CompareBlockItem
+
+    old_items = (
+        CompareBlockItem("old-1", "五、本基金按照法律法规成立并运作。"),
+        CompareBlockItem("old-2", "六、本基金合同关于资料概要的编制。"),
+    )
+    new_items = (
+        CompareBlockItem("new-1", "五、本基金可参与转融通业务。"),
+        CompareBlockItem("new-2", "六、本基金按照法律法规成立并运作。"),
+    )
+    kept_old, kept_new = chunking.filter_compare_block_items_by_stripped_numbering_identity(old_items, new_items)
+    assert [item.text for item in kept_old] == ["六、本基金合同关于资料概要的编制。"]
+    assert [item.text for item in kept_new] == ["五、本基金可参与转融通业务。"]
+
+
+def test_filter_compare_block_items_by_stripped_numbering_identity_skips_pair_beyond_neighbor_window():
+    chunking = _chunking_module()
+    from file_comparison.compare.models import CompareBlockItem
+
+    old_items = (
+        CompareBlockItem("o1", "1、同体一句。"),
+        CompareBlockItem("o2", "2、填老B。"),
+        CompareBlockItem("o3", "3、填老C。"),
+        CompareBlockItem("o4", "4、填老D。"),
+        CompareBlockItem("o5", "5、填老E。"),
+        CompareBlockItem("o6", "6、填老F。"),
+        CompareBlockItem("o7", "7、填老G。"),
+    )
+    new_items = (
+        CompareBlockItem("n1", "1、填新1。"),
+        CompareBlockItem("n2", "2、填新2。"),
+        CompareBlockItem("n3", "3、填新3。"),
+        CompareBlockItem("n4", "4、填新4。"),
+        CompareBlockItem("n5", "5、填新5。"),
+        CompareBlockItem("n6", "6、填新6。"),
+        CompareBlockItem("n7", "9、同体一句。"),
+    )
+    kept_old, kept_new = chunking.filter_compare_block_items_by_stripped_numbering_identity(old_items, new_items)
+    assert kept_old == old_items and kept_new == new_items
+
+
+def test_filter_compare_block_items_by_stripped_numbering_identity_keeps_different_body():
+    chunking = _chunking_module()
+    from file_comparison.compare.models import CompareBlockItem
+
+    old_items = (CompareBlockItem("old-1", "1、甲条款"),)
+    new_items = (CompareBlockItem("new-1", "1、乙条款"),)
+    kept_old, kept_new = chunking.filter_compare_block_items_by_stripped_numbering_identity(old_items, new_items)
+    assert kept_old == old_items and kept_new == new_items

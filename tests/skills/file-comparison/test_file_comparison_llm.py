@@ -319,6 +319,274 @@ def test_rows_from_block_operations_payload_expands_add_delete_and_replace():
     ]
 
 
+def test_rows_from_block_operations_payload_resolves_replace_across_blocks():
+    """replace 引用其它 compare block 中的 new_item_id 时，应用全局 map 回查右侧正文。"""
+    block_new_only = CompareBlock(
+        block_id="第五部分-block-001",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="",
+        old_items=(),
+        new_items=(
+            CompareBlockItem(
+                "第五部分-new-001",
+                "《新版基金合同》生效后满三年…并在6个月内召集基金份额持有人大会。",
+            ),
+        ),
+    )
+    block_old_only = CompareBlock(
+        block_id="第五部分-block-004",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="三、基金存续期内的基金份额持有人数量和资产规模",
+        old_items=(
+            CompareBlockItem(
+                "第五部分-old-006",
+                "《基金合同》生效后满三年…并在6个月内召开基金份额持有人大会进行表决。",
+            ),
+        ),
+        new_items=(),
+    )
+    payload = {
+        "blocks": [
+            {
+                "block_id": "第五部分-block-004",
+                "chapter": "第五部分  基金备案",
+                "parent_path": "三、基金存续期内的基金份额持有人数量和资产规模",
+                "operations": [
+                    {
+                        "type": "replace",
+                        "old_item_ids": ["第五部分-old-006"],
+                        "new_item_ids": ["第五部分-new-001"],
+                        "old_focus_text": "",
+                        "new_focus_text": "",
+                        "confidence": 0.9,
+                        "reason": "跨块引用 new-001。",
+                    }
+                ],
+            }
+        ]
+    }
+    rows = rows_from_block_operations_payload(
+        payload, compare_blocks=(block_new_only, block_old_only)
+    )
+    assert len(rows) == 1
+    assert "《基金合同》" in rows[0].old_text
+    assert "《新版基金合同》" in rows[0].new_text
+    assert rows[0].new_text != "删除"
+
+
+def test_rows_from_block_operations_payload_merges_consecutive_deletes_same_subchapter():
+    b = CompareBlock(
+        block_id="b1",
+        chapter_number="第七部分",
+        chapter_title="第七部分  示例",
+        parent_path="一、基金管理人",
+        old_items=(
+            CompareBlockItem("old-a", "甲段"),
+            CompareBlockItem("old-b", "乙段"),
+        ),
+        new_items=(),
+    )
+    payload = {
+        "blocks": [
+            {
+                "block_id": "b1",
+                "operations": [
+                    {
+                        "type": "delete",
+                        "old_item_ids": ["old-a"],
+                        "new_item_ids": [],
+                    },
+                    {
+                        "type": "delete",
+                        "old_item_ids": ["old-b"],
+                        "new_item_ids": [],
+                    },
+                ],
+            }
+        ]
+    }
+    rows = rows_from_block_operations_payload(payload, compare_blocks=(b,))
+    assert len(rows) == 1
+    assert rows[0].old_text == "一、基金管理人\n甲段\n乙段"
+    assert rows[0].subchapter == ""
+    assert rows[0].new_text == "删除"
+
+
+def test_rows_from_llm_payload_drops_add_when_replace_already_uses_new_item_id():
+    """模型同时给根下 add 与小标题下 replace（同一 new_item_id）时，不应再保留「无|新增」重复行。"""
+    block_root = CompareBlock(
+        block_id="第五部分-block-001",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="",
+        old_items=(),
+        new_items=(CompareBlockItem("第五部分-new-001", "新版条款全文"),),
+    )
+    block_rep = CompareBlock(
+        block_id="第五部分-block-004",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="三、存续",
+        old_items=(CompareBlockItem("第五部分-old-006", "旧版条款全文"),),
+        new_items=(CompareBlockItem("第五部分-new-001", "新版条款全文"),),
+    )
+    compare_blocks = (block_root, block_rep)
+    payload = {
+        "blocks": [
+            {
+                "block_id": "第五部分-block-001",
+                "chapter": "第五部分  基金备案",
+                "operations": [
+                    {"type": "add", "old_item_ids": [], "new_item_ids": ["第五部分-new-001"]},
+                ],
+            },
+            {
+                "block_id": "第五部分-block-004",
+                "chapter": "第五部分  基金备案",
+                "operations": [
+                    {
+                        "type": "replace",
+                        "old_item_ids": ["第五部分-old-006"],
+                        "new_item_ids": ["第五部分-new-001"],
+                    }
+                ],
+            },
+        ]
+    }
+    rows = rows_from_llm_payload(payload, compare_blocks=compare_blocks)
+    fifth = [r for r in rows if r.chapter == "第五部分  基金备案"]
+    assert len(fifth) == 1
+    assert fifth[0].old_text != "新增"
+    assert "旧版" in fifth[0].old_text or "旧版条款" in fifth[0].old_text
+    assert "新版" in fifth[0].new_text
+
+
+def test_rows_from_llm_payload_coerces_root_add_and_similar_delete_to_replace():
+    """根块 add 与另一块 delete 正文高度重合时，应合并为 replace，且连续删除不含「三」段。"""
+    block_root_new = CompareBlock(
+        block_id="第五部分-block-001",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="",
+        old_items=(),
+        new_items=(CompareBlockItem("第五部分-new-001", "《新版合同》条款正文甲乙丙丁"),),
+    )
+    block_del1 = CompareBlock(
+        block_id="第五部分-block-002",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="一、条件",
+        old_items=(CompareBlockItem("第五部分-old-001", "旧侧一段"),),
+        new_items=(),
+    )
+    block_del2 = CompareBlock(
+        block_id="第五部分-block-003",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="二、处理",
+        old_items=(CompareBlockItem("第五部分-old-002", "旧侧二段"),),
+        new_items=(),
+    )
+    block_del3 = CompareBlock(
+        block_id="第五部分-block-004",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="三、存续",
+        old_items=(CompareBlockItem("第五部分-old-006", "《基金合同》条款正文甲乙丙丁"),),
+        new_items=(),
+    )
+    compare_blocks = (block_root_new, block_del1, block_del2, block_del3)
+    payload = {
+        "blocks": [
+            {
+                "block_id": "第五部分-block-001",
+                "chapter": "第五部分  基金备案",
+                "operations": [
+                    {
+                        "type": "add",
+                        "old_item_ids": [],
+                        "new_item_ids": ["第五部分-new-001"],
+                    }
+                ],
+            },
+            {
+                "block_id": "第五部分-block-002",
+                "chapter": "第五部分  基金备案",
+                "operations": [
+                    {"type": "delete", "old_item_ids": ["第五部分-old-001"], "new_item_ids": []},
+                ],
+            },
+            {
+                "block_id": "第五部分-block-003",
+                "chapter": "第五部分  基金备案",
+                "operations": [
+                    {"type": "delete", "old_item_ids": ["第五部分-old-002"], "new_item_ids": []},
+                ],
+            },
+            {
+                "block_id": "第五部分-block-004",
+                "chapter": "第五部分  基金备案",
+                "operations": [
+                    {"type": "delete", "old_item_ids": ["第五部分-old-006"], "new_item_ids": []},
+                ],
+            },
+        ]
+    }
+    rows = rows_from_llm_payload(payload, compare_blocks=compare_blocks)
+    fifth = [r for r in rows if r.chapter == "第五部分  基金备案"]
+    assert len(fifth) == 2
+    deletes = [r for r in fifth if r.new_text == "删除"]
+    replaces = [r for r in fifth if r.new_text not in {"删除", "新增"} and r.old_text not in {"新增", "删除"}]
+    assert len(deletes) == 1
+    assert "一、条件" in deletes[0].old_text and "二、处理" in deletes[0].old_text
+    assert "三、存续" not in deletes[0].old_text
+    assert len(replaces) == 1
+    assert "《基金合同》" in replaces[0].old_text
+    assert "《新版合同》" in replaces[0].new_text
+
+
+def test_rows_from_block_operations_payload_merges_consecutive_deletes_same_chapter_different_subchapter():
+    b1 = CompareBlock(
+        block_id="第五部分-block-002",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="一、基金备案的条件",
+        old_items=(CompareBlockItem("o1", "旧一段"),),
+        new_items=(),
+    )
+    b2 = CompareBlock(
+        block_id="第五部分-block-003",
+        chapter_number="第五部分",
+        chapter_title="第五部分  基金备案",
+        parent_path="二、基金合同不能生效时募集资金的处理方式",
+        old_items=(CompareBlockItem("o2", "旧二段"),),
+        new_items=(),
+    )
+    payload = {
+        "blocks": [
+            {
+                "block_id": "第五部分-block-002",
+                "operations": [
+                    {"type": "delete", "old_item_ids": ["o1"], "new_item_ids": []},
+                ],
+            },
+            {
+                "block_id": "第五部分-block-003",
+                "operations": [
+                    {"type": "delete", "old_item_ids": ["o2"], "new_item_ids": []},
+                ],
+            },
+        ]
+    }
+    rows = rows_from_block_operations_payload(payload, compare_blocks=(b1, b2))
+    assert len(rows) == 1
+    assert "一、基金备案的条件" in rows[0].old_text
+    assert "二、基金合同不能生效时募集资金的处理方式" in rows[0].old_text
+    assert rows[0].new_text == "删除"
+
+
 def test_rows_from_block_operations_payload_keeps_ellipsis_for_equal_middle_lines():
     source_block = CompareBlock(
         block_id="block-001",
@@ -2711,11 +2979,29 @@ def test_build_request_payload_requests_block_operation_schema(tmp_path):
     operation_schema = schema["properties"]["blocks"]["items"]["properties"]["operations"]["items"]
     assert operation_schema["properties"]["type"]["enum"] == ["add", "delete", "replace"]
     assert "compare_blocks" in payload["instructions"]
-    assert "仅编号顺延的条目不要返回" in payload["instructions"]
+    assert "## 工作步骤" in payload["instructions"]
+    assert "## 匹配规则" in payload["instructions"]
+    assert "## 覆盖规则" in payload["instructions"]
+    assert "## 输出规则" in payload["instructions"]
+    assert "## 返回结构示例" in payload["instructions"]
+    assert "仅编号顺延的条目，这些条目不要输出" in payload["instructions"]
     assert "每个 compare block 必须做覆盖检查" in payload["instructions"]
-    assert "未被匹配的 old_item 必须返回 delete" in payload["instructions"]
-    assert "未被匹配的 new_item 必须返回 add" in payload["instructions"]
-    assert "定义项优先按冒号前的定义名称对齐" in payload["instructions"]
+    assert "仍未匹配的 old_item 必须返回 delete" in payload["instructions"]
+    assert "仍未匹配的 new_item 必须返回 add" in payload["instructions"]
+    assert "建立覆盖清单" in payload["instructions"]
+    assert "定义项必须优先按冒号或中文冒号前的定义名称对齐" in payload["instructions"]
+    assert "不同定义名称默认不要 replace" in payload["instructions"]
+    assert "定义A" in payload["instructions"]
+    assert "定义C" in payload["instructions"]
+    assert "定义E" in payload["instructions"]
+    assert "定义F" in payload["instructions"]
+    assert "默认拆成 delete + add" in payload["instructions"]
+    assert "条款G" in payload["instructions"]
+    assert "后续正文未变的顺延条目不要输出" in payload["instructions"]
+    assert "基金募集期" not in payload["instructions"]
+    assert "输出前必须自检" in payload["instructions"]
+    assert '"operations"' in payload["instructions"]
+    assert '"old_item_ids"' in payload["instructions"]
 
 
 def test_compare_pair_with_llm_routes_batches_round_robin_and_keeps_order(tmp_path):

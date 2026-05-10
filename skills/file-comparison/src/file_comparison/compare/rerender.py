@@ -14,11 +14,11 @@ from .chunking import build_compare_blocks_for_llm, build_rows, group_compare_bl
 from .engine import (
     build_output_document_paths,
     normalize_product_name_rows,
-    rows_from_llm_payload,
     validate_complete_batch_results,
 )
 from .extractor import extract_fund_name_or_empty, extract_text
 from .models import ComparisonRow, PairMatch, Section
+from .postprocess import merge_consecutive_delete_rows, rows_from_llm_payload
 from .writer import convert_docx_to_doc, write_docx
 
 SKILL_ROOT = Path(__file__).resolve().parents[3]
@@ -103,18 +103,21 @@ def rows_from_stored_batches(pair_dir: Path, old_sections: list[Section], new_se
     )
     llm_dir = pair_dir / "llm"
     batch_results: dict[str, list[ComparisonRow]] = {}
+    all_lookup_blocks = tuple(block for batch in batches for block in batch.compare_blocks)
     for batch in batches:
         batch_dir = llm_dir / batch.batch_id
         recovery = decide_batch_recovery(batch_dir)
         if recovery.action in {"reuse_parsed", "reuse_repair"} and recovery.payload is not None:
-            batch_results[batch.batch_id] = rows_from_llm_payload(recovery.payload, compare_blocks=batch.compare_blocks)
+            batch_results[batch.batch_id] = rows_from_llm_payload(
+                recovery.payload, compare_blocks=all_lookup_blocks
+            )
             continue
         raise RuntimeError(f"{batch.batch_id} 没有可复用的模型解析结果；本地 fallback 不允许生成正式文档")
     validate_complete_batch_results(batches=batches, batch_results=batch_results, llm_dir=llm_dir)
     rows: list[ComparisonRow] = []
     for batch in batches:
         rows.extend(batch_results[batch.batch_id])
-    return rows
+    return merge_consecutive_delete_rows(rows)
 
 
 def rows_from_current_local_rules(old_sections: list[Section], new_sections: list[Section]) -> list[ComparisonRow]:

@@ -34,6 +34,7 @@ from .pairing import (
     scan_folder_for_pairs,
 )
 from .postprocess import (
+    merge_consecutive_delete_rows,
     normalize_block_operations_payload,
     normalize_product_name_rows,
     rows_from_block_operations_payload,
@@ -257,12 +258,15 @@ def compare_pair_with_llm(
     )
     batch_results: dict[str, list[ComparisonRow]] = {}
     pending_batches: list[tuple[int, ChapterBatch]] = []
+    all_lookup_blocks = tuple(block for batch in batches for block in batch.compare_blocks)
     for batch_index, batch in enumerate(batches):
         batch_dir = llm_dir / batch.batch_id
         batch_dir.mkdir(parents=True, exist_ok=True)
         recovery = decide_batch_recovery(batch_dir)
         if recovery.action in {"reuse_parsed", "reuse_repair"} and recovery.payload is not None:
-            batch_results[batch.batch_id] = rows_from_llm_payload(recovery.payload, compare_blocks=batch.compare_blocks)
+            batch_results[batch.batch_id] = rows_from_llm_payload(
+                recovery.payload, compare_blocks=all_lookup_blocks
+            )
             continue
         pending_batches.append((batch_index, batch))
     if pending_batches:
@@ -280,6 +284,7 @@ def compare_pair_with_llm(
                     pair_store=pair_store,
                     client=client,
                     provider_chain=provider_chain,
+                    item_lookup_blocks=all_lookup_blocks,
                 ): batch.batch_id
                 for batch_index, batch in pending_batches
             }
@@ -295,7 +300,7 @@ def compare_pair_with_llm(
     ordered_rows: list[ComparisonRow] = []
     for batch in batches:
         ordered_rows.extend(batch_results[batch.batch_id])
-    return ordered_rows
+    return merge_consecutive_delete_rows(ordered_rows)
 
 
 def validate_complete_batch_results(

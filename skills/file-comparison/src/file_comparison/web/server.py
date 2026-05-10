@@ -47,6 +47,29 @@ def pair_to_payload(pair: PairMatch) -> dict[str, str]:
     }
 
 
+def enrich_status_with_task_workspace(run_dir: Path, payload: dict) -> dict:
+    """从 task.json 附带工作区目录与 Word 列表，供带 task_id 刷新页面时恢复上传区与下拉选项。"""
+    task_path = run_dir / "task.json"
+    if not task_path.exists():
+        return payload
+    try:
+        task_data = json.loads(task_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return payload
+    if not isinstance(task_data, dict):
+        return payload
+    folder_raw = str(task_data.get("folder_path", "")).strip()
+    if not folder_raw:
+        return payload
+    payload["folder_path"] = folder_raw
+    folder = Path(folder_raw).expanduser().resolve()
+    if folder.is_dir():
+        payload["files"] = list_word_files(folder)
+    else:
+        payload["files"] = []
+    return payload
+
+
 def hydrate_status_from_checkpoints(run_dir: Path, payload: dict) -> dict:
     """用最新 pair checkpoint 补充页面轮询状态，提升运行中可观测性。"""
     pairs = payload.get("pairs", [])
@@ -459,7 +482,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": "task not found"}, status=404)
                 return
             payload = json.loads(status_path.read_text(encoding="utf-8"))
-            self._send_json(hydrate_status_from_checkpoints(status_path.parent, payload))
+            payload = hydrate_status_from_checkpoints(status_path.parent, payload)
+            self._send_json(enrich_status_with_task_workspace(status_path.parent, payload))
             return
         if parsed.path.startswith("/api/file-comparison/task/") and parsed.path.endswith("/pairs"):
             task_id = parsed.path.split("/")[4]

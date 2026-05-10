@@ -17,6 +17,8 @@ DISPLAY_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、|
 DECIMAL_HEADING_RE = re.compile(r"^\d+、")
 CHINESE_CONTEXT_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|（[一二三四五六七八九十]+）)")
 MAX_PARENT_HEADING_CHARS = 40
+# 同 compare block 内，去行首序号后判定「可成对剔除」时，允许 old/new 列表下标相差不超过该值。
+COMPARE_BLOCK_STRIP_MATCH_NEIGHBOR_WINDOW = 5
 
 
 def active_display_heading_re(lines: list[str]) -> re.Pattern[str]:
@@ -511,6 +513,79 @@ def block_item_texts(items: tuple[CompareBlockItem, ...]) -> tuple[str, ...]:
     return tuple(item.text for item in items)
 
 
+def _matched_indices_stripped_equal_within_window(
+    old_block_items: tuple[CompareBlockItem, ...],
+    new_block_items: tuple[CompareBlockItem, ...],
+    *,
+    neighbor_window: int,
+) -> tuple[set[int], set[int]]:
+    """返回去序号后正文相同、且 old 下标 i 与 new 下标 j 满足 |i-j|<=neighbor_window 的配对下标。"""
+    old_n = len(old_block_items)
+    new_n = len(new_block_items)
+    candidates: list[tuple[int, int, int]] = []
+    for i in range(old_n):
+        key_old = strip_leading_numbering(old_block_items[i].text)
+        j_lo = max(0, i - neighbor_window)
+        j_hi = min(new_n, i + neighbor_window + 1)
+        for j in range(j_lo, j_hi):
+            if strip_leading_numbering(new_block_items[j].text) != key_old:
+                continue
+            candidates.append((abs(i - j), i, j))
+    candidates.sort()
+    matched_old: set[int] = set()
+    matched_new: set[int] = set()
+    for _dist, i, j in candidates:
+        if i in matched_old or j in matched_new:
+            continue
+        matched_old.add(i)
+        matched_new.add(j)
+    return matched_old, matched_new
+
+
+def filter_compare_block_items_by_stripped_numbering_identity(
+    old_block_items: tuple[CompareBlockItem, ...],
+    new_block_items: tuple[CompareBlockItem, ...],
+    *,
+    neighbor_window: int | None = None,
+) -> tuple[tuple[CompareBlockItem, ...], tuple[CompareBlockItem, ...]]:
+    """同块内减少送模噪音：先全文完全一致剔除，再在邻域内配对去行首序号后相同的条目。
+
+    全文交集与原先一致。随后在所有满足 ``|i-j| <= neighbor_window``（默认
+    ``COMPARE_BLOCK_STRIP_MATCH_NEIGHBOR_WINDOW``）且
+    ``strip_leading_numbering(old[i]) == strip_leading_numbering(new[j])`` 的 (i,j) 中，
+    按 ``|i-j|`` 升序贪心配对，已配对的下标不再参与；配对成功的两侧条目一并丢弃。
+    """
+    if not old_block_items and not new_block_items:
+        return old_block_items, new_block_items
+
+    window = (
+        neighbor_window
+        if neighbor_window is not None
+        else COMPARE_BLOCK_STRIP_MATCH_NEIGHBOR_WINDOW
+    )
+
+    old_texts = {item.text for item in old_block_items}
+    new_texts = {item.text for item in new_block_items}
+    identical_texts = old_texts & new_texts
+    if identical_texts:
+        old_block_items = tuple(item for item in old_block_items if item.text not in identical_texts)
+        new_block_items = tuple(item for item in new_block_items if item.text not in identical_texts)
+
+    if not old_block_items or not new_block_items:
+        return old_block_items, new_block_items
+
+    matched_old, matched_new = _matched_indices_stripped_equal_within_window(
+        old_block_items, new_block_items, neighbor_window=window
+    )
+    kept_old = tuple(
+        item for index, item in enumerate(old_block_items) if index not in matched_old
+    )
+    kept_new = tuple(
+        item for index, item in enumerate(new_block_items) if index not in matched_new
+    )
+    return kept_old, kept_new
+
+
 def build_compare_blocks_for_llm(
     old_sections: list[Section],
     new_sections: list[Section],
@@ -550,6 +625,11 @@ def build_compare_blocks_for_llm(
                 )
             )
             new_item_sequence += len(new_block_items)
+            if not old_block_items and not new_block_items:
+                continue
+            old_block_items, new_block_items = filter_compare_block_items_by_stripped_numbering_identity(
+                old_block_items, new_block_items
+            )
             if not old_block_items and not new_block_items:
                 continue
             if block_item_texts(old_block_items) == block_item_texts(new_block_items):

@@ -37,8 +37,10 @@ def _process_llm_batch(
     pair_store: PairCheckpointStore | None,
     client: OpenAIResponsesClient,
     provider_chain,
+    item_lookup_blocks: tuple[Any, ...] | None = None,
 ) -> tuple[str, list[ComparisonRow]]:
     """执行单个章节批次的模型比较、重试和规则回退。"""
+    lookup_compare_blocks = item_lookup_blocks if item_lookup_blocks is not None else batch.compare_blocks
     batch_dir = llm_dir / batch.batch_id
     batch_dir.mkdir(parents=True, exist_ok=True)
     timeline = CallTimeline(batch_dir, batch_id=batch.batch_id)
@@ -160,13 +162,16 @@ def _process_llm_batch(
                             pair_store=None,
                             client=client,
                             provider_chain=provider_chain,
+                            item_lookup_blocks=item_lookup_blocks,
                         )
                         split_rows.extend(child_rows)
                     combined_payload = _combine_split_batch_payloads(
                         split_root_dir=split_root_dir,
                         child_batches=child_batches,
                     )
-                    combined_payload = normalize_block_operations_payload(combined_payload, compare_blocks=batch.compare_blocks)
+                    combined_payload = normalize_block_operations_payload(
+                        combined_payload, compare_blocks=lookup_compare_blocks
+                    )
                     parsed_filename = f"parsed.attempt-{attempt_index:02d}.{provider_config.provider}.split.json"
                     _write_json_file(batch_dir / parsed_filename, combined_payload)
                     _record_checkpoint(
@@ -213,10 +218,10 @@ def _process_llm_batch(
                 default_chapter=_batch_title(batch),
                 timeline=timeline,
             )
-            parsed = normalize_block_operations_payload(parsed, compare_blocks=batch.compare_blocks)
+            parsed = normalize_block_operations_payload(parsed, compare_blocks=lookup_compare_blocks)
             parsed_filename = f"parsed.attempt-{attempt_index:02d}.{provider_config.provider}.json"
             _write_json_file(batch_dir / parsed_filename, parsed)
-            batch_rows = rows_from_llm_payload(parsed, compare_blocks=batch.compare_blocks)
+            batch_rows = rows_from_llm_payload(parsed, compare_blocks=lookup_compare_blocks)
             rows.extend(batch_rows)
             _record_checkpoint(
                 pair_store,
@@ -485,10 +490,21 @@ def _apply_prompt_mode(payload: dict[str, Any], *, prompt_mode: str) -> dict[str
     if isinstance(payload.get("messages"), list) and payload["messages"]:
         payload["messages"][-1]["content"] = (
             str(payload["messages"][-1].get("content", ""))
-            + "\n\n请使用最小 JSON 输出：只返回 add/delete/replace；完全一致或仅编号顺延不要返回。只保留 blocks、block_id、chapter、parent_path、operations、type、old_item_ids、new_item_ids、old_focus_text、new_focus_text、confidence、reason。"
+            + "\n\n## 最小 JSON 输出要求\n"
+            "- 只返回 add/delete/replace；完全一致或仅编号顺延不要返回。\n"
+            "- 输出前逐项核对每个 compare block 的所有 old_items/new_items。\n"
+            "- 未匹配的 old_item 必须 delete，未匹配的 new_item 必须 add。\n"
+            "- 定义项按冒号前名称优先对齐。\n"
+            "- 只保留 blocks、block_id、chapter、parent_path、operations、type、old_item_ids、new_item_ids、old_focus_text、new_focus_text、confidence、reason。"
         )
     elif isinstance(payload.get("input"), str):
-        payload["input"] = payload["input"] + "\n\n请使用最小 JSON 输出，只返回 add/delete/replace；完全一致或仅编号顺延不要返回。"
+        payload["input"] = (
+            payload["input"]
+            + "\n\n## 最小 JSON 输出要求\n"
+            "- 只返回 add/delete/replace；完全一致或仅编号顺延不要返回。\n"
+            "- 输出前逐项核对所有 old_items/new_items。\n"
+            "- 未匹配 old_item 必须 delete，未匹配 new_item 必须 add。"
+        )
     return payload
 
 

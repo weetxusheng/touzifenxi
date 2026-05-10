@@ -163,6 +163,10 @@ def test_scan_folder_and_task_status_endpoints(tmp_path, monkeypatch):
         ),
         encoding="utf-8",
     )
+    (status_dir / "task.json").write_text(
+        json.dumps({"task_id": "task-001", "folder_path": str(folder)}, ensure_ascii=False),
+        encoding="utf-8",
+    )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
@@ -195,6 +199,9 @@ def test_scan_folder_and_task_status_endpoints(tmp_path, monkeypatch):
         assert status_payload["status"] == "running"
         assert status_payload["duration_ms"] == 1234
         assert status_payload["pairs"][0]["key"] == "基金合同"
+        assert status_payload["folder_path"] == str(folder)
+        assert len(status_payload["files"]) == 2
+        assert status_payload["files"][0]["label"] == "基金合同_3月.docx"
 
         status, pairs_payload = request_json(f"{base_url}/api/file-comparison/task/task-001/pairs")
         assert status == 200

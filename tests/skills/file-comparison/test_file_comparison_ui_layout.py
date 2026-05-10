@@ -83,5 +83,6 @@ def test_file_comparison_pair_preview_avoids_horizontal_scroll():
     assert 'scroll=${{ x: 990 }}' not in app_js
     assert 'title: "主键"' in app_js
     assert 'width: 120' in app_js
-    assert 'direction="vertical"' in app_js
+    assert 'width: 150' in app_js
+    assert 'wrap=${false}' in app_js
     assert 'tableLayout="fixed"' in app_js

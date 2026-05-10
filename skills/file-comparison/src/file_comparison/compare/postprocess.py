@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import copy
 import difflib
 import re
 from typing import Any
 
-from .chunking import is_only_numbering_changed, remove_fully_equal_lines
+from .chunking import (
+    is_only_numbering_changed,
+    remove_fully_equal_lines,
+    strip_leading_numbering,
+    text_starts_with_subchapter,
+)
 from .models import ComparisonRow
 
 PRODUCT_NAME_CHAPTER = "基金名称"
@@ -20,6 +26,9 @@ def rows_from_llm_payload(
     """把模型返回的结构化 payload 转成最终展示行。"""
     if isinstance(payload.get("blocks"), list):
         payload = normalize_block_operations_payload(payload, compare_blocks=compare_blocks)
+        payload = copy.deepcopy(payload)
+        coerce_shifted_clause_add_delete_to_replace(payload, compare_blocks=compare_blocks)
+        drop_redundant_adds_when_replace_reuses_new_items(payload)
         return rows_from_block_operations_payload(payload, compare_blocks=compare_blocks)
     if isinstance(payload.get("units"), list):
         return rows_from_unit_decision_payload(payload, compare_units)
@@ -57,6 +66,245 @@ def block_lookup_id(block_id: str) -> str:
     if "-part-" in normalized:
         return normalized.split("-part-", 1)[0]
     return normalized
+
+
+def compare_block_item_text_maps(compare_blocks: tuple[Any, ...]) -> tuple[dict[str, str], dict[str, str]]:
+    """汇总本批所有 compare block 的 item_id → 正文，供跨块引用 old/new_item_ids 时回查。"""
+    old_by_id: dict[str, str] = {}
+    new_by_id: dict[str, str] = {}
+    for block in compare_blocks:
+        for item in block.old_items:
+            old_by_id[str(item.item_id)] = str(item.text).strip()
+        for item in block.new_items:
+            new_by_id[str(item.item_id)] = str(item.text).strip()
+    return old_by_id, new_by_id
+
+
+def _resolve_operation_item_texts(
+    item_ids: list[str],
+    *,
+    local_by_id: dict[str, str],
+    global_by_id: dict[str, str],
+) -> str:
+    """先查当前块，再查批次内全局 map（模型可能在 replace 里引用其它块的 item_id）。"""
+    parts: list[str] = []
+    for raw_id in item_ids:
+        item_id = str(raw_id).strip()
+        text = local_by_id.get(item_id) or global_by_id.get(item_id, "")
+        if text:
+            parts.append(text)
+    return "\n".join(parts).strip()
+
+
+def _clause_relocation_similarity(old_text: str, new_text: str) -> float:
+    """判断「某条 delete 的旧正文」与「另一处 add 的新正文」是否实为同一条款挪位（如整章根下新增 vs 小标题下整删）。"""
+    a = old_text.strip()
+    b = new_text.strip()
+    if not a or not b:
+        return 0.0
+    strip_a = strip_leading_numbering(a)
+    strip_b = strip_leading_numbering(b)
+    stripped_ratio = difflib.SequenceMatcher(None, strip_a, strip_b).ratio()
+    raw_ratio = difflib.SequenceMatcher(None, a, b).ratio()
+    return max(stripped_ratio, raw_ratio)
+
+
+def coerce_shifted_clause_add_delete_to_replace(
+    payload: dict[str, Any],
+    compare_blocks: tuple[Any, ...],
+    *,
+    similarity_threshold: float = 0.85,
+) -> None:
+    """将同章内「仅 new 的根块 add」与「高度相似正文的 delete」并为 replace，避免无/新增 + 连续删把「三」并进「一、二」。
+
+    典型：第五部分 block-001 add(new-001) 与 block-004 delete(old-006) 实为修订，模型拆成 add+delete 时在此纠偏。
+    """
+    block_list = payload.get("blocks")
+    if not isinstance(block_list, list) or not compare_blocks:
+        return
+    global_old, global_new = compare_block_item_text_maps(compare_blocks)
+    empty_local: dict[str, str] = {}
+
+    add_ops: list[tuple[int, int, list[str], str, str]] = []
+    del_ops: list[tuple[int, int, list[str], str, str]] = []
+    for bi, bp in enumerate(block_list):
+        if not isinstance(bp, dict):
+            continue
+        chapter_key = str(bp.get("chapter", "")).strip()
+        ops = bp.get("operations")
+        if not isinstance(ops, list):
+            continue
+        for oi, op in enumerate(ops):
+            if not isinstance(op, dict):
+                continue
+            typ = str(op.get("type", "")).strip()
+            if typ == "add":
+                new_ids = [str(x).strip() for x in op.get("new_item_ids", []) if str(x).strip()]
+                old_ids = [str(x).strip() for x in op.get("old_item_ids", []) if str(x).strip()]
+                if not new_ids or old_ids:
+                    continue
+                nt = _resolve_operation_item_texts(new_ids, local_by_id=empty_local, global_by_id=global_new)
+                if not nt.strip():
+                    continue
+                add_ops.append((bi, oi, new_ids, nt.strip(), chapter_key))
+            elif typ == "delete":
+                old_ids = [str(x).strip() for x in op.get("old_item_ids", []) if str(x).strip()]
+                new_ids = [str(x).strip() for x in op.get("new_item_ids", []) if str(x).strip()]
+                if not old_ids or new_ids:
+                    continue
+                ot = _resolve_operation_item_texts(old_ids, local_by_id=empty_local, global_by_id=global_old)
+                if not ot.strip():
+                    continue
+                del_ops.append((bi, oi, old_ids, ot.strip(), chapter_key))
+
+    candidates: list[tuple[float, tuple[int, int], tuple[int, int], list[str]]] = []
+    for abi, aoi, new_ids, nt, ch_a in add_ops:
+        for dbi, doi, _old_ids, ot, ch_d in del_ops:
+            if ch_a != ch_d or abi == dbi:
+                continue
+            sim = _clause_relocation_similarity(ot, nt)
+            if sim >= similarity_threshold:
+                candidates.append((sim, (abi, aoi), (dbi, doi), new_ids))
+    candidates.sort(key=lambda item: item[0], reverse=True)
+
+    matched_add: set[tuple[int, int]] = set()
+    matched_del: set[tuple[int, int]] = set()
+    del_to_new_ids: dict[tuple[int, int], list[str]] = {}
+    for _sim, add_ref, del_ref, new_ids in candidates:
+        if add_ref in matched_add or del_ref in matched_del:
+            continue
+        matched_add.add(add_ref)
+        matched_del.add(del_ref)
+        del_to_new_ids[del_ref] = new_ids
+
+    for bi, bp in enumerate(block_list):
+        if not isinstance(bp, dict):
+            continue
+        ops = bp.get("operations")
+        if not isinstance(ops, list):
+            continue
+        rebuilt: list[dict[str, Any]] = []
+        for oi, op in enumerate(ops):
+            if not isinstance(op, dict):
+                continue
+            if (bi, oi) in matched_add:
+                continue
+            if (bi, oi) in del_to_new_ids:
+                new_op = dict(op)
+                new_op["type"] = "replace"
+                new_op["old_item_ids"] = list(op.get("old_item_ids", []))
+                new_op["new_item_ids"] = list(del_to_new_ids[(bi, oi)])
+                rebuilt.append(new_op)
+                continue
+            rebuilt.append(op)
+        bp["operations"] = rebuilt
+
+
+def drop_redundant_adds_when_replace_reuses_new_items(payload: dict[str, Any]) -> None:
+    """同章内若已有 replace 引用某 new_item_id，则去掉仅重复展示该条的 add（模型常同时写根下 add 与小标题下 replace）。"""
+    block_list = payload.get("blocks")
+    if not isinstance(block_list, list):
+        return
+    new_ids_in_replace_by_chapter: dict[str, set[str]] = {}
+    for bp in block_list:
+        if not isinstance(bp, dict):
+            continue
+        chapter_key = str(bp.get("chapter", "")).strip()
+        for op in bp.get("operations", []) or []:
+            if not isinstance(op, dict):
+                continue
+            if str(op.get("type", "")).strip() != "replace":
+                continue
+            bucket = new_ids_in_replace_by_chapter.setdefault(chapter_key, set())
+            for raw_id in op.get("new_item_ids", []) or []:
+                nid = str(raw_id).strip()
+                if nid:
+                    bucket.add(nid)
+
+    for bp in block_list:
+        if not isinstance(bp, dict):
+            continue
+        chapter_key = str(bp.get("chapter", "")).strip()
+        reused = new_ids_in_replace_by_chapter.get(chapter_key, set())
+        if not reused:
+            continue
+        ops = bp.get("operations")
+        if not isinstance(ops, list):
+            continue
+        rebuilt: list[dict[str, Any]] = []
+        for op in ops:
+            if not isinstance(op, dict):
+                rebuilt.append(op)
+                continue
+            if str(op.get("type", "")).strip() != "add":
+                rebuilt.append(op)
+                continue
+            new_ids = [str(x).strip() for x in op.get("new_item_ids", []) if str(x).strip()]
+            if new_ids and all(nid in reused for nid in new_ids):
+                continue
+            rebuilt.append(op)
+        bp["operations"] = rebuilt
+
+
+def _combine_deleted_run_old_text(run_rows: list[ComparisonRow]) -> str:
+    """合并连续删除段的左侧正文；小标题不同时各自保留在段首，同小标题续段只拼正文。"""
+    parts: list[str] = []
+    last_subchapter: str | None = None
+    for row in run_rows:
+        sc = str(row.subchapter or "").strip()
+        body = str(row.old_text or "").strip()
+        if body in {"", "新增", "删除"}:
+            if body:
+                parts.append(body)
+            last_subchapter = None
+            continue
+        if sc:
+            if text_starts_with_subchapter(body, sc):
+                segment = body
+            else:
+                segment = f"{sc}\n{body}"
+            if last_subchapter == sc and parts:
+                parts.append(body)
+            else:
+                parts.append(segment)
+            last_subchapter = sc
+        else:
+            parts.append(body)
+            last_subchapter = None
+    return "\n".join(p for p in parts if p).strip()
+
+
+def merge_consecutive_delete_rows(rows: list[ComparisonRow]) -> list[ComparisonRow]:
+    """同一章节下连续「右侧为删除」合并为一行（小标题可不同），减少表格碎行与章节内不对齐感。"""
+    if not rows:
+        return rows
+    out: list[ComparisonRow] = []
+    index = 0
+    while index < len(rows):
+        row = rows[index]
+        if row.new_text != "删除":
+            out.append(row)
+            index += 1
+            continue
+        chapter = row.chapter
+        run_start = index
+        run_rows: list[ComparisonRow] = [row]
+        index += 1
+        while index < len(rows) and rows[index].new_text == "删除" and rows[index].chapter == chapter:
+            run_rows.append(rows[index])
+            index += 1
+        if len(run_rows) == 1:
+            out.append(rows[run_start])
+            continue
+        out.append(
+            ComparisonRow(
+                chapter=chapter,
+                subchapter="",
+                old_text=_combine_deleted_run_old_text(run_rows),
+                new_text="删除",
+            )
+        )
+    return out
 
 
 def block_item_text_from_ids(*, item_ids: list[str], items_by_id: dict[str, str], fallback_text: str = "") -> str:
@@ -743,6 +991,7 @@ def dedupe_block_operations(operations: list[dict[str, Any]]) -> list[dict[str, 
 def rows_from_block_operations_payload(payload: dict[str, Any], compare_blocks: tuple[Any, ...]) -> list[ComparisonRow]:
     """把块级操作集回查原始 compare block 后转成最终展示行。"""
     blocks_by_id = {str(block.block_id): block for block in compare_blocks}
+    global_old_by_id, global_new_by_id = compare_block_item_text_maps(compare_blocks)
     rows: list[ComparisonRow] = []
     for block_payload in payload.get("blocks", []):
         source_block = blocks_by_id.get(block_lookup_id(str(block_payload.get("block_id", "")).strip()))
@@ -754,16 +1003,14 @@ def rows_from_block_operations_payload(payload: dict[str, Any], compare_blocks: 
             operation_type = str(operation.get("type", "")).strip()
             if operation_type in {"match", "renumber_only"}:
                 continue
-            old_text = "\n".join(
-                old_items_by_id[item_id]
-                for item_id in operation.get("old_item_ids", [])
-                if item_id in old_items_by_id and old_items_by_id[item_id]
-            ).strip()
-            new_text = "\n".join(
-                new_items_by_id[item_id]
-                for item_id in operation.get("new_item_ids", [])
-                if item_id in new_items_by_id and new_items_by_id[item_id]
-            ).strip()
+            old_ids = [str(x).strip() for x in operation.get("old_item_ids", []) if str(x).strip()]
+            new_ids = [str(x).strip() for x in operation.get("new_item_ids", []) if str(x).strip()]
+            old_text = _resolve_operation_item_texts(
+                old_ids, local_by_id=old_items_by_id, global_by_id=global_old_by_id
+            )
+            new_text = _resolve_operation_item_texts(
+                new_ids, local_by_id=new_items_by_id, global_by_id=global_new_by_id
+            )
             if operation_type == "add":
                 old_text = "新增"
             elif operation_type == "delete":
@@ -783,7 +1030,7 @@ def rows_from_block_operations_payload(payload: dict[str, Any], compare_blocks: 
                     new_text=new_text or "删除",
                 )
             )
-    return rows
+    return merge_consecutive_delete_rows(rows)
 
 
 def rows_from_unit_decision_payload(payload: dict[str, Any], compare_units: tuple[Any, ...]) -> list[ComparisonRow]:
