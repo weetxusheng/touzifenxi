@@ -172,6 +172,32 @@ def test_split_sections_handles_page_breaks_and_toc_numbers():
     assert "新内容" in sections[1].body
 
 
+def test_split_sections_recognizes_chapter_heading_without_space_after_part():
+    """旧版 Word 常见「第一部分前言」连写，须与「第一部分 前言」同样切成一级章节。"""
+    module = load_module()
+    text = """
+封面
+第一部分前言\t1
+第二部分释义\t4
+
+第一部分前言
+一、总则
+旧版正文
+
+第二部分释义
+二、定义
+更多正文
+""".strip()
+
+    sections = module.split_sections(text)
+
+    assert [section.number for section in sections] == ["第一部分", "第二部分"]
+    assert sections[0].title == "第一部分前言"
+    assert sections[1].title == "第二部分释义"
+    assert "旧版正文" in sections[0].body
+    assert "更多正文" in sections[1].body
+
+
 def test_extract_docx_text_includes_inserted_revisions_but_ignores_deleted_revisions(tmp_path):
     load_module()
     from file_comparison.compare.extractor import extract_docx_text
@@ -931,6 +957,44 @@ def test_build_compare_blocks_for_llm_aligns_parent_heading_after_insert():
         "本基金实施侧袋机制的，本基金的申购和赎回安排详见招募说明书或相关公告。"
     ]
     assert summaries[0]["block_count"] == 1
+
+
+def test_build_compare_blocks_orders_chapters_by_document_part_number():
+    """旧/新 Section 列表在内存中的顺序不应影响送模块顺序；应按「第N部分」序号排列。"""
+    module = load_module()
+    old_sections = [
+        module.Section(
+            number="第七部分",
+            title="第七部分  甲",
+            body="第七部分  甲\n一、条\n旧",
+        ),
+        module.Section(
+            number="第一部分",
+            title="第一部分  前言",
+            body="第一部分  前言\n旧",
+        ),
+    ]
+    new_sections = [
+        module.Section(
+            number="第七部分",
+            title="第七部分  甲",
+            body="第七部分  甲\n一、条\n新",
+        ),
+        module.Section(
+            number="第一部分",
+            title="第一部分  前言",
+            body="第一部分  前言\n新",
+        ),
+        module.Section(
+            number="第二部分",
+            title="第二部分  释义",
+            body="第二部分  释义\n仅新侧",
+        ),
+    ]
+    blocks, _summaries = module.build_compare_blocks_for_llm(old_sections, new_sections)
+    chapter_order = [b.chapter_number for b in blocks]
+    assert chapter_order.index("第一部分") < chapter_order.index("第二部分")
+    assert chapter_order.index("第二部分") < chapter_order.index("第七部分")
 
 
 def test_group_compare_blocks_into_batches_uses_chapter_count_limit():

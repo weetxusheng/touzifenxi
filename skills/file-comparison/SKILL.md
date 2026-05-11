@@ -151,6 +151,9 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 完整处理逻辑见：
 
 - `docs/PROCESSING_REQUIREMENTS.md`
+- `docs/chunking-development-guide.md`（切块、compare block 与送模批次）
+- `docs/engine-development-guide.md`（单 pair / 多 pair 任务编排）
+- `docs/postprocess-development-guide.md`（模型结果后处理模块分工与改动落点）
 
 ## 分发约束
 

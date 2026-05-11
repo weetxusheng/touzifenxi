@@ -35,6 +35,9 @@ def test_file_comparison_page_keeps_light_blue_background_while_scrolling():
 def test_file_comparison_page_uses_task_summary_and_docx_primary_download():
     app_js = (SKILL_ROOT / "src" / "file_comparison" / "web" / "static" / "app.js").read_text(encoding="utf-8")
 
+    assert "暂停当次任务" in app_js
+    assert "暂停待生效" in app_js
+    assert "/abort" in app_js
     assert "文件对进度" in app_js
     assert "活跃模型" in app_js
     assert "下载 DOCX" in app_js

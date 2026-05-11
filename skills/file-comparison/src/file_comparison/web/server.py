@@ -14,6 +14,7 @@ from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from ..compare.engine import TaskManager, scan_folder_for_pairs
+from ..compare.engine.abort_control import is_abort_requested
 from ..compare.models import PairMatch
 from ..compare.rerender import rerender_pair
 from ..runtime.checkpoint import atomic_write_json
@@ -67,6 +68,12 @@ def enrich_status_with_task_workspace(run_dir: Path, payload: dict) -> dict:
         payload["files"] = list_word_files(folder)
     else:
         payload["files"] = []
+    return payload
+
+
+def enrich_status_with_abort_flag(run_dir: Path, payload: dict) -> dict:
+    """轮询时附带是否已请求暂停，便于前端在任务仍为 running 时展示「暂停待生效」。"""
+    payload["abort_requested"] = bool(is_abort_requested(run_dir))
     return payload
 
 
@@ -483,7 +490,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 return
             payload = json.loads(status_path.read_text(encoding="utf-8"))
             payload = hydrate_status_from_checkpoints(status_path.parent, payload)
-            self._send_json(enrich_status_with_task_workspace(status_path.parent, payload))
+            payload = enrich_status_with_task_workspace(status_path.parent, payload)
+            self._send_json(enrich_status_with_abort_flag(status_path.parent, payload))
             return
         if parsed.path.startswith("/api/file-comparison/task/") and parsed.path.endswith("/pairs"):
             task_id = parsed.path.split("/")[4]
@@ -587,6 +595,25 @@ class RequestHandler(BaseHTTPRequestHandler):
                 },
                 status=201,
             )
+            return
+        if parsed.path.startswith("/api/file-comparison/task/") and parsed.path.endswith("/abort"):
+            parts = parsed.path.strip("/").split("/")
+            if len(parts) != 5:
+                self._send_json({"error": "abort path 格式不正确"}, status=400)
+                return
+            task_id = parts[3]
+            try:
+                abort_payload = self.server.task_manager.request_abort(task_id)
+            except FileNotFoundError as exc:
+                self._send_json({"error": str(exc)}, status=404)
+                return
+            except RuntimeError as exc:
+                self._send_json({"error": str(exc)}, status=409)
+                return
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+                return
+            self._send_json(abort_payload, status=200)
             return
         if parsed.path.startswith("/api/file-comparison/task/") and parsed.path.endswith("/rerender-docx"):
             parts = parsed.path.strip("/").split("/")

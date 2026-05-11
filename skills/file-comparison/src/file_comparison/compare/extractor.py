@@ -10,7 +10,12 @@ from zipfile import ZipFile
 
 from .models import NumberingLevel, Section
 
-SECTION_RE = re.compile(r"(^|\n|\x0c)(第[一二三四五六七八九十百零]+部分\s+[^\n]+)", re.M)
+# 「第N部分」与标题之间可无空格（如「第一部分前言」）。第一分支只用行内空白（不含换行），
+# 避免「第七部分\\n正文」被整段吃进标题；第二分支要求标题以汉字起笔，以区别于异常排版。
+SECTION_RE = re.compile(
+    r"(^|\n|\x0c)(第[一二三四五六七八九十百零]+部分(?:[ \t\x0c]+[^\n]+|(?=[\u4e00-\u9fff])[^\n]+))",
+    re.M,
+)
 WORDPROCESSING_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 WORD_NAMESPACES = {"w": WORDPROCESSING_NS}
 
@@ -31,6 +36,78 @@ def section_number(title: str) -> str:
     return match.group(1)
 
 
+_SECTION_PART_ORDINAL_RE = re.compile(r"^第([一二三四五六七八九十百零]+)部分$")
+
+
+def chinese_counting_string_to_int(text: str) -> int | None:
+    """把「一」「十二」「二十三」「一百二十三」等中文计数串解析为正整数；无法解析时返回 None。"""
+    if not text:
+        return None
+    digit = {"零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+    if set(text) - set(digit) - {"十", "百", "千"}:
+        return None
+    if "千" in text:
+        left, _, right = text.partition("千")
+        hi = digit[left] if left else 1
+        if hi is None:
+            return None
+        rest = right.lstrip("零") if right else ""
+        if not rest:
+            return hi * 1000
+        low = chinese_counting_string_to_int(rest)
+        return None if low is None else hi * 1000 + low
+    if "百" in text:
+        left, _, right = text.partition("百")
+        hi = digit[left] if left else 1
+        if left and hi is None:
+            return None
+        rest = right.lstrip("零") if right else ""
+        if not rest:
+            return hi * 100
+        low = chinese_counting_string_to_int(rest)
+        return None if low is None else hi * 100 + low
+    if "十" in text:
+        left, _, right = text.partition("十")
+        tens = digit[left] if left else 1
+        if left and tens is None:
+            return None
+        base = tens * 10
+        rest = right.lstrip("零")
+        if not rest:
+            return base
+        if len(rest) != 1 or rest not in digit:
+            return None
+        return base + digit[rest]
+    if len(text) == 1:
+        return digit.get(text)
+    return None
+
+
+def section_part_ordinal_sort_key(number: str) -> tuple[int, str]:
+    """用于排序的键：匹配 `第N部分` 时按 N 升序；否则排在后面并保持字符串稳定次序。"""
+    stripped = str(number).strip()
+    match = _SECTION_PART_ORDINAL_RE.match(stripped)
+    if not match:
+        return (1 << 30, stripped)
+    ordinal = chinese_counting_string_to_int(match.group(1))
+    if ordinal is None:
+        return (1 << 30, stripped)
+    return (ordinal, stripped)
+
+
+def ordered_unique_section_numbers(old_sections: list[Section], new_sections: list[Section]) -> list[str]:
+    """合并两侧出现的一级章节号，去重后按合同「第N部分」序号排序（与原文阅读顺序一致）。"""
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for section in old_sections + new_sections:
+        num = section.number
+        if num not in seen:
+            seen.add(num)
+            ordered.append(num)
+    ordered.sort(key=section_part_ordinal_sort_key)
+    return ordered
+
+
 def clean_lines(text: str) -> list[str]:
     """按行清洗文本，移除空行与首尾空白。"""
     return [line.strip() for line in text.replace("\r", "").splitlines() if line.strip()]
@@ -39,7 +116,7 @@ def clean_lines(text: str) -> list[str]:
 def split_sections(text: str) -> list[Section]:
     """把整份文档文本按一级章节切成 `Section` 列表。"""
     start = None
-    for marker in ("第一部分  前言\n", "第一部分 前言\n"):
+    for marker in ("第一部分  前言\n", "第一部分 前言\n", "第一部分前言\n"):
         idx = text.find(marker)
         if idx != -1:
             start = idx

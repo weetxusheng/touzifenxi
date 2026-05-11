@@ -7,7 +7,17 @@ from pathlib import Path
 from typing import Literal
 
 TaskStatus = Literal["pending", "running", "partial_failed", "completed", "failed", "aborted"]
-PairStatus = Literal["pending", "extracting", "ready_for_llm", "llm_running", "postprocessing", "rendering", "completed", "failed"]
+PairStatus = Literal[
+    "pending",
+    "extracting",
+    "ready_for_llm",
+    "llm_running",
+    "postprocessing",
+    "rendering",
+    "completed",
+    "failed",
+    "aborted",
+]
 BatchStatus = Literal["pending", "success", "error", "parse_error", "postprocess_error", "aborted"]
 
 

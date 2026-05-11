@@ -80,6 +80,9 @@ class FakeTaskManager:
         self.rerun_args = (task_id, pair_id, batch_id)
         return {"task_id": task_id, "pair_id": pair_id, "batch_id": batch_id, "status": "running"}
 
+    def request_abort(self, task_id):
+        return {"task_id": task_id, "status": "abort_requested"}
+
 
 class CapturingTaskManager:
     """记录创建任务时实际使用的运行配置，方便验证配置热加载。"""
@@ -782,6 +785,74 @@ def test_running_status_duration_is_recomputed_from_started_at(tmp_path):
         assert payload["duration_ms"] >= 2500
         assert payload["started_at"] == started_at
         assert payload["updated_at"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_request_task_abort_writes_flag(tmp_path):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    run_dir = server.paths.runs_root / "task-abort-1"
+    run_dir.mkdir(parents=True)
+    (run_dir / "status.json").write_text(
+        json.dumps({"task_id": "task-abort-1", "status": "running", "pairs": []}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json(
+            f"{base_url}/api/file-comparison/task/task-abort-1/abort",
+            method="POST",
+            payload={},
+        )
+        assert status == 200
+        assert payload["task_id"] == "task-abort-1"
+        assert payload["status"] == "abort_requested"
+        assert (run_dir / "abort_requested").is_file()
+        st, status_body = request_json(f"{base_url}/api/file-comparison/task/task-abort-1/status")
+        assert st == 200
+        assert status_body.get("abort_requested") is True
+        assert status_body.get("status") == "running"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_request_task_abort_rejects_completed(tmp_path):
+    write_runtime_config(tmp_path, {"paths": {"output_root": str(tmp_path / "runs")}, "ui": {"port": 0}})
+    runtime_config = load_file_comparison_runtime_config(tmp_path)
+    try:
+        server = create_app(runtime_config, config_base_path=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"socket bind not permitted in sandbox: {exc}")
+    server.paths = resolve_paths(tmp_path)
+    run_dir = server.paths.runs_root / "task-abort-done"
+    run_dir.mkdir(parents=True)
+    (run_dir / "status.json").write_text(
+        json.dumps({"task_id": "task-abort-done", "status": "completed", "pairs": []}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+    try:
+        status, payload = request_json_allow_error(
+            f"{base_url}/api/file-comparison/task/task-abort-done/abort",
+            method="POST",
+            payload={},
+        )
+        assert status == 409
+        assert "结束" in payload.get("error", "")
     finally:
         server.shutdown()
         server.server_close()

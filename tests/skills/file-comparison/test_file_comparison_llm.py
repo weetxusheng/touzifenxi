@@ -23,6 +23,11 @@ from file_comparison.compare.models import (
     PairMatch,
     Section,
 )
+from file_comparison.compare.postprocess import (
+    insert_section_title_change_rows,
+    merge_pure_delete_and_add_runs,
+    sort_block_operations_old_first,
+)
 from file_comparison.compare.rerender import output_paths
 from file_comparison.llm.client import OpenAIResponsesClient, ProviderRequestError
 from file_comparison.llm.parser import ResponseParseError, parse_response_payload
@@ -545,6 +550,264 @@ def test_rows_from_llm_payload_coerces_root_add_and_similar_delete_to_replace():
     assert len(replaces) == 1
     assert "《基金合同》" in replaces[0].old_text
     assert "《新版合同》" in replaces[0].new_text
+
+
+def test_rows_from_block_operations_payload_merges_similar_delete_add_alongside_replace():
+    """同块内除多条 replace 外仅一条 delete、一条 add，且删增正文高度相似时，仍应并成一行（与第四部分标题+正文同块场景一致）。"""
+    block = CompareBlock(
+        block_id="第四部分-block-001",
+        chapter_number="第四部分",
+        chapter_title="第四部分  基金份额的发售",
+        parent_path="",
+        old_items=(
+            CompareBlockItem("第四部分-old-001", "第四部分  基金份额的发售"),
+            CompareBlockItem("第四部分-old-002", "一、下面某条款旧文"),
+        ),
+        new_items=(
+            CompareBlockItem("第四部分-new-001", "第四部分  基金份额的发售历史沿革"),
+            CompareBlockItem("第四部分-new-002", "一、下面某条款新文"),
+        ),
+    )
+    payload = {
+        "blocks": [
+            {
+                "block_id": "第四部分-block-001",
+                "chapter": "第四部分  基金份额的发售",
+                "operations": [
+                    {
+                        "type": "replace",
+                        "old_item_ids": ["第四部分-old-002"],
+                        "new_item_ids": ["第四部分-new-002"],
+                        "confidence": 0.9,
+                        "reason": "正文修订",
+                    },
+                    {
+                        "type": "delete",
+                        "old_item_ids": ["第四部分-old-001"],
+                        "new_item_ids": [],
+                        "confidence": 0.9,
+                    },
+                    {
+                        "type": "add",
+                        "old_item_ids": [],
+                        "new_item_ids": ["第四部分-new-001"],
+                        "confidence": 0.9,
+                    },
+                ],
+            }
+        ]
+    }
+    rows = rows_from_block_operations_payload(payload, compare_blocks=(block,))
+    assert len(rows) == 2
+    titles = [r for r in rows if "历史沿革" in r.new_text]
+    assert len(titles) == 1
+    assert "发售" in titles[0].old_text and titles[0].old_text != "新增"
+    bodies = [r for r in rows if "条款新文" in r.new_text]
+    assert len(bodies) == 1
+    assert "条款旧文" in bodies[0].old_text
+
+
+def test_rows_from_llm_payload_merges_same_block_lone_delete_add_to_single_row():
+    """同块内仅一条 delete、一条 add、无 replace，且两侧正文相似度够高时，应对照为一行（左右正文）。"""
+    block = CompareBlock(
+        block_id="第四部分-block-001",
+        chapter_number="第四部分",
+        chapter_title="第四部分  基金份额的发售",
+        parent_path="",
+        old_items=(CompareBlockItem("old-ch", "第四部分  基金份额的发售"),),
+        new_items=(CompareBlockItem("new-ch", "第四部分  基金份额的发售历史沿革"),),
+    )
+    payload = {
+        "blocks": [
+            {
+                "block_id": "第四部分-block-001",
+                "chapter": "第四部分  基金份额的发售",
+                "parent_path": "",
+                "operations": [
+                    {
+                        "type": "delete",
+                        "old_item_ids": ["old-ch"],
+                        "new_item_ids": [],
+                        "confidence": 0.9,
+                        "reason": "标题删除",
+                    },
+                    {
+                        "type": "add",
+                        "old_item_ids": [],
+                        "new_item_ids": ["new-ch"],
+                        "confidence": 0.9,
+                        "reason": "标题新增",
+                    },
+                ],
+            }
+        ]
+    }
+    rows = rows_from_llm_payload(payload, compare_blocks=(block,))
+    assert len(rows) == 1
+    assert rows[0].old_text not in {"新增", "删除"}
+    assert rows[0].new_text not in {"新增", "删除"}
+    assert "发售" in rows[0].old_text
+    assert "历史沿革" in rows[0].new_text
+
+
+def test_sort_block_operations_old_first_orders_by_minimum_old_index():
+    block = CompareBlock(
+        block_id="第七部分-block-001",
+        chapter_number="第七部分",
+        chapter_title="第七部分  示例",
+        parent_path="",
+        old_items=(
+            CompareBlockItem("第七部分-old-001", "先"),
+            CompareBlockItem("第七部分-old-002", "后"),
+        ),
+        new_items=(
+            CompareBlockItem("第七部分-new-001", "先新"),
+            CompareBlockItem("第七部分-new-002", "后新"),
+        ),
+    )
+    payload = {
+        "blocks": [
+            {
+                "block_id": "第七部分-block-001",
+                "chapter": "第七部分  示例",
+                "operations": [
+                    {
+                        "type": "replace",
+                        "old_item_ids": ["第七部分-old-002"],
+                        "new_item_ids": ["第七部分-new-002"],
+                    },
+                    {
+                        "type": "replace",
+                        "old_item_ids": ["第七部分-old-001"],
+                        "new_item_ids": ["第七部分-new-001"],
+                    },
+                ],
+            }
+        ]
+    }
+    sort_block_operations_old_first(payload, compare_blocks=(block,))
+    ordered = payload["blocks"][0]["operations"]
+    assert [op["old_item_ids"][0] for op in ordered] == ["第七部分-old-001", "第七部分-old-002"]
+
+
+def test_sort_block_operations_old_first_pure_add_uses_new_order():
+    block = CompareBlock(
+        block_id="b-add",
+        chapter_number="章",
+        chapter_title="章  题",
+        parent_path="",
+        old_items=(),
+        new_items=(
+            CompareBlockItem("n1", "甲"),
+            CompareBlockItem("n2", "乙"),
+        ),
+    )
+    payload = {
+        "blocks": [
+            {
+                "block_id": "b-add",
+                "operations": [
+                    {"type": "add", "old_item_ids": [], "new_item_ids": ["n2"]},
+                    {"type": "add", "old_item_ids": [], "new_item_ids": ["n1"]},
+                ],
+            }
+        ]
+    }
+    sort_block_operations_old_first(payload, compare_blocks=(block,))
+    assert [op["new_item_ids"][0] for op in payload["blocks"][0]["operations"]] == ["n1", "n2"]
+
+
+def test_merge_pure_delete_and_add_runs_combines_consecutive_delete_and_add():
+    ch = "第四部分  基金份额的发售"
+    rows = [
+        ComparisonRow(chapter=ch, subchapter="一、节", old_text="旧段A", new_text="删除"),
+        ComparisonRow(chapter=ch, subchapter="", old_text="新增", new_text="新说明B"),
+    ]
+    out = merge_pure_delete_and_add_runs(rows)
+    assert len(out) == 1
+    assert "旧段A" in out[0].old_text
+    assert "新说明B" in out[0].new_text
+    assert out[0].new_text != "删除"
+    assert out[0].old_text != "新增"
+
+
+def test_merge_pure_delete_and_add_runs_inserts_after_title_row_still_merges_body():
+    ch = "第四部分  基金份额的发售"
+    rows = [
+        ComparisonRow(chapter=ch, subchapter="", old_text=ch, new_text=ch + "历史沿革"),
+        ComparisonRow(chapter=ch, subchapter="一、小节", old_text="删文", new_text="删除"),
+        ComparisonRow(chapter=ch, subchapter="", old_text="新增", new_text="增文"),
+    ]
+    out = merge_pure_delete_and_add_runs(rows)
+    assert len(out) == 2
+    assert "历史沿革" in out[0].new_text
+    assert "删文" in out[1].old_text and "增文" in out[1].new_text
+
+
+def test_merge_pure_delete_and_add_runs_does_not_span_replace_like_row():
+    ch = "示例章"
+    rows = [
+        ComparisonRow(chapter=ch, subchapter="", old_text="删1", new_text="删除"),
+        ComparisonRow(chapter=ch, subchapter="", old_text="左替", new_text="右替"),
+        ComparisonRow(chapter=ch, subchapter="", old_text="新增", new_text="增"),
+    ]
+    out = merge_pure_delete_and_add_runs(rows)
+    assert len(out) == 3
+
+
+def test_insert_section_title_change_rows_prepends_when_old_new_titles_differ():
+    old_sections = [Section("第四部分", "第四部分  基金份额的发售", "body")]
+    new_sections = [Section("第四部分", "第四部分  基金份额的发售历史沿革", "body")]
+    rows = [
+        ComparisonRow(chapter="第四部分  基金份额的发售", subchapter="一、小节", old_text="正文左", new_text="正文右"),
+    ]
+    out = insert_section_title_change_rows(rows, old_sections=old_sections, new_sections=new_sections)
+    assert len(out) == 2
+    assert out[0].subchapter == ""
+    assert out[0].old_text == "第四部分  基金份额的发售"
+    assert out[0].new_text == "第四部分  基金份额的发售历史沿革"
+    assert out[1].old_text == "正文左"
+
+
+def test_insert_section_title_change_rows_skips_when_row_already_has_title_pair():
+    title_old = "第四部分  基金份额的发售"
+    title_new = "第四部分  基金份额的发售历史沿革"
+    old_sections = [Section("第四部分", title_old, "body")]
+    new_sections = [Section("第四部分", title_new, "body")]
+    rows = [
+        ComparisonRow(chapter=title_old, subchapter="", old_text=title_old, new_text=title_new),
+        ComparisonRow(chapter=title_old, subchapter="一、", old_text="a", new_text="b"),
+    ]
+    out = insert_section_title_change_rows(rows, old_sections=old_sections, new_sections=new_sections)
+    assert len(out) == 2
+
+
+def test_rows_from_block_operations_payload_skips_merging_lone_delete_add_when_dissimilar():
+    """单删+单增但正文相似度不足时不合并，避免误把两条无关操作挤成一行。"""
+    block = CompareBlock(
+        block_id="b1",
+        chapter_number="示例",
+        chapter_title="示例章",
+        parent_path="",
+        old_items=(CompareBlockItem("o1", "完全不同的旧文案甲"),),
+        new_items=(CompareBlockItem("n1", "完全不同的新文案乙"),),
+    )
+    payload = {
+        "blocks": [
+            {
+                "block_id": "b1",
+                "chapter": "示例章",
+                "operations": [
+                    {"type": "delete", "old_item_ids": ["o1"], "new_item_ids": []},
+                    {"type": "add", "old_item_ids": [], "new_item_ids": ["n1"]},
+                ],
+            }
+        ]
+    }
+    rows = rows_from_block_operations_payload(payload, compare_blocks=(block,))
+    assert len(rows) == 2
+    assert rows[0].new_text == "删除"
+    assert rows[1].old_text == "新增"
 
 
 def test_rows_from_block_operations_payload_merges_consecutive_deletes_same_chapter_different_subchapter():

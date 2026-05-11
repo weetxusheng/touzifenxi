@@ -10,6 +10,7 @@
     Card,
     ConfigProvider,
     Input,
+    Popconfirm,
     Select,
     Space,
     Table,
@@ -38,6 +39,7 @@
     if (status === "completed") return html`<${Tag} color="success">已完成<//>`;
     if (status === "failed") return html`<${Tag} color="error">失败<//>`;
     if (status === "partial_failed") return html`<${Tag} color="warning">部分失败<//>`;
+    if (status === "aborted") return html`<${Tag} color="default">已中止<//>`;
     if (status === "running") return html`<${Tag} color="processing">运行中<//>`;
     return html`<${Tag}>${status || "待处理"}<//>`;
   }
@@ -128,6 +130,7 @@
     const [rerunningBatchIds, setRerunningBatchIds] = React.useState({});
     const [rerenderingPairIds, setRerenderingPairIds] = React.useState({});
     const [pollVersion, setPollVersion] = React.useState(0);
+    const [abortingTask, setAbortingTask] = React.useState(false);
     const initialUrlTaskIdRef = React.useRef(readTaskIdFromLocation());
     const workspaceHydratedRef = React.useRef("");
 
@@ -179,6 +182,13 @@
     const governance = (taskPayload && taskPayload.governance_summary) || {};
     const plannedBatchCount = governance.planned_batch_count || governance.total_batch_count || 0;
     const activeProviderLabel = providerLabelFromList(governance.active_providers, governance.current_provider);
+    const abortPending =
+      !!(taskPayload && taskPayload.abort_requested && ["pending", "running"].indexOf(taskPayload.status) >= 0);
+    const canAbortTask =
+      !!currentTaskId &&
+      taskPayload &&
+      ["pending", "running"].indexOf(taskPayload.status) >= 0 &&
+      !taskPayload.abort_requested;
 
     function clearCurrentTask() {
       workspaceHydratedRef.current = "";
@@ -300,6 +310,27 @@
       const payload = await fetchJson("/api/file-comparison/task/" + taskId + "/status");
       setTaskPayload(payload);
       return payload;
+    }
+
+    async function requestAbortTask() {
+      if (!currentTaskId) return;
+      setAbortingTask(true);
+      try {
+        await fetchJson("/api/file-comparison/task/" + currentTaskId + "/abort", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        message.success("已请求暂停，当前文件对处理结束后将停止后续对比。");
+        setPollVersion(function (prev) {
+          return prev + 1;
+        });
+        await refreshTask(currentTaskId);
+      } catch (error) {
+        message.error(error.message);
+      } finally {
+        setAbortingTask(false);
+      }
     }
 
     async function copyText(text) {
@@ -770,8 +801,22 @@
             <${Text} type="secondary">上传文件、确认配对、生成结果、下载文档<//>
           </div>
           ${currentTaskId
-            ? html`<${Space} size=${6}>
+            ? html`<${Space} size=${6} wrap=${true}>
                 <${Tag} color="processing">当前任务：${currentTaskId}<//>
+                ${abortPending
+                  ? html`<${Tag} color="warning">暂停待生效<//>`
+                  : null}
+                ${canAbortTask
+                  ? html`<${Popconfirm}
+                      title="确定暂停当次任务？"
+                      description="正在处理的文件对仍会先跑完，后续文件对将不再执行。"
+                      okText="暂停"
+                      cancelText="取消"
+                      onConfirm=${requestAbortTask}
+                    >
+                      <${Button} size="small" loading=${abortingTask}>暂停当次任务<//>
+                    <//>`
+                  : null}
                 <${Button} size="small" onClick=${clearCurrentTask}>清空当前任务<//>
               <//>`
             : null}
@@ -919,7 +964,14 @@
                 <div className="task-progress-summary">
                   <div className="task-progress-item">
                     <span className="task-progress-label">任务状态</span>
-                    <span className="task-progress-value">${statusTag((taskPayload && taskPayload.status) || "未开始")}</span>
+                    <span className="task-progress-value">
+                      <${Space} size=${4} wrap=${true}>
+                        ${statusTag((taskPayload && taskPayload.status) || "未开始")}
+                        ${abortPending
+                          ? html`<${Tag} color="warning">暂停待生效（当前文件对结束后停止）<//>`
+                          : null}
+                      <//>
+                    </span>
                   </div>
                   <div className="task-progress-item">
                     <span className="task-progress-label">文件对进度</span>
