@@ -1,0 +1,2 @@
+# Windows 批处理必须用 CRLF，否则 cmd 会拆行报错（如 EnableDelayedExpansion → yedExpansion）。
+*.bat text eol=crlf

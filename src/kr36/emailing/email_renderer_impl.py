@@ -347,6 +347,8 @@ def _kr36_build_plain_text(
                         f"{index}) {str(source.get('title') or '待补充')} | "
                         f"{str(source.get('url') or '待补充')}"
                     )
+        elif bucket_title == BUCKET_ACTIVITY:
+            lines.append(" 暂无活动")
     body = "\n".join(lines).strip()
     if FOOTER_DISCLAIMER:
         body = f"{body}\n\n{FOOTER_DISCLAIMER}"
@@ -999,7 +1001,15 @@ def _render_bucket_section_html(
             "</li>"
             for item in sources
         )
-    if not source_items_html:
+    if not source_items_html and title == BUCKET_ACTIVITY:
+        source_block_html = (
+            '<div class="activity-cards">'
+            '<article class="activity-card activity-card-empty">'
+            '<p class="activity-field">暂无活动</p>'
+            "</article>"
+            "</div>"
+        )
+    elif not source_items_html:
         source_block_html = ""
     elif title == BUCKET_ACTIVITY:
         source_block_html = f'<div class="activity-cards">{source_items_html}</div>'
@@ -2595,6 +2605,55 @@ def _render_section(
     badge_row = f'<div class="section-badges">{badge_html}</div>' if badge_html else ""
 
     blocks: list[str] = []
+
+    def _clean_analysis_text(text: str) -> str:
+        cleaned = str(text or "").strip()
+        # 清理模型/前端截断痕迹，避免页面出现 "..."。
+        cleaned = re.sub(r"\s*\.\.\.\s*$", "", cleaned)
+        cleaned = re.sub(r"\s*…+\s*$", "", cleaned)
+        cleaned = cleaned.replace("... [为简报截断]", "").replace("... [truncated by topic_fulltext_index]", "")
+        return cleaned.strip()
+
+    def _build_impact_fallback(seed_text: str) -> str:
+        seed = _first_complete_sentence(_clean_analysis_text(seed_text), max_chars=120).strip()
+        if not seed:
+            return "结合全文判断，该事件已对相关主体的业务节奏与行业预期形成现实影响，后续以新增数据持续校验。"
+        return f"结合正文判断，{seed}，其影响将继续传导至相关业务节奏与行业预期，需用后续数据持续验证。"
+
+    def _build_counterpoint_fallback(seed_text: str) -> str:
+        seed = _first_complete_sentence(_clean_analysis_text(seed_text), max_chars=120).strip()
+        if not seed:
+            return "反面情形在于关键前提未兑现或后续数据与当前叙事背离，需持续跟踪证据链并动态修正判断。"
+        return (
+            f"反面情形在于：若“{seed}”对应的关键前提未兑现，或后续数据与当前叙事背离，"
+            "则结论需要下修并重估。"
+        )
+
+    text_by_subtitle: dict[str, str] = {}
+    for subtitle, items in subsection_map.items():
+        if subtitle in {"源地址", "补充地址", "增量信息", "需要继续跟踪的点"}:
+            continue
+        if not isinstance(items, list) or not items:
+            continue
+        text = " ".join(str(item).strip() for item in items if str(item).strip())
+        text = _clean_analysis_text(text)
+        if text:
+            text_by_subtitle[str(subtitle)] = text
+
+    fact_text = text_by_subtitle.get("事实", "")
+    desc_text = text_by_subtitle.get("描述", "")
+    if fact_text and desc_text and _clean_analysis_text(fact_text) == _clean_analysis_text(desc_text):
+        text_by_subtitle.pop("描述", None)
+
+    seed_text = " ".join(
+        text_by_subtitle.get(key, "")
+        for key in ("事实", "背景", "背景/原因", "核心判断", "描述")
+    ).strip()
+    if "产生的影响" not in text_by_subtitle:
+        text_by_subtitle["产生的影响"] = _build_impact_fallback(seed_text)
+    if "反面观点 / 数据矛盾点" not in text_by_subtitle:
+        text_by_subtitle["反面观点 / 数据矛盾点"] = _build_counterpoint_fallback(seed_text)
+
     for subtitle, items in subsection_map.items():
         if not isinstance(items, list) or not items:
             continue
@@ -2614,7 +2673,7 @@ def _render_section(
                 continue
             body = f"<ul>{list_items}</ul>"
         else:
-            text = " ".join(str(item).strip() for item in items if str(item).strip())
+            text = text_by_subtitle.get(str(subtitle), "")
             if not text:
                 continue
             block_class = "block-text indented-text" if subtitle in {"核心判断", "产业/公司影响", "产品/公司影响"} else "block-text"
@@ -2624,6 +2683,20 @@ def _render_section(
             '<div class="block">'
             f'<h4 class="block-title">{_html.escape(str(subtitle))}</h4>'
             f"{body}"
+            "</div>"
+        )
+
+    existing_titles = {str(subtitle) for subtitle in subsection_map.keys()}
+    for subtitle in ("产生的影响", "反面观点 / 数据矛盾点"):
+        if subtitle in existing_titles:
+            continue
+        text = text_by_subtitle.get(subtitle, "").strip()
+        if not text:
+            continue
+        blocks.append(
+            '<div class="block">'
+            f'<h4 class="block-title">{_html.escape(subtitle)}</h4>'
+            f'<p class="block-text">{_html.escape(text)}</p>'
             "</div>"
         )
 

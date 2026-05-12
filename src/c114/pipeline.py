@@ -18,7 +18,7 @@ from utils.tools.orchestration import (
 )
 
 _SHANGHAI = timezone(timedelta(hours=8))
-_C114_HTML_MISSING_ALERT_TO = ["zx944532395@sina.com"]
+_C114_HTML_MISSING_ALERT_TO = ["zx944532395@sina.com", "944532395@qq.com"]
 
 
 def shanghai_yesterday() -> date_cls:
@@ -45,6 +45,18 @@ class EmailSendResult:
     succeeded: bool
     step6_path: str = ""
     error_detail: str = ""
+
+
+@dataclass
+class C114DailyBriefRunResult:
+    """``utils.cli run-c114-daily-brief`` 聚合结果。"""
+
+    succeeded: bool
+    failure_step: str = ""
+    failure_reason: str = ""
+    run_dir: str = ""
+    step6_path: str = ""
+    log_path: str = ""
 
 
 def _find_latest_c114_brief_markdown(reports_dir: Path, report_date: date_cls) -> Path | None:
@@ -261,3 +273,80 @@ def _merge_weekend_brief(reports_dir: Path, saturday: date_cls, sunday: date_cls
     merged_html_path = range_dir / f"c114_step_6_brief_{sunday_token}.html"
     merged_md_path.write_text(merged_md, encoding="utf-8")
     merged_html_path.write_text(render_c114_brief_email(merged_md).html, encoding="utf-8")
+
+
+def run_c114_daily_brief(
+    *,
+    project_root: Path,
+    report_date: date_cls,
+    recipients: list[str],
+    send_mail: bool = True,
+) -> C114DailyBriefRunResult:
+    """在项目根下执行 C114 ``run``，并在成功后可选发送 Step6 简报邮件。"""
+
+    import os
+
+    from c114.cli import build_parser, run_with_args
+    from c114.runtime.settings import ensure_directories, resolve_paths as c114_resolve_paths
+
+    root = project_root.resolve()
+    previous_cwd = os.getcwd()
+    paths_c114 = None
+    try:
+        os.chdir(root)
+        paths_c114 = c114_resolve_paths()
+        ensure_directories(paths_c114)
+        parser = build_parser()
+        args = parser.parse_args(["run", "--source", "c114", "--date", report_date.isoformat()])
+        run_with_args(args, paths=paths_c114)
+    except BaseException as exc:
+        return C114DailyBriefRunResult(
+            succeeded=False,
+            failure_step="run",
+            failure_reason=str(exc),
+        )
+    finally:
+        try:
+            os.chdir(previous_cwd)
+        except OSError:
+            pass
+
+    if paths_c114 is None:
+        return C114DailyBriefRunResult(
+            succeeded=False,
+            failure_step="run",
+            failure_reason="未能解析 C114 路径（内部错误）。",
+        )
+
+    c114_root = paths_c114.reports_dir / "c114_report"
+    step6 = _find_latest_c114_brief_markdown(c114_root, report_date)
+    step6_str = str(step6) if step6 is not None else ""
+    if send_mail:
+        mail_kwargs: dict[str, Any] = {
+            "project_root": root,
+            "recipients": recipients,
+            "report_date": report_date,
+        }
+        canonical_mail_root = root / "output" / "reports" / "c114_report"
+        if step6 is not None:
+            try:
+                step6.resolve().relative_to(canonical_mail_root.resolve())
+            except ValueError:
+                pass
+            else:
+                mail_kwargs["step6_md_path"] = step6
+        mail_out = send_latest_c114_brief_email(**mail_kwargs)
+        if not mail_out.succeeded:
+            return C114DailyBriefRunResult(
+                succeeded=False,
+                failure_step="email",
+                failure_reason=mail_out.error_detail or "邮件发送失败",
+                run_dir=str(c114_root),
+                step6_path=step6_str,
+            )
+
+    return C114DailyBriefRunResult(
+        succeeded=True,
+        run_dir=str(c114_root),
+        step6_path=step6_str,
+    )

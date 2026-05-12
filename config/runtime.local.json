@@ -2,10 +2,10 @@
   "_comment": "Websearch skill 运行配置。本地 key 放在此文件中，程序会忽略 *_comment 字段。",
   "keys": {
     "_comment": "至少配置一个搜索 provider key；aliyun_iqs_api_key 用于正文抽取。",
-    "tavily_api_key": "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",
+    "tavily_api_key": "",
     "metaso_api_key": "",
     "baidu_api_key": "",
-    "aliyun_iqs_api_key": "VsFyAQ-ARxXaSDHD-40JmmYyQ2zy8yM2OWRiMjE1OQ"
+    "aliyun_iqs_api_key": "043pywCHpQegnV8ZDEOsQP3uUDWHTbM2OWZjMzA1Mw"
   },
   "sources": {
     "_comment": "站点抓取入口参数。",

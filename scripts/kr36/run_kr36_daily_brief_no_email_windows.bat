@@ -27,6 +27,8 @@ if not defined PYTHON_CMD call :probe_python "py -3"
 
 cd /d "%PROJECT_ROOT%"
 set "PYTHONPATH=%PROJECT_ROOT%\src"
+if not defined PYTHONUTF8 set "PYTHONUTF8=1"
+if not defined PYTHONIOENCODING set "PYTHONIOENCODING=utf-8"
 for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd HH:mm:ss')"`) do set "RUN_AT=%%I"
 echo [%LOG_TAG%] %RUN_AT% starting daily brief run (no email)...
 echo [%LOG_TAG%] PROJECT_ROOT=%PROJECT_ROOT%

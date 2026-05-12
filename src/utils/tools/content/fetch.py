@@ -45,7 +45,7 @@ BLOCKED_CONTENT_DOMAINS = {
 }
 
 class AliyunIQSClient:
-    """Minimal Aliyun IQS client used as the preferred正文提取 provider."""
+    """阿里云 IQS unified：Step 3 作联网搜索、Step 4 作正文候选与 URL 抓取。"""
     def __init__(
         self,
         api_key: str,

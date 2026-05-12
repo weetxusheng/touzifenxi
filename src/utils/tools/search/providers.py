@@ -287,19 +287,62 @@ class AutoSearchClient:
         baidu_client: BaiduSearchClient | None,
         google_client: GooglePlaywrightClient | None = None,
         provider_mode: str = "auto",
+        aliyun_iqs_client: Any | None = None,
     ) -> None:
         self.tavily_client = tavily_client
         self.metaso_client = metaso_client
         self.baidu_client = baidu_client
         self.google_client = google_client or GooglePlaywrightClient()
         self.provider_mode = provider_mode
+        self.aliyun_iqs_client = aliyun_iqs_client
 
     def search(self, query: SearchQuery, max_results: int) -> list[dict[str, Any]]:
         _, results = self.search_with_provider(query, max_results)
         return results
 
+    def _try_aliyun_iqs_search(self, query: SearchQuery, max_results: int) -> tuple[str, list[dict[str, Any]]] | None:
+        """将阿里云 IQS unified 结果转成与 Tavily 默认归一化分支兼容的 dict 列表。"""
+        if self.aliyun_iqs_client is None:
+            return None
+        documents = self.aliyun_iqs_client.search(query.value)
+        normalized: list[dict[str, Any]] = []
+        for doc in documents[:max_results]:
+            url = str(getattr(doc, "link", "") or "").strip()
+            title = compact_text(str(getattr(doc, "title", "") or ""), limit=160)
+            if not url or not title:
+                continue
+            body = str(getattr(doc, "main_text", "") or "")
+            rich = str(getattr(doc, "rich_main_body", "") or "")
+            snippet = compact_text(body or rich, limit=400)
+            published_at = str(getattr(doc, "published_at", "") or "")
+            normalized.append(
+                {
+                    "url": url,
+                    "title": title,
+                    "snippet": snippet,
+                    "published_at": published_at,
+                    "score": 0.5,
+                }
+            )
+        return ("aliyun_iqs", normalized) if normalized else None
+
+    def _raise_no_search_provider(self, query: SearchQuery, max_results: int) -> tuple[str, list[dict[str, Any]]]:
+        pair = self._try_aliyun_iqs_search(query, max_results)
+        if pair is not None:
+            return pair
+        raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
+
     def search_with_provider(self, query: SearchQuery, max_results: int) -> tuple[str, list[dict[str, Any]]]:
         provider = choose_search_provider(query, forced_provider=self.provider_mode)
+        if provider == "auto":
+            pair = self._try_aliyun_iqs_search(query, max_results)
+            if pair is not None:
+                return pair
+        if provider == "aliyun_iqs":
+            pair = self._try_aliyun_iqs_search(query, max_results)
+            if pair is None:
+                raise RuntimeError("未配置 aliyun_iqs_api_key 或 IQS 无结果，无法执行 step 3 搜索。")
+            return pair
         if provider == "google":
             return "google", self.google_client.search(query, max_results)
         if provider == "baidu":
@@ -311,12 +354,15 @@ class AutoSearchClient:
                         return "metaso", self.metaso_client.search(query, max_results)
                     if self.tavily_client is not None:
                         return "tavily", self.tavily_client.search(query, max_results)
+                    pair = self._try_aliyun_iqs_search(query, max_results)
+                    if pair is not None:
+                        return pair
                     raise
             if self.metaso_client is not None:
                 return "metaso", self.metaso_client.search(query, max_results)
             if self.tavily_client is not None:
                 return "tavily", self.tavily_client.search(query, max_results)
-            raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
+            return self._raise_no_search_provider(query, max_results)
         if provider == "metaso":
             if self.metaso_client is not None:
                 return "metaso", self.metaso_client.search(query, max_results)
@@ -324,7 +370,7 @@ class AutoSearchClient:
                 return "baidu", self.baidu_client.search(query, max_results)
             if self.tavily_client is not None:
                 return "tavily", self.tavily_client.search(query, max_results)
-            raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
+            return self._raise_no_search_provider(query, max_results)
         if self.tavily_client is not None:
             try:
                 return "tavily", self.tavily_client.search(query, max_results)
@@ -335,15 +381,21 @@ class AutoSearchClient:
                     except RuntimeError:
                         if self.baidu_client is not None:
                             return "baidu", self.baidu_client.search(query, max_results)
+                        pair = self._try_aliyun_iqs_search(query, max_results)
+                        if pair is not None:
+                            return pair
                         raise
                 if self.baidu_client is not None:
                     return "baidu", self.baidu_client.search(query, max_results)
+                pair = self._try_aliyun_iqs_search(query, max_results)
+                if pair is not None:
+                    return pair
                 raise
         if self.metaso_client is not None:
             return "metaso", self.metaso_client.search(query, max_results)
         if self.baidu_client is not None:
             return "baidu", self.baidu_client.search(query, max_results)
-        raise RuntimeError("未配置可用搜索 provider，无法执行 step 3 搜索。")
+        return self._raise_no_search_provider(query, max_results)
 
     def extract(self, urls: list[str], query: str) -> dict[str, str]:
         if self.tavily_client is None:
@@ -351,24 +403,46 @@ class AutoSearchClient:
         return self.tavily_client.extract(urls, query)
 
 
+def _build_aliyun_iqs_client_from_runtime(runtime_config: Any) -> Any | None:
+    key = str(getattr(runtime_config, "aliyun_iqs_api_key", "") or "").strip()
+    if not key:
+        return None
+    from utils.tools.content.fetch import AliyunIQSClient
+
+    return AliyunIQSClient(
+        api_key=key,
+        timeout=float(getattr(runtime_config, "aliyun_timeout_seconds", 45.0)),
+        max_retries=int(getattr(runtime_config, "aliyun_max_retries", 2)),
+        retry_backoff_seconds=float(getattr(runtime_config, "aliyun_retry_backoff_seconds", 0.5)),
+    )
+
+
 def build_auto_search_client(runtime_config: Any, provider_mode: str = "auto") -> AutoSearchClient:
     timeout = runtime_config.request_timeout_seconds
     tavily_client = TavilyClient(runtime_config.tavily_api_key, timeout=timeout) if runtime_config.tavily_api_key else None
     metaso_client = MetasoClient(runtime_config.metaso_api_key, timeout=timeout) if runtime_config.metaso_api_key else None
     baidu_client = BaiduSearchClient(runtime_config.baidu_api_key, timeout=timeout) if runtime_config.baidu_api_key else None
-    if tavily_client is None and metaso_client is None and baidu_client is None:
-        raise RuntimeError("未配置任何搜索 provider key，无法执行 step 3 搜索。")
+    aliyun_client = _build_aliyun_iqs_client_from_runtime(runtime_config)
+    if tavily_client is None and metaso_client is None and baidu_client is None and aliyun_client is None:
+        raise RuntimeError(
+            "未配置任何 Step 3 搜索能力：请至少配置 tavily / metaso / baidu 之一，或配置 aliyun_iqs_api_key 使用阿里云 IQS 统一搜索。"
+        )
     return AutoSearchClient(
         tavily_client=tavily_client,
         metaso_client=metaso_client,
         baidu_client=baidu_client,
         provider_mode=provider_mode,
+        aliyun_iqs_client=aliyun_client,
     )
 
 
 def choose_search_provider(query: SearchQuery, forced_provider: str = "auto") -> str:
-    if forced_provider in {"tavily", "metaso", "baidu", "google"}:
-        return forced_provider
+    """``auto`` 在 ``AutoSearchClient`` 内优先走阿里云 IQS（有 key 且能出结果时），否则回退 Tavily/Metaso/Baidu 链。"""
+    forced = str(forced_provider or "auto").strip().lower()
+    if forced in {"tavily", "metaso", "baidu", "google", "aliyun_iqs"}:
+        return forced
+    if forced in {"", "auto"}:
+        return "auto"
     return "tavily"
 
 

@@ -11,6 +11,7 @@ from typing import Any
 from utils.tools.settings import AppPaths
 
 from c114.pipeline import run_daily_pipeline
+from utils.tools.analysis.step5_recovery_notes import clear_step5_recovery_messages, drain_step5_recovery_messages
 
 
 def handle_run_command(args: argparse.Namespace, *, paths: AppPaths, facade: Any) -> None:
@@ -40,4 +41,18 @@ def handle_run_command(args: argparse.Namespace, *, paths: AppPaths, facade: Any
         run_infoq_with_args(argparse.Namespace(command="run", date=infoq_dates[0].isoformat()))
         return
 
-    run_daily_pipeline(args, paths=paths, facade=facade)
+    clear_step5_recovery_messages()
+    try:
+        run_daily_pipeline(args, paths=paths, facade=facade)
+    except BaseException as exc:
+        soft = drain_step5_recovery_messages()
+        from c114.ops_alerts import send_c114_pipeline_failure_alert
+
+        send_c114_pipeline_failure_alert(project_root=paths.project_root, exc=exc, soft_notes=soft)
+        raise
+    else:
+        soft = drain_step5_recovery_messages()
+        if soft:
+            from c114.ops_alerts import send_c114_pipeline_soft_digest
+
+            send_c114_pipeline_soft_digest(project_root=paths.project_root, messages=soft)

@@ -6,7 +6,7 @@ LLM 章节生成、checkpoint 和问题汇总由 steps.step6_brief 负责。
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 from ..analysis.models import BriefSectionDraft, ContentAnalysisInput
@@ -22,14 +22,10 @@ def _payload_is_kr36_report(payload: ContentAnalysisInput) -> bool:
 
 def format_kr36_crawl_week_range_label(report_date_iso: str) -> str:
     """
-    36Kr 简报主标题内日期，与 ``source_adapter.resolve_kr36_biweekly_date_window`` 完全对齐：
+    36Kr 简报主标题内日期。
 
-    - **周三（weekday=2）** → 上周六 ～ 本周三（4 天窗口）
-    - **周六（weekday=5）** → 本周三 ～ 本周六（4 天窗口）
-    - **其他日期**          → 上一完整自然周（兜底，用于一次性/临时跑）
-
-    例如：周三 Apr 29 → 「2026-04-25 至 2026-04-29」
-          周六 May 2  → 「2026-04-29 至 2026-05-02」
+    标题不复制日期窗口规则，直接调用 kr36 抓取层的
+    ``resolve_kr36_weekly_listing_date_window``，确保标题展示区间与实际抓取区间同源。
     """
     s = (report_date_iso or "").strip()
     if len(s) < 10:
@@ -38,20 +34,14 @@ def format_kr36_crawl_week_range_label(report_date_iso: str) -> str:
         d = date.fromisoformat(s[:10])
     except ValueError:
         return s
-    wd = d.weekday()
-    if wd == 2:  # 周三 → 上周六 ～ 本周三
-        last_sat = d - timedelta(days=4)
-        return f"{last_sat.isoformat()} 至 {d.isoformat()}"
-    if wd == 5:  # 周六 → 本周三 ～ 本周六
-        last_wed = d - timedelta(days=3)
-        return f"{last_wed.isoformat()} 至 {d.isoformat()}"
-    # 兜底：上一完整自然周
-    current_week_monday = d - timedelta(days=wd)
-    previous_week_sunday = current_week_monday - timedelta(days=1)
-    previous_week_monday = previous_week_sunday - timedelta(days=6)
-    if previous_week_monday == previous_week_sunday:
-        return previous_week_monday.isoformat()
-    return f"{previous_week_monday.isoformat()} 至 {previous_week_sunday.isoformat()}"
+    try:
+        from kr36.source_adapter import resolve_kr36_weekly_listing_date_window
+    except ImportError:
+        return s
+    window_start, window_end = resolve_kr36_weekly_listing_date_window(d)
+    if window_start == window_end:
+        return window_start.isoformat()
+    return f"{window_start.isoformat()} 至 {window_end.isoformat()}"
 
 
 def _brief_title_date_phrase(payload: ContentAnalysisInput) -> str:

@@ -15,6 +15,9 @@ def bootstrap() -> None:
 
 def main() -> None:
     bootstrap()
+    from utils.tools.runtime.win_stdio import ensure_utf8_stdio
+
+    ensure_utf8_stdio()
     from c114.cli import main as skill_main
 
     skill_main()
