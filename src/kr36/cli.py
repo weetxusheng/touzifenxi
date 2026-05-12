@@ -238,57 +238,70 @@ def run_with_args(args: argparse.Namespace, *, paths: AppPaths | None = None) ->
         print("提示：--external-search 在 36kr 新四步流程中已忽略（不再走 C114 外搜/搜索清单）。")
 
     target_date = date.fromisoformat(args.date)
-    _ = load_c114_runtime_config()
-    llm_client = require_llm_client()
-    run_dir = create_run_directory(resolved_paths.reports_dir)
-    bind_llm_trace_log(llm_client, run_dir=run_dir, target_date=target_date, reset_file=True)
-
-    fetch_log = run_dir / "kr36_fetch.log"
-    with kr36_debug_log_file(fetch_log):
-        raw_payload = fetch_and_materialize_kr36_articles(target_date, resolved_paths, run_dir=run_dir)
-    print(f"抓取日志: {fetch_log}")
-    raw_csv_path = raw_payload["raw_csv_path"]
     report_date_text = target_date.isoformat()
+    run_dir: Path | None = None
+    try:
+        _ = load_c114_runtime_config()
+        llm_client = require_llm_client()
+        run_dir = create_run_directory(resolved_paths.reports_dir)
+        bind_llm_trace_log(llm_client, run_dir=run_dir, target_date=target_date, reset_file=True)
 
-    analysis_output = run_dir / step_1_analysis_name(target_date)
-    analyses, _briefs = analyze_daily_articles(raw_csv_path, report_date_text)
-    if analyses and all(isinstance(item, ArticleAnalysis) for item in analyses):
-        topic_grouping_checkpoint_store = StepCheckpointStore.load_or_create(
-            checkpoint_path=checkpoint_path_for_step(
-                output_path=analysis_output,
+        fetch_log = run_dir / "kr36_fetch.log"
+        with kr36_debug_log_file(fetch_log):
+            raw_payload = fetch_and_materialize_kr36_articles(target_date, resolved_paths, run_dir=run_dir)
+        print(f"抓取日志: {fetch_log}")
+        raw_csv_path = raw_payload["raw_csv_path"]
+
+        analysis_output = run_dir / step_1_analysis_name(target_date)
+        analyses, _briefs = analyze_daily_articles(raw_csv_path, report_date_text)
+        if analyses and all(isinstance(item, ArticleAnalysis) for item in analyses):
+            topic_grouping_checkpoint_store = StepCheckpointStore.load_or_create(
+                checkpoint_path=checkpoint_path_for_step(
+                    output_path=analysis_output,
+                    step_name="step_1_5",
+                    report_date=report_date_text,
+                    prefix="kr36",
+                ),
                 step_name="step_1_5",
                 report_date=report_date_text,
-                prefix="kr36",
-            ),
-            step_name="step_1_5",
-            report_date=report_date_text,
-            input_path=raw_csv_path,
-            output_path=analysis_output,
-        )
-        analyses, _briefs = auto_group_analysis_topics(
-            analyses,
-            llm_client,
-            report_date=report_date_text,
-            source_site="36kr",
-            checkpoint_store=topic_grouping_checkpoint_store,
-            prompt_path=TOPIC_GROUPING_PROMPT_PATH,
-        )
-    save_article_analysis_csv(analysis_output, analyses)
-    count = len(analyses)
-    print(f"36Kr 步骤1 {target_date.isoformat()} 完成 | 条数: {count}")
-    print(f"  Step1 CSV: {analysis_output}")
-    if not analyses:
-        print("当日无分析条目，结束。")
-        return
+                input_path=raw_csv_path,
+                output_path=analysis_output,
+            )
+            analyses, _briefs = auto_group_analysis_topics(
+                analyses,
+                llm_client,
+                report_date=report_date_text,
+                source_site="36kr",
+                checkpoint_store=topic_grouping_checkpoint_store,
+                prompt_path=TOPIC_GROUPING_PROMPT_PATH,
+            )
+        save_article_analysis_csv(analysis_output, analyses)
+        count = len(analyses)
+        print(f"36Kr 步骤1 {target_date.isoformat()} 完成 | 条数: {count}")
+        print(f"  Step1 CSV: {analysis_output}")
+        if not analyses:
+            print("当日无分析条目，结束。")
+            return
 
-    run_stages_2_3_4(
-        run_dir=run_dir,
-        target_date=target_date,
-        report_date_text=report_date_text,
-        analyses=analyses,
-        step1_csv_path=analysis_output,
-        llm_client=llm_client,
-    )
+        run_stages_2_3_4(
+            run_dir=run_dir,
+            target_date=target_date,
+            report_date_text=report_date_text,
+            analyses=analyses,
+            step1_csv_path=analysis_output,
+            llm_client=llm_client,
+        )
+    except BaseException as exc:
+        from .ops_alerts import send_kr36_pipeline_failure_alert
+
+        send_kr36_pipeline_failure_alert(
+            project_root=resolved_paths.project_root,
+            command=getattr(args, "command", "run"),
+            report_date=report_date_text,
+            run_dir=run_dir,
+            exc=exc,
+        )
+        raise
 
 
 def _raw_article_ref_from_hot_topics_json_row(row: dict[str, Any]) -> RawArticleRef:

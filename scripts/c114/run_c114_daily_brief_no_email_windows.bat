@@ -6,8 +6,9 @@ set "SOURCE=%~1"
 if "%~1"=="" set "SOURCE=c114"
 set "LOG_TAG=!SOURCE!"
 
-rem Per-HTTP request timeout in seconds. Override: set C114_PRT=180 before run.
+rem HTTP 单次请求超时（秒）。默认 300。仅可设为纯数字；启动前执行 set C114_PRT=180 即可覆盖（勿把本说明整行拷进 .env）。
 if not defined C114_PRT set "C114_PRT=300"
+call :sanitize_c114_prt
 
 rem Repo root = scripts/c114 -> two levels up from this file.
 for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
@@ -24,6 +25,9 @@ if not defined PYTHON_CMD call :probe_python "py -3"
 
 cd /d "!PROJECT_ROOT!"
 set "PYTHONPATH=!PROJECT_ROOT!\src"
+rem Python 重定向到日志文件时默认可能用系统 ANSI 编码；与 UTF-8 混写会乱码。
+if not defined PYTHONUTF8 set "PYTHONUTF8=1"
+if not defined PYTHONIOENCODING set "PYTHONIOENCODING=utf-8"
 echo [!LOG_TAG!] %date% %time% starting daily brief run (no email)...
 echo [!LOG_TAG!] PROJECT_ROOT=!PROJECT_ROOT!
 echo [!LOG_TAG!] PYTHON_CMD=!PYTHON_CMD!
@@ -60,6 +64,7 @@ if exist "!PROJECT_ROOT!\.env" (
     if not "%%A"=="" if not "%%A:~0,1"=="#" set "%%A=%%B"
   )
 )
+call :sanitize_c114_prt
 
 rem Append Python stderr (tracebacks) to logs/c114/<source>.log
 !PYTHON_CMD! "!PROJECT_ROOT!\scripts\websearch.py" run --source !SOURCE! --timeout !C114_PRT! 2>> "!LOG_FILE!"
@@ -81,4 +86,10 @@ set "_PY_CAND=%~1"
 if not defined _PY_CAND exit /b 0
 %_PY_CAND% --version >nul 2>&1
 if not errorlevel 1 set "PYTHON_CMD=%_PY_CAND%"
+exit /b 0
+
+:sanitize_c114_prt
+rem --timeout 必须为纯数字，否则 argparse 会把多余词当成非法参数。
+echo(!C114_PRT!| findstr /r "^[0-9][0-9]*$" >nul || set "C114_PRT=300"
+if "!C114_PRT!"=="" set "C114_PRT=300"
 exit /b 0

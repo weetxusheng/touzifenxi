@@ -610,7 +610,8 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             )
         )
         # 专题二级（专题详情内视频/文）：时间窗；一级仍只按 topic_focus_keywords 选栏。
-        # weekday_split=周一至周四抓上周、周五至周日抓本周；兼容仅配置 topic_previous_week_only 的旧项。
+        # weekday_split=周三抓上周六～本周三、周六抓本周三～本周六；其他日期兜底抓上周。
+        # 兼容仅配置 topic_previous_week_only 的旧项。
         self.topic_subitem_date_mode = _kr36_topic_subitem_date_mode_from_config(
             dict(self._source_config) if self._source_config else {}
         )
@@ -781,7 +782,8 @@ class Kr36SourceAdapter(ContentSourceAdapter):
         info_categories = {name for name, _ in KR36_SEARCH_CATEGORY_KEYWORDS}
         info_counts: dict[str, int] = {}
         info_total_count = 0
-        # 搜索分类日期窗：Mon~Sat 上一完整自然周；Sun 本周一～当天。AI/创投仅当天，见 resolve_kr36_information_ai_vc_date_window。
+        # 搜索分类日期窗：周三=上周六～本周三；周六=本周三～本周六；
+        # 其他日期兜底为上一完整自然周。AI/创投也使用同一窗口。
         _sdw = resolve_kr36_search_category_date_window(report_date)
         effective_window: tuple[date, date] = _sdw
         if self.search_listing_enabled:
@@ -957,6 +959,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             f"[kr36] listing_begin report_date={report_date.isoformat()} rounds_total={rounds_total} "
             f"candidate_limit={self.candidate_limit} parallel=true step0.5_plus_step1"
         )
+        _append_kr36_date_window_log(report_date, topic_mode=self.topic_subitem_date_mode)
         d_topic: list[dict[str, str]] = []
         d_main: list[dict[str, str]] = []
         cfg = dict(self._source_config)
@@ -1238,6 +1241,7 @@ class Kr36SourceAdapter(ContentSourceAdapter):
             f"[kr36] listing_begin report_date={report_date.isoformat()} rounds_total={rounds_total} "
             f"candidate_limit={self.candidate_limit} mode=sequential step0.5_then_step1"
         )
+        _append_kr36_date_window_log(report_date, topic_mode=self.topic_subitem_date_mode)
         topic_items = self._run_listing_step05_topics(
             deferred_pages, report_date, rounds_total=rounds_total
         )
@@ -3341,9 +3345,32 @@ def resolve_kr36_search_category_date_window(report_date: date) -> tuple[date, d
 
 
 def resolve_kr36_information_ai_vc_date_window(report_date: date) -> tuple[date, date]:
-    """AI / 创投 资讯列表（/information/AI、/information/contact）：仅报告日当天。"""
-    d = report_date
-    return d, d
+    """AI / 创投 资讯列表（/information/AI、/information/contact）：使用周三/周六同一窗口。"""
+    return resolve_kr36_weekly_listing_date_window(report_date)
+
+
+def _format_kr36_window_for_log(window: tuple[date | None, date | None]) -> str:
+    start, end = window
+    if start is None or end is None:
+        return "none"
+    return f"{start.isoformat()}~{end.isoformat()}"
+
+
+def _append_kr36_date_window_log(report_date: date, *, topic_mode: str) -> None:
+    """Log the effective date-window rules once per listing run."""
+    weekly_window = resolve_kr36_weekly_listing_date_window(report_date)
+    topic_window = resolve_kr36_topic_subitem_date_window(report_date, mode=topic_mode)
+    info_ai_vc_window = resolve_kr36_information_ai_vc_date_window(report_date)
+    _append_kr36_debug_log(
+        "[kr36] date_window_summary "
+        f"report_date={report_date.isoformat()} "
+        f"weekly_listing={_format_kr36_window_for_log(weekly_window)} "
+        f"search_category={_format_kr36_window_for_log(weekly_window)} "
+        f"topic_subitems={_format_kr36_window_for_log(topic_window)} "
+        f"topic_mode={(topic_mode or 'weekday_split')} "
+        f"info_ai_vc={_format_kr36_window_for_log(info_ai_vc_window)} "
+        "activity=state_only"
+    )
 
 
 def resolve_current_week_window(report_date: date) -> tuple[date, date]:
@@ -3379,7 +3406,8 @@ def resolve_kr36_topic_subitem_date_window(
     """
     专题详情页子项（二级）的日期窗。
 
-    - ``weekday_split``（默认）：周一至周六为「上一完整自然周」；周日为「本周一～报告日当天」（与搜索周窗一致）。
+    - ``weekday_split``（默认）：周三为「上周六～本周三」；周六为「本周三～本周六」；
+      其他日期兜底为「上一完整自然周」（与搜索周窗一致）。
     - ``previous_week``：始终为上周窗（与历史 ``topic_previous_week_only=true`` 一致）。
     - ``none``：不按时窗筛子项（与 ``topic_previous_week_only=false`` 一致）。活动页不走本函数。
 

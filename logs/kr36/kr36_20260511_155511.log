@@ -1,0 +1,17 @@
+[kr36] 2026-05-11 15:55:11 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=e:\AI\touzifenxi
+[kr36] PYTHON_CMD="e:\AI\touzifenxi\.venv\Scripts\python.exe"
+[kr36] TIMEOUT=40s
+[kr36] LOG_FILE=e:\AI\touzifenxi\logs\kr36\kr36_20260511_155511.log
+[kr36] running: "e:\AI\touzifenxi\.venv\Scripts\python.exe" "e:\AI\touzifenxi\scripts\websearch.py" run --source 36kr --timeout 40
+2026-05-11 15:55:18 [kr36] cookie_quality sensors_short len=479
+2026-05-11 15:55:18 [kr36] listing_begin report_date=2026-05-11 rounds_total=5 candidate_limit=120 mode=sequential step0.5_then_step1
+2026-05-11 15:55:18 [kr36] date_window_summary report_date=2026-05-11 weekly_listing=2026-05-04~2026-05-10 search_category=2026-05-04~2026-05-10 topic_subitems=2026-05-04~2026-05-10 topic_mode=weekday_split info_ai_vc=2026-05-04~2026-05-10 activity=state_only
+2026-05-11 15:55:18 [kr36] step0.5_topic_round_start page=1 round=1/5 stage=topics url=https://36kr.com/topics/
+2026-05-11 15:55:18 [kr36] 进入专题页(0.5步)，数据 0 条，累计 0 条
+2026-05-11 15:55:18 [kr36] fetch_start url=https://36kr.com/topics/
+2026-05-11 15:55:19 [kr36] fetch_ok method=curl url=https://36kr.com/topics/ html_length=74118
+2026-05-11 15:55:19 [kr36] throttle_wait url=https://36kr.com/topics/3780490016134406 wait_ms=21118 global_wait_ms=21118 same_url_wait_ms=0 risk_wait_ms=0
+2026-05-11 15:55:40 [kr36] fetch_start url=https://36kr.com/topics/3780490016134406
+2026-05-11 15:55:41 [kr36] fetch_ok method=curl url=https://36kr.com/topics/3780490016134406 html_length=75711
+2026-05-11 15:55:41 [kr36] throttle_wait url=https://36kr.com/topics/3780865660869640 wait_ms=36670 global_wait_ms=36670 same_url_wait_ms=0 risk_wait_ms=0

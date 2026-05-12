@@ -329,7 +329,7 @@ def build_parser() -> argparse.ArgumentParser:
     c114_search_parser.add_argument(
         "--provider",
         default="auto",
-        choices=["auto", "tavily", "metaso", "baidu", "google"],
+        choices=["auto", "tavily", "metaso", "baidu", "google", "aliyun_iqs"],
         help="Search provider.",
     )
     c114_search_parser.add_argument("--per-query-limit", type=int, default=5)
@@ -390,7 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
     c114_run_parser.add_argument(
         "--provider",
         default="auto",
-        choices=["auto", "tavily", "metaso", "baidu", "google"],
+        choices=["auto", "tavily", "metaso", "baidu", "google", "aliyun_iqs"],
         help="Search provider.",
     )
     c114_run_parser.add_argument("--per-query-limit", type=int, default=5)
@@ -417,7 +417,7 @@ def build_parser() -> argparse.ArgumentParser:
     c114_direct_run_parser.add_argument(
         "--provider",
         default="auto",
-        choices=["auto", "tavily", "metaso", "baidu", "google"],
+        choices=["auto", "tavily", "metaso", "baidu", "google", "aliyun_iqs"],
         help="Search provider.",
     )
     c114_direct_run_parser.add_argument("--per-query-limit", type=int, default=5)

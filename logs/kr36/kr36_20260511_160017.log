@@ -1,0 +1,142 @@
+[kr36] 2026-05-11 16:00:18 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=e:\AI\touzifenxi
+[kr36] PYTHON_CMD="e:\AI\touzifenxi\.venv\Scripts\python.exe"
+[kr36] TIMEOUT=50s
+[kr36] LOG_FILE=e:\AI\touzifenxi\logs\kr36\kr36_20260511_160017.log
+[kr36] running: "e:\AI\touzifenxi\.venv\Scripts\python.exe" "e:\AI\touzifenxi\scripts\websearch.py" run --source 36kr --timeout 50
+2026-05-11 16:00:21 [kr36] cookie_quality sensors_short len=479
+2026-05-11 16:00:21 [kr36] listing_begin report_date=2026-05-11 rounds_total=5 candidate_limit=120 mode=sequential step0.5_then_step1
+2026-05-11 16:00:21 [kr36] date_window_summary report_date=2026-05-11 weekly_listing=2026-05-04~2026-05-10 search_category=2026-05-04~2026-05-10 topic_subitems=2026-05-04~2026-05-10 topic_mode=weekday_split info_ai_vc=2026-05-04~2026-05-10 activity=state_only
+2026-05-11 16:00:21 [kr36] step0.5_topic_round_start page=1 round=1/5 stage=topics url=https://36kr.com/topics/
+2026-05-11 16:00:21 [kr36] 进入专题页(0.5步)，数据 0 条，累计 0 条
+2026-05-11 16:00:21 [kr36] fetch_start url=https://36kr.com/topics/
+2026-05-11 16:00:21 [kr36] fetch_ok method=curl url=https://36kr.com/topics/ html_length=74118
+2026-05-11 16:00:21 [kr36] throttle_wait url=https://36kr.com/topics/3780490016134406 wait_ms=37417 global_wait_ms=37417 same_url_wait_ms=0 risk_wait_ms=0
+2026-05-11 16:00:59 [kr36] fetch_start url=https://36kr.com/topics/3780490016134406
+2026-05-11 16:00:59 [kr36] fetch_ok method=curl url=https://36kr.com/topics/3780490016134406 html_length=96726
+2026-05-11 16:00:59 [kr36] throttle_wait url=https://36kr.com/topics/3780865660869640 wait_ms=20286 global_wait_ms=20286 same_url_wait_ms=0 risk_wait_ms=0
+2026-05-11 16:01:19 [kr36] fetch_start url=https://36kr.com/topics/3780865660869640
+2026-05-11 16:01:20 [kr36] fetch_ok method=curl url=https://36kr.com/topics/3780865660869640 html_length=61506
+2026-05-11 16:01:20 [kr36] step0.5_topic_round_end page=1 round=1/5 stage=topics status=ok fetched=2 total_topic_refs=2 elapsed_ms=59093
+2026-05-11 16:01:20 [kr36] 完成专题页(0.5步)，数据 2 条，累计 2 条
+2026-05-11 16:01:20 [kr36] step1_listing_next round=2/5 stage=activity
+2026-05-11 16:01:20 [kr36] step1_main_round_start page=2 round=2/5 stage=activity url=https://36kr.com/activity
+2026-05-11 16:01:20 [kr36] 进入活动页，数据 0 条，累计 0 条
+2026-05-11 16:01:20 [kr36] throttle_wait url=https://36kr.com/activity wait_ms=35032 global_wait_ms=35032 same_url_wait_ms=0 risk_wait_ms=0
+2026-05-11 16:01:55 [kr36] fetch_start url=https://36kr.com/activity
+2026-05-11 16:01:55 [kr36] fetch_ok method=curl url=https://36kr.com/activity html_length=61832
+2026-05-11 16:01:55 [kr36] round_end page=2 round=2/5 stage=activity status=ok fetched=0 total_refs=0 elapsed_ms=35570
+2026-05-11 16:01:55 [kr36] 完成活动页，数据 0 条，累计 0 条
+2026-05-11 16:01:55 [kr36] round_next round=3/5 stage=search
+2026-05-11 16:01:55 [kr36] round_start page=3 round=3/5 stage=search category=36氪独家 url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 date_window=2026-05-04~2026-05-10
+2026-05-11 16:01:55 [kr36] 进入搜索页(36氪独家)，数据 0 条，累计 0 条
+2026-05-11 16:01:55 [kr36] throttle_wait url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 wait_ms=22450 global_wait_ms=22450 same_url_wait_ms=0 risk_wait_ms=0
+2026-05-11 16:02:18 [kr36] fetch_start url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-05-11 16:02:18 [kr36] search_enrich_direct_step4 reason=auto_solver url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6
+2026-05-11 16:02:18 [slider] playwright_slider_start phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 headless=false channel='msedge'
+2026-05-11 16:02:37 [slider] playwright_slider_url_settled phase='search-listing-step4' final_url='https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6'
+2026-05-11 16:02:37 [slider] playwright_slider_preloop phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 wait_after_load_ms=1800 slider_ui_ready_max_ms=20000
+2026-05-11 16:02:41 [slider] playwright_slider_ok phase='search-listing-step4' url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102461
+2026-05-11 16:02:42 [kr36] search_listing_csr_enriched url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102461
+2026-05-11 16:02:42 [kr36] fetch_ok method=curl_playwright_search url=https://36kr.com/search/articles/36%E6%B0%AA%E7%8B%AC%E5%AE%B6 html_length=102461
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-21 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-29 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-09 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-17 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-20 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-26 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-05 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-19 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-31 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-16 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-24 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-22 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-04 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-14 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-07 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-26 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-21 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-29 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-09 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-17 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-20 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-26 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-05 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-19 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-19 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-31 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-16 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-24 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-22 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-04 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-14 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-07 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_parse_failed fixed_category=36氪独家 window=2026-05-04~2026-05-10 item_html_len=1335 action=exclude
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-21 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-21 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-29 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-29 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-09 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-09 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-17 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-17 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-20 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-20 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-04-02 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-26 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-26 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-05 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-05 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-19 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-19 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-31 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-31 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-16 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-16 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-24 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-24 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-22 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-22 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-04 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-03-04 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-14 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-14 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-07 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-07 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-15 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-26 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] search_date_filtered fixed_category=36氪独家 pub=2026-01-26 window=2026-05-04~2026-05-10
+2026-05-11 16:02:42 [kr36] round_end page=3 round=3/5 stage=search category=36氪独家 status=ok fetched=0 total_refs=0 elapsed_ms=46928
+2026-05-11 16:02:42 [kr36] search_zero_result category=36氪独家 html_length=102461 has_list_main=true has_search_item=true has_p_link=true risk_like=false
+2026-05-11 16:02:42 [kr36] 完成搜索页(36氪独家)，数据 0 条，累计 0 条
+2026-05-11 16:02:42 [kr36] round_next round=4/5 stage=search_or_channel
+2026-05-11 16:02:42 [kr36] round_start page=4 round=4/5 stage=channel url=https://36kr.com/information/AI/
+2026-05-11 16:02:42 [kr36] 进入频道页，数据 0 条，累计 0 条
+2026-05-11 16:02:42 [kr36] fetch_start url=https://36kr.com/information/AI/
+2026-05-11 16:02:43 [kr36] fetch_ok method=curl url=https://36kr.com/information/AI/ html_length=115328
+2026-05-11 16:02:43 [kr36] round_end page=4 round=4/5 stage=channel status=ok url=https://36kr.com/information/AI/ fetched=2 total_refs=2 elapsed_ms=550
+2026-05-11 16:02:43 [kr36] 完成频道页，数据 2 条，累计 2 条
+2026-05-11 16:02:43 [kr36] round_next round=5/5 stage=channel
+2026-05-11 16:02:43 [kr36] round_start page=5 round=5/5 stage=channel url=https://36kr.com/information/contact/
+2026-05-11 16:02:43 [kr36] 进入频道页，数据 0 条，累计 2 条
+2026-05-11 16:02:43 [kr36] throttle_wait url=https://36kr.com/information/contact/ wait_ms=22179 global_wait_ms=22179 same_url_wait_ms=0 risk_wait_ms=0
+2026-05-11 16:03:05 [kr36] fetch_start url=https://36kr.com/information/contact/
+2026-05-11 16:03:06 [kr36] fetch_ok method=curl url=https://36kr.com/information/contact/ html_length=116179
+2026-05-11 16:03:06 [kr36] round_end page=5 round=5/5 stage=channel status=ok url=https://36kr.com/information/contact/ fetched=52 total_refs=54 elapsed_ms=22769
+2026-05-11 16:03:06 [kr36] 完成频道页，数据 52 条，累计 54 条
+2026-05-11 16:03:06 [kr36] listing_end report_date=2026-05-11 total_refs=56 stopped_by=normal_complete
+[kr36] 2026-05-11 16:20:42 finished with exit code 0.

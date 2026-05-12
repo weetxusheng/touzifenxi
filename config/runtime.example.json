@@ -1,7 +1,7 @@
 {
   "_comment": "Websearch skill 运行配置示例。复制为 runtime.local.json 后填写本地 key；JSON 不支持注释，因此说明放在 *_comment 字段中，程序会忽略这些字段。",
   "keys": {
-    "_comment": "外部搜索与正文抽取所需 key。至少配置一个搜索 provider key；aliyun_iqs_api_key 用于搜索结果正文抽取。",
+    "_comment": "Step 3 搜索：tavily / metaso / baidu 三选一或组合；仅配 aliyun_iqs_api_key 时也可用阿里云 IQS 统一搜索。aliyun_iqs 同时用于 Step 4 正文抽取。",
     "tavily_api_key": "",
     "metaso_api_key": "",
     "baidu_api_key": "",

@@ -353,6 +353,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    from .tools.runtime.win_stdio import ensure_utf8_stdio
+
+    ensure_utf8_stdio()
     parser = build_parser()
     args = parser.parse_args()
     paths = resolve_paths()

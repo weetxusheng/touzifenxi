@@ -1,12 +1,13 @@
 @echo off
+chcp 65001 >nul
 setlocal EnableExtensions
 
 rem Send T-1 C114 brief when task runs. Requires .env SMTP.
 rem Same-dir c114_step_6_brief_YYYYMMDD.html must exist (enforced in send-c114-latest-brief-email).
 rem Gate: step6 .md mtime not before gate-time today (Shanghai).
 
-set "MAIL_TO_LIST=zx944532395@sina.com 944532395@qq.com"
-set "T1_GATE_TIME=11:56"
+set "MAIL_TO_LIST=chenxusheng@cjhxfund.com liuyangcj@cjhxfund.com zx944532395@sina.com 944532395@qq.com"
+set "T1_GATE_TIME=15:08"
 
 for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
 set "LOG_DIR=%PROJECT_ROOT%\logs\c114"
@@ -23,6 +24,8 @@ if not defined PYTHON_CMD call :probe_python "py -3"
 
 cd /d "%PROJECT_ROOT%"
 set "PYTHONPATH=%PROJECT_ROOT%\src;%PYTHONPATH%"
+if not defined PYTHONUTF8 set "PYTHONUTF8=1"
+if not defined PYTHONIOENCODING set "PYTHONIOENCODING=utf-8"
 
 call :load_dotenv
 
