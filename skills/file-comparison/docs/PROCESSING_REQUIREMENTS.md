@@ -246,7 +246,7 @@
 
 - 页面轮询只读轻量状态：
   - `status.json`
-  - `task_checkpoint.json`
+  - `task.json`（位于 `checkpoints/`，旧版叫 `task_checkpoint.json`）
   - `pair.json`
 - 页面不直接读取大模型完整 response，避免前端负担过重。
 - 页面任务状态表支持展开文件对查看 batch 明细。

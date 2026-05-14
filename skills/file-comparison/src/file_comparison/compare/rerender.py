@@ -9,7 +9,7 @@ from typing import Any
 
 from ..runtime.config import load_file_comparison_runtime_config
 from ..runtime.recovery import decide_batch_recovery
-from ..runtime.settings import resolve_paths
+from ..runtime.settings import iter_pair_dirs, pair_dir_for, resolve_paths
 from .chunking import build_compare_blocks_for_llm, build_rows, group_compare_blocks_into_batches
 from .engine import (
     build_output_document_paths,
@@ -176,10 +176,9 @@ def rerender_pair(pair_dir: Path, *, mode: str, overwrite: bool) -> dict[str, An
 
 def pair_dirs_for_run(run_dir: Path, pair_id: str) -> list[Path]:
     """根据 pair_id 参数返回需要重渲染的 pair 目录列表。"""
-    pairs_root = run_dir / "pairs"
     if pair_id:
-        pair_dir = pairs_root / pair_id
-        if not pair_dir.exists():
+        candidate = pair_dir_for(run_dir, pair_id)
+        if not candidate.exists():
             raise FileNotFoundError(f"未找到 pair: {pair_id}")
-        return [pair_dir]
-    return sorted(path for path in pairs_root.iterdir() if path.is_dir() and (path / "pair.json").exists())
+        return [candidate]
+    return iter_pair_dirs(run_dir)

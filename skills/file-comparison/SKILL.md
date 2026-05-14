@@ -102,16 +102,18 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 - 核心产物：
   - `task.json`
   - `status.json`
-  - `checkpoints/task_checkpoint.json`
-  - `checkpoints/pair_<pair_id>_checkpoint.json`
-  - `pairs/<pair_id>/llm/batch-xxx/timeline.json`
-  - `pairs/<pair_id>/llm/batch-xxx/final_status.json`
-  - `pairs/<pair_id>/llm/batch-xxx/request.attempt-*.json`
-  - `pairs/<pair_id>/llm/batch-xxx/response.raw.attempt-*.json`
-  - `pairs/<pair_id>/llm/batch-xxx/response.normalized.attempt-*.json`
-  - `pairs/<pair_id>/llm/batch-xxx/parsed.attempt-*.json`
-  - `pairs/<pair_id>/outputs/<前文件名> 与 <后文件名> 对照表 <YYYYMMDD_HHMMSS>.docx`
-  - `pairs/<pair_id>/outputs/<前文件名> 与 <后文件名> 对照表 <YYYYMMDD_HHMMSS>.doc`
+  - `checkpoints/task.json`
+  - `checkpoints/<pair_id>.json`
+  - `<pair_id>/llm/batch-xxx/timeline.json`
+  - `<pair_id>/llm/batch-xxx/final_status.json`
+  - `<pair_id>/llm/batch-xxx/request.attempt-*.json`
+  - `<pair_id>/llm/batch-xxx/response.raw.attempt-*.json`
+  - `<pair_id>/llm/batch-xxx/response.normalized.attempt-*.json`
+  - `<pair_id>/llm/batch-xxx/parsed.attempt-*.json`
+  - `<pair_id>/outputs/<前文件名> 与 <后文件名> 对照表 <YYYYMMDD_HHMMSS>.docx`
+  - `<pair_id>/outputs/<前文件名> 与 <后文件名> 对照表 <YYYYMMDD_HHMMSS>.doc`
+  - 说明：P0-④ 起 pair 目录直接位于 task 根（不再嵌套 `pairs/` 包装层）；旧布局 `pairs/<pair_id>/`
+    在首次访问时由 `pair_dir_for` / `iter_pair_dirs` 就地迁移到新位置。
 
 ## 目录说明
 

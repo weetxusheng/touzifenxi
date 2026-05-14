@@ -79,7 +79,7 @@ def test_task_manager_rerun_batch_clears_only_target_batch_and_starts_resume(tmp
     runtime_config = load_file_comparison_runtime_config(tmp_path)
     paths = resolve_paths(tmp_path)
     run_dir = paths.runs_root / "task-001"
-    pair_dir = run_dir / "pairs" / "pair-001"
+    pair_dir = run_dir / "pair-001"
     old_path = tmp_path / "old.docx"
     new_path = tmp_path / "new.docx"
     old_path.write_text("old", encoding="utf-8")
@@ -111,7 +111,7 @@ def test_task_manager_rerun_batch_clears_only_target_batch_and_starts_resume(tmp
         },
     )
     pair_store = PairCheckpointStore.load_or_create(
-        run_dir / "checkpoints" / "pair_pair-001_checkpoint.json",
+        run_dir / "checkpoints" / "pair-001.json",
         pair_id="pair-001",
         task_id="task-001",
     )
@@ -128,7 +128,7 @@ def test_task_manager_rerun_batch_clears_only_target_batch_and_starts_resume(tmp
 
     payload = TaskManager(runtime_config, paths).rerun_batch("task-001", "pair-001", "batch-001")
 
-    checkpoint_payload = json.loads((run_dir / "checkpoints" / "pair_pair-001_checkpoint.json").read_text(encoding="utf-8"))
+    checkpoint_payload = json.loads((run_dir / "checkpoints" / "pair-001.json").read_text(encoding="utf-8"))
     assert payload["status"] == "running"
     assert not (pair_dir / "llm" / "batch-001").exists()
     assert (pair_dir / "llm" / "batch-002" / "parsed.json").exists()

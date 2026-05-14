@@ -11,10 +11,16 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from ...runtime.checkpoint import PairCheckpointStore, TaskCheckpointStore, atomic_write_json
+from ...runtime.checkpoint import (
+    PairCheckpointStore,
+    TaskCheckpointStore,
+    atomic_write_json,
+    pair_checkpoint_path,
+    task_checkpoint_path,
+)
 from ...runtime.config import FileComparisonRuntimeConfig
 from ...runtime.execution import BatchManifest, PairManifest, TaskManifest, task_status_from_pairs
-from ...runtime.settings import prepare_run_dir, resolve_paths
+from ...runtime.settings import pair_dir_for, prepare_run_dir, resolve_paths
 from ..artifacts import write_status_json
 from ..models import PairMatch
 from ..pairing import scan_folder_for_pairs
@@ -36,7 +42,7 @@ def run_task(
     task_started_wall_at = datetime.now().astimezone().isoformat()
     pairs = pairs or scan_folder_for_pairs(folder_path, runtime_config.pairing.month_pattern)
     task_id = run_dir.name
-    task_store = TaskCheckpointStore.load_or_create(run_dir / "checkpoints" / "task_checkpoint.json", task_id=task_id)
+    task_store = TaskCheckpointStore.load_or_create(task_checkpoint_path(run_dir), task_id=task_id)
     atomic_write_json(
         run_dir / "task.json",
         {
@@ -79,7 +85,7 @@ def run_task(
             clear_abort_requested_flag(run_dir)
             abort_msg = USER_ABORT_PAIR_MESSAGE
             for rest_pair in pairs[index:]:
-                rest_pair_dir = run_dir / "pairs" / rest_pair.pair_id
+                rest_pair_dir = pair_dir_for(run_dir, rest_pair.pair_id)
                 for subdir in ("source", "extracted", "llm", "outputs"):
                     (rest_pair_dir / subdir).mkdir(parents=True, exist_ok=True)
                 task_store.record_pair(pair_id=rest_pair.pair_id, status="aborted", error=abort_msg, duration_ms=0)
@@ -123,10 +129,10 @@ def run_task(
             )
             write_status_json(run_dir, manifest)
             break
-        pair_dir = run_dir / "pairs" / pair.pair_id
+        pair_dir = pair_dir_for(run_dir, pair.pair_id)
         for subdir in ("source", "extracted", "llm", "outputs"):
             (pair_dir / subdir).mkdir(parents=True, exist_ok=True)
-        pair_store = PairCheckpointStore.load_or_create(run_dir / "checkpoints" / f"pair_{pair.pair_id}_checkpoint.json", pair_id=pair.pair_id, task_id=task_id)
+        pair_store = PairCheckpointStore.load_or_create(pair_checkpoint_path(run_dir, pair.pair_id), pair_id=pair.pair_id, task_id=task_id)
         task_store.record_pair(pair_id=pair.pair_id, status="extracting")
         atomic_write_json(
             pair_dir / "pair.json",

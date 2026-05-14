@@ -307,7 +307,7 @@ def test_rerender_docx_clears_failed_pair_status_and_error(tmp_path, monkeypatch
     server.paths = resolve_paths(tmp_path)
 
     run_dir = server.paths.runs_root / "task-rerender"
-    pair_dir = run_dir / "pairs" / "pair-001"
+    pair_dir = run_dir / "pair-001"
     outputs_dir = pair_dir / "outputs"
     outputs_dir.mkdir(parents=True, exist_ok=True)
     docx_path = outputs_dir / "基金合同 对照表.docx"
@@ -521,7 +521,7 @@ def test_rerender_docx_endpoint_reuses_stored_batches(tmp_path, monkeypatch):
     except PermissionError as exc:
         pytest.skip(f"socket bind not permitted in sandbox: {exc}")
     server.paths = resolve_paths(tmp_path)
-    pair_dir = server.paths.runs_root / "task-001" / "pairs" / "pair-001"
+    pair_dir = server.paths.runs_root / "task-001" / "pair-001"
     pair_dir.mkdir(parents=True, exist_ok=True)
     rerender_calls: list[tuple[str, str, bool]] = []
 
@@ -593,10 +593,10 @@ def test_artifact_download_blocks_fallback_only_document(tmp_path):
     except PermissionError as exc:
         pytest.skip(f"socket bind not permitted in sandbox: {exc}")
     server.paths = resolve_paths(tmp_path)
-    artifact_dir = server.paths.runs_root / "task-001" / "pairs" / "pair-001" / "outputs"
+    artifact_dir = server.paths.runs_root / "task-001" / "pair-001" / "outputs"
     artifact_dir.mkdir(parents=True)
     (artifact_dir / "comparison.docx").write_bytes(b"diagnostic-doc")
-    batch_dir = server.paths.runs_root / "task-001" / "pairs" / "pair-001" / "llm" / "batch-001"
+    batch_dir = server.paths.runs_root / "task-001" / "pair-001" / "llm" / "batch-001"
     batch_dir.mkdir(parents=True)
     (batch_dir / "final_status.json").write_text(
         json.dumps({"status": "fallback_succeeded", "fallback": "compare-units"}, ensure_ascii=False),
@@ -626,7 +626,7 @@ def test_artifact_download_serves_chinese_named_output(tmp_path):
     except PermissionError as exc:
         pytest.skip(f"socket bind not permitted in sandbox: {exc}")
     server.paths = resolve_paths(tmp_path)
-    artifact_dir = server.paths.runs_root / "task-001" / "pairs" / "pair-001" / "outputs"
+    artifact_dir = server.paths.runs_root / "task-001" / "pair-001" / "outputs"
     artifact_dir.mkdir(parents=True)
     artifact_name = "基金合同_3月 与 基金合同_6月 对照表 20260501_101530.docx"
     (artifact_dir / artifact_name).write_bytes(b"official-doc")
@@ -654,7 +654,7 @@ def test_status_hydration_uses_stable_planned_batch_count(tmp_path):
         pytest.skip(f"socket bind not permitted in sandbox: {exc}")
     server.paths = resolve_paths(tmp_path)
     run_dir = server.paths.runs_root / "task-001"
-    pair_dir = run_dir / "pairs" / "pair-001"
+    pair_dir = run_dir / "pair-001"
     (pair_dir / "extracted").mkdir(parents=True)
     (run_dir / "checkpoints").mkdir(parents=True)
     (pair_dir / "extracted" / "batch_plan.json").write_text(
@@ -688,7 +688,7 @@ def test_status_hydration_uses_stable_planned_batch_count(tmp_path):
         ),
         encoding="utf-8",
     )
-    (run_dir / "checkpoints" / "pair_pair-001_checkpoint.json").write_text(
+    (run_dir / "checkpoints" / "pair-001.json").write_text(
         json.dumps(
             {
                 "pair_id": "pair-001",

@@ -107,8 +107,8 @@
     }
   },
   "paths": {
-    "output_mode": "skill", // skill=输出到 skills/file-comparison/output/file-comparison；project=按 output_root 解析
-    "output_root": "output/file-comparison/runs" // 共享项目模式下的输出根目录；当前 skill 模式下主要作为文档化配置保留
+    "output_mode": "skill", // skill=输出到 skills/file-comparison/output/；project=按下方 output_root 解析
+    "output_root": "output" // 共享项目模式下的输出根目录；当前 skill 模式下主要作为文档化配置保留
   },
   "pairing": {
     "month_pattern": "(?P<month>\\d{1,2})月" // 从文件名提取月份的正则；必须包含名为 month 的捕获组

@@ -21,6 +21,34 @@ VALID_BATCH_STATUSES = (
 )
 
 
+def task_checkpoint_path(run_dir: Path) -> Path:
+    """返回任务级 checkpoint 路径（新短名 `task.json`）。
+
+    历史命名 `task_checkpoint.json` 在 P0-③ 压缩冗余前缀；`load_or_create` 会自动回退到
+    旧文件以兼容已落盘的运行目录。
+    """
+    return run_dir / "checkpoints" / "task.json"
+
+
+def pair_checkpoint_path(run_dir: Path, pair_id: str) -> Path:
+    """返回 pair 级 checkpoint 路径（新短名 `<pair_id>.json`）。
+
+    历史命名 `pair_{pair_id}_checkpoint.json` 在 P0-③ 压缩冗余前缀；`load_or_create`
+    会自动回退到旧文件以兼容已落盘的运行目录。
+    """
+    return run_dir / "checkpoints" / f"{pair_id}.json"
+
+
+def _legacy_pair_checkpoint_path(checkpoint_path: Path, pair_id: str) -> Path:
+    """新短名不存在时尝试匹配的旧路径。"""
+    return checkpoint_path.parent / f"pair_{pair_id}_checkpoint.json"
+
+
+def _legacy_task_checkpoint_path(checkpoint_path: Path) -> Path:
+    """新短名不存在时尝试匹配的旧路径。"""
+    return checkpoint_path.parent / "task_checkpoint.json"
+
+
 def utc_now_iso() -> str:
     """返回带时区的当前时间字符串。"""
     return datetime.now().astimezone().isoformat(timespec="seconds")
@@ -85,6 +113,10 @@ class PairCheckpointStore:
     @classmethod
     def load_or_create(cls, checkpoint_path: Path, *, pair_id: str, task_id: str) -> PairCheckpointStore:
         """读取已有 checkpoint，或在不存在时创建一个新的。"""
+        if not checkpoint_path.exists():
+            legacy = _legacy_pair_checkpoint_path(checkpoint_path, pair_id)
+            if legacy.exists():
+                legacy.replace(checkpoint_path)
         if checkpoint_path.exists():
             payload = json.loads(checkpoint_path.read_text(encoding="utf-8"))
             return cls(checkpoint_path, pair_id=pair_id, task_id=task_id, payload=payload)
@@ -218,6 +250,10 @@ class TaskCheckpointStore:
     @classmethod
     def load_or_create(cls, checkpoint_path: Path, *, task_id: str) -> TaskCheckpointStore:
         """读取已有任务 checkpoint，或在不存在时创建新的。"""
+        if not checkpoint_path.exists():
+            legacy = _legacy_task_checkpoint_path(checkpoint_path)
+            if legacy.exists():
+                legacy.replace(checkpoint_path)
         if checkpoint_path.exists():
             payload = json.loads(checkpoint_path.read_text(encoding="utf-8"))
             return cls(checkpoint_path, task_id=task_id, payload=payload)

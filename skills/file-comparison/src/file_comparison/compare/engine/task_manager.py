@@ -13,10 +13,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ...runtime.checkpoint import PairCheckpointStore, atomic_write_json
+from ...runtime.checkpoint import PairCheckpointStore, atomic_write_json, pair_checkpoint_path
 from ...runtime.config import FileComparisonRuntimeConfig
 from ...runtime.execution import PairManifest, TaskManifest
-from ...runtime.settings import AppPaths, prepare_run_dir, resolve_paths
+from ...runtime.settings import AppPaths, pair_dir_for, prepare_run_dir, resolve_paths
 from ..artifacts import write_status_json
 from ..models import PairMatch
 from ..pairing import scan_folder_for_pairs
@@ -131,17 +131,19 @@ class TaskManager:
 
     def _clear_batch_for_rerun(self, *, run_dir: Path, pair_id: str, batch_id: str) -> None:
         """删除单个 batch 的过程文件、checkpoint entry 和旧产物。"""
-        batch_dir = run_dir / "pairs" / pair_id / "llm" / batch_id
+        pair_dir = pair_dir_for(run_dir, pair_id)
+        batch_dir = pair_dir / "llm" / batch_id
         if batch_dir.exists():
             shutil.rmtree(batch_dir)
-        pair_checkpoint_path = run_dir / "checkpoints" / f"pair_{pair_id}_checkpoint.json"
-        if pair_checkpoint_path.exists():
-            pair_store = PairCheckpointStore.load_or_create(pair_checkpoint_path, pair_id=pair_id, task_id=run_dir.name)
+        ckpt_path = pair_checkpoint_path(run_dir, pair_id)
+        if ckpt_path.exists() or (ckpt_path.parent / f"pair_{pair_id}_checkpoint.json").exists():
+            pair_store = PairCheckpointStore.load_or_create(ckpt_path, pair_id=pair_id, task_id=run_dir.name)
             pair_store.remove_entry(batch_id)
-        outputs_dir = run_dir / "pairs" / pair_id / "outputs"
-        for target in tuple(outputs_dir.glob("*.docx")) + tuple(outputs_dir.glob("*.doc")):
-            if target.exists():
-                target.unlink()
+        outputs_dir = pair_dir / "outputs"
+        if outputs_dir.is_dir():
+            for target in tuple(outputs_dir.glob("*.docx")) + tuple(outputs_dir.glob("*.doc")):
+                if target.exists():
+                    target.unlink()
 
     def _run_background(self, folder_path: Path, run_dir: Path, pairs: list[PairMatch]) -> None:
         """在线程中执行真实任务，并在结束后清理线程登记。"""

@@ -9,7 +9,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from file_comparison.web.dev_server import restart_web_server  # noqa: E402
+if sys.platform == "win32":
+    from file_comparison.web.dev_server_win import restart_web_server  # noqa: E402
+else:
+    from file_comparison.web.dev_server import restart_web_server  # noqa: E402
 
 
 def main() -> None:

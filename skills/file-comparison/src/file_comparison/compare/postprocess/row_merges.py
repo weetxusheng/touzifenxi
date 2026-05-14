@@ -20,11 +20,42 @@ def _is_pure_add_row(row: ComparisonRow) -> bool:
     return str(row.old_text).strip() == "新增" and str(row.new_text).strip() not in ("", "删除", "新增")
 
 
+def _split_run_by_subchapter(run: list[ComparisonRow]) -> list[list[ComparisonRow]]:
+    """把同 chapter 的 run 按 subchapter 切成多个子段。
+
+    规则：
+    - 空 subchapter 行（典型 add 行无锚点）归入**当前**子段——保持"小差异 del + 空 sub 的 add"
+      还能在同一段内合并展示。
+    - 一旦出现与当前子段锚点不同的**非空** subchapter，立刻新开子段——避免"三、…"与"四、…"
+      被合并成单格大段（155.png 复现场景）。
+    """
+    groups: list[list[ComparisonRow]] = []
+    current: list[ComparisonRow] = []
+    anchor = ""
+    for row in run:
+        sc = str(row.subchapter or "").strip()
+        if sc and anchor and sc != anchor:
+            if current:
+                groups.append(current)
+            current = [row]
+            anchor = sc
+            continue
+        current.append(row)
+        if sc and not anchor:
+            anchor = sc
+    if current:
+        groups.append(current)
+    return groups
+
+
 def merge_pure_delete_and_add_runs(rows: list[ComparisonRow]) -> list[ComparisonRow]:
     """同一章节内连续、且每行仅为「纯删除」或「纯新增」时，若同时含删与增则并为一行（不检验相似度）。
 
     适用于整章/整段在模型侧只产出 delete 与 add、无 replace 的展示（如第四部分旧章整删 + 新侧一条说明）；
     在 `merge_consecutive_delete_rows` 与 `insert_section_title_change_rows` 之后再执行。
+
+    155.png 修正：同 chapter 下若 run 跨越多个非空 subchapter，按 subchapter 切分子段后逐段
+    判定合并；空 subchapter 仍兼容兜底，避免 1–2 字小改动（add 行常无锚点）被拆散。
     """
     if not rows:
         return rows
@@ -43,19 +74,20 @@ def merge_pure_delete_and_add_runs(rows: list[ComparisonRow]) -> list[Comparison
         ):
             run.append(rows[i])
             i += 1
-        del_rows = [r for r in run if _is_pure_delete_row(r)]
-        add_rows = [r for r in run if _is_pure_add_row(r)]
-        if del_rows and add_rows:
-            out.append(
-                ComparisonRow(
-                    chapter=chapter,
-                    subchapter="",
-                    old_text=combine_comparison_run_text(del_rows, side="old"),
-                    new_text=combine_comparison_run_text(add_rows, side="new"),
+        for group in _split_run_by_subchapter(run):
+            del_rows = [r for r in group if _is_pure_delete_row(r)]
+            add_rows = [r for r in group if _is_pure_add_row(r)]
+            if del_rows and add_rows:
+                out.append(
+                    ComparisonRow(
+                        chapter=chapter,
+                        subchapter="",
+                        old_text=combine_comparison_run_text(del_rows, side="old"),
+                        new_text=combine_comparison_run_text(add_rows, side="new"),
+                    )
                 )
-            )
-        else:
-            out.extend(run)
+            else:
+                out.extend(group)
     return out
 
 

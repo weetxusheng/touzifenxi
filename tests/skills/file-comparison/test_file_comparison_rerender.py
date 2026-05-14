@@ -25,7 +25,7 @@ def test_rerender_output_paths_use_two_source_file_names(tmp_path):
         old_label="3月.docx",
         new_label="6月.docx",
     )
-    pair_dir = tmp_path / "pairs" / "pair-001"
+    pair_dir = tmp_path / "pair-001"
 
     docx_path, doc_path = module.output_paths(pair_dir, pair=pair, overwrite=False, timestamp="20260501_180101")
 

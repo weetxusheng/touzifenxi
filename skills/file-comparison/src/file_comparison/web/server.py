@@ -17,10 +17,10 @@ from ..compare.engine import TaskManager, scan_folder_for_pairs
 from ..compare.engine.abort_control import is_abort_requested
 from ..compare.models import PairMatch
 from ..compare.rerender import rerender_pair
-from ..runtime.checkpoint import atomic_write_json
+from ..runtime.checkpoint import atomic_write_json, pair_checkpoint_path
 from ..runtime.config import FileComparisonRuntimeConfig, load_file_comparison_runtime_config
 from ..runtime.execution import PairManifest, task_status_from_pairs
-from ..runtime.settings import ensure_directories, resolve_paths
+from ..runtime.settings import ensure_directories, pair_dir_for, resolve_paths
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 SKILL_ROOT = Path(__file__).resolve().parents[3]
@@ -95,14 +95,16 @@ def hydrate_status_from_checkpoints(run_dir: Path, payload: dict) -> dict:
             pair_planned_batch_count = int(pair.get("planned_batch_count", 0) or len(pair.get("batches", []) or []))
         pair["planned_batch_count"] = pair_planned_batch_count
         planned_batch_count += pair_planned_batch_count
-        checkpoint_path = run_dir / "checkpoints" / f"pair_{pair_id}_checkpoint.json"
-        if not pair_id or not checkpoint_path.exists():
+        checkpoint_path = pair_checkpoint_path(run_dir, pair_id)
+        legacy_path = checkpoint_path.parent / f"pair_{pair_id}_checkpoint.json"
+        if not pair_id or not (checkpoint_path.exists() or legacy_path.exists()):
             pair_batches = planned_batches or (pair.get("batches", []) if isinstance(pair.get("batches"), list) else [])
             pair["batches"] = pair_batches
             all_batches.extend(pair_batches)
             continue
         try:
-            checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            read_from = checkpoint_path if checkpoint_path.exists() else legacy_path
+            checkpoint = json.loads(read_from.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             continue
         entries = checkpoint.get("entries", [])
@@ -131,7 +133,7 @@ def planned_batch_payloads_from_batch_plan(run_dir: Path, pair_id: str) -> list[
     """从 batch_plan.json 读取完整计划批次骨架。"""
     if not pair_id:
         return []
-    batch_plan_path = run_dir / "pairs" / pair_id / "extracted" / "batch_plan.json"
+    batch_plan_path = pair_dir_for(run_dir, pair_id) / "extracted" / "batch_plan.json"
     if not batch_plan_path.exists():
         return []
     try:
@@ -196,7 +198,7 @@ def hydrate_pair_artifacts(run_dir: Path, pair: dict) -> None:
     pair_id = str(pair.get("pair_id", "")).strip()
     if not pair_id:
         return
-    pair_json_path = run_dir / "pairs" / pair_id / "pair.json"
+    pair_json_path = pair_dir_for(run_dir, pair_id) / "pair.json"
     if pair_json_path.exists():
         try:
             pair_payload = json.loads(pair_json_path.read_text(encoding="utf-8"))
@@ -324,7 +326,7 @@ def refresh_running_duration(payload: dict) -> dict:
 
 def pair_has_fallback_diagnostic(run_dir: Path, pair_id: str) -> bool:
     """判断文件对是否包含本地 fallback 诊断结果；包含则禁止下载正式产物。"""
-    llm_dir = run_dir / "pairs" / pair_id / "llm"
+    llm_dir = pair_dir_for(run_dir, pair_id) / "llm"
     if not llm_dir.exists():
         return False
     for final_status_path in llm_dir.glob("batch-*/final_status.json"):
@@ -348,7 +350,7 @@ def resolve_pair_artifact_path(run_dir: Path, pair_id: str, kind: str) -> Path |
     suffix = suffix_by_kind.get(kind)
     if suffix is None:
         return None
-    pair_dir = run_dir / "pairs" / pair_id
+    pair_dir = pair_dir_for(run_dir, pair_id)
     pair_json_path = pair_dir / "pair.json"
     if pair_json_path.exists():
         try:
@@ -367,7 +369,7 @@ def resolve_pair_artifact_path(run_dir: Path, pair_id: str, kind: str) -> Path |
 
 def update_pair_and_task_status_after_rerender(run_dir: Path, pair_id: str, rerender_payload: dict) -> None:
     """在重生成 DOCX 成功后，同步清理 pair/task 级失败状态和错误信息。"""
-    pair_dir = run_dir / "pairs" / pair_id
+    pair_dir = pair_dir_for(run_dir, pair_id)
     pair_json_path = pair_dir / "pair.json"
     if pair_json_path.exists():
         try:
@@ -622,7 +624,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 return
             task_id = parts[3]
             pair_id = parts[5]
-            pair_dir = self.server.paths.runs_root / task_id / "pairs" / pair_id
+            pair_dir = pair_dir_for(self.server.paths.runs_root / task_id, pair_id)
             if not pair_dir.exists():
                 self._send_json({"error": f"pair not found: {pair_id}"}, status=404)
                 return

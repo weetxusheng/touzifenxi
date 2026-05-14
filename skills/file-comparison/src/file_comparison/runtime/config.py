@@ -326,7 +326,7 @@ def default_runtime_payload() -> dict[str, Any]:
         },
         "paths": {
             "output_mode": "skill",
-            "output_root": "output/file-comparison/runs",
+            "output_root": "output",
         },
         "pairing": {
             "month_pattern": r"(?P<month>\d{1,2})月",
