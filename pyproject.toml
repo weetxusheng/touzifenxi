@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "touzifenxi"
 version = "0.1.0"
 description = "Multi-agent A-share research team MVP for daily top-5 stock ideas."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
   "tzdata>=2024.1",
@@ -16,6 +16,9 @@ dependencies = [
   "alembic>=1.13,<2",
   "psycopg[binary]>=3.2,<4",
   "playwright>=1.58,<2",
+  "requests>=2.28.0",
+  "python-dotenv>=1.0.0",
+  "beautifulsoup4>=4.12.0",
 ]
 
 [project.optional-dependencies]
@@ -27,23 +30,27 @@ dev = [
 
 [project.scripts]
 touzifenxi = "utils.cli:main"
+gzh-fetch = "gzh_pipeline.cli.fetch:main"
+gzh-parse = "gzh_pipeline.cli.parse:main"
+gzh-repair-url-html = "gzh_pipeline.cli.repair_url_html:main"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+[tool.setuptools.package-dir]
+"" = "src"
+"gzh_pipeline" = "src/gzh/src"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "src/gzh/src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
+pythonpath = ["src", "src/gzh/src"]
+testpaths = ["tests", "src/gzh/tests"]
 python_files = ["test_*.py"]
 markers = [
   "c114_network: live fetch to c114 (requires C114_NETWORK_TEST=1)",
 ]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 120
 src = ["src"]
 include = [
