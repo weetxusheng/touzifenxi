@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "touzifenxi"
 version = "0.1.0"
 description = "Multi-agent A-share research team MVP for daily top-5 stock ideas."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
   "tzdata>=2024.1",
@@ -16,6 +16,10 @@ dependencies = [
   "alembic>=1.13,<2",
   "psycopg[binary]>=3.2,<4",
   "playwright>=1.58,<2",
+  "beautifulsoup4>=4.12",
+  "deep-translator>=1.11",
+  "feedparser>=6.0",
+  "trafilatura>=1.8",
 ]
 
 [project.optional-dependencies]
@@ -40,10 +44,11 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 markers = [
   "c114_network: live fetch to c114 (requires C114_NETWORK_TEST=1)",
+  "chip_network: live fetch to chip sources (requires CHIP_NETWORK_TEST=1)",
 ]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 120
 src = ["src"]
 include = [

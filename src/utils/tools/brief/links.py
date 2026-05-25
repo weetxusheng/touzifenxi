@@ -31,6 +31,8 @@ def infer_brief_title(input_path: Path) -> str:
         return "InfoQ 主题简报"
     if name.startswith("kr36_") or name.startswith("36kr_"):
         return "36Kr 主题简报"
+    if name.startswith("chip_"):
+        return "半导体简报"
     return "C114 主题简报"
 
 

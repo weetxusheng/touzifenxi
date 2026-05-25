@@ -1,0 +1,3088 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <!-- <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"> -->
+    
+    <meta name="baidu-site-verification" content="code-lsJi0ewBwW" />
+    <link
+      rel="shortcut icon"
+      href="https://s.laoyaoba.com/favicon.ico"
+      type="image/x-icon"
+    />
+    <link rel="icon" href="https://s.laoyaoba.com/favicon.ico" />
+    <title>爱集微 - ijiwei：专业的 ICT
+产业互联网平台</title>
+    
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta
+	name="keywords"
+	content="集微网,集微咨询,半导体,芯片,集成电路,EDA,ICT,半导体新闻,快讯,直播"
+/>
+<meta
+	name="description"
+	content="爱集微(ijiwei)为全电子行业产业链提供专业的行业咨询,品牌营销,资讯,知识产权,投融资,职场等服务。"
+/>
+
+          <link rel="stylesheet" href="/styles/index.c585e.css" media="screen and (orientation: portrait)">
+          <link rel="stylesheet" href="/styles/index.c585e.css" media="screen and (orientation: landscape)">
+        
+<link
+	rel="stylesheet"
+	href="https://cdn.ijiwei.com/element-ui/v2.14.0/theme-chalk/index.min.css"
+/>
+ 
+    <script src="https://cdn.ijiwei.com/jquery/3.6.0/jquery.min.js"></script>
+  </head>
+
+  <body style="-webkit-overflow-scrolling: touch">
+     
+
+          <link rel="stylesheet" href="/styles/headermax.a468e.css" media="screen and (orientation: portrait)">
+          <link rel="stylesheet" href="/styles/headermax.a468e.css" media="screen and (orientation: landscape)">
+        
+ 
+<div id="header-root"></div>
+ 
+<script>
+	(function flexible(window, document) {
+		function resetFontSize() {
+			let size = 0;
+			size = (document.documentElement.clientWidth / 1920) * 16;
+			document.documentElement.style.fontSize = (size <= 14 ? 13 : size) + 'px';
+		}
+
+		resetFontSize();
+		window.addEventListener('pageshow', resetFontSize);
+		window.addEventListener('resize', resetFontSize);
+	})(window, document);
+</script>
+<script src="https://cdn.ijiwei.com/axios/v0.27.2/axios.min.js"></script>
+<script src="https://cdn.ijiwei.com/react/v18.2.0/react.production.min.js"></script>
+<script src="https://cdn.ijiwei.com/react/v18.2.0/react-dom.production.min.js"></script>
+<script src="/scripts/headermax.a468e.bundule.js"></script>
+
+ 
+<main class="main main-full">
+	<!-- AI问答模块 -->
+	<div class="qa-section">
+		<div class="qa-section-inner">
+			<div class="qa-title">
+				<img src="https://s.laoyaoba.com/index_ai_title.png?v=1" alt="JiweiGPT" />
+			</div>
+			
+			<div class="qa-card-wrapper">
+				<div id="qa-card" class="qa-card">
+					<div class="qa-tabs">
+						
+						<button
+							class="qa-tab-btn active"
+							data-id="d_0000000000000000000"
+							data-explain="输入问题，集微为您解答，升级或使用Pro 可深度解析"
+						>
+							全部
+						</button>
+						
+						<button
+							class="qa-tab-btn"
+							data-id="d_7618790948461854755"
+							data-explain="请输入关于算力芯片的问题"
+						>
+							算力芯片
+						</button>
+						
+						<button
+							class="qa-tab-btn"
+							data-id="d_7619971595272486912"
+							data-explain="请输入关于先进内存的问题"
+						>
+							先进内存
+						</button>
+						
+						<button
+							class="qa-tab-btn"
+							data-id="d_7619972411836071988"
+							data-explain="请输入关于MEMS器件的问题"
+						>
+							MEMS 器件
+						</button>
+						
+						<button
+							class="qa-tab-btn"
+							data-id="d_7619972807371423784"
+							data-explain="请输入关于工业AI应用的问题"
+						>
+							AI应用
+						</button>
+						
+						<button
+							class="qa-tab-btn"
+							data-id="d_7619973206736453695"
+							data-explain="请输入关于产业政策动向的问题"
+						>
+							政策动向
+						</button>
+						
+						<button
+							class="qa-tab-btn"
+							data-id="d_7619973611818156074"
+							data-explain="请输入关于企业业绩分析的问题"
+						>
+							业绩分析
+						</button>
+						
+					</div>
+					<textarea
+						id="qa-input"
+						class="qa-input"
+						placeholder="输入问题，集微为您解答，升级或使用Pro 可深度解析"
+					></textarea>
+					<div class="qa-footer">
+						<span class="qa-footer-hint">Shift + Enter 换行</span>
+						<div class="qa-footer-right">
+							<span id="qa-char-count" class="qa-char-count">0/300</span>
+							<button id="qa-send-btn" class="qa-send-btn">发送</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+		</div>
+	</div>
+
+	<article class="content">
+		<!-- 顶部广告位A -->
+		
+		<div class="ad-slide">
+			<a
+				class="ad-box ad-count ad-10017"
+				href="https://www.laoyaoba.com/api/advert/advertclick?source=pc&ad_item_id=2774&url=https%3A%2F%2Flaoyaoba.com%2Factivity%2Fjwss%2F2026"
+				target="_blank"
+				data-dc-page_name="集微网首页"
+				data-dc-target="广告"
+				data-dc-event="click"
+				data-dcparams-title="2026集微大会"
+				data-dcparams-description=""
+				data-dcparams-position="PC/首页顶部广告位-编号10017/*"
+			>
+				<img src="http://s.laoyaoba.com/jwImg/advertItem/2026/05/18/17790876733005.jpg" alt="2026集微大会" />
+			</a>
+		</div>
+		
+
+		<div class="flex-row-left">
+			<div class="list-left">
+				<!-- 轮播+广告 -->
+				<section class="banner-box">
+					<!-- 左侧广告位B -->
+					<div class="banner-advert">
+						
+						<a
+							class="ad-box ad-count ad-10008"
+							href="https://www.laoyaoba.com/api/advert/advertclick?source=pc&ad_item_id=2776&url=https%3A%2F%2Flaoyaoba.com%2Factivity%2Fjwss%2F2026"
+							target="_blank"
+							data-dc-page_name="集微网首页"
+							data-dc-target="广告"
+							data-dc-event="click"
+							data-dcparams-title="2026集微大会"
+							data-dcparams-description=""
+							data-dcparams-position="PC/首页右上角广告位-编号10008/*"
+						>
+							<img
+								src="http://s.laoyaoba.com/jwImg/advertItem/2026/05/18/17790879672612.gif"
+								alt="2026集微大会"
+							/>
+						</a>
+						
+					</div>
+					<!-- 轮播 -->
+					<div id="news-banner-root"></div>
+				</section>
+
+				
+				<!-- 精华四 -->
+				<section class="four">
+					
+					<div class="flex-row-left menu">
+						<div class="four-cover-list">
+							<a
+								data-index="0"
+								class="active img-box img-hover-scale "
+								href="/n/1037712"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="1"
+								class="img-box img-hover-scale "
+								href="/n/1037703"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/625551774214.0339.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="2"
+								class="img-box img-hover-scale "
+								href="/n/1037270"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="3"
+								class="img-box img-hover-scale "
+								href="/n/1037232"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+						</div>
+						<ul class="four-news-list">
+							<li
+								class="item text-hover active"
+								data-index="0"
+								data-news_id="1037712"
+								data-cover="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1037712"
+									target="_blank"
+								>
+									全明星阵容！集微端侧AI峰会5月28日盛大启幕
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="1"
+								data-news_id="1037703"
+								data-cover="http://s.laoyaoba.com/jwImg/625551774214.0339.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1037703"
+									target="_blank"
+								>
+									复盘信号链Q1盈利分化，复苏红利下的格局重塑
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="2"
+								data-news_id="1037270"
+								data-cover="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1037270"
+									target="_blank"
+								>
+									400位！集微大会首批嘉宾名单重磅揭晓
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="3"
+								data-news_id="1037232"
+								data-cover="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1037232"
+									target="_blank"
+								>
+									早鸟票倒计时五天！全球半导体分析师论坛解密地缘风云中的“星火燎原”
+								</a>
+							</li>
+							
+						</ul>
+					</div>
+					
+					<div class="flex-row-left menu">
+						<div class="four-cover-list">
+							<a
+								data-index="0"
+								class="active img-box img-hover-scale "
+								href="/n/1037121"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="1"
+								class="img-box img-hover-scale "
+								href="/n/1035903"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="2"
+								class="img-box img-hover-scale "
+								href="/n/1035896"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="3"
+								class="img-box img-hover-scale "
+								href="/n/1035370"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+						</div>
+						<ul class="four-news-list">
+							<li
+								class="item text-hover active"
+								data-index="0"
+								data-news_id="1037121"
+								data-cover="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1037121"
+									target="_blank"
+								>
+									5月29日《2025年度中国高校半导体行业专利白皮书》重磅首发
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="1"
+								data-news_id="1035903"
+								data-cover="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1035903"
+									target="_blank"
+								>
+									议程确定！集微大会ICT知识产权发展联盟年会重磅将启
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="2"
+								data-news_id="1035896"
+								data-cover="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1035896"
+									target="_blank"
+								>
+									议程正式出炉！集微EDA IP 工业软件盛会5月29日张江见
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="3"
+								data-news_id="1035370"
+								data-cover="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1035370"
+									target="_blank"
+								>
+									议程出炉！集微大会先进封测创新峰会启幕
+								</a>
+							</li>
+							
+						</ul>
+					</div>
+					
+					<div class="flex-row-left menu">
+						<div class="four-cover-list">
+							<a
+								data-index="0"
+								class="active img-box img-hover-scale "
+								href="/n/1035119"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/358625021249.9973.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="1"
+								class="img-box img-hover-scale "
+								href="/n/1035034"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/1460669642753.0857.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="2"
+								class="img-box img-hover-scale "
+								href="/n/1034420"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/bianjifagao2024/1302af712e4d0c061043c5fe894b9bad/3aad0bbe48df5417fb333b98d35ede7f.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="3"
+								class="img-box img-hover-scale "
+								href="/n/1034409"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/16512766697.55832.png?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+						</div>
+						<ul class="four-news-list">
+							<li
+								class="item text-hover active"
+								data-index="0"
+								data-news_id="1035119"
+								data-cover="http://s.laoyaoba.com/jwImg/358625021249.9973.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1035119"
+									target="_blank"
+								>
+									全链路AI产业阵容集结！AI赋能峰会共探大模型落地与产业升级
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="1"
+								data-news_id="1035034"
+								data-cover="http://s.laoyaoba.com/jwImg/1460669642753.0857.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1035034"
+									target="_blank"
+								>
+									模拟双雄Q1复苏讯号强劲，ADI、TI业绩背后的新风口
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="2"
+								data-news_id="1034420"
+								data-cover="http://s.laoyaoba.com/bianjifagao2024/1302af712e4d0c061043c5fe894b9bad/3aad0bbe48df5417fb333b98d35ede7f.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1034420"
+									target="_blank"
+								>
+									国产AI芯片企业密集冲刺“A+H”两地上市 资本加持产业迎新热潮
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="3"
+								data-news_id="1034409"
+								data-cover="http://s.laoyaoba.com/jwImg/16512766697.55832.png?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1034409"
+									target="_blank"
+								>
+									AMD登顶数据中心王座，市值冲破7400亿美元
+								</a>
+							</li>
+							
+						</ul>
+					</div>
+					
+					<div class="flex-row-left menu">
+						<div class="four-cover-list">
+							<a
+								data-index="0"
+								class="active img-box img-hover-scale "
+								href="/n/1034394"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/10702039176.50138.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="1"
+								class="img-box img-hover-scale "
+								href="/n/1034323"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/1033156389417.9705.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="2"
+								class="img-box img-hover-scale "
+								href="/n/1026089"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/358625021249.9973.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+							<a
+								data-index="3"
+								class="img-box img-hover-scale "
+								href="/n/1026736"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/358625021249.9973.jpg?imageView2/1/w/270/h/180"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+								/>
+							</a>
+							
+						</div>
+						<ul class="four-news-list">
+							<li
+								class="item text-hover active"
+								data-index="0"
+								data-news_id="1034394"
+								data-cover="http://s.laoyaoba.com/jwImg/10702039176.50138.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1034394"
+									target="_blank"
+								>
+									爱集微APP更名为“集微”：定位基于智能体的ICT产业大脑
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="1"
+								data-news_id="1034323"
+								data-cover="http://s.laoyaoba.com/jwImg/1033156389417.9705.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1034323"
+									target="_blank"
+								>
+									全球巨头密集布局，端侧AI产业链红利迎来重估
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="2"
+								data-news_id="1026089"
+								data-cover="http://s.laoyaoba.com/jwImg/358625021249.9973.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1026089"
+									target="_blank"
+								>
+									演讲嘉宾重磅发布！第六届ICT知识产权发展联盟年会启幕在即
+								</a>
+							</li>
+							
+							<li
+								class="item text-hover"
+								data-index="3"
+								data-news_id="1026736"
+								data-cover="http://s.laoyaoba.com/jwImg/358625021249.9973.jpg?imageView2/1/w/270/h/180"
+							>
+								<a
+									class="title ell_one"
+									href="/n/1026736"
+									target="_blank"
+								>
+									汇聚半导体核心朋友圈 集微投资峰会议程发布
+								</a>
+							</li>
+							
+						</ul>
+					</div>
+					
+				</section>
+
+				<!-- 视频推荐 -->
+				
+				<section class="video">
+					<div class="flex-row-space h5-titlebg">
+						<h5 class="modular-title">视频推荐</h5>
+						
+						<a
+							href="/jwvideos"
+							target="_blank"
+							class="button-more"
+							data-name="st"
+							>更多&nbsp;></a
+						>
+						
+					</div>
+					<ul class="video-list flex-row-left">
+						
+						<li class="item">
+							<a
+								class="img-box img-hover-scale"
+								href="/n/1004570"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/bianjifagao2024/534f3c2bfd70b044e0e5607d0df6a16b/83310f7bb8c67aaaa50cb1d26609fafd.jpg?insert-from=article"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+									alt="技术深、体验实、应用宽｜维信诺携多款创新成果亮相ICDT2026"
+								/>
+							</a>
+							<div class="item-bottom">
+								<p class="text ell_two">
+									<a href="/n/1004570" target="_blank" class="title"
+										>技术深、体验实、应用宽｜维信诺携多款创新成果亮相ICDT2026</a
+									>
+								</p>
+							</div>
+						</li>
+						
+						<li class="item">
+							<a
+								class="img-box img-hover-scale"
+								href="/n/1025657"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/1054437234379.2334.jpeg"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+									alt="昂瑞微亮相蓝牙亚洲大会“寻物+”生态引领产业新赛道"
+								/>
+							</a>
+							<div class="item-bottom">
+								<p class="text ell_two">
+									<a href="/n/1025657" target="_blank" class="title"
+										>昂瑞微亮相蓝牙亚洲大会“寻物+”生态引领产业新赛道</a
+									>
+								</p>
+							</div>
+						</li>
+						
+						<li class="item">
+							<a
+								class="img-box img-hover-scale"
+								href="/n/1012081"
+								target="_blank"
+							>
+								<img
+									src="http://s.laoyaoba.com/jwImg/532594178114.1485.png"
+									onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+									alt="车规级热管理方案怎么搭？3 分钟看懂纳芯微实机 Demo！"
+								/>
+							</a>
+							<div class="item-bottom">
+								<p class="text ell_two">
+									<a href="/n/1012081" target="_blank" class="title"
+										>车规级热管理方案怎么搭？3 分钟看懂纳芯微实机 Demo！</a
+									>
+								</p>
+							</div>
+						</li>
+						
+					</ul>
+				</section>
+				
+
+				<!-- 精华三 -->
+				<section>
+					<div id="three-list" class="video-menu list-more">
+						<ul class="list-body">
+							         
+<li
+  class="card"
+  data-id="1038398"
+  data-href="/n/1038398"
+  data-news-id="1038398"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/1398046712451.097.jpg?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="中兴通讯发布2025年度可持续发展报告：AI驱动绿色数智未来"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">本土IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            中兴通讯发布2025年度可持续发展报告：AI驱动绿色数智未来
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">​近日，中兴通讯正式发布2025年度可持续发展报告，全面展示了公司深化环境、社会及治理（ESG）实践的最新成果。这也是中兴通讯连续第十八年向社会披露履责答卷。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=1"
+              data-user-id="1"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/category/2019/07/23/15638590636274.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="爱集微"
+              />
+              爱集微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              9分钟前
+            </div>
+            
+            <div class="tag-list">
+              <span>中兴通讯</span>
+              <span>可持续发展报告</span>
+              <span>2025年度</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>22</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038385"
+  data-href="/n/1038385"
+  data-news-id="1038385"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/261174404803.7771.png?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="传Stellantis将与东风汽车成立合资企业，在法国生产Voyah电动汽车"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">智驾</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            传Stellantis将与东风汽车成立合资企业，在法国生产Voyah电动汽车
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">两位知情人士透露，Stellantis即将宣布与东风汽车成立合资企业，并达成协议，在其位于法国雷恩的工厂为东风汽车生产至少一款Voyah品牌的纯电动汽车。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5185218"
+              data-user-id="5185218"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2019/09/06/15677469389986.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="赵月"
+              />
+              赵月
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              2小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>东风汽车</span>
+              <span>电动汽车</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1562</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038377"
+  data-href="/n/1038377"
+  data-news-id="1038377"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/1152253022869.60641239441795317.2097.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="电动化转型折戟，斯巴鲁2025财年利润暴跌90%"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">概念股</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            电动化转型折戟，斯巴鲁2025财年利润暴跌90%
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">日本汽车制造商斯巴鲁近日发布了2025财年（2025年4月至2026年3月）业绩报告，交出了一份“营收微增、利润雪崩”的成绩单。数据显示，该财年斯巴鲁营收同比增长2.1%，达4.785万亿日元，但营业利润同比暴跌90%，仅录得401亿日元；净利润为908亿日元，同比大跌73%。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5200468"
+              data-user-id="5200468"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2021/04/09/1617935129406820210409102528?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="黄仁贵"
+              />
+              黄仁贵
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              3小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>斯巴鲁</span>
+              <span>营收微增</span>
+              <span>利润暴跌</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1208</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038371"
+  data-href="/n/1038371"
+  data-news-id="1038371"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/162272698317.97516.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="穗晶光电出资700万元设立控股子公司，切入背光产品研发与生产"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">概念股</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            穗晶光电出资700万元设立控股子公司，切入背光产品研发与生产
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">5月19日，穗晶光电发布公告，公司与伟亚光电（苏州）有限公司共同出资设立控股子公司「苏州伟亚显示科技有限公司」，注册资本为人民币1,000万元。其中，穗晶光电认缴出资700万元，占注册资本70%；伟亚光电（苏州）认缴出资200万元，占20%；剩余10%股权由新公司管理团队持有。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5200468"
+              data-user-id="5200468"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2021/04/09/1617935129406820210409102528?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="黄仁贵"
+              />
+              黄仁贵
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              3小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>穗晶光电</span>
+              <span>伟亚光电</span>
+              <span>合资设司</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1273</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038370"
+  data-href="/n/1038370"
+  data-news-id="1038370"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/830063113279.0868.png?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="精研科技拟4亿元投建零部件研发与产业化项目"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">概念股</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            精研科技拟4亿元投建零部件研发与产业化项目
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">5月19日，精研科技发布公告，公司拟作为项目实施主体，投资建设「高强高韧粉末钛合金及其精密注射成形构件的研发与产业化项目」，计划投资总额为人民币4亿元，预计建设周期为3年，资金来源为公司自有或自筹资金。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5200468"
+              data-user-id="5200468"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2021/04/09/1617935129406820210409102528?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="黄仁贵"
+              />
+              黄仁贵
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              3小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>精研科技</span>
+              <span>钛合金</span>
+              <span>研发项目</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1361</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038365"
+  data-href="/n/1038365"
+  data-news-id="1038365"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/1491368494600.741.png?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="禾赛科技Q1净收入达6.81亿元，连续第四个季度实现盈利"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">概念股</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            禾赛科技Q1净收入达6.81亿元，连续第四个季度实现盈利
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">5月19日， 禾赛科技公布其截至2026年3月31日止三个月的未经审计财务业绩。季度净收入为人民币6.81亿元（9,870万美元），同比增长29.6%；激光雷达总出货量达471,723台，同比增长140.9%；季度净利润为人民币1,830万元（270万美元），已连续第四个季度实现公认会计准则（GAAP）盈利。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5200468"
+              data-user-id="5200468"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2021/04/09/1617935129406820210409102528?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="黄仁贵"
+              />
+              黄仁贵
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              3小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>禾赛科技</span>
+              <span>财务盈利</span>
+              <span>奔驰合作</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1220</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038358"
+  data-href="/n/1038358"
+  data-news-id="1038358"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/1493244744322.1707.png?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="机构：五一期间中国智能手机销量下降 16%，华为领跑市场"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">数码</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            机构：五一期间中国智能手机销量下降 16%，华为领跑市场
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">市调机构Counterpoint Research发布的《中国智能手机周报》显示，2026年五一假期前后两周（包括第18周和第19周），中国智能手机销量同比下降16%。华为继续领跑中国智能手机市场。 畅享90 Pro Max凭借其卓越的续航能力和极高的性价比，表现尤为强劲。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5185218"
+              data-user-id="5185218"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2019/09/06/15677469389986.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="赵月"
+              />
+              赵月
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              3小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>智能手机</span>
+              <span>中国市场</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1702</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038344"
+  data-href="/n/1038344"
+  data-news-id="1038344"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/bianjifagao2024/d6a5785ac406d48bc739027c29b343db/98a575eff16a302699ac3381718d5880.jpg?insert-from=article&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="芯联先锋荣获国家级专精特新“小巨人”企业称号"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            芯联先锋荣获国家级专精特新“小巨人”企业称号
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">近日，芯联集成（688469.SH）控股子公司芯联先锋集成电路制造（绍兴）有限公司获得工信部授予的2025年度国家级专精特新“小巨人”企业称号。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=1"
+              data-user-id="1"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/category/2019/07/23/15638590636274.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="爱集微"
+              />
+              爱集微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              4小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>芯联集成</span>
+              <span>芯联先锋</span>
+              <span>专精特新</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1645</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038335"
+  data-href="/n/1038335"
+  data-news-id="1038335"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/1125237596883.6047.png?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="华天科技借势先进封装突围，并购整合点燃新一轮增长引擎"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">概念股</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            华天科技借势先进封装突围，并购整合点燃新一轮增长引擎
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">​随着人工智能（AI）算力需求持续爆发与半导体行业景气度攀升，国内封测龙头华天科技迎来了强劲的业绩复苏。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5228058"
+              data-user-id="5228058"
+            >
+              <img
+                class="node-def_portrait"
+                src=""
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="孙乐"
+              />
+              孙乐
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              4小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>华天科技</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1406</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1037759"
+  data-href="/n/1037759"
+  data-news-id="1037759"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/574639069444.0798.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="【IPO一线】长江存储启动IPO辅导：中信证券、中信建投护航"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">本土IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            【IPO一线】长江存储启动IPO辅导：中信证券、中信建投护航
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">5 月 19 日，中国证监会披露，长江存储控股股份有限公司（简称 “长江存储”）已办理首次公开发行股票并上市辅导备案，正式吹响登陆资本市场的号角。本次辅导由中信证券、中信建投证券联合担任机构，这家国内存储芯片绝对龙头的资本化进程迈入关键阶段。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5236657"
+              data-user-id="5236657"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2019/06/14/1560509770261blob?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="集小微"
+              />
+              集小微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              21小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>长江存储</span>
+              <span>IPO辅导</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span class="hot-color">1.1w</span>
+    <img class="node-list-look"  src="https://s.laoyaoba.com/node-media-hot.png" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038299"
+  data-href="/n/1038299"
+  data-news-id="1038299"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/810741455431.6522.jpg?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="英伟达CEO黄仁勋看好AI黄金十年 直言相关建置仍在最初期"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            英伟达CEO黄仁勋看好AI黄金十年 直言相关建置仍在最初期
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro-not"></p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=1"
+              data-user-id="1"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/category/2019/07/23/15638590636274.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="爱集微"
+              />
+              爱集微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              6小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>英伟达</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>2079</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1037729"
+  data-href="/n/1037729"
+  data-news-id="1037729"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/335982421892.2147.jpg?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="珞珈“芯”力量再集结！第十届集微大会武汉大学校友论坛即将启幕，邀您共赴新征程"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">本土IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            珞珈“芯”力量再集结！第十届集微大会武汉大学校友论坛即将启幕，邀您共赴新征程
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">校友情谊再度汇聚，共筑产业新生态！2026年5月29日，第十届集微大会武汉大学校友论坛将在上海浦东长荣桂冠酒店隆重举办。本次论坛定位为“学术前沿、产业生态与长期资本”的高端闭环对话平台，汇聚武汉大学优秀校友、产业专家、顶尖投资机构及企业领袖，共同探讨半导体技术前沿、产业创新与合作机遇，凝聚校友情怀与产业智慧新力量。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=1"
+              data-user-id="1"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/category/2019/07/23/15638590636274.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="爱集微"
+              />
+              爱集微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              22小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>武汉大学</span>
+              <span>校友论坛</span>
+              <span>集微大会</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span class="hot-color">1.2w</span>
+    <img class="node-list-look"  src="https://s.laoyaoba.com/node-media-hot.png" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038312"
+  data-href="/n/1038312"
+  data-news-id="1038312"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/708678703785.711.jpg?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="芯片竞赛…英特尔追赶台积 外资泼冷水"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            芯片竞赛…英特尔追赶台积 外资泼冷水
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro-not"></p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=1"
+              data-user-id="1"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/category/2019/07/23/15638590636274.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="爱集微"
+              />
+              爱集微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              6小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>英特尔</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1750</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038304"
+  data-href="/n/1038304"
+  data-news-id="1038304"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/879488641886.1252.jpg?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="AMD执行长苏姿丰释风向 AI进入CPU+GPU时代"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            AMD执行长苏姿丰释风向 AI进入CPU+GPU时代
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro-not"></p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=1"
+              data-user-id="1"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/category/2019/07/23/15638590636274.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="爱集微"
+              />
+              爱集微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              6小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>AMD</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1759</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038300"
+  data-href="/n/1038300"
+  data-news-id="1038300"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/1358466733769.1807.jpg?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="英伟达Vera CPU出货…首批卖给Anthropic、OpenAI等 鸿海、广达迎大单"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            英伟达Vera CPU出货…首批卖给Anthropic、OpenAI等 鸿海、广达迎大单
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro-not"></p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=1"
+              data-user-id="1"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/category/2019/07/23/15638590636274.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="爱集微"
+              />
+              爱集微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              6小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>英伟达</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>1924</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038296"
+  data-href="/n/1038296"
+  data-news-id="1038296"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/1376967833252.0103.jpg?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="亚洲存储器狂潮未止！分析：“获利能力”是关键"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            亚洲存储器狂潮未止！分析：“获利能力”是关键
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro-not"></p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=1"
+              data-user-id="1"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/category/2019/07/23/15638590636274.jpg?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="爱集微"
+              />
+              爱集微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              6小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>存储</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>2009</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1038026"
+  data-href="/n/1038026"
+  data-news-id="1038026"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/jwImg/3717925186.7819877.png?imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="AMD潘晓明：打造开源繁荣AI生态的四个关键词"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            AMD潘晓明：打造开源繁荣AI生态的四个关键词
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">潘晓明表示，当前全球的AI发展驶入了快车道，中国更是走在了世界的前列，汇聚了全球顶尖的AI人才，创新企业也遍地开花。中国具有大批优秀的AI开发者，正在为全球的AI产业贡献重要力量。</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5149388"
+              data-user-id="5149388"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2018/09/04/15360390181778blob?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="张轶群"
+              />
+              张轶群
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              14小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>AMD</span>
+              <span>潘晓明</span>
+              <span>AI</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span class="hot-color">1.1w</span>
+    <img class="node-list-look"  src="https://s.laoyaoba.com/node-media-hot.png" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1037946"
+  data-href="/n/1037946"
+  data-news-id="1037946"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/bianjifagao2024/0283983c3e10e4b9a07b5b02f9210e08/7a82fe324bfc3fdd356e5cdc6d926fdc.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="DeepSeek发布“特列符号”情况说明"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">科技</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            DeepSeek发布“特列符号”情况说明
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">DeepSeek发布“特列符号”情况说明</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5236657"
+              data-user-id="5236657"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2019/06/14/1560509770261blob?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="集小微"
+              />
+              集小微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              16小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>DeepSeek</span>
+              <span>模型幻觉</span>
+              <span>隐私安全</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span class="hot-color">1.4w</span>
+    <img class="node-list-look"  src="https://s.laoyaoba.com/node-media-hot.png" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1037938"
+  data-href="/n/1037938"
+  data-news-id="1037938"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/bianjifagao2024/cf67f57aeb1b9fdfb22fa04e8de10d82/70514ece92a5a3b1d264a66fec4918e5.jpg?insert-from=gallery&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="欧洲汽车巨头Stellantis集团向中国车企兜售4座欧洲工厂"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">智驾</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            欧洲汽车巨头Stellantis集团向中国车企兜售4座欧洲工厂
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">欧洲汽车巨头Stellantis集团向中国车企兜售4座欧洲工厂</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5236657"
+              data-user-id="5236657"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2019/06/14/1560509770261blob?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="集小微"
+              />
+              集小微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              17小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>Stellant</span>
+              <span>汽车</span>
+              <span>欧洲</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>6374</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+          
+<li
+  class="card"
+  data-id="1037937"
+  data-href="/n/1037937"
+  data-news-id="1037937"
+>
+  <div class="news-item-item">
+    <div class="flex-row-left">
+      
+      <div
+        class="left-img img-box img-hover-scale "
+      >
+        <img
+          src="http://s.laoyaoba.com/bianjifagao2024/b53f4225be9fd88bf1b57517a39d3dba/7c35c9cce1897a54bb4c469e098b767b.png?insert-from=article&amp;imageView2/1/w/270/h/180"
+          onerror="onerror=null; src='https://s.laoyaoba.com/node-def_bg.png'"
+          alt="传ADI拟15 亿美元洽购AI电源芯片初创企业"
+        />
+        <!-- 栏目标签是否显示 -->
+        
+        <div class="tips">IC</div>
+        
+      </div>
+      
+
+      <div
+        class="news-info "
+      >
+        <div class="title-box">
+          <!-- 一张图展示 -->
+          
+          <p class="ell_two p_two title">
+            传ADI拟15 亿美元洽购AI电源芯片初创企业
+          </p>
+          
+        </div>
+
+        
+        <!-- cover 或者正文图小于4张 展示 简介 -->
+        <div class="intro-box flex-1">
+          
+          <p class="intro ell_two">亚德诺半导体洽谈 15 亿美元收购初创企业赋能半导体</p>
+          
+        </div>
+        
+        <div class="flex-row-space user-info-box">
+          <div class="user-info">
+            <div
+              class="flex-row-center text-hover"
+              data-href="/home/#/author?id=5236657"
+              data-user-id="5236657"
+            >
+              <img
+                class="node-def_portrait"
+                src="http://s.laoyaoba.com/jwImg/avatar/2019/06/14/1560509770261blob?imageView2/2/w/90/h/90"
+                onerror="onerror=null;src='https://s.laoyaoba.com/node-def_head.png'"
+                alt="集小微"
+              />
+              集小微
+            </div>
+            <div class="time flex-row-center">
+              <img
+                class="node-time"
+                src="https://s.laoyaoba.com/node-time.png"
+              />
+              17小时前
+            </div>
+            
+            <div class="tag-list">
+              <span>亚德诺半导体</span>
+              <span>赋能半导体</span>
+              <span>芯片收购</span>
+              
+            </div>
+            
+          </div>
+          <div class="hot flex-row-center">
+            <span>3654</span>
+    <img class="node-list-look" src="https://s.laoyaoba.com/node-list-look.png"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+ 
+						</ul>
+					</div>
+				</section>
+			</div>
+			<div class="list-right">
+				<div class="aside-affix">
+					
+					<section class="focus">
+						<div class="focus-title">
+							<img
+								src="https://s.laoyaoba.com/jiwei/web/jwjd-title.png"
+								alt="集微焦点"
+							/>
+							
+							<a
+								href="/jwfocus"
+								target="_blank"
+								class="button-more"
+								data-name="jd"
+								>更多&nbsp;></a
+							>
+							
+						</div>
+						<ul class="flex-row-space">
+							
+							<li class="ell_one">
+								<a href="/n/1037759" target="_blank"
+									>【IPO一线】长江存储启动IPO辅导：中信证券、中信建投护航</a
+								>
+							</li>
+							
+							<li class="ell_one">
+								<a href="/n/1037747" target="_blank"
+									>【IPO一线】武汉新芯科创板IPO终止 48亿元募资计划搁浅</a
+								>
+							</li>
+							
+							<li class="ell_one">
+								<a href="/n/1037712" target="_blank"
+									>全明星阵容！集微端侧AI峰会5月28日盛大启幕</a
+								>
+							</li>
+							
+							<li class="ell_one">
+								<a href="/n/1037270" target="_blank"
+									>400位！集微大会首批嘉宾名单重磅揭晓</a
+								>
+							</li>
+							
+						</ul>
+					</section>
+					
+					<!-- 专题推荐 -->
+					
+					<section class="special">
+						<div class="flex-row-space h5-titlebg">
+							<h5 class="modular-title">专题推荐</h5>
+							
+							<a href="/jwsubjects" target="_blank" class="button-more"
+								>更多&nbsp;></a
+							>
+							
+						</div>
+						<ul class="special-list">
+							
+							<li class="list">
+								<div class="special-card">
+									<a
+										href="https://laoyaoba.com/activity/jwss/2026"
+										target="_bank"
+										class="img-box img-hover-scale"
+									>
+										<img
+											src="http://s.laoyaoba.com/jwImg/projectNewCover/2026/05/15/17788156974030.jpg"
+											onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+											alt=""
+										/>
+										<div class="special-card-title">
+											<h3 class="title ell_two">
+												2026第十届集微大会
+											</h3>
+										</div>
+									</a>
+									<ul class="special-news">
+										 
+										<li class="text-hover ell_one">
+											<a href="/n/1037729" target="_blank"
+												>珞珈“芯”力量再集结！第十届集微大会武汉大学校友论坛即将启幕，邀您共赴新征程</a
+											>
+										</li>
+										
+										<li class="text-hover ell_one">
+											<a href="/n/1037712" target="_blank"
+												>全明星阵容！集微端侧AI峰会5月28日盛大启幕</a
+											>
+										</li>
+										
+										<li class="text-hover ell_one">
+											<a href="/n/1037182" target="_blank"
+												>第十届集微大会半导体展：全产业链同台 共筑发展新生态</a
+											>
+										</li>
+										 
+									</ul>
+								</div>
+								<div class="special-title">
+									2026第十届集微大会
+								</div>
+							</li>
+							
+							<li class="list">
+								<div class="special-card">
+									<a
+										href="https://www.laoyaoba.com/activity/iicie/2026"
+										target="_bank"
+										class="img-box img-hover-scale"
+									>
+										<img
+											src="http://s.laoyaoba.com/jwImg/projectNewCover/2026/02/11/17707783844729.jpeg"
+											onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+											alt=""
+										/>
+										<div class="special-card-title">
+											<h3 class="title ell_two">
+												2026 国际集成电路创新博览会
+											</h3>
+										</div>
+									</a>
+									<ul class="special-news">
+										 
+										<li class="text-hover ell_one">
+											<a href="/n/1033218" target="_blank"
+												>IICIE国际集成电路创新博览会赋能半导体产业，直击产业前沿 ——三展联动34万展示面积，链接全球优质资源</a
+											>
+										</li>
+										
+										<li class="text-hover ell_one">
+											<a href="/n/1025683" target="_blank"
+												>34万㎡三展联动协同共筑芯生态，IC创新博览会9月深圳举办</a
+											>
+										</li>
+										
+										<li class="text-hover ell_one">
+											<a href="/n/1021381" target="_blank"
+												>34万㎡超大规模，5000+展商集结，一同解码半导体行业新发展</a
+											>
+										</li>
+										 
+									</ul>
+								</div>
+								<div class="special-title">
+									2026 国际集成电路创新博览会
+								</div>
+							</li>
+							
+							<li class="list">
+								<div class="special-card">
+									<a
+										href="https://www.laoyaoba.com/special/type=2?news_id=977326"
+										target="_bank"
+										class="img-box img-hover-scale"
+									>
+										<img
+											src="http://s.laoyaoba.com/jwImg/projectNewCover/2026/01/28/17695855194823.jpg"
+											onerror="onerror=null;src='https://s.laoyaoba.com/node-def_bg.png'"
+											alt=""
+										/>
+										<div class="special-card-title">
+											<h3 class="title ell_two">
+												融合 2025 乘风 2026
+											</h3>
+										</div>
+									</a>
+									<ul class="special-news">
+										 
+										<li class="text-hover ell_one">
+											<a href="/n/997638" target="_blank"
+												>锚定RISC-V+AI战略，奕斯伟计算的“蓄力”与“扬帆”</a
+											>
+										</li>
+										
+										<li class="text-hover ell_one">
+											<a href="/n/985978" target="_blank"
+												>唯捷创芯：2025多维突破筑壁垒 2026锚定AI与汽车电子新增长点</a
+											>
+										</li>
+										
+										<li class="text-hover ell_one">
+											<a href="/n/985455" target="_blank"
+												>芯原股份：技术厚积终成势 端侧智能正当潮</a
+											>
+										</li>
+										 
+									</ul>
+								</div>
+								<div class="special-title">
+									融合 2025 乘风 2026
+								</div>
+							</li>
+							
+						</ul>
+					</section>
+					
+					<!-- 最新快讯 -->
+					
+					<section class="news mt40">
+						<div class="flex-row-space h5-titlebg">
+							<h5 class="modular-title">最新快讯</h5>
+							<a href="/jwnictation" target="_blank" class="button-more"
+								>更多&nbsp;></a
+							>
+						</div>
+						<ul class="news-list">
+							
+							<li>
+								<a href="/n/1038379" target="_blank">
+									<p class="time">3小时前</p>
+									<p class="text-hover ell_two">
+										年产360万平方米IC载板材料智能工厂建设项目封顶
+									</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1038376" target="_blank">
+									<p class="time">3小时前</p>
+									<p class="text-hover ell_two">
+										特斯拉正式放弃印度建厂计划：供应链短板与政策风险成拦路虎
+									</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1038369" target="_blank">
+									<p class="time">3小时前</p>
+									<p class="text-hover ell_two">
+										达瑞电子以7000万元收购东莞运宏70%股权
+									</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1038366" target="_blank">
+									<p class="time">3小时前</p>
+									<p class="text-hover ell_two">
+										超讯通信拟2550万元设立控股子公司，推进算力服务器业务市场开拓
+									</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1038363" target="_blank">
+									<p class="time">3小时前</p>
+									<p class="text-hover ell_two">
+										佑驾创新签署200台无人物流车采购协议
+									</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1038362" target="_blank">
+									<p class="time">3小时前</p>
+									<p class="text-hover ell_two">
+										*ST易录收到法院预重整决定书，启动预重整程序
+									</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1038359" target="_blank">
+									<p class="time">3小时前</p>
+									<p class="text-hover ell_two">
+										范式智能与欢喜传媒达成战略合作 携手推动AI影视内容创新
+									</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1038348" target="_blank">
+									<p class="time">4小时前</p>
+									<p class="text-hover ell_two">
+										壁仞科技与万达信息达成生态战略合作，打造国产AI解决方案新标杆
+									</p>
+								</a>
+							</li>
+							
+						</ul>
+					</section>
+					
+					<!-- 热门文章 -->
+					
+					<section class="hot mt40">
+						<div class="flex-row-space h5-titlebg">
+							<h5 class="modular-title">热门文章</h5>
+						</div>
+						<ul class="hot-list">
+							
+							<li>
+								<a href="/n/1035304" target="_blank">
+									<p class="text-hover ell_two">
+										立园满园｜增幅高达900%！中微四川公司增资至10亿元
+									</p>
+									<p class="time">05-13 21:58</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1035414" target="_blank">
+									<p class="text-hover ell_two">
+										从“造强芯”到“造生态”：AI时代，天玑重构智能体发展新格局
+									</p>
+									<p class="time">05-15 07:34</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1035370" target="_blank">
+									<p class="text-hover ell_two">
+										议程出炉！集微大会先进封测创新峰会启幕
+									</p>
+									<p class="time">05-14 16:43</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1035371" target="_blank">
+									<p class="text-hover ell_two">
+										中芯国际发布26Q1财报 单季销售收入超25亿美元
+									</p>
+									<p class="time">05-14 18:18</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1035320" target="_blank">
+									<p class="text-hover ell_two">
+										小鹏汽车与大众等车企洽谈收购欧洲工厂
+									</p>
+									<p class="time">05-14 10:23</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1035311" target="_blank">
+									<p class="text-hover ell_two">
+										机构：Q1美国智能手机市场出货量同比下降5.7%
+									</p>
+									<p class="time">05-14 09:52</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1037062" target="_blank">
+									<p class="text-hover ell_two">
+										西电团队提出完美光学涡旋梳定制新方法 有望用于先进光通信技术
+									</p>
+									<p class="time">05-17 21:20</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1035324" target="_blank">
+									<p class="text-hover ell_two">
+										奔驰CEO：欧盟现行法规并未推动预期的电动汽车转型
+									</p>
+									<p class="time">05-14 10:28</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1034411" target="_blank">
+									<p class="text-hover ell_two">
+										aigo率先破局：软硬一体AP10，重新定义大众移动存储
+									</p>
+									<p class="time">05-13 07:10</p>
+								</a>
+							</li>
+							
+							<li>
+								<a href="/n/1037066" target="_blank">
+									<p class="text-hover ell_two">
+										同济大学徐军团队研发预测惯性约束聚变用激光增益材料的深度学习框架ICFgainAI
+									</p>
+									<p class="time">05-17 21:23</p>
+								</a>
+							</li>
+							
+						</ul>
+					</section>
+					
+					<!-- 右侧广告位C -->
+					
+				</div>
+			</div>
+		</div>
+	</article>
+</main>
+
+<footer>
+
+ 
+<div class="footer">
+  <section class="top">
+    <div class="top-left">
+      <a class="top-left-logo" href="/">
+        <img src="https://s.laoyaoba.com/node-header-logo1.png" alt="集微logo" />
+      </a>
+      <!-- <a class="top-left-logo2" href="/">
+        <img src="https://s.laoyaoba.com/node-header-logo2.png" alt="集微logo" />
+      </a> -->
+
+      <div>
+        <a href="/" target="_blank">网站首页</a>
+        <a href="/n/729927" target="_blank">版权声明</a>
+        <!-- <a href="https://www.laoyaoba.com/html/jiade/jiade" target="_blank">嘉勤官网</a> -->
+        <a href="/workplace/#/" target="_blank">集微招聘</a>
+        <a href="/n/683318" target="_blank">联系我们</a>
+        <a href="/map" target="_blank">网站地图</a>
+        <a href="/n/683317" target="_blank">关于我们</a>
+        <a href="https://www.laoyaoba.com/static/view/business.html" target="_blank">商务合作</a>
+        <a href="https://www.laoyaoba.com/api/rss/hbb" target="_blank">rss订阅</a>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="top-right-info">
+        <div>
+          <p>联系电话：</p>
+          <p>0592-6892326</p>
+        </div>
+        <div>
+          <p>新闻投稿：</p>
+          <p>laoyaoba@gmail.com</p>
+        </div>
+        <div>
+          <p>商务合作：</p>
+          <p>chenhao@ijiwei.com</p>
+        </div>
+        <div>
+          <p>问题反馈：</p>
+          <p>1574400753 (QQ)</p>
+        </div>
+      </div>
+      <div class="top-right-code">
+        <div>
+          <img
+            src="https://s.laoyaoba.com/node-code-wx.png"
+            alt="集微官方微信"
+          />
+          <p>官方微信</p>
+        </div>
+        <div>
+          <img
+            src="https://s.laoyaoba.com/node-code-wb.png"
+            alt="集微官方微博"
+          />
+          <p>官方微博</p>
+        </div>
+        <div>
+          <img src="https://s.laoyaoba.com/node-code-app.png" alt="集微app" />
+          <p>APP下载</p>
+        </div>
+      </div>
+    </div>
+
+    </section>
+    <!-- <ul class="center">
+      <p>友情链接：</p>
+      <li>
+        <p><a href="https://tech.ifeng.com/" target="_blank">凤凰科技</a></p>
+      </li>
+      <li>
+        <p><a href="https://www.leiphone.com/" target="_blank">雷锋网</a></p>
+      </li>
+      <li>
+        <p>
+          <a href="https://www.cls.cn/depth?id=1111" target="_blank">财联社</a>
+        </p>
+      </li>
+      <li>
+        <p>
+          <a href="http://www.eepw.com.cn/" target="_blank">电子产品世界</a>
+        </p>
+      </li>
+      <li>
+        <p><a href="https://www.eefocus.com/" target="_blank">与非网</a></p>
+      </li>
+    </ul> -->
+  </article>
+  <section class="bottom">
+    <p>
+      Copyright 2007-2026©<span id="tt"></span>.com™Inc.All rights reserved |
+      <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank"
+        >沪ICP备2025138789号</a
+      ><span id="ts"></span>
+    </p>
+    <div>
+      <img src="https://s.laoyaoba.com/node-footer-security.png" alt />
+      <a
+        href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011502404153"
+        target="_blank"
+        >沪公网安备 31011502404153号</a
+      >
+    </div>
+  </section>
+  <script>
+    if (RegExp(/jiweinet/).test(window.location.href)) {
+      document.getElementById('ts').innerHTML = '-1';
+      document.getElementById('tt').innerHTML = 'JiWeiNet';
+    } else if (RegExp(/laoyaoba/).test(window.location.href)) {
+      document.getElementById('ts').innerHTML = '-2';
+      document.getElementById('tt').innerHTML = 'IJiWei';
+    } else if (RegExp(/ijiwei.com/).test(window.location.href)) {
+      document.getElementById('ts').innerHTML = '-3';
+      document.getElementById('tt').innerHTML = 'IJiWei';
+    } else if (RegExp(/ijiwei.net/).test(window.location.href)) {
+      document.getElementById('ts').innerHTML = '-4';
+      document.getElementById('tt').innerHTML = 'IJiWei';
+    }else {
+      document.getElementById('ts').innerHTML = '';
+      document.getElementById('tt').innerHTML = 'IJiWei';
+    }
+  </script>
+</div>
+ 
+<script src="/scripts/footer.919a3.bundule.js"></script>
+
+</footer>
+  
+
+          <link rel="stylesheet" href="/styles/fixedbar.8bc9f.css" media="screen and (orientation: portrait)">
+          <link rel="stylesheet" href="/styles/fixedbar.8bc9f.css" media="screen and (orientation: landscape)">
+        
+<ul class="fixed-bar index-fixed">
+  <li>
+    <a href="/feedback" target="_blank">
+      <img
+        class="yj"
+        src="https://s.laoyaoba.com/node-fixed-yj.png"
+        alt="意见反馈"
+      />
+    </a>
+  </li>
+  <li>
+    <img
+      class="jiwei"
+      src="https://s.laoyaoba.com/node-fixed-jiwei.png"
+      alt=""
+    />
+    <section class="index-fixed-plane jiweiplane">
+      <img
+        src="https://s.laoyaoba.com/node-code-app.png"
+        alt="爱集微APP扫码下载"
+      />
+      <p>爱集微APP</p>
+      <p>扫码下载</p>
+    </section>
+  </li>
+  <li>
+    <img class="wx" src="https://s.laoyaoba.com/node-fixed-wx.png" alt="" />
+    <section class="index-fixed-plane wxplane">
+      <img
+        src="https://s.laoyaoba.com/node-code-wx.png"
+        alt="集微网微信公众号"
+      />
+      <p>集微网</p>
+      <p>微信公众号</p>
+    </section>
+  </li>
+  <li>
+    <a href="https://videos.ijiwei.com/" target="_blank">
+      <img
+        class="videoweb"
+        src="https://s.laoyaoba.com/node-fixed-videoweb.png"
+        alt="爱集微视频报价网站"
+      />
+    </a>
+    <!-- <img
+      class="tiktok"
+      src="https://s.laoyaoba.com/node-fixed-tiktok.png"
+      alt=""
+    />
+
+    <section class="index-fixed-plane tiktokplane">
+      <img
+        src="https://s.laoyaoba.com/node-code-tiktok.png"
+        alt="爱集微,抖音号：1862666521"
+      />
+      <p>爱集微</p>
+      <p>抖音号：1862666521</p>
+    </section> -->
+  </li>
+  <li>
+    <img class="fw" src="https://s.laoyaoba.com/node-fixed-fw.png" alt="" />
+    <section class="index-fixed-plane fwplane">
+      <img
+        src="https://s.laoyaoba.com/node-code-fw.png"
+        alt="爱集微数字化业务手册二维码"
+      />
+      <p>业务合作</p>
+      <p>爱集微业务电子手册</p>
+    </section>
+  </li>
+  <li>
+    <img
+      class="top"
+      id="top"
+      src="https://s.laoyaoba.com/node-fixed-top.png"
+      alt=""
+      onclick="document.documentElement.scrollTo({ top: 0, behavior: 'smooth'})"
+    />
+  </li>
+</ul>
+<script src="/scripts/fixedbar.8bc9f.bundule.js"></script>
+   
+<script src="https://cdn.ijiwei.com/vue/v2.6.9/vue.min.js"></script>
+<script src="https://cdn.ijiwei.com/vue-router/v3.4.9/vue-router.min.js"></script>
+<script src="https://cdn.ijiwei.com/axios/v0.27.2/axios.min.js"></script>
+<script src="https://cdn.ijiwei.com/element-ui/v2.14.0/index.min.js"></script>
+<script src="https://static.ijiwei.com/static/js/md5.js"></script>
+
+<script></script>
+
+<script src="/scripts/index.c585e.bundule.js"></script>
+<script id="laoyaoba">
+	(function () {
+		var hm = document.createElement('script');
+		hm.src = 'https://hm.baidu.com/hm.js?7a320689f49c65329a61fd46277563ee';
+		var s = document.getElementById('laoyaoba');
+		s.parentNode.insertBefore(hm, s);
+	})();
+</script>
+<script id="ijiwei">
+	(function () {
+		var hm = document.createElement('script');
+		hm.src = 'https://hm.baidu.com/hm.js?e5f8162d3d8e9cb33d12d6b5d557fa3a';
+		var s = document.getElementById('ijiwei');
+		s.parentNode.insertBefore(hm, s);
+	})();
+</script>
+
+  </body>
+</html>

@@ -174,8 +174,16 @@ class RenderedEmail:
     html: str
 
 
-def render_c114_brief_email(markdown_text: str) -> RenderedEmail:
-    """把 C114 step 6 Markdown 简报渲染成适合邮件发送的文本与 HTML。"""
+def render_c114_brief_email(
+    markdown_text: str,
+    *,
+    footer_disclaimer: str = C114_EMAIL_FOOTER_DISCLAIMER,
+) -> RenderedEmail:
+    """把 step 6 Markdown 简报渲染成适合邮件发送的文本与 HTML。
+
+    ``footer_disclaimer`` defaults to the c114 footer for backward compatibility;
+    other sources (e.g., chip) can override it with their own disclaimer text.
+    """
 
     lines = [line.rstrip() for line in markdown_text.splitlines()]
     title = "C114 主题简报"
@@ -238,14 +246,14 @@ def render_c114_brief_email(markdown_text: str) -> RenderedEmail:
         role_line=role_line,
         summary_items=summary_items,
         topics=topic_sections,
-        footer_disclaimer=C114_EMAIL_FOOTER_DISCLAIMER,
+        footer_disclaimer=footer_disclaimer,
     )
     html_body = build_html(
         title=title,
         role_line=role_line,
         summary_items=summary_items,
         topics=topic_sections,
-        footer_disclaimer=C114_EMAIL_FOOTER_DISCLAIMER,
+        footer_disclaimer=footer_disclaimer,
     )
     return RenderedEmail(subject=subject, text=plain_text, html=html_body)
 
@@ -569,12 +577,22 @@ def render_topic_section(topic: dict[str, object]) -> str:
 
 
 def render_navigation_item(topic: dict[str, object]) -> str:
-    """渲染标题下方的主题导航项。"""
+    """渲染标题下方的主题导航项；分类后缀文章数「（N篇）」。
+
+    篇数取该分类「源地址」小节的条目数（= 该桶对应的原始文章数）。
+    """
 
     raw_title = str(topic["title"])
     title = html.escape(raw_title)
     section_id = make_anchor_id(raw_title)
-    return f'<li><a href="#{section_id}">{title}</a></li>'
+    subsections = topic.get("subsections", {})
+    count = 0
+    if isinstance(subsections, dict):
+        sources = subsections.get("源地址", [])
+        if isinstance(sources, list):
+            count = len([s for s in sources if str(s).strip()])
+    suffix = f"（{count}篇）" if count else ""
+    return f'<li><a href="#{section_id}">{title}{suffix}</a></li>'
 
 
 def render_subsection_block(subtitle: str, items: list[str]) -> str:
@@ -603,7 +621,22 @@ def render_subsection_body(subtitle: str, items: list[str]) -> str:
     text_class = "block-text"
     if subtitle in {"核心判断", "产业/公司影响", "产品/公司影响"}:
         text_class = "block-text indented-text"
-    return f'<p class="{text_class}">{html.escape(text)}</p>'
+    return f'<p class="{text_class}">{_break_enumerations(html.escape(text))}</p>'
+
+
+# 句末标点后的"一、二、…"(中文数字)与"1、2、…"(阿拉伯数字)枚举标记，
+# 是 LLM 长段落里常见的分点写法，挤在一段里可读性差。渲染时在这些枚举前换行：
+#  - 中文数字主分点 → <br> 顶格
+#  - 阿拉伯数字次分点 → <br> + 全角空格缩进
+# 只匹配「句末标点（。！？：）后」的枚举，避免误伤正文里的普通顿号（如"设备、材料"）。
+_ENUM_CN_RE = re.compile(r"([。！？：])\s*([一二三四五六七八九十]+、)")
+_ENUM_AR_RE = re.compile(r"([。！？：])\s*([1-9]\d?、)")
+
+
+def _break_enumerations(escaped_text: str) -> str:
+    s = _ENUM_CN_RE.sub(r"\1<br>\2", escaped_text)
+    s = _ENUM_AR_RE.sub(r"\1<br>　　\2", s)
+    return s
 
 
 def render_list_item(item: str, subtitle: str) -> str:
