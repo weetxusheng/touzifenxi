@@ -24,6 +24,8 @@ class GatedSource:
     valuable: bool
     category: str
     reason_zh: str
+    star_rating: int = 3          # 1-5星评分，默认3星
+    summary: str = ""             # 40字以内简短摘要
 
 
 def _env_flag(name: str, default_on: bool = True) -> bool:
@@ -83,14 +85,23 @@ def value_gate_system_prompt() -> str:
         "- 只有情绪口号，没有数据、事件或逻辑分析的鸡汤文；\n",
         "- 重复转载且无新增信息的洗稿；\n",
         "- 纯礼节性贺电、祝贺信等无实质内容的信息。\n\n",
+        "### 评分标准（star_rating: 1-5）：\n",
+        "- ⭐⭐⭐⭐⭐ (5星)：重大宏观政策、地缘政治事件、影响市场的核心数据、重磅行业变革；\n",
+        "- ⭐⭐⭐⭐ (4星)：重要公司动态、行业发展趋势、监管政策、市场数据分析；\n",
+        "- ⭐⭐ (3星)：一般性新闻报道、常规公告、信息量有限但有参考价值；\n",
+        "- ⭐⭐ (2星)：活动通知、纯导流内容、重复转载无新增信息；\n",
+        "- ⭐ (1星)：硬广促销、抽奖招聘、情绪口号、标题党诱导点击。\n\n",
     ]
     if vision_line:
         parts.append(f"\n{vision_line}")
     parts.append(
         "\n只依据用户给出的标题与正文（及可能的配图识读摘录），不要做馆外联想或编造。\n"
-        "最终回复必须且仅能是一个 JSON 对象，键："
-        "valuable（布尔）, category（短英文标签，如 ad, spam, news, macro_geopolitics, company）, "
-        "reason_zh（一两句中文理由，供审计）。"
+        "最终回复必须且仅能是一个 JSON 对象，包含以下键：\n"
+        "- valuable（布尔）：是否有解析价值\n"
+        "- category（短英文标签，如 ad, spam, news, macro_geopolitics, company）\n"
+        "- reason_zh（一两句中文理由，供审计）\n"
+        "- star_rating（整数 1-5）：文章价值评分\n"
+        "- summary（字符串，40字以内）：简短摘要，突出核心价值点\n"
     )
     return "".join(parts)
 
@@ -129,6 +140,8 @@ def assess_article_value(
             valuable=True,
             category="gate_disabled",
             reason_zh=str(detail["reason_zh"]),
+            star_rating=4,  # 默认高价值（因为跳过了预筛）
+            summary="",     # 无摘要
         )
 
     excerpt = article.plain_text[: gate_max_chars()]
@@ -188,6 +201,8 @@ def assess_article_value(
             valuable=valuable,
             category="gate_error",
             reason_zh=str(detail["reason_zh"]),
+            star_rating=3,  # 默认3星
+            summary="",     # 空摘要
         )
 
     try:
@@ -195,7 +210,23 @@ def assess_article_value(
         valuable = bool(data.get("valuable", True))
         category = str(data.get("category", "unknown")).strip() or "unknown"
         reason_zh = str(data.get("reason_zh", "")).strip() or "（模型未给出原因）"
-        detail = {"stem": article.stem, "valuable": valuable, "category": category, "reason_zh": reason_zh}
+        
+        # 解析新增字段：star_rating 和 summary
+        star_rating = int(data.get("star_rating", 3))
+        star_rating = max(1, min(5, star_rating))  # 限制在 1-5 范围内
+        
+        summary = str(data.get("summary", "")).strip()
+        if len(summary) > 40:
+            summary = summary[:40] + "..."  # 截断到 40 字以内
+        
+        detail = {
+            "stem": article.stem,
+            "valuable": valuable,
+            "category": category,
+            "reason_zh": reason_zh,
+            "star_rating": star_rating,
+            "summary": summary,
+        }
         if trace:
             trace.add_step("value_gate", f"assess:{article.stem}", True, detail)
         return GatedSource(
@@ -203,6 +234,8 @@ def assess_article_value(
             valuable=valuable,
             category=category,
             reason_zh=reason_zh,
+            star_rating=star_rating,
+            summary=summary,
         )
     except Exception as e:  # noqa: BLE001 — 审计需要吞掉并留痕
         if strict_llm:
@@ -232,4 +265,6 @@ def assess_article_value(
             valuable=valuable,
             category="gate_parse_error",
             reason_zh=str(detail["reason_zh"]),
+            star_rating=3,  # 默认3星
+            summary="",     # 空摘要
         )

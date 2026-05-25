@@ -213,11 +213,13 @@ def build_aggregate_html(
     parse_version: str,
     *,
     source_article_title: str | None = None,
+    source_url: str | None = None,
 ) -> str:
     """
     成品页：最简文档壳 + 「来源」（原文地址，可点击）+ 四段大模型 HTML。
     「配图识读」VL 正文仅写入 trace/summary，不写入成品 HTML。
     ``source_article_title``：一篇一文件模式下写入标题级副标（仍不含源路径）。
+    ``source_url``：原始文章 URL，用于在"来源"模块中显示为可点击按钮。
     """
     biz_label = biz_date_iso_for_display(biz_date_path)
     base = f"{escape_html(account)} · {escape_html(biz_label)}（{escape_html(biz_date_path)}）"
@@ -233,12 +235,34 @@ def build_aggregate_html(
         ("impact", "event-dimension-impact", "产生的影响"),
         ("counterpoints", "event-dimension-contradictions", "反面观点 / 数据矛盾点"),
     ]
+    
+    # 构建四维度内容
     body_parts: list[str] = [
-        f"<h1>{h1_inner}</h1>\n",
         '<article class="brief-entry gzh-collection-brief">\n',
     ]
     for key, section_cls, title_zh in dim_blocks:
         frag = dimensions.get(key) or ""
+        
+        # 如果是"来源"模块且有原始 URL，添加跳转按钮
+        if key == "source" and source_url and source_url.strip():
+            safe_url = escape_html(source_url)
+            button_html = (
+                f'\n<div style="margin-top: 12px;">'
+                f'  <a href="{safe_url}" target="_blank" rel="noopener noreferrer" '
+                f'     style="display: inline-flex; align-items: center; gap: 6px; '
+                f'            padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); '
+                f'            color: white; border-radius: 6px; text-decoration: none; '
+                f'            font-weight: 500; font-size: 14px; '
+                f'            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3); '
+                f'            transition: all 0.2s ease;" '
+                f'     onmouseover="this.style.transform=\'translateY(-1px)\'; this.style.boxShadow=\'0 4px 8px rgba(102, 126, 234, 0.4)\';" '
+                f'     onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'0 2px 4px rgba(102, 126, 234, 0.3)\';">'
+                f'     查看原始文章'
+                f'  </a>'
+                f'</div>\n'
+            )
+            frag = frag + button_html
+        
         body_parts.append(
             f'<section class="factor-section event-dimension-section {section_cls}" id="dim-{key}">\n'
             f'<h3 class="factor-title">{escape_html(title_zh)}</h3>\n'
@@ -246,7 +270,8 @@ def build_aggregate_html(
             "</section>\n"
         )
     body_parts.append("</article>\n")
-
+    
+    # 单栏模式
     return (
         "<!doctype html>\n"
         '<html lang="zh-CN">\n'
@@ -260,9 +285,24 @@ def build_aggregate_html(
         f'  <meta name="generator" content="gzh-pipeline {escape_html(parse_version)}">\n'
         "</head>\n"
         "<body>\n"
+        f"<h1>{h1_inner}</h1>\n"
         + "".join(body_parts)
         + "</body>\n</html>\n"
     )
+
+
+def _build_dual_pane_html(
+    h1_inner: str,
+    parsed_content: str,
+    source_url: str,
+    parse_version: str,
+) -> str:
+    """
+    已废弃：双栏布局函数（因微信公众号等网站拒绝 iframe 嵌入）。
+    保留此函数仅为向后兼容，实际不再使用。
+    """
+    # 此函数已不再使用，保留仅为兼容性
+    pass
 
 
 def run_aggregate_job(
@@ -516,6 +556,8 @@ def run_aggregate_job(
                         "dimension_engine": "skipped_filtered",
                         "value_gate_category": g.category,
                         "value_gate_reason_zh": g.reason_zh,
+                        "star_rating": g.star_rating,
+                        "summary": g.summary,
                     }
                     vread = _vision_preclean_audit_row_for_stem(preclean_collector, trace, ar.stem)
                     if vread:
@@ -562,6 +604,7 @@ def run_aggregate_job(
                     dim_html,
                     AGGREGATE_PARSE_VERSION,
                     source_article_title=ar.title,
+                    source_url=ar.source_url or None,
                 )
                 dest_html.write_text(page, encoding="utf-8")
                 trace.add_step(
@@ -595,6 +638,10 @@ def run_aggregate_job(
                     "valuable": g.valuable,
                     "path": str(dest_html),
                     "dimension_engine": dim_engine,
+                    "value_gate_category": g.category,
+                    "value_gate_reason_zh": g.reason_zh,
+                    "star_rating": g.star_rating,
+                    "summary": g.summary,
                 }
                 vread = _vision_preclean_audit_row_for_stem(preclean_collector, trace, ar.stem)
                 if vread:

@@ -11,43 +11,30 @@ if errorlevel 1 (
 )
 
 set "BIZ=%~1"
-set "ACC=%~2"
-set "STEM=summary"
 set "WAIT_END="
 
-if /i "%~3"=="WAIT" (
-  set "WAIT_END=1"
-)
-if not "!WAIT_END!"=="1" (
-  if not "%~3"=="" set "STEM=%~3"
-)
-if /i "%~4"=="WAIT" set "WAIT_END=1"
+if /i "%~2"=="WAIT" set "WAIT_END=1"
 
-set "EXTRA_ARGS="
-if /i "!PARSE_SKIP_IF_SAME!"=="1" set "EXTRA_ARGS=--idempotent-skip"
-if not "!BIZ!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --biz-date !BIZ!"
-if not "!ACC!"=="" set "EXTRA_ARGS=!EXTRA_ARGS! --account !ACC!"
-if not "!STEM!"=="summary" set "EXTRA_ARGS=!EXTRA_ARGS! --output-stem !STEM!"
+if "!BIZ!"=="" (
+  echo ERROR: biz_date is required
+  echo Usage: run_overview.bat ^<biz-date^> [WAIT]
+  echo Example: run_overview.bat 20260522
+  pause
+  exit /b 1
+)
 
 set "PYTHONUNBUFFERED=1"
-if "!GZH_PARSE_PROGRESS!"=="" set "GZH_PARSE_PROGRESS=1"
 
 echo Repo: %REPO_ROOT%
-echo Input:  %GZH_FETCH_OUTPUT_DIR%
+echo Biz Date: !BIZ!
 echo Output: %GZH_PARSE_OUTPUT_DIR%
 echo Audit:  %GZH_PARSE_AUDIT_DIR%
-if "!BIZ!"=="" if "!ACC!"=="" (
-  echo Running parse: biz_date from .env GZH_DAJIALA_FETCH_MODE [today=当天目录, yesterday=前一天目录], all accounts
-) else (
-  echo Running parse biz_date=!BIZ! account=!ACC! output_stem=!STEM! PARSE_SKIP_IF_SAME=!PARSE_SKIP_IF_SAME!
-)
 echo.
 
-%PYEXE% %PYVER% -u -m gzh_pipeline.cli.parse ^
-  --input-root "%GZH_FETCH_OUTPUT_DIR%" ^
+%PYEXE% %PYVER% -u -m gzh_pipeline.cli.overview ^
+  --biz-date "!BIZ!" ^
   --output-root "%GZH_PARSE_OUTPUT_DIR%" ^
-  --audit-json-root "%GZH_PARSE_AUDIT_DIR%" ^
-  %EXTRA_ARGS% --json
+  --audit-json-root "%GZH_PARSE_AUDIT_DIR%"
 
 set "EXITCODE=!ERRORLEVEL!"
 if not "!EXITCODE!"=="0" (
@@ -57,36 +44,19 @@ if not "!EXITCODE!"=="0" (
   exit /b !EXITCODE!
 )
 echo.
-
-:: 生成当日总览页面
-if "!BIZ!"=="" (
-  echo [WARNING] biz_date not specified, skipping overview generation
-) else (
-  echo Generating overview page for !BIZ!...
-  %PYEXE% %PYVER% -u -m gzh_pipeline.cli.overview ^
-    --biz-date "!BIZ!" ^
-    --output-root "%GZH_PARSE_OUTPUT_DIR%" ^
-    --audit-json-root "%GZH_PARSE_AUDIT_DIR%"
-  if errorlevel 1 (
-    echo [WARNING] Overview generation failed with exit code !ERRORLEVEL!
-  ) else (
-    echo Overview page generated successfully.
-  )
-)
-
-echo.
+echo Overview page generated successfully!
 if "!WAIT_END!"=="1" pause
 exit /b 0
 
 :usage
 echo Usage:
-echo   run_aggregate_parse.bat
-echo     Parses HTML under input root ^(.env PARSE_INPUT_ROOT or exports^).
+echo   run_overview.bat ^<biz-date^> [WAIT]
+echo     Generates overview page for specified date
 echo.
-echo   run_aggregate_parse.bat [biz-date] [account] [output-stem] [WAIT]
-echo     Optional biz-date yyyyMMdd, account folder name, output stem, WAIT=pause at end
+echo   biz-date: yyyyMMdd format (e.g., 20260522)
+echo   WAIT: optional, pause at end
 echo.
-echo Env: repo root .env ^(PARSE_* / GZH_* / DEEPSEEK_*^)
+echo Env: repo root .env ^(PARSE_* / GZH_*^)
 echo.
 pause
 exit /b 0
