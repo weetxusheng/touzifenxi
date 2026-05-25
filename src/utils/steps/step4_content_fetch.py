@@ -87,6 +87,7 @@ def run_content_fetch_workflow(
     *,
     search_input: SearchResultsInputPayload | None = None,
     expected_article_count: int | None = None,
+    source_label: str = "C114",
 ) -> ContentWorkflowPayload:
     """Execute step 4 for one report date and return the full content payload.
 
@@ -187,7 +188,7 @@ def run_content_fetch_workflow(
         iqs_rounds = int(take_iqs()) if callable(take_iqs) else 0
     article_row_count = len(flattened_articles)
     print(
-        "[C114][Step4 正文抓取] "
+        f"[{source_label}][Step4 正文抓取] "
         f"内容分析条目数={article_row_count}（Step3/4 中一行一条；与「抓取次数」不是同一量纲）| "
         f"入选链接(去重前)={selected_before_dedup} | "
         f"标题去重剔除={removed_title_dupes} | "

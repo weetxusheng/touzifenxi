@@ -1,0 +1,7 @@
+beautifulsoup4
+fastapi
+feedparser
+playwright
+requests
+trafilatura
+uvicorn

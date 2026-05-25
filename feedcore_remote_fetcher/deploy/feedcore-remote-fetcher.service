@@ -1,0 +1,20 @@
+[Unit]
+Description=FeedCore Remote Fetcher (RSS/article fetch API)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 按实际部署路径修改 WorkingDirectory 与 ExecStart 中的路径
+WorkingDirectory=/root/remote_fetcher
+EnvironmentFile=-/etc/feedcore/remote-fetcher.env
+# 必须用 venv 里的 python 绝对路径，不要用 run_fetcher.sh（会跑 pip 后父进程退出）
+ExecStart=/root/remote_fetcher/.venv/bin/python /root/remote_fetcher/run_fetcher.py --host 0.0.0.0 --port 3000 --output-dir /root/remote_fetcher/remote_output
+Restart=on-failure
+RestartSec=5
+# 日志：journalctl -u feedcore-remote-fetcher -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

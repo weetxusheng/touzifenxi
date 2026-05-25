@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+import argparse
 import sys
+from importlib import import_module
 from pathlib import Path
+
+_SOURCES = {
+    "c114": "c114.cli",
+    "infoq": "infoq.cli",
+    "chip": "chip.cli",
+}
 
 
 def bootstrap() -> None:
@@ -18,9 +26,13 @@ def main() -> None:
     from utils.tools.runtime.win_stdio import ensure_utf8_stdio
 
     ensure_utf8_stdio()
-    from c114.cli import main as skill_main
 
-    skill_main()
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--source", choices=list(_SOURCES.keys()), default="c114")
+    args, remainder = parser.parse_known_args()
+    target_module = import_module(_SOURCES[args.source])
+    sys.argv = [sys.argv[0]] + remainder
+    target_module.main()
 
 
 if __name__ == "__main__":

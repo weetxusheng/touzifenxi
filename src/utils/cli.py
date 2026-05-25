@@ -98,6 +98,59 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="与 --report-date 联用：要求 Step6 在上海「今日」不早于 HH:MM 写盘。",
     )
+    chip_runner_parser = subparsers.add_parser(
+        "run-chip-daily-brief",
+        help="以项目内统一 runner 运行 chip 产业新闻当日简报（SEMI + 爱集微），并在成功后发送邮件。",
+    )
+    chip_runner_parser.add_argument(
+        "--date",
+        default=None,
+        help="可选日期，格式 YYYY-MM-DD；不传时使用 Asia/Shanghai 的 T-1 日期。",
+    )
+    chip_runner_parser.add_argument(
+        "--no-email",
+        action="store_true",
+        help="仅跑流水线并生成本地 Step6 markdown，不发送邮件。",
+    )
+    chip_runner_parser.add_argument(
+        "--to",
+        nargs="+",
+        default=["zx944532395@sina.com"],
+        help="邮件收件人列表。",
+    )
+
+    send_chip_latest_parser = subparsers.add_parser(
+        "send-chip-latest-brief-email",
+        help="仅根据 chip Step6 简报渲染并发送邮件，不重新跑流水线。",
+    )
+    send_chip_latest_parser.add_argument(
+        "--to",
+        nargs="+",
+        default=["zx944532395@sina.com"],
+        help="邮件收件人列表。",
+    )
+    send_chip_latest_parser.add_argument(
+        "--report-date",
+        default=None,
+        help="指定统计日 YYYY-MM-DD；只发送该日的 chip_step_6_brief_YYYYMMDD.md。缺省时取 T-1。",
+    )
+    send_chip_latest_parser.add_argument(
+        "--t1-gate",
+        action="store_true",
+        help="按 Asia/Shanghai 的 T-1 统计日选取 Step6，并要求其在「上海」今日不早于 --gate-time 生成。",
+    )
+    send_chip_latest_parser.add_argument(
+        "--gate-time",
+        default="10:00",
+        help="与 --t1-gate 联用：Step6 的 mtime 不得早于上海当日的该时刻（默认 10:00）。",
+    )
+    send_chip_latest_parser.add_argument(
+        "--require-built-not-before",
+        dest="require_built_not_before",
+        default=None,
+        help="与 --report-date 联用：要求 Step6 在上海「今日」不早于 HH:MM 写盘。",
+    )
+
     send_kr36_latest_parser = subparsers.add_parser(
         "send-kr36-latest-brief-email",
         help="Only render and send latest 36Kr brief email from generated Markdown (without rerun).",
@@ -554,6 +607,79 @@ def main() -> None:
                 print(f"{token} 发送失败: {result.error_detail or '发送失败。'}")
                 raise SystemExit(1)
             print(f"Step 6 文件: {result.step6_path}")
+        print(f"邮件发送完成: {', '.join(args.to)}")
+        return
+
+    if args.command == "run-chip-daily-brief":
+        from datetime import date as date_cls
+
+        from chip.pipeline import run_chip_daily_brief, shanghai_yesterday
+
+        report_date = date_cls.fromisoformat(args.date) if args.date else shanghai_yesterday()
+        result = run_chip_daily_brief(
+            project_root=paths.project_root,
+            report_date=report_date,
+            recipients=args.to,
+            send_mail=not args.no_email,
+        )
+        if result.succeeded:
+            print(f"运行目录: {result.run_dir}")
+            print(f"Step 6 文件: {result.step6_path}")
+            if args.no_email:
+                print("已跳过邮件发送（--no-email）。")
+            else:
+                print(f"邮件发送完成: {', '.join(args.to)}")
+            return
+        print(f"失败步骤: {result.failure_step}")
+        print(f"失败原因: {result.failure_reason}")
+        if result.run_dir:
+            print(f"运行目录: {result.run_dir}")
+        raise SystemExit(1)
+
+    if args.command == "send-chip-latest-brief-email":
+        from datetime import date as date_cls
+
+        from c114.pipeline import parse_clock_hh_mm, shanghai_local_today_at
+        from chip.pipeline import send_latest_chip_brief_email, shanghai_yesterday
+
+        require_dt = None
+        if args.t1_gate:
+            if args.report_date:
+                print("--t1-gate 不能与 --report-date 同时使用。", file=sys.stderr)
+                raise SystemExit(2)
+            try:
+                gh, gm = parse_clock_hh_mm(args.gate_time)
+            except ValueError as exc:
+                print(f"--gate-time 无效: {exc}", file=sys.stderr)
+                raise SystemExit(2) from exc
+            require_dt = shanghai_local_today_at(gh, gm)
+            report_date = shanghai_yesterday()
+        elif args.report_date:
+            report_date = date_cls.fromisoformat(args.report_date)
+            if args.require_built_not_before:
+                try:
+                    bh, bm = parse_clock_hh_mm(args.require_built_not_before)
+                except ValueError as exc:
+                    print(f"--require-built-not-before 无效: {exc}", file=sys.stderr)
+                    raise SystemExit(2) from exc
+                require_dt = shanghai_local_today_at(bh, bm)
+        elif args.require_built_not_before:
+            print("--require-built-not-before 需要同时指定 --report-date。", file=sys.stderr)
+            raise SystemExit(2)
+        else:
+            report_date = shanghai_yesterday()
+
+        result = send_latest_chip_brief_email(
+            project_root=paths.project_root,
+            recipients=args.to,
+            report_date=report_date,
+            require_modified_not_before=require_dt,
+            step6_md_path=None,
+        )
+        if not result.succeeded:
+            print(result.error_detail or "发送失败。")
+            raise SystemExit(1)
+        print(f"Step 6 文件: {result.step6_path}")
         print(f"邮件发送完成: {', '.join(args.to)}")
         return
 
