@@ -60,7 +60,40 @@ echo.
 
 :: 生成当日总览页面
 if "!BIZ!"=="" (
-  echo [WARNING] biz_date not specified, skipping overview generation
+  :: 如果未指定 biz_date，尝试从 .env 中的 GZH_DAJIALA_FETCH_MODE 获取日期
+  set "AUTO_BIZ="
+  for /f "usebackq eol=# tokens=1,* delims==" %%A in ("%REPO_ROOT%\.env") do (
+    if /i "%%A"=="GZH_DAJIALA_FETCH_MODE" if not "%%~B"=="" set "FETCH_MODE=%%~B"
+  )
+  
+  if "!FETCH_MODE!"=="today" (
+    for /f "tokens=2 delims==" %%I in ('wmic OS Get localdatetime /value') do set "TODAY=%%I"
+    set "AUTO_BIZ=!TODAY:~0,8!"
+  ) else if "!FETCH_MODE!"=="yesterday" (
+    :: 计算昨天日期（简化版，假设当前为 2026 年）
+    for /f "tokens=2 delims==" %%I in ('wmic OS Get localdatetime /value') do set "NOW=%%I"
+    set "YEAR=!NOW:~0,4!"
+    set "MONTH=!NOW:~4,2!"
+    set "DAY=!NOW:~6,2!"
+    set /a "YESTERDAY_DAY=!DAY! - 1"
+    if !YESTERDAY_DAY! LSS 10 set "YESTERDAY_DAY=0!YESTERDAY_DAY!"
+    set "AUTO_BIZ=!YEAR!!MONTH!!YESTERDAY_DAY!"
+  )
+  
+  if "!AUTO_BIZ!"=="" (
+    echo [WARNING] biz_date not specified and cannot auto-detect from GZH_DAJIALA_FETCH_MODE, skipping overview generation
+  ) else (
+    echo Generating overview page for !AUTO_BIZ! ^(auto-detected from FETCH_MODE=!FETCH_MODE!^)...
+    %PYEXE% %PYVER% -u -m gzh_pipeline.cli.overview ^
+      --biz-date "!AUTO_BIZ!" ^
+      --output-root "%GZH_PARSE_OUTPUT_DIR%" ^
+      --audit-json-root "%GZH_PARSE_AUDIT_DIR%"
+    if errorlevel 1 (
+      echo [WARNING] Overview generation failed with exit code !ERRORLEVEL!
+    ) else (
+      echo Overview page generated successfully.
+    )
+  )
 ) else (
   echo Generating overview page for !BIZ!...
   %PYEXE% %PYVER% -u -m gzh_pipeline.cli.overview ^
