@@ -65,12 +65,18 @@ PYTHONPATH=src ./.venv/bin/python -m touzifenxi.cli send-email \
 
 - `TOUZIFENXI_EMAIL_USERNAME`
   - SMTP 登录用户名；不填时默认等于 `TOUZIFENXI_EMAIL_FROM`
+- `TOUZIFENXI_EMAIL_FROM_NAME`
+  - 发件人显示名称（可选）；例如 `投研简报机器人`
 - `TOUZIFENXI_EMAIL_SMTP_HOST`
   - SMTP 主机
 - `TOUZIFENXI_EMAIL_SMTP_PORT`
   - SMTP 端口
 - `TOUZIFENXI_EMAIL_USE_SSL`
   - 是否使用 SSL，支持 `true/false`
+- `TOUZIFENXI_EMAIL_VERIFY_TLS`
+  - 是否校验 TLS 证书（默认 true）；支持 `true/false`
+- `TOUZIFENXI_EMAIL_INSECURE`
+  - 是否禁用 TLS 证书校验（默认 false）；支持 `true/false`
 - `TOUZIFENXI_EMAIL_TIMEOUT_SECONDS`
   - SMTP 超时秒数
 
@@ -89,7 +95,16 @@ PYTHONPATH=src ./.venv/bin/python -m touzifenxi.cli send-email \
 
 这只是默认推断，不会覆盖你显式配置的主机和端口。
 
-## 5. 与 skill 的关系
+## 5. mail.cjhxfund.com 兼容行为
+
+当 `TOUZIFENXI_EMAIL_SMTP_HOST=mail.cjhxfund.com` 时，默认使用：
+
+- `587`
+- `STARTTLS`
+
+并且可以通过 `TOUZIFENXI_EMAIL_INSECURE=true`（或 `TOUZIFENXI_EMAIL_VERIFY_TLS=false`）来兼容内网/自签证书环境。
+
+## 6. 与 skill 的关系
 
 - 发送渠道属于项目级公共能力，不放在单个 skill 目录里。
 - skill 只负责产出结果文件。
