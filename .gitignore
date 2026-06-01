@@ -8,6 +8,7 @@ __pycache__/
 /.venv/
 dist/
 .env
+.env.*
 .env.local
 *.pyc
 *.pyo
