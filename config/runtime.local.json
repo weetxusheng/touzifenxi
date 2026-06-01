@@ -1,0 +1,161 @@
+{
+  "_comment": "Websearch skill 运行配置。本地 key 放在此文件中，程序会忽略 *_comment 字段。",
+  "keys": {
+    "_comment": "至少配置一个搜索 provider key；aliyun_iqs_api_key 用于正文抽取。",
+    "tavily_api_key": "",
+    "metaso_api_key": "",
+    "baidu_api_key": "",
+    "aliyun_iqs_api_key": "043pywCHpQegnV8ZDEOsQP3uUDWHTbM2OWZjMzA1Mw"
+  },
+  "sources": {
+    "_comment": "站点抓取入口参数。",
+    "infoq": {
+      "_comment": "InfoQ 当前使用首页新列表接口。",
+      "listing": "new_list",
+      "listing_size": 12
+    },
+    "kr36": {
+      "_comment": "36Kr 使用 search/articles 子项抓取；不走 web_news 与资讯子级页面。",
+      "channel_urls": [],
+      "candidate_limit": 120,
+      "info_per_category_limit": 5,
+      "search_listing_enabled": true,
+      "request_interval_min_ms": 20000,
+      "request_interval_max_ms": 40000,
+      "risk_retry_count": 3,
+      "retry_on_risk_enabled": false,
+      "risk_retry_wait_ms": 3000,
+      "http_only_mode": false,
+      "risk_verification_auto_solver": true,
+      "risk_verification_playwright_mode": "agent-browser",
+      "risk_verification_agent_browser_retry": false,
+      "search_listing_playwright_enabled": true,
+      "deferred_retry_attempts": 3,
+      "deferred_retry_min_interval_ms": 90000,
+      "deferred_retry_max_interval_ms": 180000,
+      "deferred_retry_backoff_step_ms": 60000,
+      "deferred_retry_wait_jitter_ms": 8000,
+      "topic_deep_fetch_enabled": true,
+      "topic_focus_limit": 2,
+      "topic_focus_keywords": ["本周有大事", "36氪编辑精选"],
+      "topic_subitem_date_mode": "weekday_split",
+      "topic_item_download_enabled": true,
+      "topic_video_download_enabled": true,
+      "topic_article_download_enabled": true,
+      "topic_download_dir": ".",
+      "volc_speech_api_key": "",
+      "volc_speech_app_key": "3012701136",
+      "volc_speech_access_key": "P9QMfx7VT1NTOb988oHOnMY57qA0Q0hl",
+      "volc_speech_uid": "",
+      "topic_video_curl_max_time_seconds": 600,
+      "topic_extract_audio_enabled": true,
+      "topic_asr_enabled": true,
+      "topic_asr_max_audio_mb": 95,
+      "topic_asr_timeout_seconds": 300,
+      "risk_cooldown_after_block_ms": 180000,
+      "risk_cooldown_jitter_ms": 8000,
+      "deferred_retry_skip_blocked_ratio_percent": 85,
+      "risk_verification_command": "",
+      "risk_incognito_cookie_refresh_enabled": false,
+      "risk_verification_wait_ms": 3000,
+      "browser_fallback_enabled": false
+    }
+  },
+  "execution": {
+    "_comment": "builtin 表示 Python 内置模型自动执行完整链路。",
+    "mode": "builtin"
+  },
+  "llm": {
+    "_comment": "默认使用火山方舟 Responses API（volc-ark）；不启用主备切换、不在步骤间轮询 MiniMax。",
+    "providers": [
+      {
+        "provider": "volc-ark",
+        "model": "ep-20260415114137-55jp7",
+        "api_key": "eb717a84-0a5e-43b9-b433-4812154f1fb1",
+        "base_url": "https://ark.cn-beijing.volces.com/api/v3/responses",
+        "timeout_seconds": 180,
+        "max_retries": 2,
+        "retry_backoff_seconds": 2.0
+      }
+    ],
+    "failover": {
+      "_comment": "单 provider 时保持关闭。",
+      "enabled": false,
+      "consecutive_failures": 3,
+      "reset_scope": "step",
+      "error_scope": "infra_only"
+    },
+    "retry": {
+      "_comment": "请求级重试配置。",
+      "honor_retry_after": true,
+      "jitter_seconds": 0.5,
+      "classifier": {
+        "_comment": "不同错误类别的最大重试次数。",
+        "infra_max_attempts": 3,
+        "parse_max_attempts": 3,
+        "postprocess_max_attempts": 3,
+        "fatal_max_attempts": 2
+      }
+    },
+    "concurrency": {
+      "_comment": "LLM 并发上限。",
+      "default": 2,
+      "providers": {
+        "volc-ark": 2
+      }
+    },
+    "streaming": {
+      "_comment": "volc-ark 使用 Responses 非流式 JSON；长步骤仍走非流式。",
+      "enabled": true,
+      "steps": ["step_5", "step_6", "step_7"]
+    },
+    "step_rate_limits": {
+      "_comment": "按 step 控制请求发起间隔。",
+      "step_5": {
+        "min_interval_seconds": 40
+      }
+    },
+    "step_task_routing": {
+      "_comment": "仅使用 volc-ark，不做多 provider 轮询。",
+      "step_3": {
+        "enabled": true,
+        "providers": ["volc-ark"]
+      },
+      "step_5": {
+        "enabled": true,
+        "providers": ["volc-ark"]
+      }
+    }
+  },
+  "network": {
+    "_comment": "普通网络请求和阿里云 IQS 的超时重试配置。",
+    "request_timeout_seconds": 45,
+    "aliyun_timeout_seconds": 45,
+    "aliyun_max_retries": 2,
+    "aliyun_retry_backoff_seconds": 0.5
+  },
+  "search": {
+    "_comment": "Step 3 搜索补充配置。",
+    "recent_days": 30,
+    "max_external_results": 5
+  },
+  "content": {
+    "_comment": "Step 4/5 正文抓取与正文分析配置。",
+    "fetch_keep_levels": ["strong", "weak"],
+    "analysis_mode": "per_topic",
+    "analysis_batch_retry_attempts": 3
+  },
+  "brief": {
+    "_comment": "Step 6 简报生成角色配置。",
+    "role": "senior_researcher"
+  },
+  "review": {
+    "_comment": "Step 7 简报审查开关。",
+    "enable_step7": false
+  },
+  "paths": {
+    "_comment": "skill 表示写入 skills/websearch/output。",
+    "output_mode": "skill"
+  }
+}
+

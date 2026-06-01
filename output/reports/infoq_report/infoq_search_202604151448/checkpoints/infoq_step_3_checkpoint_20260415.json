@@ -1,0 +1,2239 @@
+{
+  "step": "step_3",
+  "report_date": "2026-04-15",
+  "input_path": "E:\\AI\\touzifenxi\\skills\\websearch\\output\\reports\\infoq_report\\infoq_search_202604151448\\infoq_step_2_search_checklist_20260415.yaml",
+  "output_path": "E:\\AI\\touzifenxi\\skills\\websearch\\output\\reports\\infoq_report\\infoq_search_202604151448\\infoq_step_3_search_results_20260415.yaml",
+  "generated_at": "2026-04-15T14:50:35+08:00",
+  "updated_at": "2026-04-15T14:51:59+08:00",
+  "status_summary": {
+    "total": 48,
+    "pending": 0,
+    "success": 48,
+    "error": 0,
+    "parse_error": 0,
+    "postprocess_error": 0,
+    "aborted": 0
+  },
+  "entries": [
+    {
+      "entry_id": "article::AI Agent与数据质量::硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义",
+        "original_url": "https://www.infoq.cn/article/b613c940c0d9a6422afb1e3a1",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义",
+        "original_url": "https://www.infoq.cn/article/b613c940c0d9a6422afb1e3a1",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "Hermes AI Agent 数据质量",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [],
+        "selected_results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI Agent与数据质量::虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:37+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ",
+        "original_url": "https://www.infoq.cn/article/35c42aa9ff972413e7cddc316",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ",
+        "original_url": "https://www.infoq.cn/article/35c42aa9ff972413e7cddc316",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "虚拟人 Function Calling 再创作",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [],
+        "selected_results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI Agent与数据质量::零基础玩转 OpenClaw | 零代码・免配置・解压即用",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "零基础玩转 OpenClaw | 零代码・免配置・解压即用",
+        "original_url": "https://www.infoq.cn/article/7e33201c087b4bacc0dac7eed",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "零基础玩转 OpenClaw | 零代码・免配置・解压即用",
+        "original_url": "https://www.infoq.cn/article/7e33201c087b4bacc0dac7eed",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "零基础玩转 OpenClaw | 零代码・免配置・解压即用",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "OpenClaw 零代码部署",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [],
+        "selected_results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI辅助编程与开发实践::GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:48+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+        "original_url": "https://www.infoq.cn/article/c409583476628981c4092e2bd",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+        "original_url": "https://www.infoq.cn/article/c409583476628981c4092e2bd",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "GitHub 主理人 宣发",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "GitHub 主理人 宣发",
+                "query_type": "keyword",
+                "result_title": "README.md - xianyu110/awesome-openclaw-tutorial - GitHub",
+                "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+                "domain": "github.com",
+                "published_at": "2026-03-18",
+                "snippet": "两万人AI社区主理人. 项目进度. ✓ v1.6（2026-03-18）：新增一键部署教程（8个平台）; ✓ v1.8（2026-04-13）：同步OpenClaw v2026.4.11 稳定版能力地图，补充记忆",
+                "score": 0.1391274,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [
+                  "GitHub",
+                  "主理人"
+                ],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          }
+        ],
+        "search_results": [
+          {
+            "query": "GitHub 主理人 宣发",
+            "query_type": "keyword",
+            "result_title": "README.md - xianyu110/awesome-openclaw-tutorial - GitHub",
+            "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+            "domain": "github.com",
+            "published_at": "2026-03-18",
+            "snippet": "两万人AI社区主理人. 项目进度. ✓ v1.6（2026-03-18）：新增一键部署教程（8个平台）; ✓ v1.8（2026-04-13）：同步OpenClaw v2026.4.11 稳定版能力地图，补充记忆",
+            "score": 0.1391274,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [
+              "GitHub",
+              "主理人"
+            ],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ],
+        "selected_results": [
+          {
+            "query": "GitHub 主理人 宣发",
+            "query_type": "keyword",
+            "result_title": "README.md - xianyu110/awesome-openclaw-tutorial - GitHub",
+            "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+            "domain": "github.com",
+            "published_at": "2026-03-18",
+            "snippet": "两万人AI社区主理人. 项目进度. ✓ v1.6（2026-03-18）：新增一键部署教程（8个平台）; ✓ v1.8（2026-04-13）：同步OpenClaw v2026.4.11 稳定版能力地图，补充记忆",
+            "score": 0.1391274,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [
+              "GitHub",
+              "主理人"
+            ],
+            "extract_text": "Clawbot项目: 700+ Stars 两万人AI社区主理人 ## 📈 项目进度 []( ✅ v1.6（2026-03-18）：新增一键部署教程（8个平台） ✅ v1.8（2026-04-13）：同步 OpenClaw `v2026.4.11` 稳定版能力地图，补充记忆系统、Task Flow、Webhooks 与官方媒体主路线提示 ✅ v1.9（2026-04-04）：同步橙皮书 v1.3~v1.4 更新——新增微信ClawBot、腾讯全家桶、浏览器渠道、GLM-5-Turbo、安全漏洞统计 🔄 v1.8（进行中）：优化内容质量，补充实战案例 ## 📄 许可证 []( 本项目采用 GPL-3.0 License Image 11: star ### ⚠️ 重要声明：禁止倒卖 []( ❌ 严禁倒卖：禁止将本教程打包后进行商业售卖 ❌ 严禁闭源商用：任何基于本项目的衍生作品必须同样开源 ✅ 允许学习：欢迎个人学习和使用 ✅ 允许分享：欢迎分享给更多需要的人 ✅ 允许修改：可以修改并分享，但必须保持开源 最后更新：2026年4月4日 教程版本：v1.9 总字数：408,000字（15章节 + 15附录） 适用OpenClaw版本：2026.4.11（稳定版） / 2026.4.12-beta.1（预发布参考） 🎉 教程已完成 | 支持续优化 | 完全免费 🎉 🚀 一个人 + OpenClaw = 无限可能 🚀 ⭐ 如果觉得有用，请给个Star支持一下 ⭐ ## Footer []( © 2026 GitHub,Inc. ### Footer navigation [...] ## Breadcrumbs 1. awesome-openclaw-tutorial / # README.md Copy path Blame More file actions Blame More file actions ## Latest commit ## History History · 18.8 KB ## Breadcrumbs 1. awesome-openclaw-tutorial / # README.md Top ## File metadata and controls Preview Code Blame 390 lines (282 loc) · 18.8 KB Raw Copy raw file Download raw file You must be signed in to make or propose changes More edit options Outline Edit and raw actions # 🦞 Awesome OpenClaw Tutorial 3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`) 4. 推送到分支 (`git push origin feature/AmazingFeature`) 5. 提交Pull Request ## 📮 联系方式 : @Nikitka_aktikiN ### 项目链接 []( Clawbot项目: 700+ Stars 两万人AI社区主理人 ## 📈 项目进度 []( [...] # awesome-openclaw-tutorial/README.md at main · xianyu110/awesome-openclaw-tutorial · GitHub Skip to content ## Navigation Menu Toggle navigation forward slash/",
+            "extract_status": "success",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI辅助编程与开发实践::一文带你看懂，火爆全网的Harness Engineering到底是个啥。",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:40+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "一文带你看懂，火爆全网的Harness Engineering到底是个啥。",
+        "original_url": "https://www.infoq.cn/article/641bc4412b508ed15c128b2ca",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "一文带你看懂，火爆全网的Harness Engineering到底是个啥。",
+        "original_url": "https://www.infoq.cn/article/641bc4412b508ed15c128b2ca",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "一文带你看懂，火爆全网的Harness Engineering到底是个啥。",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "Harness Engineering 解释",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [],
+        "selected_results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::AI辅助编程与开发实践::别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:40+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清",
+        "original_url": "https://www.infoq.cn/article/28d350e40237164be89704f22",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清",
+        "original_url": "https://www.infoq.cn/article/28d350e40237164be89704f22",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "AI 编程模式 Vibe Coding",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [],
+        "selected_results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::Go语言技术实践::Go语言中的Pool：对象复用的艺术",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:39+08:00",
+      "request_context": {
+        "topic": "Go语言技术实践",
+        "channel": "首页",
+        "original_title": "Go语言中的Pool：对象复用的艺术",
+        "original_url": "https://www.infoq.cn/article/bf1edd99a743a75f8fe427238",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "Go语言技术实践",
+        "channel": "首页",
+        "original_title": "Go语言中的Pool：对象复用的艺术",
+        "original_url": "https://www.infoq.cn/article/bf1edd99a743a75f8fe427238",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "Go语言中的Pool：对象复用的艺术",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "Go Pool 对象复用",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [],
+        "selected_results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::To B企业增长与营销策略::To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:39+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型",
+        "original_url": "https://www.infoq.cn/article/804df8efe7e196a35af320248",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型",
+        "original_url": "https://www.infoq.cn/article/804df8efe7e196a35af320248",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "To B技术创业 增长飞轮模型",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [],
+        "selected_results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::To B企业增长与营销策略::信创国产化浪潮下的企业IM即时通讯如何选择？",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:39+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+        "original_url": "https://www.infoq.cn/article/8aff0c089410a63641cda5e0a",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+        "original_url": "https://www.infoq.cn/article/8aff0c089410a63641cda5e0a",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+                "query_type": "title",
+                "result_title": "私有化信创聊天工具选型对比：2026年五大主流方案深度评测 - 喧喧",
+                "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+                "domain": "www.xuanim.com",
+                "published_at": "2026-04-13",
+                "snippet": "# 私有化信创聊天工具选型对比：2026年五大主流方案深度评测. 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马. ### 本篇目录. * 3.1 华为云空间/WeLink（私有化版）. * 3.2 钉钉/飞书（私有部署版）. * 3.5 网易云信（私有化PaaS/组件化方案）. * 4.3 核心亮点从“零配置”到“全适配”. * 5.1 警惕“全家桶”陷阱. * 5.2 关注“接口开放度”而非“功能列表”. * 5.3 验证“真信创”适配. ### 2.1 国产化兼容性（信创生态适配）. ### 2.2 全链路安全加密能力. ### 2.3 技术架构与性能表现. 优秀的架构需要在开发效率与运行性能之间找到完美平衡。纯原生开发成本极高且迭代缓慢，而粗糙的网页套壳则会导致严重的内存泄漏。混合开发模式是目前兼顾两者优势的主流选择。此外，服务端架构必须具备支撑万人级群",
+                "score": 0.7742597,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          },
+          {
+            "query": "信创国产化 企业IM即时通讯",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [
+          {
+            "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+            "query_type": "title",
+            "result_title": "私有化信创聊天工具选型对比：2026年五大主流方案深度评测 - 喧喧",
+            "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+            "domain": "www.xuanim.com",
+            "published_at": "2026-04-13",
+            "snippet": "# 私有化信创聊天工具选型对比：2026年五大主流方案深度评测. 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马. ### 本篇目录. * 3.1 华为云空间/WeLink（私有化版）. * 3.2 钉钉/飞书（私有部署版）. * 3.5 网易云信（私有化PaaS/组件化方案）. * 4.3 核心亮点从“零配置”到“全适配”. * 5.1 警惕“全家桶”陷阱. * 5.2 关注“接口开放度”而非“功能列表”. * 5.3 验证“真信创”适配. ### 2.1 国产化兼容性（信创生态适配）. ### 2.2 全链路安全加密能力. ### 2.3 技术架构与性能表现. 优秀的架构需要在开发效率与运行性能之间找到完美平衡。纯原生开发成本极高且迭代缓慢，而粗糙的网页套壳则会导致严重的内存泄漏。混合开发模式是目前兼顾两者优势的主流选择。此外，服务端架构必须具备支撑万人级群",
+            "score": 0.7742597,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ],
+        "selected_results": [
+          {
+            "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+            "query_type": "title",
+            "result_title": "私有化信创聊天工具选型对比：2026年五大主流方案深度评测 - 喧喧",
+            "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+            "domain": "www.xuanim.com",
+            "published_at": "2026-04-13",
+            "snippet": "# 私有化信创聊天工具选型对比：2026年五大主流方案深度评测. 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马. ### 本篇目录. * 3.1 华为云空间/WeLink（私有化版）. * 3.2 钉钉/飞书（私有部署版）. * 3.5 网易云信（私有化PaaS/组件化方案）. * 4.3 核心亮点从“零配置”到“全适配”. * 5.1 警惕“全家桶”陷阱. * 5.2 关注“接口开放度”而非“功能列表”. * 5.3 验证“真信创”适配. ### 2.1 国产化兼容性（信创生态适配）. ### 2.2 全链路安全加密能力. ### 2.3 技术架构与性能表现. 优秀的架构需要在开发效率与运行性能之间找到完美平衡。纯原生开发成本极高且迭代缓慢，而粗糙的网页套壳则会导致严重的内存泄漏。混合开发模式是目前兼顾两者优势的主流选择。此外，服务端架构必须具备支撑万人级群",
+            "score": 0.7742597,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "禅道软件（青岛）集团有限公司 当前位置： 首页 博客 IM即时通讯 私有化信创聊天工具选型对比：2026年五大主流方案深度评测 # 私有化信创聊天工具选型对比：2026年五大主流方案深度评测 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马 私有化信创聊天工具选型对比：2026年五大主流方案深度评测 ### 本篇目录 1. 2026年信创国产化进入“深水区” 2. 五大核心评测维度建立IM选型的“度量衡” 2.1 国产化兼容性（信创生态适配） 2.2 全链路安全加密能力 2.3 技术架构与性能表现 2.4 系统集成柔性与扩展性 2.5 移动办公与多端体验 3. 2026年五大主流私有化IM方案横向对比 3.1 华为云空间/WeLink（私有化版） 3.2 钉钉/飞书（私有部署版） 3.3 喧喧IM（轻量级信创先导方案） 3.4 蓝信/安信 3.5 网易云信（私有化PaaS/组件化方案） 4. 重点方案深度评测喧喧IM——高性价比信创利器 4.1 品牌背景与信创资质 4.2 技术栈解析高性能混合开发模式 4.3 核心亮点从“零配置”到“全适配” 4.4 扩展能力打造企业信息中转站 5. 2026年选型“避坑指南”IT负责人的决策参考 5.1 警惕“全家桶”陷阱 5.2 关注“接口开放度”而非“功能列表” 5.3 验证“真信创”适配 5.4 运维成本预测 6. 适用场景建议与总结 7. 常见问题模块（FAQ） ## 1. 2026年信创国产化进入“深水区” ## 2. 五大核心评测维度：建立IM选型的“度量衡” ### 2.1 国产化兼容性（信创生态适配） ### 2.2 全链路安全加密能力 ### 2.3 技术架构与性能表现 [...] ### 5.1 警惕“全家桶”陷阱 许多企业在招标时倾向于选择功能大而全的巨无霸系统，却忽略了这些系统往往伴随着极高的硬件算力要求。盲目追求大而全会导致系统严重冗余，最终迫使企业在服务器硬件上的投入远超初期预算，造成资源极大浪费。 ### 5.2 关注“接口开放度”而非“功能列表” 真正决定一款IM工具长期价值的，不是它自带了多少个花哨的小程序，而是它能否通过轻量化接口低成本集成企业现有的核心业务系统。一个具备高开放度的底层通讯底座，比自带万种功能的封闭系统更具战略意义。 ### 5.3 验证“真信创”适配 在考察信创兼容性时，绝不能仅凭厂商的一纸证书。必须要求厂商在企业真实的国产软硬件测试环境中进行安装部署演练。警惕那些通过低效兼容层强行运行的方案，这类方案在实际高并发场景下往往会暴露出严重的性能损耗与崩溃问题。 ### 5.4 运维成本预测 私有化部署意味着企业需要自行承担系统的长期运行压力。在选型初期，就必须将系统升级维护的难易程度纳入考量，优先选择底层逻辑清晰、具有专业且响应迅速的技术服务团队支撑的国产软件，避免后期陷入无人维护的“孤岛”困境。 ## 6. 适用场景建议与总结 经过全方位的拆解，我们可以清晰地看到不同方案的适用边界。对于预算极其充裕、IT基础设施高度统一的大型超大规模集团，选择架构沉重但功能全覆盖的头部大商方案是稳妥之举。 而对于政务、军工、金融等对数据安全极度敏感的机构，优先考虑具备纯净信创基因、高安全防护矩阵的私有部署方案才是长久之计。对于注重效能的研发型企业及中大型单位，我们强烈推荐喧喧IM，利用其轻量化的部署体验、极高的系统扩展性以及对研发流程的友好支持，企业能够以最优的性价比实现内部效能的全面升级。 ## 7. 常见问题模块（FAQ） [...] ### 4.2 技术栈解析：高性能混合开发模式 在技术架构上，喧喧IM给出了教科书级别的示范。其客户端采用了Electron结合React的技术栈，这种高性能混合开发模式既保证了跨平台多端发布的极速效率，又实现了无限接近原生应用的流畅运行体验。在核心的消息中转处理上，采用了基于Go语言编写的XXD服务，极大地提升了万人级并发场景下的即时通信稳定性。而后端服务则基于成熟的PHP结合MySQL架构，逻辑清晰，大幅降低了企业的后期维护成本。 ### 4.3 核心亮点：从“零配置”到“全适配” 产品核心功能界面组合展示图 喧喧IM最大的工程亮点在于将复杂的私有化部署做到了极简。通过一键部署包，IT人员解压即用，一分钟内即可完成内网私有化环境的搭建。在信创适配方面，它不仅是支持麒麟系统的聊天软件，更是完美运行在UOS系统及鲲鹏、飞腾等国产芯片之上，无需任何折中妥协。在安全防护矩阵上，它构建了包含全链路通讯加密、严格的IP登录限制以及服务端文件二次加密存储的立体防线。 ### 4.4 扩展能力：打造企业信息中转站 组织架构通讯录功能界面截图 封闭的系统是没有生命力的。喧喧IM内置了强大的应用中心，支持通过Webhook接入各类第三方服务，并全面支持SSO单点登录。最值得一提的是它与禅道项目管理系统的天然深度集成。当研发流程中出现Bug指派或任务状态变更时，系统会自动向相关讨论组或个人推送实时通知，真正实现了将IM打造为企业业务流转的信息中转站。 ## 5. 2026年选型“避坑指南”：IT负责人的决策参考 根据我们为数百家企业规划IT架构的经验，在进行2026企业IM选型时，IT负责人极易陷入以下几个误区。 ### 5.1 警惕“全家桶”陷阱",
+            "extract_status": "success",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::To B企业增长与营销策略::我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流",
+        "original_url": "https://www.infoq.cn/article/a3808f8a5660d311b61f55c25",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流",
+        "original_url": "https://www.infoq.cn/article/a3808f8a5660d311b61f55c25",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "SEO内容农场 躺着收流量",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [],
+        "selected_results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::出海与海外市场数字化::什么是网红营销平台？品牌该如何选择？",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:39+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "什么是网红营销平台？品牌该如何选择？",
+        "original_url": "https://www.infoq.cn/article/a2e6fcd66d1b4fc49879f6b38",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "什么是网红营销平台？品牌该如何选择？",
+        "original_url": "https://www.infoq.cn/article/a2e6fcd66d1b4fc49879f6b38",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "什么是网红营销平台？品牌该如何选择？",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "网红营销平台 品牌选择",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "网红营销平台 品牌选择",
+                "query_type": "keyword",
+                "result_title": "2026软文营销平台，五大主流平台推荐，照着选不出错_腾讯新闻",
+                "url": "https://news.qq.com/rain/a/20260409A03UKE00",
+                "domain": "news.qq.com",
+                "published_at": "2026-04-09",
+                "snippet": "# 2026软文营销平台，五大主流平台推荐，照着选不出错. 2026-04-09 11:19发布于河南. 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。. 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。. 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。. 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。. 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务. 核心优势：侧重高品质内容与头部媒体匹配，主",
+                "score": 0.24182089,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          }
+        ],
+        "search_results": [
+          {
+            "query": "网红营销平台 品牌选择",
+            "query_type": "keyword",
+            "result_title": "2026软文营销平台，五大主流平台推荐，照着选不出错_腾讯新闻",
+            "url": "https://news.qq.com/rain/a/20260409A03UKE00",
+            "domain": "news.qq.com",
+            "published_at": "2026-04-09",
+            "snippet": "# 2026软文营销平台，五大主流平台推荐，照着选不出错. 2026-04-09 11:19发布于河南. 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。. 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。. 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。. 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。. 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务. 核心优势：侧重高品质内容与头部媒体匹配，主",
+            "score": 0.24182089,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ],
+        "selected_results": [
+          {
+            "query": "网红营销平台 品牌选择",
+            "query_type": "keyword",
+            "result_title": "2026软文营销平台，五大主流平台推荐，照着选不出错_腾讯新闻",
+            "url": "https://news.qq.com/rain/a/20260409A03UKE00",
+            "domain": "news.qq.com",
+            "published_at": "2026-04-09",
+            "snippet": "# 2026软文营销平台，五大主流平台推荐，照着选不出错. 2026-04-09 11:19发布于河南. 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。. 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。. 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。. 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。. 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务. 核心优势：侧重高品质内容与头部媒体匹配，主",
+            "score": 0.24182089,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "# 2026软文营销平台，五大主流平台推荐，照着选不出错 ![头像](http://inews.gtimg.com/newsapp_ls/0/13333203306_200200/0) 河南手机报 2026-04-09 11:19发布于河南 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。 **一、2026五大软文营销平台推荐** **1. 媒介盒子** 核心优势： 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。 ![图片](https://inews.gtimg.com/om_bt/Osw-dpbEABz_JWIyAVQ_xacoCsvWNgfoEaS9M9SselhCAAA/641) ![图片](https://inews.gtimg.com/om_bt/Osw-dpbEABz_JWIyAVQ_xacoCsvWNgfoEaS9M9SselhCAAA/641) 适合企业：中大型企业，追求多渠道覆盖和品牌声量集中引爆。 服务特色：提供内容策划、媒体组合策略、效果追踪等全链路服务。 **2. 媒体批发网** 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。 适合企业：预算有限，但需要覆盖一定媒体数量的成长型企业。 服务特色：套餐灵活，支持自定义媒体包，性价比突出。 **3. 媒体特价网** 核心优势：主打限时特价和团购模式，常推出主流媒体优惠资源，适合抢高性价比曝光机会。 适合企业：对价格敏感，且能灵活调整投放节奏的企业。 服务特色：每日更新特价媒体列表，便于快速捡漏。 **4. 投媒网** 核心优势： 一手资源，八年广告经验整合优质资源。 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务 短视频推广资源，短视频全渠道覆盖，超多网红达人、素人博主助力品牌效益提升！ 适合企业：注重ROI和数据分析，希望优化投放策略的成熟品牌。 服务特色：AI智能推荐媒体，并提供传播效果报告。 **5. 优媒汇** 核心优势：侧重高品质内容与头部媒体匹配，主打深度内容合作（如专访、专题策划等）。 适合企业：注重品牌调性、需与权威媒体建立长期关系的高端品牌。 服务特色：定制化内容生产、主编级内容审核、深度资源对接。 ![图片](https://inews.gtimg.com/om_bt/OQmS7n8umwGzcjRJCmYoZbbsifIzM9-mJhksTkvHjULsYAA/641) ![图片](https://inews.gtimg.com/om_bt/OQmS7n8umwGzcjRJCmYoZbbsifIzM9-mJhksTkvHjULsYAA/641) **二、企业做软文营销常见问题（FAQ）** **1. 如何选择适合自己企业的平台？** 明确营销目标：品牌曝光、引流获客、口碑维护还是SEO优化？ 评估预算：高性价比选媒体批发网/媒体特价网；重品质选优媒汇；全链路服务选媒介盒子。 测试验证：可先小规模测试不同平台的资源质量、响应速度和服务水平。 **2. 软文投放效果如何衡量？** 基础指标：阅读量、转载量、关键词搜索排名提升。 互动指标：评论、点赞、收藏及引流页面的点击率、转化率。 品牌指标：媒体权威度、舆情正向比例、品牌词提及增长。 **3. 如何保证软文内容质量？** 避免硬广：注重用户价值，以知识分享、场景故事等形式传递信息。 专业策划：可借助平台提供的内容团队或第三方内容服务。 符合调性：内容风格与投放媒体受众偏好保持一致。 **4. 中小企业预算有限，怎样高效投放？** 聚焦垂直媒体：选择行业精准媒体，而非盲目追求门户覆盖。 利用套餐/团购：关注媒体批发网、媒体特价网的优惠套餐。 内容复用：一篇优质内容可适配不同媒体形式。 ![图片](https://inews.gtimg.com/om_bt/OlCILMOLKcexPOY0zLDuPh3J61cDh5qOxcuQO97GTtI-cAA/641) ![图片](https://inews.gtimg.com/om_bt/OlCILMOLKcexPOY0zLDuPh3J61cDh5qOxcuQO97GTtI-cAA/641) **5. 如何避免“踩坑”？** 审核资源真实性：查验媒体资质、过往案例，避免虚假资源。 明确合同条款：确认价格、发布时间、修改次数、退款条件等细节。 持续追踪效果：使用短链追踪、客服暗访等方式验证发布效果。 2026软文营销趋势提示：软文正从“广撒网”转向“精准渗透”，内容深度、媒体匹配度、数据驱动将成为核心竞争力。选对平台，并配以清晰策略与优质内容，才能让每一分预算都掷地有声。 选择合适的平台，只是成功的第一步。持续优化内容策略，结合数据反馈灵活调整，才能让软文营销真正成为品牌增长的助推器。",
+            "extract_status": "success",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "article::出海与海外市场数字化::海外舆情态势感知框架",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "search_article",
+      "last_updated_at": "2026-04-15T14:50:57+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "海外舆情态势感知框架",
+        "original_url": "https://www.infoq.cn/article/f87c4e0f050bf997f13bccc58",
+        "original_published_at": "2026-04-15"
+      },
+      "result": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "海外舆情态势感知框架",
+        "original_url": "https://www.infoq.cn/article/f87c4e0f050bf997f13bccc58",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "海外舆情态势感知框架",
+                "query_type": "title",
+                "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+                "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+                "domain": "www.sznews.com",
+                "published_at": "2026-04-08",
+                "snippet": "例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。",
+                "score": 0.16531023,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              },
+              {
+                "query": "海外舆情态势感知框架",
+                "query_type": "title",
+                "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+                "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+                "domain": "www.ciweek.com",
+                "published_at": "2026-04-08",
+                "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+                "score": 0.11876296,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          },
+          {
+            "query": "海外舆情 态势感知框架",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "海外舆情 态势感知框架",
+                "query_type": "keyword",
+                "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+                "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+                "domain": "www.ciweek.com",
+                "published_at": "2026-04-08",
+                "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+                "score": 0.10754074,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              },
+              {
+                "query": "海外舆情 态势感知框架",
+                "query_type": "keyword",
+                "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+                "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+                "domain": "www.sznews.com",
+                "published_at": "2026-04-08",
+                "snippet": "运用算法推荐技术建立全球用户动态画像，针对不同区域受众的文化偏好实现内容精准分发，有效提升传播的到达率与接受度。引导海外用户通过互动技术参与文化意义的再创造，推动",
+                "score": 0.052819017,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          }
+        ],
+        "search_results": [
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+            "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+            "domain": "www.sznews.com",
+            "published_at": "2026-04-08",
+            "snippet": "例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。",
+            "score": 0.16531023,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          },
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+            "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+            "domain": "www.ciweek.com",
+            "published_at": "2026-04-08",
+            "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+            "score": 0.11876296,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ],
+        "selected_results": [
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+            "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+            "domain": "www.sznews.com",
+            "published_at": "2026-04-08",
+            "snippet": "例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。",
+            "score": 0.16531023,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "创新叙事激活情感共鸣。提升国际传播效能，不仅取决于文化内容自身的感召力，更有赖于传播方式与话语表达同受众心理的精准契合，让人们在共通的情感中产生和加深认同。要坚持将用户思维融入乡村文化创新全流程，深入研究不同国家和地区受众的文化心理，根据不同文化偏好进行叙事调适。系统构建涵盖多元文化形态的叙事资源库，健全叙事效果的跟踪反馈机制，通过海外受众的互动行为数据优化叙事策略。深入探索不同类型乡村文化的叙事转换规律，多采用微观叙事呈现真实的乡村风貌与村民生活，将中国乡村的文化基因、生活方式等转化为易于海外用户理解和接受的话语体系，向世界展现产业兴旺、生态宜居、乡风文明、治理有效、生活富裕的中国乡村图景。从人类共通的情感体验和情感需求出发，提炼乡村文化中的共同价值和文化内涵，以情感为桥梁打破文化隔阂，推动跨文化传播有效落地，形成兼具文化辨识度与跨文化共情力的优质内容。例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。 [...] 技术赋能提升传播效能。数字技术打破了乡村文化传播的地理局限，将具有地域特色的民俗技艺、风土人情等转化为具有全球性特征的视觉符号，推动乡村文化进入国际传播场域。强化技术赋能有助于提升乡村文化国际传播能力建设水平，优化产品形态和用户体验。要大力加强数字文化资源建设，推动乡村文化资源的数字化转化与标准化建设，建立多语种、跨媒介的文化内容数据库，为国际传播提供持续、稳定、可调用的内容资源支撑。积极拓展前沿数字技术在乡村文化国际传播中的应用场景，通过短视频、虚拟现实、增强现实等技术打造虚实融合的文化体验空间，进一步拓展受众的感知维度。例如，“一部手机游云南”平台依托全景和慢直播技术，将元阳哈尼梯田景色推送到用户手机端，实现文化遗产的可视化传播，让海外用户突破物理空间限制，获得沉浸式文化体验。可加快构建自主可控的传播平台矩阵，深化与海外主流平台的内容合作与渠道共建，增强议题设置能力和话语主动权。运用算法推荐技术建立全球用户动态画像，针对不同区域受众的文化偏好实现内容精准分发，有效提升传播的到达率与接受度。引导海外用户通过互动技术参与文化意义的再创造，推动乡村文化国际传播从单向传递走向价值共创，在双向互动中深化情感认同，实现乡村文化从“可见可感”向“可信可亲”的跨越。 [...] 培育人才夯实发展根基。习近平总书记指出：“培育挖掘乡土文化人才”。传播队伍的规模、结构及能力直接决定传播效能的提升空间。要着力构建乡村文化国际传播的立体化格局，推动媒体、文艺志愿者、村民等更多群体成为乡村文化国际传播的参与者、贡献者。例如，北京昌平下苑村聚集众多艺术家，形成“艺术+民俗”的文化生态，吸引许多海外游客到访并通过自媒体平台展现中国乡村的艺术活力。又如，云南省保山市施甸县乡村视频博主“滇西小哥”以美食为切入点展现村民日常生活和乡村风物，在海外社交平台圈粉众多。要加强乡村本土文化国际传播人才培养，持续拓宽人才选拔视野，注重发掘、培育乡村非遗传承人、“新农人”、乡村自媒体博主等新兴乡村文化传播力量，丰富人才储备。加大数字传播技能培训力度，帮助基层文化人才掌握全媒体内容生产与运营能力，适应数字时代的传播需求。加快建立跨领域人才协作网络，推动国际传播与文化研究、数字技术等领域的专业力量深度合作，大力培养复合型人才。充分尊重和激发村民的文化主体意识，提升村民参与国际传播的主动性，让村民从被讲述者转变为讲述者，在传播实践中增强文化认同和文化自信，最终实现从“人才支撑”向“主体自觉”的深层转变。 （作者为对外经济贸易大学北京对外开放研究院研究员） 编辑：单铭捷 手机扫一扫打开当前页面 Image 16 深圳新闻网传媒股份有限公司版权所有，未经书面授权禁止使用 深圳市福田区莲花街道景华社区商报路2号新媒体大厦21层-22层 COPYRIGHT © BY WWW.SZNEWS.COM ALL RIGHTS RESERVED",
+            "extract_status": "success",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          },
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+            "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+            "domain": "www.ciweek.com",
+            "published_at": "2026-04-08",
+            "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+            "score": 0.11876296,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "（文/因赛） 医疗器械 江苏医疗器械科技产业园（Medpark）获2024年度高端医疗器械基地创新发展奖 Medpark坚持数字引领、创新驱动、集群发展，做强产业竞争力、做足特色亮点，打响国内医疗器械产业第一品牌（Medpark），打造千亿级医疗器械产业基地。依托“载体开发建设+园区运营+产业投资”三大核心能力，现已成为长三角地区医疗器械及生物医药产业重要集聚地。 （文/光库） 数据中心 数讯信息高功率水冷机柜定制解决方案获2024数据中心创新应用奖 该方案注重机房的安全性和稳定性，明确了机房区域要求，并提供了高电量机柜支持以及水冷解决方案，使得单机柜额定功率达到50kVA，确保高效稳定的运行环境。为包括金融、证券、保险、芯片等行业提供AI和大数据、大模型应用等提供高性能CPU、GPU的完全自主可控的解决方案。 （文/魔方） 人工智能 蜜巢政务大模型获2024大模型应用场景创新落地奖 蜜巢为蜜度自主研发的政务大模型，具备“自主安全双引擎 ，应用丰富落地强”的特点，基于自主积累的海量高质量中文语料数据，从源头强化价值观对齐能力与中文理解能力，并融合书生·浦语大模型，通过构建“双引擎”协同机制，聚焦智能知识管理、文稿智能写作、智能舆情分析三大垂直应用方向，赋能各类应用场景的深度开发与高效落地实施，为千行百业的客户提供优质高效、低成本、低门槛的大模型服务。目前，蜜巢已成功在多个政府、企业实现商业化落地，为1万+客户提供SaaS服务。 （文/云岸） 数字化人力资源管理平台 致远薪事力获2024 信创应用创新奖 致远薪事力人力云是推动信创产品从“可用”到“好用”的实质性进展，其支持全信创版本，实现操作系统、数据库、中间件的全国产基础软件主流品牌支持，兼容性强、确保符合行业规范。在数据安全层面，采用了多重安全措施，包括数据库安全、数据权限、文件安全等。 [...] （文/向天） 智算中心 九章云极DataCanvas获2024智算服务匠心奖 DATACANVAS AIDC OS智算操作系统作为智算中心的“中枢神经”，以告别“祼金属”、为 AI而生、全局加速优化、异构算力纳管与调度和1度算力的五大价值为基核，突破异构算力适配、异构算力调度等关键技术，有效管理、调度各种算力资源，提供一体化、开放化、标准化的AI模型服务，落地各类智算应用。面对当前算力流通和公平结算缺少统一的行业标准，九章云极DataCanvas从用户视角出发，首次提出了统一的算力服务计量单位“度”（DCU），并用其实现标准化的算力计量计费，旨在为用户实现“买到即用到”的算力服务，为未来算力资源互联互通打下良性商业基础。 （文/Still） AIGC、人工智能 灵感岛获2024 AIGC智能营销奖 灵感岛是AI内容创作与智能营销平台。对内容创作者来说，将红人大数据加入知识增强大语言模型的训练，通过对行业知识图谱的构建，自动调优生成高效、准确、优质的文本内容，打通AI前沿技术赋能红人新经济领域生产实践的最后一公里；对品牌来说，协助客户在短期内实现社媒平台运营的降本增效，拥有30类营销应用场景及多种内容类型，能够满足多方面客户的需求，具备分钟级内容生成、快速的响应能力。从内容正确性、准确性批量内容一键审核优化，缩减人力成本投入。 （文/楚风） 云通信 途鸽全球云通信物联网（AIoT）平台获2024智能制造出海突出贡献奖 [...] （文/问天） 工业软件 依柯力inkelink获2024新能源汽车数字化应用创新奖 在大力发展新质生产力的当下，依柯力自身不断融合新技术、新应用、新模式，为新能源汽车领域的数字化建设提供新示范。目前，依柯力已累计成功落地项目800+，业务范围覆盖注塑、冲压、焊装、压铸、机加、涂装、总装、电芯、电池模组、电池PACK等全流程工艺，实现新能源汽车生产全产业链覆盖。此外，于2023年联合华为发布基于华为云工业数字模型引擎iDME构建的“新一代新能源汽车MOM解决方案”，共同打造新能源汽车工业软件新范式！ （文/追月） 产业园区开发、运营 龙华高新园产业运营服务体系获2024年度产业运营优秀案例 高新园公司打造了“1+1+4”的产业运营服务体系实现了园区可持续发展的创新引领，以助力政府服务企业为1个核心，以企业管家体系为1个体系，以基础服务、政策服务、第三方服务、创投服务为四平台，开启了一场高质量、高品质发展的产业示范生产力革命。 （文/拾二） 旅游零售行业 亿点免税微信小程序获2024年度旅游零售行业精准营销平台 在全球旅游零售行业面临多种挑战的当下，中国市场日渐成为全球瞩目的焦点，如何赢得中国消费者的青睐，成为各国旅游零售企业的基本共识。亿点免税携中国出境旅客当中的高消费购物客群，拥有高净值与高消费的双重标签，为全球旅游零售行业赢得中国消费者提供了解决之道。 （文/鹏大） 行业 Marketingforce迈富时获2024 信创应用创新奖 迈富时率先构建了一个垂直一体化的AI整合技术架构，以及“营销云、销售云、商业云、分析云、智能云、组织云”六朵云体系，以Tforce大模型为底座赋能Marketingforce平台提供更智能化、更强增长能力的服务，赋予各行业先进的新质生产力，支持信创产业的跨越式发展。 （文/因赛） 医疗器械",
+            "extract_status": "success",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI Agent与数据质量::硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义::keyword::Hermes AI Agent 数据质量",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义",
+        "original_url": "https://www.infoq.cn/article/b613c940c0d9a6422afb1e3a1",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "Hermes AI Agent 数据质量"
+      },
+      "result": {
+        "query": "Hermes AI Agent 数据质量",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI Agent与数据质量::硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义::title::硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:37+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义",
+        "original_url": "https://www.infoq.cn/article/b613c940c0d9a6422afb1e3a1",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义"
+      },
+      "result": {
+        "query": "硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI Agent与数据质量::虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ::keyword::虚拟人 Function Calling 再创作",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:37+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ",
+        "original_url": "https://www.infoq.cn/article/35c42aa9ff972413e7cddc316",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "虚拟人 Function Calling 再创作"
+      },
+      "result": {
+        "query": "虚拟人 Function Calling 再创作",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI Agent与数据质量::虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ::title::虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:37+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ",
+        "original_url": "https://www.infoq.cn/article/35c42aa9ff972413e7cddc316",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ"
+      },
+      "result": {
+        "query": "虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI Agent与数据质量::零基础玩转 OpenClaw | 零代码・免配置・解压即用::keyword::OpenClaw 零代码部署",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "零基础玩转 OpenClaw | 零代码・免配置・解压即用",
+        "original_url": "https://www.infoq.cn/article/7e33201c087b4bacc0dac7eed",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "OpenClaw 零代码部署"
+      },
+      "result": {
+        "query": "OpenClaw 零代码部署",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI Agent与数据质量::零基础玩转 OpenClaw | 零代码・免配置・解压即用::title::零基础玩转 OpenClaw | 零代码・免配置・解压即用",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:37+08:00",
+      "request_context": {
+        "topic": "AI Agent与数据质量",
+        "channel": "首页",
+        "original_title": "零基础玩转 OpenClaw | 零代码・免配置・解压即用",
+        "original_url": "https://www.infoq.cn/article/7e33201c087b4bacc0dac7eed",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "零基础玩转 OpenClaw | 零代码・免配置・解压即用"
+      },
+      "result": {
+        "query": "零基础玩转 OpenClaw | 零代码・免配置・解压即用",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI辅助编程与开发实践::GitHub会成为主理人们的宣发地，但你学的慢也没关系::keyword::GitHub 主理人 宣发",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:40+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+        "original_url": "https://www.infoq.cn/article/c409583476628981c4092e2bd",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "GitHub 主理人 宣发"
+      },
+      "result": {
+        "query": "GitHub 主理人 宣发",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": [
+          {
+            "query": "GitHub 主理人 宣发",
+            "query_type": "keyword",
+            "result_title": "README.md - xianyu110/awesome-openclaw-tutorial - GitHub",
+            "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+            "domain": "github.com",
+            "published_at": "2026-03-18",
+            "snippet": "两万人AI社区主理人. 项目进度. ✓ v1.6（2026-03-18）：新增一键部署教程（8个平台）; ✓ v1.8（2026-04-13）：同步OpenClaw v2026.4.11 稳定版能力地图，补充记忆",
+            "score": 0.1391274,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [
+              "GitHub",
+              "主理人"
+            ],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI辅助编程与开发实践::GitHub会成为主理人们的宣发地，但你学的慢也没关系::title::GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:40+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+        "original_url": "https://www.infoq.cn/article/c409583476628981c4092e2bd",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "GitHub会成为主理人们的宣发地，但你学的慢也没关系"
+      },
+      "result": {
+        "query": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI辅助编程与开发实践::一文带你看懂，火爆全网的Harness Engineering到底是个啥。::keyword::Harness Engineering 解释",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:40+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "一文带你看懂，火爆全网的Harness Engineering到底是个啥。",
+        "original_url": "https://www.infoq.cn/article/641bc4412b508ed15c128b2ca",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "Harness Engineering 解释"
+      },
+      "result": {
+        "query": "Harness Engineering 解释",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI辅助编程与开发实践::一文带你看懂，火爆全网的Harness Engineering到底是个啥。::title::一文带你看懂，火爆全网的Harness Engineering到底是个啥。",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:40+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "一文带你看懂，火爆全网的Harness Engineering到底是个啥。",
+        "original_url": "https://www.infoq.cn/article/641bc4412b508ed15c128b2ca",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "一文带你看懂，火爆全网的Harness Engineering到底是个啥。"
+      },
+      "result": {
+        "query": "一文带你看懂，火爆全网的Harness Engineering到底是个啥。",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI辅助编程与开发实践::别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清::keyword::AI 编程模式 Vibe Coding",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:40+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清",
+        "original_url": "https://www.infoq.cn/article/28d350e40237164be89704f22",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "AI 编程模式 Vibe Coding"
+      },
+      "result": {
+        "query": "AI 编程模式 Vibe Coding",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::AI辅助编程与开发实践::别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清::title::别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:40+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清",
+        "original_url": "https://www.infoq.cn/article/28d350e40237164be89704f22",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清"
+      },
+      "result": {
+        "query": "别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::Go语言技术实践::Go语言中的Pool：对象复用的艺术::keyword::Go Pool 对象复用",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:39+08:00",
+      "request_context": {
+        "topic": "Go语言技术实践",
+        "channel": "首页",
+        "original_title": "Go语言中的Pool：对象复用的艺术",
+        "original_url": "https://www.infoq.cn/article/bf1edd99a743a75f8fe427238",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "Go Pool 对象复用"
+      },
+      "result": {
+        "query": "Go Pool 对象复用",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::Go语言技术实践::Go语言中的Pool：对象复用的艺术::title::Go语言中的Pool：对象复用的艺术",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:39+08:00",
+      "request_context": {
+        "topic": "Go语言技术实践",
+        "channel": "首页",
+        "original_title": "Go语言中的Pool：对象复用的艺术",
+        "original_url": "https://www.infoq.cn/article/bf1edd99a743a75f8fe427238",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "Go语言中的Pool：对象复用的艺术"
+      },
+      "result": {
+        "query": "Go语言中的Pool：对象复用的艺术",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::To B企业增长与营销策略::To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型::keyword::To B技术创业 增长飞轮模型",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型",
+        "original_url": "https://www.infoq.cn/article/804df8efe7e196a35af320248",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "To B技术创业 增长飞轮模型"
+      },
+      "result": {
+        "query": "To B技术创业 增长飞轮模型",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::To B企业增长与营销策略::To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型::title::To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型",
+        "original_url": "https://www.infoq.cn/article/804df8efe7e196a35af320248",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型"
+      },
+      "result": {
+        "query": "To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::To B企业增长与营销策略::信创国产化浪潮下的企业IM即时通讯如何选择？::keyword::信创国产化 企业IM即时通讯",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+        "original_url": "https://www.infoq.cn/article/8aff0c089410a63641cda5e0a",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "信创国产化 企业IM即时通讯"
+      },
+      "result": {
+        "query": "信创国产化 企业IM即时通讯",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::To B企业增长与营销策略::信创国产化浪潮下的企业IM即时通讯如何选择？::title::信创国产化浪潮下的企业IM即时通讯如何选择？",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+        "original_url": "https://www.infoq.cn/article/8aff0c089410a63641cda5e0a",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "信创国产化浪潮下的企业IM即时通讯如何选择？"
+      },
+      "result": {
+        "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": [
+          {
+            "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+            "query_type": "title",
+            "result_title": "私有化信创聊天工具选型对比：2026年五大主流方案深度评测 - 喧喧",
+            "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+            "domain": "www.xuanim.com",
+            "published_at": "2026-04-13",
+            "snippet": "# 私有化信创聊天工具选型对比：2026年五大主流方案深度评测. 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马. ### 本篇目录. * 3.1 华为云空间/WeLink（私有化版）. * 3.2 钉钉/飞书（私有部署版）. * 3.5 网易云信（私有化PaaS/组件化方案）. * 4.3 核心亮点从“零配置”到“全适配”. * 5.1 警惕“全家桶”陷阱. * 5.2 关注“接口开放度”而非“功能列表”. * 5.3 验证“真信创”适配. ### 2.1 国产化兼容性（信创生态适配）. ### 2.2 全链路安全加密能力. ### 2.3 技术架构与性能表现. 优秀的架构需要在开发效率与运行性能之间找到完美平衡。纯原生开发成本极高且迭代缓慢，而粗糙的网页套壳则会导致严重的内存泄漏。混合开发模式是目前兼顾两者优势的主流选择。此外，服务端架构必须具备支撑万人级群",
+            "score": 0.7742597,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::To B企业增长与营销策略::我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流::keyword::SEO内容农场 躺着收流量",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流",
+        "original_url": "https://www.infoq.cn/article/a3808f8a5660d311b61f55c25",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "SEO内容农场 躺着收流量"
+      },
+      "result": {
+        "query": "SEO内容农场 躺着收流量",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::To B企业增长与营销策略::我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流::title::我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流",
+        "original_url": "https://www.infoq.cn/article/a3808f8a5660d311b61f55c25",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流"
+      },
+      "result": {
+        "query": "我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::出海与海外市场数字化::什么是网红营销平台？品牌该如何选择？::keyword::网红营销平台 品牌选择",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "什么是网红营销平台？品牌该如何选择？",
+        "original_url": "https://www.infoq.cn/article/a2e6fcd66d1b4fc49879f6b38",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "网红营销平台 品牌选择"
+      },
+      "result": {
+        "query": "网红营销平台 品牌选择",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": [
+          {
+            "query": "网红营销平台 品牌选择",
+            "query_type": "keyword",
+            "result_title": "2026软文营销平台，五大主流平台推荐，照着选不出错_腾讯新闻",
+            "url": "https://news.qq.com/rain/a/20260409A03UKE00",
+            "domain": "news.qq.com",
+            "published_at": "2026-04-09",
+            "snippet": "# 2026软文营销平台，五大主流平台推荐，照着选不出错. 2026-04-09 11:19发布于河南. 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。. 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。. 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。. 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。. 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务. 核心优势：侧重高品质内容与头部媒体匹配，主",
+            "score": 0.24182089,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::出海与海外市场数字化::什么是网红营销平台？品牌该如何选择？::title::什么是网红营销平台？品牌该如何选择？",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "什么是网红营销平台？品牌该如何选择？",
+        "original_url": "https://www.infoq.cn/article/a2e6fcd66d1b4fc49879f6b38",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "什么是网红营销平台？品牌该如何选择？"
+      },
+      "result": {
+        "query": "什么是网红营销平台？品牌该如何选择？",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": []
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::出海与海外市场数字化::海外舆情态势感知框架::keyword::海外舆情 态势感知框架",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "海外舆情态势感知框架",
+        "original_url": "https://www.infoq.cn/article/f87c4e0f050bf997f13bccc58",
+        "original_published_at": "2026-04-15",
+        "query_type": "keyword",
+        "query": "海外舆情 态势感知框架"
+      },
+      "result": {
+        "query": "海外舆情 态势感知框架",
+        "query_type": "keyword",
+        "provider": "tavily",
+        "results": [
+          {
+            "query": "海外舆情 态势感知框架",
+            "query_type": "keyword",
+            "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+            "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+            "domain": "www.ciweek.com",
+            "published_at": "2026-04-08",
+            "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+            "score": 0.10754074,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          },
+          {
+            "query": "海外舆情 态势感知框架",
+            "query_type": "keyword",
+            "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+            "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+            "domain": "www.sznews.com",
+            "published_at": "2026-04-08",
+            "snippet": "运用算法推荐技术建立全球用户动态画像，针对不同区域受众的文化偏好实现内容精准分发，有效提升传播的到达率与接受度。引导海外用户通过互动技术参与文化意义的再创造，推动",
+            "score": 0.052819017,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "query::出海与海外市场数字化::海外舆情态势感知框架::title::海外舆情态势感知框架",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "tavily",
+      "source": "search",
+      "last_updated_at": "2026-04-15T14:50:38+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "海外舆情态势感知框架",
+        "original_url": "https://www.infoq.cn/article/f87c4e0f050bf997f13bccc58",
+        "original_published_at": "2026-04-15",
+        "query_type": "title",
+        "query": "海外舆情态势感知框架"
+      },
+      "result": {
+        "query": "海外舆情态势感知框架",
+        "query_type": "title",
+        "provider": "tavily",
+        "results": [
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+            "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+            "domain": "www.sznews.com",
+            "published_at": "2026-04-08",
+            "snippet": "例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。",
+            "score": 0.16531023,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          },
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+            "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+            "domain": "www.ciweek.com",
+            "published_at": "2026-04-08",
+            "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+            "score": 0.11876296,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_article::AI辅助编程与开发实践::GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+      "status": "success",
+      "attempt_count": 2,
+      "provider": "",
+      "source": "ai_review_article",
+      "last_updated_at": "2026-04-15T14:51:59+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "original_title": "GitHub会成为主理人们的宣发地，但你学的慢也没关系"
+      },
+      "result": {
+        "topic": "AI辅助编程与开发实践",
+        "channel": "首页",
+        "original_title": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+        "original_url": "https://www.infoq.cn/article/c409583476628981c4092e2bd",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "GitHub 主理人 宣发",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "GitHub 主理人 宣发",
+                "query_type": "keyword",
+                "result_title": "README.md - xianyu110/awesome-openclaw-tutorial - GitHub",
+                "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+                "domain": "github.com",
+                "published_at": "2026-03-18",
+                "snippet": "两万人AI社区主理人. 项目进度. ✓ v1.6（2026-03-18）：新增一键部署教程（8个平台）; ✓ v1.8（2026-04-13）：同步OpenClaw v2026.4.11 稳定版能力地图，补充记忆",
+                "score": 0.1391274,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [
+                  "GitHub",
+                  "主理人"
+                ],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          }
+        ],
+        "search_results": [
+          {
+            "query": "GitHub 主理人 宣发",
+            "query_type": "keyword",
+            "result_title": "README.md - xianyu110/awesome-openclaw-tutorial - GitHub",
+            "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+            "domain": "github.com",
+            "published_at": "2026-03-18",
+            "snippet": "两万人AI社区主理人. 项目进度. ✓ v1.6（2026-03-18）：新增一键部署教程（8个平台）; ✓ v1.8（2026-04-13）：同步OpenClaw v2026.4.11 稳定版能力地图，补充记忆",
+            "score": 0.1391274,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [
+              "GitHub",
+              "主理人"
+            ],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ],
+        "selected_results": [
+          {
+            "query": "GitHub 主理人 宣发",
+            "query_type": "keyword",
+            "result_title": "README.md - xianyu110/awesome-openclaw-tutorial - GitHub",
+            "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+            "domain": "github.com",
+            "published_at": "2026-03-18",
+            "snippet": "两万人AI社区主理人. 项目进度. ✓ v1.6（2026-03-18）：新增一键部署教程（8个平台）; ✓ v1.8（2026-04-13）：同步OpenClaw v2026.4.11 稳定版能力地图，补充记忆",
+            "score": 0.1391274,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [
+              "GitHub",
+              "主理人"
+            ],
+            "extract_text": "Clawbot项目: 700+ Stars 两万人AI社区主理人 ## 📈 项目进度 []( ✅ v1.6（2026-03-18）：新增一键部署教程（8个平台） ✅ v1.8（2026-04-13）：同步 OpenClaw `v2026.4.11` 稳定版能力地图，补充记忆系统、Task Flow、Webhooks 与官方媒体主路线提示 ✅ v1.9（2026-04-04）：同步橙皮书 v1.3~v1.4 更新——新增微信ClawBot、腾讯全家桶、浏览器渠道、GLM-5-Turbo、安全漏洞统计 🔄 v1.8（进行中）：优化内容质量，补充实战案例 ## 📄 许可证 []( 本项目采用 GPL-3.0 License Image 11: star ### ⚠️ 重要声明：禁止倒卖 []( ❌ 严禁倒卖：禁止将本教程打包后进行商业售卖 ❌ 严禁闭源商用：任何基于本项目的衍生作品必须同样开源 ✅ 允许学习：欢迎个人学习和使用 ✅ 允许分享：欢迎分享给更多需要的人 ✅ 允许修改：可以修改并分享，但必须保持开源 最后更新：2026年4月4日 教程版本：v1.9 总字数：408,000字（15章节 + 15附录） 适用OpenClaw版本：2026.4.11（稳定版） / 2026.4.12-beta.1（预发布参考） 🎉 教程已完成 | 支持续优化 | 完全免费 🎉 🚀 一个人 + OpenClaw = 无限可能 🚀 ⭐ 如果觉得有用，请给个Star支持一下 ⭐ ## Footer []( © 2026 GitHub,Inc. ### Footer navigation [...] ## Breadcrumbs 1. awesome-openclaw-tutorial / # README.md Copy path Blame More file actions Blame More file actions ## Latest commit ## History History · 18.8 KB ## Breadcrumbs 1. awesome-openclaw-tutorial / # README.md Top ## File metadata and controls Preview Code Blame 390 lines (282 loc) · 18.8 KB Raw Copy raw file Download raw file You must be signed in to make or propose changes More edit options Outline Edit and raw actions # 🦞 Awesome OpenClaw Tutorial 3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`) 4. 推送到分支 (`git push origin feature/AmazingFeature`) 5. 提交Pull Request ## 📮 联系方式 : @Nikitka_aktikiN ### 项目链接 []( Clawbot项目: 700+ Stars 两万人AI社区主理人 ## 📈 项目进度 []( [...] # awesome-openclaw-tutorial/README.md at main · xianyu110/awesome-openclaw-tutorial · GitHub Skip to content ## Navigation Menu Toggle navigation forward slash/",
+            "extract_status": "success",
+            "review_status": "reviewed",
+            "keep_level": "weak",
+            "review_reason": "提供了具体AI社区主理人的项目实例，作为背景补充。",
+            "relevance_note": "补充了“主理人”在GitHub上具体实践的例子，与原文主题相关。",
+            "value_type": "背景补充"
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_article::To B企业增长与营销策略::信创国产化浪潮下的企业IM即时通讯如何选择？",
+      "status": "success",
+      "attempt_count": 2,
+      "provider": "",
+      "source": "ai_review_article",
+      "last_updated_at": "2026-04-15T14:51:15+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "original_title": "信创国产化浪潮下的企业IM即时通讯如何选择？"
+      },
+      "result": {
+        "topic": "To B企业增长与营销策略",
+        "channel": "首页",
+        "original_title": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+        "original_url": "https://www.infoq.cn/article/8aff0c089410a63641cda5e0a",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+                "query_type": "title",
+                "result_title": "私有化信创聊天工具选型对比：2026年五大主流方案深度评测 - 喧喧",
+                "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+                "domain": "www.xuanim.com",
+                "published_at": "2026-04-13",
+                "snippet": "# 私有化信创聊天工具选型对比：2026年五大主流方案深度评测. 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马. ### 本篇目录. * 3.1 华为云空间/WeLink（私有化版）. * 3.2 钉钉/飞书（私有部署版）. * 3.5 网易云信（私有化PaaS/组件化方案）. * 4.3 核心亮点从“零配置”到“全适配”. * 5.1 警惕“全家桶”陷阱. * 5.2 关注“接口开放度”而非“功能列表”. * 5.3 验证“真信创”适配. ### 2.1 国产化兼容性（信创生态适配）. ### 2.2 全链路安全加密能力. ### 2.3 技术架构与性能表现. 优秀的架构需要在开发效率与运行性能之间找到完美平衡。纯原生开发成本极高且迭代缓慢，而粗糙的网页套壳则会导致严重的内存泄漏。混合开发模式是目前兼顾两者优势的主流选择。此外，服务端架构必须具备支撑万人级群",
+                "score": 0.7742597,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          },
+          {
+            "query": "信创国产化 企业IM即时通讯",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": []
+          }
+        ],
+        "search_results": [
+          {
+            "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+            "query_type": "title",
+            "result_title": "私有化信创聊天工具选型对比：2026年五大主流方案深度评测 - 喧喧",
+            "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+            "domain": "www.xuanim.com",
+            "published_at": "2026-04-13",
+            "snippet": "# 私有化信创聊天工具选型对比：2026年五大主流方案深度评测. 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马. ### 本篇目录. * 3.1 华为云空间/WeLink（私有化版）. * 3.2 钉钉/飞书（私有部署版）. * 3.5 网易云信（私有化PaaS/组件化方案）. * 4.3 核心亮点从“零配置”到“全适配”. * 5.1 警惕“全家桶”陷阱. * 5.2 关注“接口开放度”而非“功能列表”. * 5.3 验证“真信创”适配. ### 2.1 国产化兼容性（信创生态适配）. ### 2.2 全链路安全加密能力. ### 2.3 技术架构与性能表现. 优秀的架构需要在开发效率与运行性能之间找到完美平衡。纯原生开发成本极高且迭代缓慢，而粗糙的网页套壳则会导致严重的内存泄漏。混合开发模式是目前兼顾两者优势的主流选择。此外，服务端架构必须具备支撑万人级群",
+            "score": 0.7742597,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ],
+        "selected_results": [
+          {
+            "query": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+            "query_type": "title",
+            "result_title": "私有化信创聊天工具选型对比：2026年五大主流方案深度评测 - 喧喧",
+            "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+            "domain": "www.xuanim.com",
+            "published_at": "2026-04-13",
+            "snippet": "# 私有化信创聊天工具选型对比：2026年五大主流方案深度评测. 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马. ### 本篇目录. * 3.1 华为云空间/WeLink（私有化版）. * 3.2 钉钉/飞书（私有部署版）. * 3.5 网易云信（私有化PaaS/组件化方案）. * 4.3 核心亮点从“零配置”到“全适配”. * 5.1 警惕“全家桶”陷阱. * 5.2 关注“接口开放度”而非“功能列表”. * 5.3 验证“真信创”适配. ### 2.1 国产化兼容性（信创生态适配）. ### 2.2 全链路安全加密能力. ### 2.3 技术架构与性能表现. 优秀的架构需要在开发效率与运行性能之间找到完美平衡。纯原生开发成本极高且迭代缓慢，而粗糙的网页套壳则会导致严重的内存泄漏。混合开发模式是目前兼顾两者优势的主流选择。此外，服务端架构必须具备支撑万人级群",
+            "score": 0.7742597,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "禅道软件（青岛）集团有限公司 当前位置： 首页 博客 IM即时通讯 私有化信创聊天工具选型对比：2026年五大主流方案深度评测 # 私有化信创聊天工具选型对比：2026年五大主流方案深度评测 预计阅读时间17分钟 最后更新：2026-04-13 作者：企业AI圈老马 私有化信创聊天工具选型对比：2026年五大主流方案深度评测 ### 本篇目录 1. 2026年信创国产化进入“深水区” 2. 五大核心评测维度建立IM选型的“度量衡” 2.1 国产化兼容性（信创生态适配） 2.2 全链路安全加密能力 2.3 技术架构与性能表现 2.4 系统集成柔性与扩展性 2.5 移动办公与多端体验 3. 2026年五大主流私有化IM方案横向对比 3.1 华为云空间/WeLink（私有化版） 3.2 钉钉/飞书（私有部署版） 3.3 喧喧IM（轻量级信创先导方案） 3.4 蓝信/安信 3.5 网易云信（私有化PaaS/组件化方案） 4. 重点方案深度评测喧喧IM——高性价比信创利器 4.1 品牌背景与信创资质 4.2 技术栈解析高性能混合开发模式 4.3 核心亮点从“零配置”到“全适配” 4.4 扩展能力打造企业信息中转站 5. 2026年选型“避坑指南”IT负责人的决策参考 5.1 警惕“全家桶”陷阱 5.2 关注“接口开放度”而非“功能列表” 5.3 验证“真信创”适配 5.4 运维成本预测 6. 适用场景建议与总结 7. 常见问题模块（FAQ） ## 1. 2026年信创国产化进入“深水区” ## 2. 五大核心评测维度：建立IM选型的“度量衡” ### 2.1 国产化兼容性（信创生态适配） ### 2.2 全链路安全加密能力 ### 2.3 技术架构与性能表现 [...] ### 5.1 警惕“全家桶”陷阱 许多企业在招标时倾向于选择功能大而全的巨无霸系统，却忽略了这些系统往往伴随着极高的硬件算力要求。盲目追求大而全会导致系统严重冗余，最终迫使企业在服务器硬件上的投入远超初期预算，造成资源极大浪费。 ### 5.2 关注“接口开放度”而非“功能列表” 真正决定一款IM工具长期价值的，不是它自带了多少个花哨的小程序，而是它能否通过轻量化接口低成本集成企业现有的核心业务系统。一个具备高开放度的底层通讯底座，比自带万种功能的封闭系统更具战略意义。 ### 5.3 验证“真信创”适配 在考察信创兼容性时，绝不能仅凭厂商的一纸证书。必须要求厂商在企业真实的国产软硬件测试环境中进行安装部署演练。警惕那些通过低效兼容层强行运行的方案，这类方案在实际高并发场景下往往会暴露出严重的性能损耗与崩溃问题。 ### 5.4 运维成本预测 私有化部署意味着企业需要自行承担系统的长期运行压力。在选型初期，就必须将系统升级维护的难易程度纳入考量，优先选择底层逻辑清晰、具有专业且响应迅速的技术服务团队支撑的国产软件，避免后期陷入无人维护的“孤岛”困境。 ## 6. 适用场景建议与总结 经过全方位的拆解，我们可以清晰地看到不同方案的适用边界。对于预算极其充裕、IT基础设施高度统一的大型超大规模集团，选择架构沉重但功能全覆盖的头部大商方案是稳妥之举。 而对于政务、军工、金融等对数据安全极度敏感的机构，优先考虑具备纯净信创基因、高安全防护矩阵的私有部署方案才是长久之计。对于注重效能的研发型企业及中大型单位，我们强烈推荐喧喧IM，利用其轻量化的部署体验、极高的系统扩展性以及对研发流程的友好支持，企业能够以最优的性价比实现内部效能的全面升级。 ## 7. 常见问题模块（FAQ） [...] ### 4.2 技术栈解析：高性能混合开发模式 在技术架构上，喧喧IM给出了教科书级别的示范。其客户端采用了Electron结合React的技术栈，这种高性能混合开发模式既保证了跨平台多端发布的极速效率，又实现了无限接近原生应用的流畅运行体验。在核心的消息中转处理上，采用了基于Go语言编写的XXD服务，极大地提升了万人级并发场景下的即时通信稳定性。而后端服务则基于成熟的PHP结合MySQL架构，逻辑清晰，大幅降低了企业的后期维护成本。 ### 4.3 核心亮点：从“零配置”到“全适配” 产品核心功能界面组合展示图 喧喧IM最大的工程亮点在于将复杂的私有化部署做到了极简。通过一键部署包，IT人员解压即用，一分钟内即可完成内网私有化环境的搭建。在信创适配方面，它不仅是支持麒麟系统的聊天软件，更是完美运行在UOS系统及鲲鹏、飞腾等国产芯片之上，无需任何折中妥协。在安全防护矩阵上，它构建了包含全链路通讯加密、严格的IP登录限制以及服务端文件二次加密存储的立体防线。 ### 4.4 扩展能力：打造企业信息中转站 组织架构通讯录功能界面截图 封闭的系统是没有生命力的。喧喧IM内置了强大的应用中心，支持通过Webhook接入各类第三方服务，并全面支持SSO单点登录。最值得一提的是它与禅道项目管理系统的天然深度集成。当研发流程中出现Bug指派或任务状态变更时，系统会自动向相关讨论组或个人推送实时通知，真正实现了将IM打造为企业业务流转的信息中转站。 ## 5. 2026年选型“避坑指南”：IT负责人的决策参考 根据我们为数百家企业规划IT架构的经验，在进行2026企业IM选型时，IT负责人极易陷入以下几个误区。 ### 5.1 警惕“全家桶”陷阱",
+            "extract_status": "success",
+            "review_status": "reviewed",
+            "keep_level": "strong",
+            "review_reason": "补充链接发布时间早于原文，且提供了具体的选型评测方案",
+            "relevance_note": "链接内容与原文主题高度一致，均为信创背景下企业IM工具选型",
+            "value_type": "新增事实"
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_article::出海与海外市场数字化::什么是网红营销平台？品牌该如何选择？",
+      "status": "success",
+      "attempt_count": 2,
+      "provider": "",
+      "source": "ai_review_article",
+      "last_updated_at": "2026-04-15T14:51:41+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "original_title": "什么是网红营销平台？品牌该如何选择？"
+      },
+      "result": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "什么是网红营销平台？品牌该如何选择？",
+        "original_url": "https://www.infoq.cn/article/a2e6fcd66d1b4fc49879f6b38",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "什么是网红营销平台？品牌该如何选择？",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": []
+          },
+          {
+            "query": "网红营销平台 品牌选择",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "网红营销平台 品牌选择",
+                "query_type": "keyword",
+                "result_title": "2026软文营销平台，五大主流平台推荐，照着选不出错_腾讯新闻",
+                "url": "https://news.qq.com/rain/a/20260409A03UKE00",
+                "domain": "news.qq.com",
+                "published_at": "2026-04-09",
+                "snippet": "# 2026软文营销平台，五大主流平台推荐，照着选不出错. 2026-04-09 11:19发布于河南. 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。. 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。. 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。. 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。. 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务. 核心优势：侧重高品质内容与头部媒体匹配，主",
+                "score": 0.24182089,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          }
+        ],
+        "search_results": [
+          {
+            "query": "网红营销平台 品牌选择",
+            "query_type": "keyword",
+            "result_title": "2026软文营销平台，五大主流平台推荐，照着选不出错_腾讯新闻",
+            "url": "https://news.qq.com/rain/a/20260409A03UKE00",
+            "domain": "news.qq.com",
+            "published_at": "2026-04-09",
+            "snippet": "# 2026软文营销平台，五大主流平台推荐，照着选不出错. 2026-04-09 11:19发布于河南. 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。. 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。. 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。. 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。. 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务. 核心优势：侧重高品质内容与头部媒体匹配，主",
+            "score": 0.24182089,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ],
+        "selected_results": [
+          {
+            "query": "网红营销平台 品牌选择",
+            "query_type": "keyword",
+            "result_title": "2026软文营销平台，五大主流平台推荐，照着选不出错_腾讯新闻",
+            "url": "https://news.qq.com/rain/a/20260409A03UKE00",
+            "domain": "news.qq.com",
+            "published_at": "2026-04-09",
+            "snippet": "# 2026软文营销平台，五大主流平台推荐，照着选不出错. 2026-04-09 11:19发布于河南. 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。. 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。. 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。. 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。. 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务. 核心优势：侧重高品质内容与头部媒体匹配，主",
+            "score": 0.24182089,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "# 2026软文营销平台，五大主流平台推荐，照着选不出错 ![头像](http://inews.gtimg.com/newsapp_ls/0/13333203306_200200/0) 河南手机报 2026-04-09 11:19发布于河南 在信息过载的数字化时代，软文营销仍是企业建立品牌认知、传递价值的重要方式。然而，面对众多平台，如何选择高效、可靠且性价比高的渠道成为许多市场人的难题。以下是2026年备受认可的五大主流软文营销平台，并附上企业常见问题解答，助你精准决策、高效投放。 **一、2026五大软文营销平台推荐** **1. 媒介盒子** 核心优势： 资源覆盖广：媒介盒子拥有10万+一手媒体资源库，涵盖门户网站、垂直媒体、地方媒体、行业网站、短视频媒体、海外媒体等多个维度。 智能匹配：其核心优势在于智能自助发稿系统，用户可一键筛选、批量发布，适合追求便捷与覆盖广度的企业。 ![图片](https://inews.gtimg.com/om_bt/Osw-dpbEABz_JWIyAVQ_xacoCsvWNgfoEaS9M9SselhCAAA/641) ![图片](https://inews.gtimg.com/om_bt/Osw-dpbEABz_JWIyAVQ_xacoCsvWNgfoEaS9M9SselhCAAA/641) 适合企业：中大型企业，追求多渠道覆盖和品牌声量集中引爆。 服务特色：提供内容策划、媒体组合策略、效果追踪等全链路服务。 **2. 媒体批发网** 核心优势：以“批发价”为特色，价格透明，尤其适合中小企业和初创公司进行低成本、多频次软文投放。 适合企业：预算有限，但需要覆盖一定媒体数量的成长型企业。 服务特色：套餐灵活，支持自定义媒体包，性价比突出。 **3. 媒体特价网** 核心优势：主打限时特价和团购模式，常推出主流媒体优惠资源，适合抢高性价比曝光机会。 适合企业：对价格敏感，且能灵活调整投放节奏的企业。 服务特色：每日更新特价媒体列表，便于快速捡漏。 **4. 投媒网** 核心优势： 一手资源，八年广告经验整合优质资源。 网络媒体资源，门户、行业、垂直媒体多方位覆盖，1分钟响应，24小时服务 短视频推广资源，短视频全渠道覆盖，超多网红达人、素人博主助力品牌效益提升！ 适合企业：注重ROI和数据分析，希望优化投放策略的成熟品牌。 服务特色：AI智能推荐媒体，并提供传播效果报告。 **5. 优媒汇** 核心优势：侧重高品质内容与头部媒体匹配，主打深度内容合作（如专访、专题策划等）。 适合企业：注重品牌调性、需与权威媒体建立长期关系的高端品牌。 服务特色：定制化内容生产、主编级内容审核、深度资源对接。 ![图片](https://inews.gtimg.com/om_bt/OQmS7n8umwGzcjRJCmYoZbbsifIzM9-mJhksTkvHjULsYAA/641) ![图片](https://inews.gtimg.com/om_bt/OQmS7n8umwGzcjRJCmYoZbbsifIzM9-mJhksTkvHjULsYAA/641) **二、企业做软文营销常见问题（FAQ）** **1. 如何选择适合自己企业的平台？** 明确营销目标：品牌曝光、引流获客、口碑维护还是SEO优化？ 评估预算：高性价比选媒体批发网/媒体特价网；重品质选优媒汇；全链路服务选媒介盒子。 测试验证：可先小规模测试不同平台的资源质量、响应速度和服务水平。 **2. 软文投放效果如何衡量？** 基础指标：阅读量、转载量、关键词搜索排名提升。 互动指标：评论、点赞、收藏及引流页面的点击率、转化率。 品牌指标：媒体权威度、舆情正向比例、品牌词提及增长。 **3. 如何保证软文内容质量？** 避免硬广：注重用户价值，以知识分享、场景故事等形式传递信息。 专业策划：可借助平台提供的内容团队或第三方内容服务。 符合调性：内容风格与投放媒体受众偏好保持一致。 **4. 中小企业预算有限，怎样高效投放？** 聚焦垂直媒体：选择行业精准媒体，而非盲目追求门户覆盖。 利用套餐/团购：关注媒体批发网、媒体特价网的优惠套餐。 内容复用：一篇优质内容可适配不同媒体形式。 ![图片](https://inews.gtimg.com/om_bt/OlCILMOLKcexPOY0zLDuPh3J61cDh5qOxcuQO97GTtI-cAA/641) ![图片](https://inews.gtimg.com/om_bt/OlCILMOLKcexPOY0zLDuPh3J61cDh5qOxcuQO97GTtI-cAA/641) **5. 如何避免“踩坑”？** 审核资源真实性：查验媒体资质、过往案例，避免虚假资源。 明确合同条款：确认价格、发布时间、修改次数、退款条件等细节。 持续追踪效果：使用短链追踪、客服暗访等方式验证发布效果。 2026软文营销趋势提示：软文正从“广撒网”转向“精准渗透”，内容深度、媒体匹配度、数据驱动将成为核心竞争力。选对平台，并配以清晰策略与优质内容，才能让每一分预算都掷地有声。 选择合适的平台，只是成功的第一步。持续优化内容策略，结合数据反馈灵活调整，才能让软文营销真正成为品牌增长的助推器。",
+            "extract_status": "success",
+            "review_status": "reviewed",
+            "keep_level": "drop",
+            "review_reason": "补充链接讨论软文营销平台，与原文主题网红营销平台存在本质差异",
+            "relevance_note": "原文聚焦网红/KOL营销，补充链接介绍的是软文发布和媒体投放平台",
+            "value_type": "跑偏结果"
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_article::出海与海外市场数字化::海外舆情态势感知框架",
+      "status": "success",
+      "attempt_count": 2,
+      "provider": "",
+      "source": "ai_review_article",
+      "last_updated_at": "2026-04-15T14:51:41+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "original_title": "海外舆情态势感知框架"
+      },
+      "result": {
+        "topic": "出海与海外市场数字化",
+        "channel": "首页",
+        "original_title": "海外舆情态势感知框架",
+        "original_url": "https://www.infoq.cn/article/f87c4e0f050bf997f13bccc58",
+        "original_published_at": "2026-04-15",
+        "queries": [
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "海外舆情态势感知框架",
+                "query_type": "title",
+                "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+                "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+                "domain": "www.sznews.com",
+                "published_at": "2026-04-08",
+                "snippet": "例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。",
+                "score": 0.16531023,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              },
+              {
+                "query": "海外舆情态势感知框架",
+                "query_type": "title",
+                "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+                "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+                "domain": "www.ciweek.com",
+                "published_at": "2026-04-08",
+                "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+                "score": 0.11876296,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          },
+          {
+            "query": "海外舆情 态势感知框架",
+            "query_type": "keyword",
+            "provider": "tavily",
+            "results": [
+              {
+                "query": "海外舆情 态势感知框架",
+                "query_type": "keyword",
+                "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+                "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+                "domain": "www.ciweek.com",
+                "published_at": "2026-04-08",
+                "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+                "score": 0.10754074,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              },
+              {
+                "query": "海外舆情 态势感知框架",
+                "query_type": "keyword",
+                "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+                "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+                "domain": "www.sznews.com",
+                "published_at": "2026-04-08",
+                "snippet": "运用算法推荐技术建立全球用户动态画像，针对不同区域受众的文化偏好实现内容精准分发，有效提升传播的到达率与接受度。引导海外用户通过互动技术参与文化意义的再创造，推动",
+                "score": 0.052819017,
+                "is_official": false,
+                "source_tier": "normal",
+                "matched_terms": [],
+                "extract_text": "",
+                "extract_status": "not_requested",
+                "review_status": "pending",
+                "keep_level": "",
+                "review_reason": "",
+                "relevance_note": "",
+                "value_type": ""
+              }
+            ]
+          }
+        ],
+        "search_results": [
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+            "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+            "domain": "www.sznews.com",
+            "published_at": "2026-04-08",
+            "snippet": "例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。",
+            "score": 0.16531023,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          },
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+            "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+            "domain": "www.ciweek.com",
+            "published_at": "2026-04-08",
+            "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+            "score": 0.11876296,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "",
+            "extract_status": "not_requested",
+            "review_status": "pending",
+            "keep_level": "",
+            "review_reason": "",
+            "relevance_note": "",
+            "value_type": ""
+          }
+        ],
+        "selected_results": [
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网",
+            "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+            "domain": "www.sznews.com",
+            "published_at": "2026-04-08",
+            "snippet": "例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。",
+            "score": 0.16531023,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "创新叙事激活情感共鸣。提升国际传播效能，不仅取决于文化内容自身的感召力，更有赖于传播方式与话语表达同受众心理的精准契合，让人们在共通的情感中产生和加深认同。要坚持将用户思维融入乡村文化创新全流程，深入研究不同国家和地区受众的文化心理，根据不同文化偏好进行叙事调适。系统构建涵盖多元文化形态的叙事资源库，健全叙事效果的跟踪反馈机制，通过海外受众的互动行为数据优化叙事策略。深入探索不同类型乡村文化的叙事转换规律，多采用微观叙事呈现真实的乡村风貌与村民生活，将中国乡村的文化基因、生活方式等转化为易于海外用户理解和接受的话语体系，向世界展现产业兴旺、生态宜居、乡风文明、治理有效、生活富裕的中国乡村图景。从人类共通的情感体验和情感需求出发，提炼乡村文化中的共同价值和文化内涵，以情感为桥梁打破文化隔阂，推动跨文化传播有效落地，形成兼具文化辨识度与跨文化共情力的优质内容。例如贵州“村超”将侗族大歌、苗族芦笙与足球相融合，在体育竞技的共通语境中实现地方性文化符号的跨媒介转译，让海外受众在熟悉的赛事框架中感知中国乡村文化的独特韵味。 [...] 技术赋能提升传播效能。数字技术打破了乡村文化传播的地理局限，将具有地域特色的民俗技艺、风土人情等转化为具有全球性特征的视觉符号，推动乡村文化进入国际传播场域。强化技术赋能有助于提升乡村文化国际传播能力建设水平，优化产品形态和用户体验。要大力加强数字文化资源建设，推动乡村文化资源的数字化转化与标准化建设，建立多语种、跨媒介的文化内容数据库，为国际传播提供持续、稳定、可调用的内容资源支撑。积极拓展前沿数字技术在乡村文化国际传播中的应用场景，通过短视频、虚拟现实、增强现实等技术打造虚实融合的文化体验空间，进一步拓展受众的感知维度。例如，“一部手机游云南”平台依托全景和慢直播技术，将元阳哈尼梯田景色推送到用户手机端，实现文化遗产的可视化传播，让海外用户突破物理空间限制，获得沉浸式文化体验。可加快构建自主可控的传播平台矩阵，深化与海外主流平台的内容合作与渠道共建，增强议题设置能力和话语主动权。运用算法推荐技术建立全球用户动态画像，针对不同区域受众的文化偏好实现内容精准分发，有效提升传播的到达率与接受度。引导海外用户通过互动技术参与文化意义的再创造，推动乡村文化国际传播从单向传递走向价值共创，在双向互动中深化情感认同，实现乡村文化从“可见可感”向“可信可亲”的跨越。 [...] 培育人才夯实发展根基。习近平总书记指出：“培育挖掘乡土文化人才”。传播队伍的规模、结构及能力直接决定传播效能的提升空间。要着力构建乡村文化国际传播的立体化格局，推动媒体、文艺志愿者、村民等更多群体成为乡村文化国际传播的参与者、贡献者。例如，北京昌平下苑村聚集众多艺术家，形成“艺术+民俗”的文化生态，吸引许多海外游客到访并通过自媒体平台展现中国乡村的艺术活力。又如，云南省保山市施甸县乡村视频博主“滇西小哥”以美食为切入点展现村民日常生活和乡村风物，在海外社交平台圈粉众多。要加强乡村本土文化国际传播人才培养，持续拓宽人才选拔视野，注重发掘、培育乡村非遗传承人、“新农人”、乡村自媒体博主等新兴乡村文化传播力量，丰富人才储备。加大数字传播技能培训力度，帮助基层文化人才掌握全媒体内容生产与运营能力，适应数字时代的传播需求。加快建立跨领域人才协作网络，推动国际传播与文化研究、数字技术等领域的专业力量深度合作，大力培养复合型人才。充分尊重和激发村民的文化主体意识，提升村民参与国际传播的主动性，让村民从被讲述者转变为讲述者，在传播实践中增强文化认同和文化自信，最终实现从“人才支撑”向“主体自觉”的深层转变。 （作者为对外经济贸易大学北京对外开放研究院研究员） 编辑：单铭捷 手机扫一扫打开当前页面 Image 16 深圳新闻网传媒股份有限公司版权所有，未经书面授权禁止使用 深圳市福田区莲花街道景华社区商报路2号新媒体大厦21层-22层 COPYRIGHT © BY WWW.SZNEWS.COM ALL RIGHTS RESERVED",
+            "extract_status": "success",
+            "review_status": "reviewed",
+            "keep_level": "weak",
+            "review_reason": "内容以乡村文化国际传播为例，与舆情监测的技术框架关联度不高",
+            "relevance_note": "可作为文化内容如何被海外感知的背景案例，但非舆情监测方法论",
+            "value_type": "背景补充"
+          },
+          {
+            "query": "海外舆情态势感知框架",
+            "query_type": "title",
+            "result_title": "2024（第六届）创新发展论坛金i奖 - 互联网周刊",
+            "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+            "domain": "www.ciweek.com",
+            "published_at": "2026-04-08",
+            "snippet": "2026-04-08 eNet&Ciweek. 三七互娱一直在人工智能领域探索，正在将基础层的大模型等AI能力，与企业主营业务场景结合，开发契合业务流程的AI工具。目前，三七互娱已自研了九大中台产品，包括研发端的“宙斯”“雅典娜”“波塞冬”“阿瑞斯”“丘比特”，推广运营端的“图灵”“量子”“天机”“易览”等，并建出了一条成熟、完整的产业工业化管线，率先实现了AI在业务研运环节的全链赋能。从产品立项和内容生产，到发行运营和资产沉淀，AI与大数据技术将各端链接起来，形成了全局化的研运体系。这套工业化管线体系的建立与完善，帮助三七互娱在发展中沉淀了各业务环节海量自有数据与数字资产，进一步扩大自身数据积累与技术沉淀优势。. 作为投标领域智能编标领导者，文兜智写运用大数据、生成式人工智能技术等新一代信息技术，开创投标领域“专业”“长文”生成的先河，打造“全行业内容覆盖”“极速编写”“每次生成内容独一",
+            "score": 0.11876296,
+            "is_official": false,
+            "source_tier": "normal",
+            "matched_terms": [],
+            "extract_text": "（文/因赛） 医疗器械 江苏医疗器械科技产业园（Medpark）获2024年度高端医疗器械基地创新发展奖 Medpark坚持数字引领、创新驱动、集群发展，做强产业竞争力、做足特色亮点，打响国内医疗器械产业第一品牌（Medpark），打造千亿级医疗器械产业基地。依托“载体开发建设+园区运营+产业投资”三大核心能力，现已成为长三角地区医疗器械及生物医药产业重要集聚地。 （文/光库） 数据中心 数讯信息高功率水冷机柜定制解决方案获2024数据中心创新应用奖 该方案注重机房的安全性和稳定性，明确了机房区域要求，并提供了高电量机柜支持以及水冷解决方案，使得单机柜额定功率达到50kVA，确保高效稳定的运行环境。为包括金融、证券、保险、芯片等行业提供AI和大数据、大模型应用等提供高性能CPU、GPU的完全自主可控的解决方案。 （文/魔方） 人工智能 蜜巢政务大模型获2024大模型应用场景创新落地奖 蜜巢为蜜度自主研发的政务大模型，具备“自主安全双引擎 ，应用丰富落地强”的特点，基于自主积累的海量高质量中文语料数据，从源头强化价值观对齐能力与中文理解能力，并融合书生·浦语大模型，通过构建“双引擎”协同机制，聚焦智能知识管理、文稿智能写作、智能舆情分析三大垂直应用方向，赋能各类应用场景的深度开发与高效落地实施，为千行百业的客户提供优质高效、低成本、低门槛的大模型服务。目前，蜜巢已成功在多个政府、企业实现商业化落地，为1万+客户提供SaaS服务。 （文/云岸） 数字化人力资源管理平台 致远薪事力获2024 信创应用创新奖 致远薪事力人力云是推动信创产品从“可用”到“好用”的实质性进展，其支持全信创版本，实现操作系统、数据库、中间件的全国产基础软件主流品牌支持，兼容性强、确保符合行业规范。在数据安全层面，采用了多重安全措施，包括数据库安全、数据权限、文件安全等。 [...] （文/向天） 智算中心 九章云极DataCanvas获2024智算服务匠心奖 DATACANVAS AIDC OS智算操作系统作为智算中心的“中枢神经”，以告别“祼金属”、为 AI而生、全局加速优化、异构算力纳管与调度和1度算力的五大价值为基核，突破异构算力适配、异构算力调度等关键技术，有效管理、调度各种算力资源，提供一体化、开放化、标准化的AI模型服务，落地各类智算应用。面对当前算力流通和公平结算缺少统一的行业标准，九章云极DataCanvas从用户视角出发，首次提出了统一的算力服务计量单位“度”（DCU），并用其实现标准化的算力计量计费，旨在为用户实现“买到即用到”的算力服务，为未来算力资源互联互通打下良性商业基础。 （文/Still） AIGC、人工智能 灵感岛获2024 AIGC智能营销奖 灵感岛是AI内容创作与智能营销平台。对内容创作者来说，将红人大数据加入知识增强大语言模型的训练，通过对行业知识图谱的构建，自动调优生成高效、准确、优质的文本内容，打通AI前沿技术赋能红人新经济领域生产实践的最后一公里；对品牌来说，协助客户在短期内实现社媒平台运营的降本增效，拥有30类营销应用场景及多种内容类型，能够满足多方面客户的需求，具备分钟级内容生成、快速的响应能力。从内容正确性、准确性批量内容一键审核优化，缩减人力成本投入。 （文/楚风） 云通信 途鸽全球云通信物联网（AIoT）平台获2024智能制造出海突出贡献奖 [...] （文/问天） 工业软件 依柯力inkelink获2024新能源汽车数字化应用创新奖 在大力发展新质生产力的当下，依柯力自身不断融合新技术、新应用、新模式，为新能源汽车领域的数字化建设提供新示范。目前，依柯力已累计成功落地项目800+，业务范围覆盖注塑、冲压、焊装、压铸、机加、涂装、总装、电芯、电池模组、电池PACK等全流程工艺，实现新能源汽车生产全产业链覆盖。此外，于2023年联合华为发布基于华为云工业数字模型引擎iDME构建的“新一代新能源汽车MOM解决方案”，共同打造新能源汽车工业软件新范式！ （文/追月） 产业园区开发、运营 龙华高新园产业运营服务体系获2024年度产业运营优秀案例 高新园公司打造了“1+1+4”的产业运营服务体系实现了园区可持续发展的创新引领，以助力政府服务企业为1个核心，以企业管家体系为1个体系，以基础服务、政策服务、第三方服务、创投服务为四平台，开启了一场高质量、高品质发展的产业示范生产力革命。 （文/拾二） 旅游零售行业 亿点免税微信小程序获2024年度旅游零售行业精准营销平台 在全球旅游零售行业面临多种挑战的当下，中国市场日渐成为全球瞩目的焦点，如何赢得中国消费者的青睐，成为各国旅游零售企业的基本共识。亿点免税携中国出境旅客当中的高消费购物客群，拥有高净值与高消费的双重标签，为全球旅游零售行业赢得中国消费者提供了解决之道。 （文/鹏大） 行业 Marketingforce迈富时获2024 信创应用创新奖 迈富时率先构建了一个垂直一体化的AI整合技术架构，以及“营销云、销售云、商业云、分析云、智能云、组织云”六朵云体系，以Tforce大模型为底座赋能Marketingforce平台提供更智能化、更强增长能力的服务，赋予各行业先进的新质生产力，支持信创产业的跨越式发展。 （文/因赛） 医疗器械",
+            "extract_status": "success",
+            "review_status": "reviewed",
+            "keep_level": "drop",
+            "review_reason": "内容主体为企业AI工具和工业化管线介绍，与海外舆情监测主题无关",
+            "relevance_note": "文章核心是游戏公司内部研发运营体系，未涉及海外市场或舆情",
+            "value_type": "跑偏结果"
+          }
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_batch::AI辅助编程与开发实践::1",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "ai_review_batch",
+      "last_updated_at": "2026-04-15T14:51:59+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "batch_index": 1
+      },
+      "result": {
+        "original_titles": [
+          "GitHub会成为主理人们的宣发地，但你学的慢也没关系"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_batch::To B企业增长与营销策略::1",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "ai_review_batch",
+      "last_updated_at": "2026-04-15T14:51:15+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "batch_index": 1
+      },
+      "result": {
+        "original_titles": [
+          "信创国产化浪潮下的企业IM即时通讯如何选择？"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_batch::出海与海外市场数字化::1",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "ai_review_batch",
+      "last_updated_at": "2026-04-15T14:51:41+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "batch_index": 1
+      },
+      "result": {
+        "original_titles": [
+          "什么是网红营销平台？品牌该如何选择？",
+          "海外舆情态势感知框架"
+        ]
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_single::AI辅助编程与开发实践::GitHub会成为主理人们的宣发地，但你学的慢也没关系::https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "ai_review_single",
+      "last_updated_at": "2026-04-15T14:51:59+08:00",
+      "request_context": {
+        "topic": "AI辅助编程与开发实践",
+        "original_title": "GitHub会成为主理人们的宣发地，但你学的慢也没关系",
+        "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md"
+      },
+      "result": {
+        "url": "https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md",
+        "keep_level": "weak",
+        "reason": "提供了具体AI社区主理人的项目实例，作为背景补充。",
+        "relevance_note": "补充了“主理人”在GitHub上具体实践的例子，与原文主题相关。",
+        "value_type": "背景补充"
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_single::To B企业增长与营销策略::信创国产化浪潮下的企业IM即时通讯如何选择？::https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "ai_review_single",
+      "last_updated_at": "2026-04-15T14:51:15+08:00",
+      "request_context": {
+        "topic": "To B企业增长与营销策略",
+        "original_title": "信创国产化浪潮下的企业IM即时通讯如何选择？",
+        "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging"
+      },
+      "result": {
+        "url": "https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging",
+        "keep_level": "strong",
+        "reason": "补充链接发布时间早于原文，且提供了具体的选型评测方案",
+        "relevance_note": "链接内容与原文主题高度一致，均为信创背景下企业IM工具选型",
+        "value_type": "新增事实"
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_single::出海与海外市场数字化::什么是网红营销平台？品牌该如何选择？::https://news.qq.com/rain/a/20260409A03UKE00",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "ai_review_single",
+      "last_updated_at": "2026-04-15T14:51:41+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "original_title": "什么是网红营销平台？品牌该如何选择？",
+        "url": "https://news.qq.com/rain/a/20260409A03UKE00"
+      },
+      "result": {
+        "url": "https://news.qq.com/rain/a/20260409A03UKE00",
+        "keep_level": "drop",
+        "reason": "补充链接讨论软文营销平台，与原文主题网红营销平台存在本质差异",
+        "relevance_note": "原文聚焦网红/KOL营销，补充链接介绍的是软文发布和媒体投放平台",
+        "value_type": "跑偏结果"
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_single::出海与海外市场数字化::海外舆情态势感知框架::http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "ai_review_single",
+      "last_updated_at": "2026-04-15T14:51:41+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "original_title": "海外舆情态势感知框架",
+        "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml"
+      },
+      "result": {
+        "url": "http://www.ciweek.com/article/2026/0408/A2026040835118.shtml",
+        "keep_level": "drop",
+        "reason": "内容主体为企业AI工具和工业化管线介绍，与海外舆情监测主题无关",
+        "relevance_note": "文章核心是游戏公司内部研发运营体系，未涉及海外市场或舆情",
+        "value_type": "跑偏结果"
+      },
+      "error": {}
+    },
+    {
+      "entry_id": "review_single::出海与海外市场数字化::海外舆情态势感知框架::https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+      "status": "success",
+      "attempt_count": 1,
+      "provider": "",
+      "source": "ai_review_single",
+      "last_updated_at": "2026-04-15T14:51:41+08:00",
+      "request_context": {
+        "topic": "出海与海外市场数字化",
+        "original_title": "海外舆情态势感知框架",
+        "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm"
+      },
+      "result": {
+        "url": "https://www.sznews.com/news/content/2026-04/08/content_32008298.htm",
+        "keep_level": "weak",
+        "reason": "内容以乡村文化国际传播为例，与舆情监测的技术框架关联度不高",
+        "relevance_note": "可作为文化内容如何被海外感知的背景案例，但非舆情监测方法论",
+        "value_type": "背景补充"
+      },
+      "error": {}
+    }
+  ]
+}

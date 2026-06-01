@@ -1,0 +1,122 @@
+report_date: '2026-04-15'
+input_path: 'E:\AI\touzifenxi\skills\websearch\output\reports\infoq_report\infoq_search_202604151448\infoq_step_2_search_checklist_20260415.yaml'
+categories:
+  - topic: 'AI Agent与数据质量'
+    items:
+      - original_title: '零基础玩转 OpenClaw | 零代码・免配置・解压即用'
+        original_url: 'https://www.infoq.cn/article/7e33201c087b4bacc0dac7eed'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义'
+        original_url: 'https://www.infoq.cn/article/b613c940c0d9a6422afb1e3a1'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ'
+        original_url: 'https://www.infoq.cn/article/35c42aa9ff972413e7cddc316'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: 'To B企业增长与营销策略'
+    items:
+      - original_title: 'To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型'
+        original_url: 'https://www.infoq.cn/article/804df8efe7e196a35af320248'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '信创国产化浪潮下的企业IM即时通讯如何选择？'
+        original_url: 'https://www.infoq.cn/article/8aff0c089410a63641cda5e0a'
+        review_groups:
+          strong:
+            - title: '私有化信创聊天工具选型对比：2026年五大主流方案深度评测 - 喧喧'
+              url: 'https://www.xuanim.com/column/private-innovation-chat-tool-comparison-mainstream-solutions-31g-InstantMessaging'
+              reason: '补充链接发布时间早于原文，且提供了具体的选型评测方案'
+              value_type: '新增事实'
+          weak:
+          drop:
+          pending:
+      - original_title: '我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流'
+        original_url: 'https://www.infoq.cn/article/a3808f8a5660d311b61f55c25'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: '出海与海外市场数字化'
+    items:
+      - original_title: '什么是网红营销平台？品牌该如何选择？'
+        original_url: 'https://www.infoq.cn/article/a2e6fcd66d1b4fc49879f6b38'
+        review_groups:
+          strong:
+          weak:
+          drop:
+            - title: '2026软文营销平台，五大主流平台推荐，照着选不出错_腾讯新闻'
+              url: 'https://news.qq.com/rain/a/20260409A03UKE00'
+              reason: '补充链接讨论软文营销平台，与原文主题网红营销平台存在本质差异'
+              value_type: '跑偏结果'
+          pending:
+      - original_title: '海外舆情态势感知框架'
+        original_url: 'https://www.infoq.cn/article/f87c4e0f050bf997f13bccc58'
+        review_groups:
+          strong:
+          weak:
+            - title: '增强乡村文化国际传播影响力（有的放矢） - 深圳新闻网'
+              url: 'https://www.sznews.com/news/content/2026-04/08/content_32008298.htm'
+              reason: '内容以乡村文化国际传播为例，与舆情监测的技术框架关联度不高'
+              value_type: '背景补充'
+          drop:
+            - title: '2024（第六届）创新发展论坛金i奖 - 互联网周刊'
+              url: 'http://www.ciweek.com/article/2026/0408/A2026040835118.shtml'
+              reason: '内容主体为企业AI工具和工业化管线介绍，与海外舆情监测主题无关'
+              value_type: '跑偏结果'
+          pending:
+  - topic: 'Go语言技术实践'
+    items:
+      - original_title: 'Go语言中的Pool：对象复用的艺术'
+        original_url: 'https://www.infoq.cn/article/bf1edd99a743a75f8fe427238'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+  - topic: 'AI辅助编程与开发实践'
+    items:
+      - original_title: '别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清'
+        original_url: 'https://www.infoq.cn/article/28d350e40237164be89704f22'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: '一文带你看懂，火爆全网的Harness Engineering到底是个啥。'
+        original_url: 'https://www.infoq.cn/article/641bc4412b508ed15c128b2ca'
+        review_groups:
+          strong:
+          weak:
+          drop:
+          pending:
+      - original_title: 'GitHub会成为主理人们的宣发地，但你学的慢也没关系'
+        original_url: 'https://www.infoq.cn/article/c409583476628981c4092e2bd'
+        review_groups:
+          strong:
+          weak:
+            - title: 'README.md - xianyu110/awesome-openclaw-tutorial - GitHub'
+              url: 'https://github.com/xianyu110/awesome-openclaw-tutorial/blob/main/README.md'
+              reason: '提供了具体AI社区主理人的项目实例，作为背景补充。'
+              value_type: '背景补充'
+          drop:
+          pending:
+summary:
+  strong: 1
+  weak: 2
+  drop: 2
+  pending: 0

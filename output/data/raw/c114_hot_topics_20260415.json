@@ -1,0 +1,314 @@
+{
+  "report_date": "2026-04-15",
+  "generated_at": "2026-04-16T18:26:51",
+  "channels": [
+    {
+      "channel_key": "home",
+      "channel_name": "首页",
+      "channel_url": "https://www.c114.com.cn/?c=web",
+      "article_count": 11,
+      "hot_topics": [
+        {
+          "keyword": "AI4S",
+          "count": 1
+        },
+        {
+          "keyword": "中科曙光",
+          "count": 1
+        },
+        {
+          "keyword": "6万卡集群",
+          "count": 1
+        },
+        {
+          "keyword": "超智融合算力",
+          "count": 1
+        },
+        {
+          "keyword": "国家超算互联网",
+          "count": 1
+        },
+        {
+          "keyword": "亚马逊",
+          "count": 1
+        },
+        {
+          "keyword": "低空",
+          "count": 1
+        },
+        {
+          "keyword": "DRAM",
+          "count": 1
+        },
+        {
+          "keyword": "Max",
+          "count": 1
+        },
+        {
+          "keyword": "旗舰机型",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308551.html",
+          "title": "里程碑时刻：中科曙光6万卡集群破解AI4S供给缺口",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "AI4S",
+            "中科曙光",
+            "6万卡集群",
+            "超智融合算力",
+            "国家超算互联网"
+          ],
+          "summary": "里程碑时刻：中科曙光6万卡集群破解AI4S供给缺口,C114讯 4月15日消息（艾斯）2026年，全球市场迎来了人工智能（AI）应用大年。从智能体（Ag"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308541.html",
+          "title": "亚马逊800亿收购卫星巨头，联手苹果阻击马斯克星链",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "亚马逊"
+          ],
+          "summary": "亚马逊800亿收购卫星巨头，联手苹果阻击马斯克星链,据彭博社报道，亚马逊收购卫星运营商Globalstar，在直接挑战马斯克旗下星链的同时，预计还会让该"
+        },
+        {
+          "url": "https://www.c114.com.cn/la/6544/a1308532.html",
+          "title": "西藏发布低空政策，最高奖励2000万元",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "低空"
+          ],
+          "summary": "西藏发布低空政策，最高奖励2000万元,C114讯 4月15日消息（兰茜）近日，为发展新质生产力，打造低空经济产业，西藏自治区通用航空产业发"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/51/a1308531.html",
+          "title": "消息称苹果自担 DRAM 内存成本压力",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "DRAM",
+            "Max",
+            "旗舰机型",
+            "苹果公司",
+            "内存"
+          ],
+          "summary": "消息称苹果自担 DRAM 内存成本压力,消息源 yeux1122 昨日（4 月 14 日）发布博文，爆料称苹果为了在竞品普遍涨价的背景下获取"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/123/a1308520.html",
+          "title": "瑞芯微2025年营收同比增长40.36% 净利润同比增长74.82% 均创历史新高",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "瑞芯微"
+          ],
+          "summary": "瑞芯微2025年营收同比增长40.36% 净利润同比增长74.82% 均创历史新高,C114讯 4月15日消息（颜翊）昨日，瑞芯微发布2025年年度报告。报告期内，公司实现营业收入44"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308518.html",
+          "title": "光刻机巨头ASML发财报：一季度净赚28亿欧元！全年预期上调至400亿",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "ASML"
+          ],
+          "summary": "光刻机巨头ASML发财报：一季度净赚28亿欧元！全年预期上调至400亿,ASML今日发布2026年第一季度财报，第一季度净销售额88亿欧元，毛利率53.0%，净利润28亿欧"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/123/a1308516.html",
+          "title": "中科曙光2025年营收同比增长13.81% 净利润同比增长13.87%",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "曙光信息"
+          ],
+          "summary": "中科曙光2025年营收同比增长13.81% 净利润同比增长13.87%,C114讯 4月15日消息（颜翊）昨日，中科曙光发布2025年年报，公司实现营业收入149.64 亿"
+        },
+        {
+          "url": "https://www.c114.com.cn/ai/5339/a1308515.html",
+          "title": "微软接手 OpenAI 挪威“星门”数据中心，获 3 万块英伟达芯片算力",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "OpenAI",
+            "星门",
+            "数据中心",
+            "芯片",
+            "谷歌"
+          ],
+          "summary": "微软接手 OpenAI 挪威“星门”数据中心，获 3 万块英伟达芯片算力,据彭博社报道，微软公司已同意租用挪威一处数据中心的算力资源，该场地最初是为 OpenAI 准备的，并"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308510.html",
+          "title": "英伟达发布开源AI模型家族“伊辛”，带动量子概念股暴涨",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "英伟达"
+          ],
+          "summary": "英伟达发布开源AI模型家族“伊辛”，带动量子概念股暴涨,C114讯 4月15日消息（云青）当地时间周二，英伟达在GTC 2026大会上，正式发布全球首个面向"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308507.html",
+          "title": "我国网络视听用户规模 10.99 亿人，稳居各互联网应用首位",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "视听",
+            "互联网应用",
+            "用户规模",
+            "首位",
+            "我国网络"
+          ],
+          "summary": "我国网络视听用户规模 10.99 亿人，稳居各互联网应用首位,据新华社报道，4 月 15 日在四川成都开幕的第 13 届中国网络视听大会上，《中国网络视听发展研究"
+        },
+        {
+          "url": "https://www.c114.com.cn/news/16/a1308506.html",
+          "title": "三星劳资纠纷升级：员工拟罢工 18 天，要求瓜分 15% 利润约 300 亿美元",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "三星"
+          ],
+          "summary": "三星劳资纠纷升级：员工拟罢工 18 天，要求瓜分 15% 利润约 300 亿美元,科技媒体 Wccftech 昨日（4 月 14 日）发布博文，报道称三星工会因不满奖金分配，威胁于"
+        }
+      ]
+    },
+    {
+      "channel_key": "quantum",
+      "channel_name": "量子信息",
+      "channel_url": "https://www.c114.com.cn/quantum/",
+      "article_count": 1,
+      "hot_topics": [
+        {
+          "keyword": "英伟达",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/quantum/5285/a1308522.html",
+          "title": "英伟达发布开源AI模型家族“伊辛”，带动量子概念股暴涨",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "英伟达"
+          ],
+          "summary": "英伟达发布开源AI模型家族“伊辛”，带动量子概念股暴涨,C114讯 4月15日消息（云青）当地时间周二，英伟达在GTC 2026大会上，正式发布全球首个面向"
+        }
+      ]
+    },
+    {
+      "channel_key": "satellite",
+      "channel_name": "卫星互联网",
+      "channel_url": "https://www.c114.com.cn/satellite/",
+      "article_count": 0,
+      "hot_topics": [],
+      "articles": []
+    },
+    {
+      "channel_key": "la",
+      "channel_name": "数智低空",
+      "channel_url": "https://www.c114.com.cn/la/",
+      "article_count": 1,
+      "hot_topics": [
+        {
+          "keyword": "低空",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/la/6544/a1308532.html",
+          "title": "西藏发布低空政策，最高奖励2000万元",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "低空"
+          ],
+          "summary": "西藏发布低空政策，最高奖励2000万元,C114讯 4月15日消息（兰茜）近日，为发展新质生产力，打造低空经济产业，西藏自治区通用航空产业发"
+        }
+      ]
+    },
+    {
+      "channel_key": "ai",
+      "channel_name": "Cloud&AI",
+      "channel_url": "https://www.c114.com.cn/ai/",
+      "article_count": 3,
+      "hot_topics": [
+        {
+          "keyword": "OpenAI",
+          "count": 2
+        },
+        {
+          "keyword": "星门",
+          "count": 1
+        },
+        {
+          "keyword": "数据中心",
+          "count": 1
+        },
+        {
+          "keyword": "芯片",
+          "count": 1
+        },
+        {
+          "keyword": "谷歌",
+          "count": 1
+        },
+        {
+          "keyword": "网络安全",
+          "count": 1
+        },
+        {
+          "keyword": "IT",
+          "count": 1
+        },
+        {
+          "keyword": "迭代",
+          "count": 1
+        },
+        {
+          "keyword": "防御能力",
+          "count": 1
+        },
+        {
+          "keyword": "Anthropic",
+          "count": 1
+        }
+      ],
+      "articles": [
+        {
+          "url": "https://www.c114.com.cn/ai/5339/a1308515.html",
+          "title": "微软接手 OpenAI 挪威“星门”数据中心，获 3 万块英伟达芯片算力",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "OpenAI",
+            "星门",
+            "数据中心",
+            "芯片",
+            "谷歌"
+          ],
+          "summary": "微软接手 OpenAI 挪威“星门”数据中心，获 3 万块英伟达芯片算力,据彭博社报道，微软公司已同意租用挪威一处数据中心的算力资源，该场地最初是为 OpenAI 准备的，并"
+        },
+        {
+          "url": "https://www.c114.com.cn/ai/5339/a1308496.html",
+          "title": "OpenAI 推出网络安全专用 AI 模型 GPT",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "OpenAI",
+            "网络安全",
+            "IT",
+            "迭代",
+            "防御能力"
+          ],
+          "summary": "OpenAI 推出网络安全专用 AI 模型 GPT-5.4-Cyber，对标 Claude Mythos,OpenAI 公司昨日（4 月 14 日）发布公告，宣布扩大网络防御可信访问计划（TAC），向数千名"
+        },
+        {
+          "url": "https://www.c114.com.cn/ai/5339/a1308495.html",
+          "title": "消息称风投争相投资 Anthropic，对其估值最高达 8000 亿美元",
+          "publish_date": "2026-04-15",
+          "keywords": [
+            "Anthropic",
+            "估值",
+            "风投",
+            "HumanX",
+            "Mythos"
+          ],
+          "summary": "消息称风投争相投资 Anthropic，对其估值最高达 8000 亿美元,据 Business Insider 报道，多位知情人士透露，最近几周，开发 Claude 的初创公"
+        }
+      ]
+    }
+  ]
+}

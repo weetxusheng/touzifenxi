@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Mobile Specific Meta -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <meta charset="UTF-8">
+    <!-- Site Title -->
+    <title>SEMI大半导体产业网</title>
+    <link rel="icon" type="image/x-icon" href="https://www.semi.org.cn/site/share/semi/img/fav.png">
+    <!-- <link href="https://fonts.googleapis.com/css?family=Poppins:100,200,400,300,500,600,700" rel="stylesheet"> -->
+    <!--CSS============================================= -->
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/linearicons.css">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/bootstrap.css">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/owl.carousel.css">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/main.css?20201231">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/tab.css">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/home.css?20201231">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/common.css">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/jdc-side-panel.css">
+    <link rel="stylesheet" href="https://www.semi.org.cn/site/share/semi/css/iconfont.css">
+
+    <!--	<link rel="stylesheet" type="text/css" href="https://cdn.mingsoft.net/plugins/iconfont/1.0.0/iconfont.css" />
+-->
+    <style>
+        @-webkit-keyframes move {
+            0% {
+                bottom: 300px;
+                left: 50%;
+            }
+
+            100% {
+                bottom: 0px;
+                left: calc(100% - 405px);
+            }
+        }
+
+        .amiante {
+            /* -webkit-animation: move 2s linear;
+         animation: move 2s linear; */
+            bottom: 0px;
+            left: calc(100% - 405px);
+            left: -moz-calc(100% - 405px);
+            left: -webkit-calc(100% - 405px);
+            /* top: -moz-calc(100% - 225px);
+         left: -moz-calc(100% - 405px);
+         top: -webkit-calc(100% - 225px);
+         left: -webkit-calc(100% - 405px); */
+            width: 400px;
+            transition: transform;
+            height: 300px;
+            position: fixed;
+        }
+
+        .origin {
+            width: 450px;
+            height: 330px;
+            z-index: 1000;
+            position: fixed;
+
+
+            transition: transform 2s;
+            display: none;
+
+        }
+
+        .origin>img,
+        .amiante>img {
+            width: 25px;
+            height: 25px;
+            position: absolute;
+            right: -19px;
+            top: 8px;
+            z-index: 9999;
+        }
+
+        .new-searching-unit input {
+            margin: 0 auto;
+            padding: 0 10px;
+            vertical-align: middle;
+            width: 230px;
+            height: 30px;
+            border: 1px solid rgb(103 154 99);
+            border-radius: 2px;
+            background-color: #fff;
+        }
+
+        .new-searching-unit .go {
+            position: absolute;
+            display: block;
+            top: 0;
+            padding: 0;
+            right: 0;
+            width: 40px;
+            height: 30px;
+            background: url(https://www.semi.org.cn/site/share/semi/images/icon_search.svg) 9px 5px no-repeat;
+            cursor: pointer;
+        }
+
+        .section1 .row {
+            margin-top: 20px;
+        }
+    </style>
+
+</head>
+
+<header class="default-header">
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="https://www.semi.org.cn/site/semi/">
+                <img src="https://www.semi.org.cn/site/share/semi/img/logo.png" width="100%" alt="">
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse justify-content-end align-items-center" id="navbarSupportedContent">
+                <ul class="navbar-nav">
+                    <li><a target="_blank"
+                            href="https://www.semi.org.cn/site/semi/column/26595298402893836.html">热点新闻</a></li>
+                    <li><a target="_blank" href="https://china.semi.org.cn">SEMI活动</a></li>
+
+                    <!-- <li><a href="https://china.semi.org.cn/article/78">SEMI标准</a></li> -->
+
+                    <li><a target="_blank" href="https://ecar.semi.org.cn/">汽车电子</a></li>
+
+                    <!-- <li><a target="_blank" href="http://pv.semi.org.cn/">光伏国际</a></li> -->
+
+                    <!-- <li><a th:href="${content[0].url}" th:text="${content[0].title}"> </a></li> -->
+
+                    <li><a href="https://www.semi.org.cn/site/semi/column/26595298402893846.html">杂志</a></li>
+
+                    <!-- <li><a href="https://www.semi.org.cn/siip/">SIIP投资平台</a></li>
+
+                    <li><a href="https://www.semi.org.cn/wfd/">英才计划</a></li> -->
+
+                    <li><a target="_blank" href="https://www.semiconchina.org">SEMICON China</a></li>
+
+                    <li><a target="_blank" href="https://www.fpdchina.org">FPD China</a></li>
+
+                    <!-- <li><a target="_blank" href="https://pso.semi.org.cn">PSO</a></li> -->
+                    <li>
+                        <div class="new-searching-unit"
+                            style="display: inline-block;position: relative; margin: 1px 5px">
+                            <input id="query" type="text" name="q" autocomplete="off" placeholder="请输入关键字" value="">
+                            <span class="go" onclick="query()"></span>
+                        </div>
+                    </li>
+                </ul>
+
+            </div>
+        </div>
+    </nav>
+</header>
+<!-- End Header Area -->
+
+<body>
+
+
+    <div class="loginbar">
+        <!-- <ul> -->
+        <!--            <li><a class="active" href="#">APP</a></li>-->
+        <!--            <li><a class="active" href="register.html">注册</a></li>-->
+        <!--            <li><a class="active" href="login.html">登录</a></li>-->
+        <!-- <li>
+                <div class="new-searching-unit" style="display: inline-block;position: relative; margin: 1px 5px">
+                    <input id="query" type="text" name="q" autocomplete="off" placeholder="请输入关键字" value="">
+                    <span class="go" onclick="query()"></span>
+                </div>
+            </li>
+        </ul> -->
+        <div id="carouselExampleSlidesOnly" class="carousel slide" data-ride="carousel">
+            <div class="carousel-inner" id='ggw6'>
+                <div class="carousel-item active">
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- <div class="origin" id="origin" >
+        <img src="./close.png" id="close"  onclick="closeVideo()"/>
+        <div onclick="linkVideo()">
+        <video src="advantest.mp4" controls="controls" muted  autoplay style="width:100%;height:330px">
+           您的浏览器不支持 video 标签。
+        </video></div>
+     </div> -->
+    <!-- start section1 Area -->
+    <!-- 热点新闻 Area -->
+    <div class="container section1">
+        <div style="margin-top:0;margin-bottom:0;" id="ggw4"></div>
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card clearfix" style="display:block;">
+                    <div class="pull-left hotLeftPic">
+
+                        <img src="https://www.semi.org.cn/site//file/2026-05/659e903d70c14d2d8e2277bc06596388@600x400.png"
+                            alt="..." class="card-img">
+                        </a>
+                        <div class="hotDotContent">
+                            <h2 class="hotDotTitle pull-left">热点新闻</h2>
+                            <a class="pull-right hotMore" href="https://www.semi.org.cn/site/semi/column/26595298402893836.html" target="_blank">更多&gt&gt</a>
+                            <div class="hotBottom">
+                                <a href="https://www.semi.org.cn/site/semi/article/8f52649ff3ae4b19ac99b3f951d3a2ad.html" target="_blank">
+                                    <h3 class="hotSubTitle">SEMI报告：2025年全球半导体材料市场销售额创下732亿美元历史新高</h3>
+                                    <p class="hotSubTxt">受先进工艺、计算和存储的制造需求推动，晶圆制造材料和封装材料两大板块双双增长</p>
+                                </a>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+                    <div class=" pull-right hotRightTxt">
+                        <!--                     		<div class="card-header">-->
+                        <!--		                        <h4 th:text="${content[2].title}"> </h4><a th:href="${content[2].url}"-->
+                        <!--		                            target="_blank">更多&gt&gt</a>-->
+                        <!--		                    </div>-->
+                        <!--		                    <div class="row no-gutters hotDotPic" style="margin: 0" th:each="obj : ${content[2].data}">-->
+                        <!--		                        <div class="col-md-12">-->
+                        <!--		                            <div class="card-body" style="margin: -2% 0">-->
+                        <!--		                                <h5 class="card-at"><a th:href="${obj.url}" target="_blank" th:text="${obj.title}"> </a>-->
+                        <!--		                                </h5>-->
+                        <!--		                                <p class="hotTxt" th:text="${obj.description}"> </p>-->
+                        <!--		                            </div>-->
+                        <!--		                        </div>-->
+                        <!--		                    </div>-->
+
+
+                    </div>
+
+                </div>
+            </div>
+            <!-- 广告 Area -->
+            <div class="col-md-4">
+                <div id="carouselExampleSlidesOnly" class="carousel slide hp-ad1" data-ride="carousel">
+                    <div class="carousel-inner" id='ggw1'>
+                        <div class="carousel-item active">
+                            <img src="https://www.semi.org.cn/site/share/semi/img/ad.jpg" target="_blank"
+                                class="d-block w-100" alt="...">
+                        </div>
+                        <div class="carousel-item">
+                            <img src="https://www.semi.org.cn/site/share/semi/img/c2.jpg" target="_blank"
+                                class="d-block w-100" alt="...">
+                        </div>
+                        <div class="carousel-item">
+                            <img src="https://www.semi.org.cn/site/share/semi/img/c3.jpg" target="_blank"
+                                class="d-block w-100" alt="...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+    <!-- End section1 Area -->
+
+
+    <!-- start section2 Area -->
+    <section id="tab-news">
+        <div class="container">
+            <!-- Tab links -->
+            <div class="tabs">
+                <button class="tablinks active" data-country="半导体">
+                    <p data-title="半导体">半导体</p>
+                </button>
+                <button class="tablinks" data-country="人工智能">
+                    <p data-title="人工智能">人工智能</p>
+                </button>
+                <button class="tablinks" data-country="汽车电子">
+                    <p data-title="汽车电子">汽车电子</p>
+                </button>
+                <button class="tablinks" data-country="PV·LED·FPD">
+                    <p data-title="PV·LED·FPD">PV·LED·FPD</p>
+                </button>
+            </div>
+
+            <!-- Tab content -->
+            <div class="wrapper_tabcontent" style="margin-bottom: -1.5%">
+                <div id="半导体" class="tabcontent active">
+                    <div class="row">
+                        <div class="n-card col-sm-12">
+                            <ul class="list-unstyled">
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/578603b665c54e42b182ce9853166fcb@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/a77885fcd495465e97cbfd36b5a17381.html" target="_blank">英特尔陈立武：14A制程2029年量产，18A工艺良率回升</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> | -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">英特尔CEO陈立武在受访时透露14A节点计划于2028年启动风险试产，2029年实现规模化量产。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/20992929c4064218a6b1ae09041b9caf@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/4e531f361b77488182b0a9eda190f2ec.html" target="_blank">格罗方德宣布推出用于CPO的硅光子共封装先进光引擎方案</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> | -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">该SCALE CPO解决方案基于格罗方德先进的硅光子技术打造，采用CWDM与DWDM技术，实现单根光纤的双向数据传输。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/7a8b29242f054d2fb4f10e3dfa1a7b85@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/4cbe2f882a8f4a77b2007904e45e0a84.html" target="_blank">蓝思科技拟收购巨腾国际控股权</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> | -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">蓝思科技拟控股巨腾国际，交易完成后将助力蓝思科技完善&quot;材料-组件-整机&quot;垂直一体化能力。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/98fbffb57c4c4a95b9eedce75c092970@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/fc51c6bb933c4e3d8f235fad9eb80c32.html" target="_blank">华大九天存储EDA工具获头部存储芯片客户验证并投入应用</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> | -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">华大九天EDA工具系统经过头部存储芯片企业的设计和生产验证，已被大规模应用于存储芯片的设计和制造中。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tabmore">
+                        <a href="https://www.semi.org.cn/site/semi/column/26595298402893851.html" target="_blank">更多&gt&gt</a>
+                    </div>
+                </div>
+
+                <div id="人工智能" class="tabcontent">
+                    <div class="row">
+                        <div class="n-card col-sm-12">
+                            <ul class="list-unstyled">
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/aa0c55e96c344637adfc02a188e1184c@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/f39a55f78ed04df7bfd5f5df00c564f8.html" target="_blank">Meta加速转型重组 7000人转岗AI部门</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> |  -->
+                                            <span>2026-05-20</span><br>
+                                            <span class="tabContentTxt">根据备忘录规划，Meta将于当地时间5月20日（周三）正式解雇全球10%的员工，并预计在今年晚些时候展开更大规模的深度裁员。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/683b4729cded4959a6b6091cd4f1ac98@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/636cd7a3d7ce44c0b2c4bc7448a6187f.html" target="_blank">三星研发移动端HBM芯片技术</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> |  -->
+                                            <span>2026-05-20</span><br>
+                                            <span class="tabContentTxt">这项移动HBM封装技术名为“多层堆叠FOWLP”，其结合了超高纵横比铜柱和扇出型晶圆级封装（FOWLP），并对现有的垂直铜柱堆叠（VCS）技术进行了改进。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/bbf7ae6d4e3a4eda97f5b1d6af680a8b@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/a66e46892c3e4020a5544ba4ea619c7f.html" target="_blank">恒生电子与阿里云达成AI全栈合作</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> |  -->
+                                            <span>2026-05-20</span><br>
+                                            <span class="tabContentTxt">双方将围绕大模型技术、算力服务及行业智能化应用等方向展开全面合作，共同推动AI技术在金融行业及其他行业的加速落地。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/74b357bc3acc4400a5f3c15d4d1f4eb0@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/fcdbcc1c53074098b8da5a51314cc74e.html" target="_blank">英伟达拟领投印度AI初创公司</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> |  -->
+                                            <span>2026-05-19</span><br>
+                                            <span class="tabContentTxt">英伟达正与Simplismart进行谈判，拟牵头参与一轮规模为2000万美元的融资活动。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tabmore">
+                        <a href="https://www.semi.org.cn/site/semi/column/26595298402893848.html" target="_blank">更多&gt&gt</a>
+                    </div>
+                </div>
+
+                <div id="汽车电子" class="tabcontent">
+                    <div class="row">
+                        <div class="n-card col-sm-12">
+                            <ul class="list-unstyled">
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/c004f4ad3c5b4959b96b9aa854ea4301@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/ad05d626e4c94098b1b41f48c3ba7d6f.html" target="_blank">消息称东风将在Stellantis法国工厂生产汽车</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> |  -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">消息透露，该合作协议最快将于本周正式官宣，初期将有一款东风旗下车型落户雷恩工厂投产。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/93a1f526ef8e457ab80e910ae878c5c0@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/31f91d3563754ad3a0c60b70f38efed3.html" target="_blank">特斯拉放弃印度建厂计划</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> |  -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">印度重工业部部长库马拉瓦米已经公开出面证实，特斯拉方面已经正式告知印度相关部门，放弃印度建厂的全部规划。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/b09572af087d435a9cebf31fd56c4cb5@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/96c5adf9afae42a1ab4db385934a2a59.html" target="_blank">尼得科将终止与广汽集团电动汽车电机合资企业</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> |  -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">E-Axle是将电机和逆变器等多个零部件组合起来的驱动装置，此次退出该业务的在华合资企业，表明尼得科正在进行战略转型，朝着结构改革的方向迈进。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/7ea9d872ec104d148a2deeb0ef1cc709@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/4c2ae8e7a2bc404599c3af491e30b045.html" target="_blank">印度Ola Electric拟斥资2.085亿美元加码电动车及电芯业务</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> |  -->
+                                            <span>2026-05-19</span><br><span class="tabContentTxt">印度两轮电动车企业Ola Electric宣布，将投资2.085亿美元布局整车与动力电池核心业务。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                    </div>
+                    <div class="tabmore">
+                        <a href="https://www.semi.org.cn/site/semi/column/26595298402893838.html" target="_blank">更多&gt&gt</a>
+                    </div>
+                </div>
+
+                <div id="PV·LED·FPD" class="tabcontent">
+                    <div class="row">
+                        <div class="n-card col-sm-12">
+                            <ul class="list-unstyled">
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/ec62b56cbf6848a48b2dc536f41fd5c0@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/0174dc871a0a48728ec7302e890a15df.html" target="_blank">云南大理774.95MW风光项目启动竞配 </a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> | -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">根据公告，大理州本次列入竞配方案的项目共有12个，总装机容量774.95MW。其中包括光伏项目9个，合计容量640.95MW；风电项目3个，合计容量134MW。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/d63b79b46ebe41fba2d94355ae572eeb@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/edaa53e4137f4df7a46284f42a1097ad.html" target="_blank">通州首个水务领域光伏示范项目并网发电</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> | -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">项目采用自发自用、余电上网模式，高效盘活厂区空间资源，走出水务节能降耗新路径。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/d0f2935dc45a4367936b6438501bb440@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/84932380f37b4743ad5440b0df0e6376.html" target="_blank">广东韶关市乳源必背镇拟建横溪村170.88kW光伏项目</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> | -->
+                                            <span>2026-05-20</span><br><span class="tabContentTxt">项目投资估算75万元（含税），计划新装安装640w光伏组件块共267块，安装容量分别为170.88kW。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                                <li class="media">
+                                    <img src="https://www.semi.org.cn/site//file/2026-05/e20713d9b3c94b19b98b6115763d5cd3@200x200.png"
+                                        class="mr-3" alt="..." width="138px" height="120px">
+                                    <div class="media-body">
+                                        <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/b785d574901543e6b75cd65782e4843a.html" target="_blank">华润新能源IPO正式获批</a></h5>
+                                        <p>
+                                            <!-- <span th:text="${obj.author}"> </span> | -->
+                                            <span>2026-05-19</span><br><span class="tabContentTxt">华润新能源本次拟在深交所主板上市，公司拟募集资金245亿元将全部投向新能源主业。</span>
+                                        </p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tabmore">
+                        <a href="https://www.semi.org.cn/site/semi/column/26595298402893840.html" target="_blank">更多&gt&gt</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <div class="container">
+        <div class="row" style="margin-bottom: 3%">
+            <!-- 近期活动 Area -->
+            <div class=" col-md-4 col-sm-12">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4>近期活动</h4><a href="https://www.semi.org.cn/site/semi/column/26595298402893845.html"
+                            target="_blank">更多&gt&gt</a>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semicontaiwan.org/zh/"
+                                target='_blank'>
+                                <!--  <span th:text="${obj.publishtime}" style="color: black;"></span><br> -->
+
+                                <span style="color: black;">2026年9月2-4日 SEMICON Taiwan 2026 台北</span></a></h4>
+                        <h4 class="maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semiconindia.org/"
+                                target='_blank'>
+                                <!--  <span th:text="${obj.publishtime}" style="color: black;"></span><br> -->
+
+                                <span style="color: black;">2026年9月17-19日 SEMICON India 2026 新德里</span></a></h4>
+                        <h4 class="maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semiconwest.org/"
+                                target='_blank'>
+                                <!--  <span th:text="${obj.publishtime}" style="color: black;"></span><br> -->
+
+                                <span style="color: black;">2026年10月13-15日 SEMICON WEST 2026 旧金山</span></a></h4>
+                        <h4 class="maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semiconeuropa.org"
+                                target='_blank'>
+                                <!--  <span th:text="${obj.publishtime}" style="color: black;"></span><br> -->
+
+                                <span style="color: black;">2026年11月10-13日 SEMICON Europa 2026 慕尼黑</span></a></h4>
+                        <h4 class="maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semiconjapan.org"
+                                target='_blank'>
+                                <!--  <span th:text="${obj.publishtime}" style="color: black;"></span><br> -->
+
+                                <span style="color: black;">2026年12月9-11日 SEMICON Japan 2026 东京</span></a></h4>
+                    </div>
+                </div>
+            </div>
+            <!-- SEMI数据 Area -->
+            <div class=" col-md-4 col-sm-12">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4>SEMI数据</h4><a href="https://www.semi.org.cn/site/semi/column/26595298402893853.html"
+                            target="_blank">更多&gt&gt</a>
+                    </div>
+                    <div class="card-body">
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/313ffe8f33344cb5a5209b613dd8640d.html"
+                                target="_blank">SEMI报告：2025年全球半导体材料市场销售额创下732亿美元历史新高</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/064889b053334e7eb1303e8ab48fbe96.html"
+                                target="_blank">SEMI报告：2026年第一季度全球硅晶圆出货量同比增长13%</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/ce4138b31858418a9fceebae19c84820.html"
+                                target="_blank">ESDA报告：2025年第四季度电子系统设计产业销售额达55亿美元</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/d08a988a850947f8acd68e22824cfcb1.html"
+                                target="_blank">SEMI报告：预测全球300mm晶圆厂设备支出2026年和2027年将实现两位数增长</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/5edc3a1c902941e181b1c907ef0b7046.html"
+                                target="_blank">SEMI报告：2025年全球硅晶圆出货量增长，销售额受传统应用影响略有下滑</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/586fa152147b419faf4600902abd617c.html"
+                                target="_blank">ESDA报告：2025 年第三季度电子系统设计产业销售额达 56 亿美元</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/4b275c3854b24bb4b8b45da65c3c88a2.html"
+                                target="_blank">SEMI报告：2027年全球半导体设备销售额预计创历史新高，达1560亿美元</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/e1eac94c2b21483a9021aa3736f3e2ef.html"
+                                target="_blank">SEMI报告：2025年第三季度全球半导体设备出货金额同比增长11%</a></h4>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- 杂志Area 每日新闻与评论-->
+            <!-- <div class=" col-md-4 col-sm-12">
+
+
+
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 th:text="${content[5].title}"></h4>
+                        <a href="https://www.semi.org.cn/site/share/semi/newslist.html" target="_blank">更多&gt&gt</a>
+                    </div>
+                    <div class="card-body" id="newslist">
+                       
+                    </div>
+                </div>
+
+
+            </div> -->
+            <div class=" col-md-4 col-sm-12">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4>高管视点</h4><a href="https://www.semi.org.cn/site/semi/column/673dd3f2d62443b7ad4a32188f952034.html"
+                            target="_blank">更多&gt&gt</a>
+                    </div>
+                    <div class="card-body">
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/f180f68106d4421ea17cf501426af79b.html"
+                                target="_blank">新微半导体：GaN 竞争白热化， 产业重构正当时</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/6174c12cfdc3458b951de91b361598f3.html"
+                                target="_blank">弥费科技：以“智能化+全球化”重塑AMHS格局</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/ae56a4c14c814d43a5d219368d6d3243.html"
+                                target="_blank">是德科技：贴近本土助力大中华区加速创新</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/42238edd9e004db78bdae965c289d103.html"
+                                target="_blank">森美协尔：抓住产业周期性波动下的国产化机遇</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/6049ef3995804251a0dc214f15e1df54.html"
+                                target="_blank">Comet：持续深化亚太布局，抢抓先进封装新机遇</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/6bafb035033a45e9825a122e12659a03.html"
+                                target="_blank">奥芯明：本土化战略赋能半导体封装新生态</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/0e53f9f1666645a6a1a9d3239e6eb601.html"
+                                target="_blank">派拓网络：工作环境变迁与网络安全技术演进</a></h4>
+                        <h4 class=" maxTxt-2"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/e1b8d7e4516f4b43b1759e17832d8082.html"
+                                target="_blank">小尺寸FPGA如何发挥大作用</a></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row" style="margin-bottom: 3%">
+            <div class=" col-md-6 col-sm-12">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4>产业观察</h4><a href="https://www.semi.org.cn/site/semi/column/26595298402893857.html"
+                            target="_blank">更多&gt&gt</a>
+                    </div>
+                    <ul class="list-unstyled" style="margin: 3% 3% 0">
+                        <li class="media">
+                            <img src="https://www.semi.org.cn/site//file/2026-01/ede0535d9f4940b8b3d78d79c5a61fd8@200x300.png"
+                                class="mr-3 bigShow" alt="..." style="width: 108px; height: 144px">
+                            <img src="https://www.semi.org.cn/site//file/2026-01/ede0535d9f4940b8b3d78d79c5a61fd8@300x200.png"
+                                class="mr-3 smallShow" alt="..." style="width: 100%;">
+                            <div class="media-body">
+                                <h5 class="mt-0 mb-1"><a href="https://www.semi.org.cn/site/semi/article/400eb632f5c348fdbbb8562a6633646b.html" target="_blank">量子时代的“隐形基石”：薄膜铌酸锂</a></h5>
+                                <p class="card-am"><span>王兆龙</span> | <span>2026-01-22</span></p>
+                                <p><span class="maxTxt-4">夜晚的光纤世界，总有一些肉眼看不见的信号在闪烁。它们以光速穿行，从海底电缆到数据中心，再到你的手机屏幕，每一次“点赞”和“推送”背后，都是亿万次光的跃迁。而在这场无声的速度竞赛中，有一种材料正在悄悄成为主角——薄膜铌酸锂（Lithium Niobate on Insulator，LNOI）。</span></p>
+                            </div>
+                        </li>
+                    </ul>
+                    
+                    
+                    
+                    <div class="card-body" style="margin: -3% 0">
+                        
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/c5a5507a434e4c64be2c35f0e8803694.html"
+                                target="_blank">从一粒沙开始：一片晶圆如何承载全球科技</a>
+                        </h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/51c0c52e663c4839895b19ac2258550c.html"
+                                target="_blank">AI 时代，建设一座未来晶圆厂要多少钱？</a>
+                        </h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/303e39ad3d864639a1c25dc3518bc82d.html"
+                                target="_blank">中国化合物半导体产业的技术突破与市场机遇</a>
+                        </h4>
+                    </div>
+                </div>
+            </div>
+            <div class=" col-md-6 col-sm-12">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4>公司财报</h4><a href="https://www.semi.org.cn/site/semi/column/26595298402893856.html"
+                            target="_blank">更多&gt&gt</a>
+                    </div>
+                    <div class="card-body" style="margin-bottom:-3%">
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/70d4b7d14e3944f4b5056c58f3e9d34c.html"
+                                target="_blank">中芯国际发布2026Q1财报，单季销售收入超25亿美元</a></h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/0939f4ca640a4fea856f69cf88f3598c.html"
+                                target="_blank">英飞凌发布2026财年第二季度运营成果，上调全年业绩指引</a></h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/4a69d73f580f42d282f954599f7904f8.html"
+                                target="_blank">安森美公布2026年第一季度业绩</a></h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/6096e53ce1914dba94c3c0c54ec13061.html"
+                                target="_blank">Arm发布2026财年第四季度财报，创季度和全年业绩新高</a></h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/bbe5df5d1a3a4a3fbd0ad3ddfd1952ac.html"
+                                target="_blank">意法半导体公布2026年第一季度财报</a></h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/113581933d514a6baad2ae6e30a8d29e.html"
+                                target="_blank">英特尔发布2026年第一季度财报</a></h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/6647dac3e222440f964538a3ced80628.html"
+                                target="_blank">SK海力士发布2026财年第一季度财务报告，营业利润率创纪录</a></h4>
+                        <h4><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/ecc13f587cd243248ec7770b44dcabe0.html"
+                                target="_blank">ASML公布2026年第一季度业绩</a></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- End section3 Area -->
+
+
+    <!-- Start advertisement2 Area  广告位-->
+    <div class="container">
+        <div class="ad2" id='ggw2'>
+            <img class="ad2-1" src="https://www.semi.org.cn/site/share/semi/img/ad2.jpg" alt="AD.">
+            <img class="ad2-2" src="https://www.semi.org.cn/site/share/semi/img/ad2.jpg" alt="AD.">
+        </div>
+    </div>
+
+    <!-- End advertisement2 Area -->
+
+
+    <!-- start section4 Area -->
+    <div class="container">
+        <!--    系统应用和设计制造和设备材料-->
+        <div class="card-deck" style="margin-bottom: -4%">
+            <div class="card applation">
+                <div class="card-header">
+                    <h4>系统应用</h4>
+                </div>
+
+                <div>
+                    <img src="https://www.semi.org.cn/site//file/2026-04/d8e938c5508b4e24805a94a928b3ce73@300x200.png"
+                        class="card-img-top" alt="..." style="width: 99%;margin: 2px;">
+                    <div class="card-body">
+
+                        <h5 class="card-at"><a href="https://www.semi.org.cn/site/semi/article/6a1fc25913974c028c31bd124b14d7d5.html" target="_blank">从连接到重塑 蓝牙技术拓宽场景边界</a></h5>
+
+                        <p class="card-am"><span>大半导体产业网</span> | <span>2026-04-29</span></p>
+                        <p><span>今天，随着信道探测（Channel Sounding）、Auracast™广播音频、高吞吐量数据传输（HDT） 等新一代规范的落地与推进，蓝牙正在重新定义无线技术的边界。</span></p>
+                        <div>
+                            <img src="https://www.semi.org.cn/site/share/semi/img/gray.jpg" width="90%" height="1.5px"
+                                alt="...">
+                        </div>
+                    </div>
+
+                </div>
+
+                
+
+                
+
+                
+
+                
+
+                
+
+                <div class="cb2 card-body">
+                    <!-- 文章标题 -->
+                    
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/e9a871497fc24737b10bd2a88749ee4e.html"
+                            target="_blank">蓝牙核心规范6.2正式发布</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/5c537a58690a4daea673d7b48cf9d840.html"
+                            target="_blank">蓝牙技术联盟宣布成立中国兴趣小组</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/5e66e0e2fb274cd98636d385e74a46a4.html"
+                            target="_blank">以平台化、自动化与全链条抢占传感器市场高地</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/40179bb819394a319785707a575eb00d.html"
+                            target="_blank">突破算力传输瓶颈：英伟芯科技推出首款“Lighthop”光传输数据线，为 AI 与大数据中心提速赋能</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/a7301b4dddcb4c08ad05581cdf5279d2.html"
+                            target="_blank">创新功率器件构建可持续未来——三菱电机即将亮相PCIM Asia 2025</a></h6>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted"><a href="https://www.semi.org.cn/site/semi/column/26595298402893844.html" target="_blank">更多&gt&gt</a></small>
+                </div>
+            </div>
+
+
+            <div class="card applation">
+                <div class="card-header">
+                    <h4>设计制造</h4>
+                </div>
+
+                <div>
+                    <img src="https://www.semi.org.cn/site//file/2026-05/b5336f2ca40b4e5991aa41118527543f@300x200.png"
+                        class="card-img-top" alt="..." style="width: 99%;margin: 2px;">
+                    <div class="card-body">
+
+                        <h5 class="card-at"><a target="_blank" href="https://www.semi.org.cn/site/semi/article/c1401d4be4e44cd887ced5fe781a3d9d.html">&quot;我的产品到底该报哪个奖?&quot;——2026&quot;中国强芯&quot;评选六大奖项一次说透！</a></h5>
+
+                        <p class="card-am"><span>大半导体产业网 </span> | <span>2026-05-12</span></p>
+                        <p><span>2026年3月13日，《中华人民共和国国民经济和社会发展第十五个五年规划纲要》正式发布，集成电路被置于新兴支柱产业之首。</span></p>
+                        <div>
+                            <img src="https://www.semi.org.cn/site/share/semi/img/gray.jpg" width="90%" height="1.5px"
+                                alt="...">
+                        </div>
+                    </div>
+
+                </div>
+
+                
+
+                
+
+                
+
+                
+
+                
+
+                <div class="cb2 card-body">
+                    <!-- 文章标题 -->
+                    
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/e2b9935f6d854159be05b8b26058255b.html"
+                            target="_blank">ST意法半导体：在中国打造一条与欧洲完全一致的本土芯片制造产线</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/c1a383d9f87f4137ac54e7315fd015ca.html"
+                            target="_blank">创新不止，创芯不已：第六届ICDIA创芯展8月南京盛大启幕！</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/1e36d47cf3e1485b9c1c203be7b88f3a.html"
+                            target="_blank">11月北京见！ICCAD Expo 2026重磅启幕</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/20b4a463d2924fb98ca4a1ab7005895f.html"
+                            target="_blank">安谋科技“玲珑”VPU IP新品，搭出一个“六边形战士”</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="https://www.semi.org.cn/site/semi/article/4de90f307b3a4e479da8b03685ca839c.html"
+                            target="_blank">SGS获授AMC专委会副主任委员单位，助推半导体微环境管控升级</a></h6>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted"><a target="_blank" href="https://www.semi.org.cn/site/semi/column/26595298402893858.html">更多&gt&gt</a></small>
+                </div>
+            </div>
+
+
+
+            <div class="card applation">
+                <div class="card-header">
+                    <h4>设备材料</h4>
+                </div>
+
+                <div>
+                    <img src="https://www.semi.org.cn/site//file/2026-04/4cf7a34ebd4b4f01ac3d441f53e9cc67@300x200.png"
+                        class="card-img-top" alt="..." style="width: 99%;margin: 2px;">
+                    <div class="card-body">
+
+                        <h5 class="card-at"><a target="_blank" href="https://www.semi.org.cn/site/semi/article/46303642c010476b92510d54fea4d954.html">“嵌入式协同”破局：奥芯明许志伟解读AI时代的中国半导体设备之道</a></h5>
+
+                        <p class="card-am"><span>奥芯明</span> | <span>2026-04-13</span></p>
+                        <p><span>奥芯明首席执行官许志伟深入分享了奥芯明如何凭借“本土创新+全球引领”的双重基因深耕中国市场，并深度解析了AI对半导体设备行业带来的双向重塑与人才体系变革，助力中国客户在这场智能革命中抢占先机。</span></p>
+                        <div>
+                            <img src="https://www.semi.org.cn/site/share/semi/img/gray.jpg" width="90%" height="1.5px"
+                                alt="...">
+                        </div>
+                    </div>
+
+                </div>
+
+                
+
+                
+
+                
+
+                
+
+                
+
+                <div class="cb2 card-body">
+                    <!-- 文章标题 -->
+                    
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a target="_blank"
+                            href="https://www.semi.org.cn/site/semi/article/4f69c39b4d204d33bb68ba61b69fcd85.html">从26nm到10.5nm：中安半导体精准守护先进制程良率</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a target="_blank"
+                            href="https://www.semi.org.cn/site/semi/article/f56078b2a8084692a1763894d0642b6d.html">思锐智能：全球化布局赋能主业深耕ALD、IMP赛道筑牢壁垒</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a target="_blank"
+                            href="https://www.semi.org.cn/site/semi/article/24afa6b7126c4cc9af0565a9d03acfb1.html">库力索法以全链路方案回应AI时代对封装工艺提出的更高要求</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a target="_blank"
+                            href="https://www.semi.org.cn/site/semi/article/bb0758533d6c402596ac2feb0a6650c9.html">华封科技携全球首台AvantaGo L2亮相 SEMICON China2026 以技术突破引领面板级封装降本增效新潮流</a></h6>
+                    <h6><img alt="□"
+                            src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a target="_blank"
+                            href="https://www.semi.org.cn/site/semi/article/e8b029d613ba4cf0baa8e17b3158a2d1.html">智创“芯”纪元 奥芯明携手ASMPT亮相SEMICON China 2026</a></h6>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted"><a target="_blank" href="https://www.semi.org.cn/site/semi/column/26595298402893837.html">更多&gt&gt</a></small>
+                </div>
+            </div>
+
+
+        </div>
+
+
+        <!-- End section4 Area -->
+
+
+        <!-- start section5 Area -->
+
+        <div class="row" style="margin-bottom: -1%">
+            <div class=" col-md-6 col-sm-12">
+                <!--				半导体制造-->
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4>半导体制造</h4><a href="https://www.semi.org.cn/site/semi/column/26595298402893846.html"
+                            target="_blank">更多&gt&gt</a>
+                    </div>
+                    <ul class="list-unstyled" style="margin: 3% 3% 2%">
+                        <li class="media">
+                            <img src="https://www.semi.org.cn/site//file/2026-03/d769d33e57864798a7e1c7090fe14484@200x300.png"
+                                style="width: 130px; height: 195px" class="mr-3 bigShow" alt="...">
+                            <img src="https://www.semi.org.cn/site//file/2026-03/d769d33e57864798a7e1c7090fe14484@300x200.png"
+                                style="width: 100%;" class="mr-3 smallShow" alt="...">
+                            <div class="media-body">
+                                <!-- <h5 class="mt-0 mb-1"><a
+                                        th:href="${'https://www.semi.org.cn/site/share/semi/ma_content.html'+obj.url}"
+                                        target="_blank" th:text="${obj.title}"></a></h5>
+                                <p class="card-am"><span th:text="${obj.author}"></span> | <span
+                                        th:text="${obj.publishtime}"></span></p>
+                                <p class="mianfeiDingYue" th:text="${obj.description}"></p> -->
+                                <!-- <h4 class="maxTxt-1" style="margin-bottom: 14px;font-size: 16px;"
+                                    th:each="obj,objState : ${content[15].data}"><img alt="□"
+                                        src="https://www.semi.org.cn/site/share/semi/img/green.jpg"
+                                        style="margin-right: 10px;"><a
+                                        th:href="${'https://www.semi.org.cn/site/share/semi/ma_content.html'+obj.url}"
+                                        target="_blank" th:text="${obj.title}"></a>
+                                </h4> -->
+
+                                <h4 class="maxTxt-1" style="margin-bottom: 14px;font-size: 16px;"><img alt="□"
+                                        src="https://www.semi.org.cn/site/share/semi/img/green.jpg"
+                                        style="margin-right: 10px;"><a href="https://www.semi.org.cn/site/semi/column/26595298402893846.html" target="_blank">OUTLOOK 2026</a>
+                                </h4>
+
+                                <h4 class="maxTxt-1" style="margin-bottom: 14px;font-size: 16px;"><img alt="□"
+                                        src="https://www.semi.org.cn/site/share/semi/img/green.jpg"
+                                        style="margin-right: 10px;"><a href="https://www.semi.org.cn/site/semi/column/26595298402893846.html" target="_blank">创“芯”图鉴</a>
+                                </h4>
+
+                                <h4 class="maxTxt-1" style="margin-bottom: 14px;font-size: 16px;"><img alt="□"
+                                        src="https://www.semi.org.cn/site/share/semi/img/green.jpg"
+                                        style="margin-right: 10px;"><a href="https://www.semi.org.cn/site/semi/column/26595298402893846.html" target="_blank">AI 开新元，共铸半导体万亿美元时代</a>
+                                </h4>
+
+                                <h4 class="maxTxt-1" style="margin-bottom: 14px;font-size: 16px;"><img alt="□"
+                                        src="https://www.semi.org.cn/site/share/semi/img/green.jpg"
+                                        style="margin-right: 10px;"><a href="https://www.semi.org.cn/site/semi/column/26595298402893846.html" target="_blank">中国半导体的“iPhone 时刻”，何时到来？</a>
+                                </h4>
+                                <a class="btn btn-success" style="margin-right: 4%;"
+                                    href="https://www.semi.org.cn/site/share/semi/sub1.html" target="_blank"
+                                    role="button">免费订阅</a>
+                                <a class="btn btn-success" style="margin-right: 4%;"
+                                    href="https://www.semi.org.cn/site/share/semi/Media_Kit.pdf" target="_blank"
+                                    role="button">媒体计划</a>
+
+                                <a class="btn btn-success" style="margin-right: 4%;"
+                                    href="https://www.semi.org.cn/site/share/semi/downloadPdf.html" target="_blank"
+                                    role="button">电子版下载</a>
+                            </div>
+                        </li>
+                        
+                        
+                        
+                    </ul>
+                    <!-- <div class="card-body" style="margin: -4% 0">
+                        <h4 class="maxTxt-2" th:each="obj,objState : ${content[15].data}"
+                            th:if="${objState.index != 0}"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a
+                                th:href="${'https://www.semi.org.cn/site/share/semi/ma_content.html'+obj.url}"
+                                target="_blank" th:text="${obj.title}"></a>
+                        </h4>
+                    </div> -->
+
+                </div>
+
+
+
+            </div>
+
+            <div class=" col-md-6 col-sm-12">
+                <!-- <div class="card h-100">
+                    <div class="card-header">
+                        <h4 th:text="${content[16].title}"></h4><a href="https://www.semi.org.cn/site/share/semi/eNewsletter.html"
+                            target="_blank">更多&gt&gt</a>
+                    </div>
+                    <div class="card-body" id="enewslist"> -->
+                <!-- <h4 th:each="obj,objState: ${content[16].data}"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a
+                                th:href="${obj.url}" target="_blank" th:text="${obj.title}"> </a></h4> -->
+                <!-- </div>
+                </div> -->
+
+                <div id="carouselExampleSlidesOnly" class="carousel slide hp-ad1" data-ride="carousel">
+                    <div class="carousel-inner" id='ggw5'>
+                        <div class="carousel-item active">
+                            <img src="https://www.semi.org.cn/site/share/semi/img/ad.jpg" target="_blank"
+                                class="d-block w-100" alt="...">
+                        </div>
+                        <div class="carousel-item">
+                            <img src="https://www.semi.org.cn/site/share/semi/img/c2.jpg" target="_blank"
+                                class="d-block w-100" alt="...">
+                        </div>
+                        <div class="carousel-item">
+                            <img src="https://www.semi.org.cn/site/share/semi/img/c3.jpg" target="_blank"
+                                class="d-block w-100" alt="...">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+
+        </div>
+        <div class="row">
+            <div class=" col-md-12 col-sm-12">
+                <div class="card jingCaiVideo">
+                    <!--                精彩视频与ppt-->
+                    <div class="card-header">
+                        <h4> SEMI China每日要闻</h4><a target="_blank"
+                            href="https://www.semi.org.cn/site/share/semi/newslist.html">更多&gt&gt</a>
+                    </div>
+                    <a target="_blank" style="">
+                        <img src="https://www.semi.org.cn/site/share/semi/images/d_news.jpg" class="mr-3 bigShow"
+                            alt="..." style="width: 98%;margin: 3px;" />
+                        <img src="https://www.semi.org.cn/site/share/semi/images/d_news.jpg" class="mr-3 smallShow"
+                            alt="..." style="width: 98%;margin: 3px;" />
+                    </a>
+
+                    <div class="card-body">
+                        <ul class="list-unstyled" style="margin: 3% 3% 0">
+                            <li class="media">
+                                <div class="media-body">
+                                    <h5 class="mt-0 mb-1">SEMI China Daily News</h5>
+                                    <p><span class="maxTxt-3">为方便SEMI中国ECS精英客户阅读SEMI
+                                            China每日要闻，自2024年12月20日起，订户登陆阅读即可及时掌握全球产业大事。登陆密码：您申请时填写的完整邮箱地址！ </span></p>
+                                </div>
+                            </li>
+                        </ul>
+                        <div id="newslist"></div>
+                        <!-- <h4 th:if="${objState.index != 0}" th:each="obj,objState: ${content[17].data}"><img alt="□"
+                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a th:href="${obj.url}"
+                                target="_blank" th:text="${obj.title}"> </a></h4> -->
+                    </div>
+                </div>
+            </div>
+            <!--                     <div class=" col-md-6 col-sm-12">-->
+            <!--                <div class="card h-100">-->
+            <!-- -->
+            <!--                    <div class="card-header">-->
+            <!--                        <h4 th:text="${content[18].title}"></h4><a th:href="${content[18].url}"-->
+            <!--                            target="_blank">更多&gt&gt</a>-->
+            <!--                    </div>-->
+            <!--                    <ul class="list-unstyled" style="margin: 3% 3% 0" th:each="obj,objState: ${content[18].data}"-->
+            <!--                        th:if="${objState.index == 0}">-->
+            <!--                        <li class="media">-->
+            <!--                            <img th:src="${obj.imgUrl == null || obj.imgUrl == 'null'? 'https://www.semi.org.cn/site/share/semi//default' : obj.imgUrl } +'@300x200.png'" class="mr-3 bigShow" alt="..."-->
+            <!--                                style="width: 150px; height: 100px">-->
+            <!--                                 <img th:src="${obj.imgUrl == null || obj.imgUrl == 'null'? 'https://www.semi.org.cn/site/share/semi//default' : obj.imgUrl } +'@300x200.png'" class="mr-3 smallShow" alt="..."-->
+            <!--                                style="width:100%">-->
+            <!--                            <div class="media-body">-->
+            <!--                                <h5 class="mt-0 mb-1"><a th:href="${obj.url}" target="_blank"-->
+            <!--                                        th:text="${obj.title}"></a></h5>-->
+            <!--                                <p class="card-am">-->
+            <!--                                    <span th:text="${obj.author}"></span> |-->
+            <!--                                    <span th:text="${obj.publishtime}"></span>-->
+            <!--                                </p>-->
+            <!--                                 <p class="mianfeiDingYue" th:text="${obj.description}"></p>-->
+            <!--                            </div>-->
+            <!--                        </li>-->
+            <!--                    </ul>-->
+            <!--                    <div class="card-body">-->
+            <!--                        <h4 th:if="${objState.index != 0}" th:each="obj,objState: ${content[18].data}"><img alt="□"-->
+            <!--                                src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a th:href="${obj.url}" target="_blank"-->
+            <!--                                th:text="${obj.title}"> </a></h4>-->
+            <!--                    </div>-->
+            <!--                </div>-->
+            <!--            </div>-->
+
+        </div>
+
+
+        <!-- <div class="row"> 
+            <div class=" col-md-12 col-sm-12">
+                <div class="card h-100">
+                   
+                    <div class="card-header">
+                        <h4 th:text="${content[18].title}"></h4><a th:href="${content[18].url}">更多&gt&gt</a>
+                    </div>
+                    <ul class="resolveUl" style="margin: 3% 3% 0">
+                        <li th:each="obj,objState: ${content[18].data}">
+
+                            <div class="img-thumbnail">
+                                <a th:href="${obj.url}" target="_balnk">
+                                    <img th:src="${obj.imgUrl == null || obj.imgUrl == 'null'? 'https://www.semi.org.cn/site/share/semi/images/default' : obj.imgUrl } +'@300x200.png'"
+                                        class="img-responsive">
+                                </a>
+                                <div class="abstract" style="padding-top:15px;height: 65px;">
+                                    <a th:href="${obj.url}" th:text="${obj.title}" target="_balnk" class="maxTxt-2"></a>
+                                </div>
+                            </div>
+
+
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>-->
+    </div>
+    <!-- End section5 Area -->
+
+    <!-- start sidebar Area -->
+    <div class="jdc-side" style="display: block;">
+        <div class="mod_hang_qrcode jdc_feedback_qrcode">
+            <div class="mod_hang_qrcode_btn"><i class="iconfont">&#xe832;</i><span>微信公众号</span></div>
+            <div class="mod_hang_qrcode_show">
+                <div class="mod-qr-tips"></div>
+                <div class="mod_hang_qrcode_show_bg">
+                    <div id="canvas" style="height: 123px; width: 123px;"><img
+                            src="https://www.semi.org.cn/site/share/semi/images/code.jpg" alt=""></div>
+                </div>
+                <p>关注SEMI公众号</p>
+            </div>
+        </div>
+        <div class="mod_hang_appeal">
+            <div class="mod_hang_appeal_btn"><i class="iconfont">&#xe6ab;</i><span>杂志订阅</span></div>
+            <div class="mod_hang_appeal_show  dingYueContent">
+                <div class="sub-title">
+                    <h3>《每日新闻订阅</h3>
+                </div>
+                <ul>
+                    <li id="entry"><a href="https://www.semi.org.cn/site/share/semi/sub2.html" target="_blank"
+                            class="f-cb">
+                            <div class="icon_box"><i class="iconfont">&#xe711;</i></div>
+                            <div class="text_box">
+                                <h5>每日新闻订阅</h5>
+                                <p>每日为您提供优质新闻</p>
+                            </div>
+                        </a></li>
+                    <!--					<li><a href="https://www.semi.org.cn/site/share/semi/sub2.html" target="_blank" class="f-cb">-->
+                    <!--							<div class="icon_box"><i class="iconfont">&#xe718;</i></div>-->
+                    <!--							<div class="text_box">-->
+                    <!--								<h5>电子版订阅</h5>-->
+                    <!--								<p>我们将为您以电子邮件方式发出。</p>-->
+                    <!--							</div>-->
+                    <!--						</a></li>-->
+                </ul>
+            </div>
+        </div>
+        <div class="mod_hang_qrcode jdc_hang_qrcode"><a class="mod_hang_qrcode_btn"><i
+                    class="iconfont">&#xe858;</i><span>扫码关注</span></a>
+            <div class="mod_hang_qrcode_show">
+                <div class="mod_hang_qrcode_show_bg"></div>
+
+                <p>SEMI产业创新投资平台</p>
+            </div>
+        </div>
+        <div class="mod_hang_qrcode mod_hang_top"><a href="#" class="mod_hang_qrcode_btn"><i
+                    class="iconfont">&#xe821;</i><span>返回顶部</span></a></div>
+        <div class="el-dialog__wrapper" style="display: none;">
+            <div class="el-dialog el-dialog--small" style="top: 15%;">
+                <div class="el-dialog__header"><span class="el-dialog__title"></span>
+                    <div type="button" class="el-dialog__headerbtn"><i
+                            class="el-dialog__close el-icon el-icon-close"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="homeId" style="display: none;">afef9fb7e4d343088384b96905bb0f0d</div>
+    <!-- End sidebar Area -->
+
+    <!-- start footer Area -->
+    <footer class="footer-area section-gap">
+        <div class="container">
+            <div class="footer-top">
+                <a target="_blank" href="https://www.semi.org.cn/site/share/semi/about.html">SEMI简介</a> |
+                <a target="_blank" href="https://www.semi.org.cn/site/share/semi/about_en.html">About SEMI</a> |
+                <a target="_blank" href="https://www.semi.org.cn/site/share/semi/contact.html">联系我们</a> |
+                <a target="_blank" href="https://china.semi.org.cn/article/267">Privacy Policy</a> |
+                <a target="_blank" href="https://www.semi.org/en">semi.org</a>
+            </div>
+            <div class="row footer-bottom d-flex justify-content-between">
+                <p class="col-lg-12 col-sm-12 footer-text">Copyright &copy;
+                    <script>document.write(new Date().getFullYear());</script>
+                    All rights reserved <br />
+                    <a target="_blank" href="https://beian.miit.gov.cn">沪ICP备06022522号</a> <br />
+                    <a target="_blank"
+                        href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011502000679">沪公网安备31011502000679号</a>
+                    <script
+                        type="text/javascript">document.write(unescape("%3Cspan id='cnzz_stat_icon_30010020'%3E%3C/span%3E%3Cscript src='https://w.cnzz.com/c.php%3Fid%3D30010020' type='text/javascript'%3E%3C/script%3E"));</script>
+                </p>
+            </div>
+        </div>
+    </footer>
+    <!-- End footer Area -->
+
+    <script src="https://www.semi.org.cn/site/share/semi/js/vendor/jquery-2.2.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"
+        integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4"
+        crossorigin="anonymous"></script>
+    <script src="https://www.semi.org.cn/site/share/semi/js/vendor/bootstrap.min.js"></script>
+    <script src="https://www.semi.org.cn/site/share/semi/js/jquery.ajaxchimp.min.js"></script>
+    <script src="https://www.semi.org.cn/site/share/semi/js/parallax.min.js"></script>
+    <script src="https://www.semi.org.cn/site/share/semi/js/owl.carousel.min.js"></script>
+    <script src="https://www.semi.org.cn/site/share/semi/js/jquery.magnific-popup.min.js"></script>
+    <script src="https://www.semi.org.cn/site/share/semi/js/jquery.sticky.js"></script>
+    <script src="https://www.semi.org.cn/site/share/semi/js/main.js"></script>
+    <script src="https://www.semi.org.cn/site/share/semi/js/shareFunction.js"></script>
+    <script>
+        var _hmt = _hmt || [];
+        (function () {
+            var hm = document.createElement("script");
+            hm.src = "https://hm.baidu.com/hm.js?3e7d6fe96b802855cfdd090cdcf75904";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+        })();
+    </script>
+
+    <script type="text/javascript">
+        $(window).scroll(function () {
+            //大于0px
+            $(window).scrollTop() > 0 ? $(".loginbar").addClass('fixed1') : $(".loginbar").removeClass('fixed1');
+            //滚动距离
+        });
+        init();
+        ajax_function();
+        ajax_news_function();
+        ajax_enews_function();
+        wechatShare();
+
+        function isWeiXin() {
+            const ua = window.navigator.userAgent.toLowerCase();
+            if (ua.match(/MicroMessenger/i) == 'micromessenger') {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+
+        function wechatShare() {
+            if (isWeiXin()) {
+                onMenuShare.initShareParams("大半导体产业网", "SEMI大半导体产业网每日更新最全面的产业资讯和产业分析。", window.location.href, "https://www.semi.org.cn/site/share/semi/images/default@200x200.png", "https://www.semi.org.cn/site/web/api/ja/js/sdk/sign");
+
+            } else {
+
+            }
+
+        }
+        function query() {
+            var val = $("#query").val();
+            if (val) {
+
+                window.open("https://www.semi.org.cn/site/share/semi/searchlist.html?keyword=" + val);
+            }
+
+        };
+        function ajax_function() {
+            var id = $("#homeId").html();
+            $.get(
+                "https://www.semi.org.cn/site/web/api/ja/advertisement/location/getAdvertisement",
+                { "homeId": id, "pageType": '1' },
+                function (data) {
+
+                    if (data.code = 200) {
+                        var array = data.data[0];
+
+                        $("#ggw1").html("");
+                        $("#ggw2").html("");
+                        $("#ggw4").html("");
+                        $("#ggw5").html("");
+                        $("#ggw6").html("");
+                        for (let index = 0; index < array.length; index++) {
+                            const element = array[index];
+
+                            var class_ = index == 0 ? 'carousel-item active' : 'carousel-item';
+
+                            var dev = '<div class="' + class_ + '">' +
+                                ' <a href="' + element.url + '" target="_blank" ><img src="' + element.thumbnailFile.fileUrl + '" class="d-block w-100" alt="..." style="width: 100%;"/></a>' +
+                                '</div>';
+
+                            $("#ggw1").append(dev);
+                        }
+
+                        var array1 = data.data[1];
+
+
+                        for (let index = 0; index < array1.length; index++) {
+
+                            const element = array1[index];
+                            var dev = '<a target="_blank" href="' + element.url + '"><img class="ad2-1" style="width: 100%;" src="' + element.thumbnailFile.fileUrl + '" alt="...">';
+
+
+                            $("#ggw2").append(dev);
+                        }
+
+                        var array2 = data.data[2];
+                        for (let index = 0; index < array2.length; index++) {
+
+                            const element = array2[index];
+                            var dev = '<a target="_blank" href="' + element.url + '"><img class="ad2-1" style="width: 100%;" src="' + element.thumbnailFile.fileUrl + '" alt="...">';
+
+
+                            $("#ggw4").append(dev);
+                        }
+                        var array5 = data.data[3];
+
+                        for (let index = 0; index < array5.length; index++) {
+                            const element = array5[index];
+
+                            var class_ = index == 0 ? 'carousel-item active' : 'carousel-item';
+
+                            var dev = '<div class="' + class_ + '">' +
+                                ' <a href="' + element.url + '" target="_blank" ><img src="' + element.thumbnailFile.fileUrl + '" class="d-block w-100" alt="..." style="width: 100%;"/></a>' +
+                                '</div>';
+
+                            $("#ggw5").append(dev);
+                        }
+
+                        var array6 = data.data[4];
+                        for (let index = 0; index < array6.length; index++) {
+                            const element = array6[index];
+
+                            var class_ = index == 0 ? 'carousel-item active' : 'carousel-item';
+
+                            var dev = '<div class="' + class_ + '">' +
+                                ' <a href="' + element.url + '" target="_blank" ><img src="' + element.thumbnailFile.fileUrl + '" class="d-block w-100" alt="..." style="width: 100%;"/></a>' +
+                                '</div>';
+
+                            $("#ggw6").append(dev);
+                        }
+                    }
+
+                }
+            );
+        }
+
+
+        function init() {
+            var tabLinks = document.querySelectorAll(".tablinks");
+            var tabContent = document.querySelectorAll(".tabcontent");
+
+
+            tabLinks.forEach(function (el) {
+                el.addEventListener("click", openTabs);
+            });
+
+
+            function openTabs(el) {
+                var btnTarget = el.currentTarget;
+                var country = btnTarget.dataset.country;
+
+                tabContent.forEach(function (el) {
+                    el.classList.remove("active");
+                });
+
+                tabLinks.forEach(function (el) {
+                    el.classList.remove("active");
+                });
+
+                document.querySelector("#" + country).classList.add("active");
+
+                btnTarget.classList.add("active");
+            }
+        }
+
+        function ajax_news_function() {
+            var parm = {};
+            parm.current = 1;
+            parm.size = 6;
+
+            parm.type = '1';
+            parm.stts = '1';
+            $.get(
+                "https://www.semi.org.cn/site/web/api/push/listPage",
+                parm,
+                function (data) {
+                    if (data.code == 200) {
+                        var array = data.data.records;
+                        $("#newslist").html("");
+                        for (let index = 0; index < array.length; index++) {
+                            const element = array[index];
+                            // var dev =
+                            //     ' <h4><img alt="□" src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a target="_blank" href="' + element.url + '">SEMI CHINA 每日新闻与评论： ' + element.name + '</a></h4>';
+
+                            var dev = `<h4 class="maxTxt-1">
+                                <img alt="□" src="https://www.semi.org.cn/site/share/semi/img/green.jpg">
+                                <span onclick="goDetails('${element.url}')" style="cursor: pointer;">${element.code} ${element.name}</span>
+                            </h4>`;
+                            $("#newslist").append(dev);
+                        }
+                    }
+                }
+            );
+        }
+
+        function goDetails(params) {
+            var checkCode = getDataFromLocal("news_check_code");
+            if (checkCode) {
+                // window.location.href = params;
+                window.open(params, '_blank');
+            } else {
+                var email = prompt("请输入订阅邮箱：");
+                if (email) {
+                    $.post(
+                        "https://www.semi.org.cn/site/web/api/news/member/check",
+                        { email },
+                        function (data) {
+                            if ((data.code == 200)) {
+                                saveDataToLocal("news_check_code", data.data.checkCode, 30);
+                                window.open(params, '_blank');
+                            } else {
+                                alert(data.message);
+                            }
+                        }
+                    );
+                }
+            }
+        }
+        // 保存数据到localStorage
+        function saveDataToLocal(key, value, daysToLive) {
+            // 将值转换为字符串
+            var stringifiedValue = JSON.stringify(value);
+            // 设置过期时间
+            var expireDate = new Date();
+            expireDate.setDate(expireDate.getDate() + daysToLive);
+            // 保存数据和过期时间
+            localStorage.setItem(key, stringifiedValue);
+            localStorage.setItem(key + "_expires", expireDate.getTime());
+        }
+
+        // 从localStorage获取数据
+        function getDataFromLocal(key) {
+            var item = localStorage.getItem(key);
+            var expires = localStorage.getItem(key + "_expires");
+            if (expires && new Date().getTime() > parseInt(expires)) {
+                // 数据已过期，删除并返回null
+                localStorage.removeItem(key);
+                localStorage.removeItem(key + "_expires");
+                return null;
+            }
+            return item ? JSON.parse(item) : null;
+        }
+
+        function ajax_enews_function() {
+            var parm = {};
+            parm.current = 1;
+            parm.size = 6;
+
+            parm.ntype = '1';
+            parm.stts = '1';
+            $.get(
+                "https://www.semi.org.cn/site/web/api/push/listPage",
+                parm,
+                function (data) {
+                    if (data.code == 200) {
+
+                        var array = data.data.records;
+
+                        $("#enewslist").html("");
+
+
+                        for (let index = 0; index < array.length; index++) {
+                            const element = array[index];
+
+                            var typeName = '';
+
+                            if (element.type == '2') {
+                                typeName = 'eCar';
+                            }
+                            if (element.type == '3') {
+                                typeName = 'pv';
+                            }
+                            if (element.type == '4') {
+                                typeName = '展会快讯';
+                            }
+
+                            var dev =
+                                ' <h4><img alt="□" src="https://www.semi.org.cn/site/share/semi/img/green.jpg"><a href="' + element.url + '">' + typeName + '： ' + element.name + '</a></h4>';
+
+
+
+                            $("#enewslist").append(dev);
+                        }
+
+
+                    }
+
+                }
+            );
+        }
+        // var isClose = null;
+
+        // function opinion() {
+        //     if ((navigator.userAgent.match(
+        //         /(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i
+        //     ))) {
+        //         return false
+
+        //     } else {
+        //         return true
+        //     }
+        // }
+        // var isPc = opinion();
+        // var innerWidth = window.innerWidth;
+        // var innerHeight = window.innerHeight
+        // debugger
+        // if (!isPc) {
+        //     document.getElementById('origin').style.display = "none";
+        // } else {
+        //     document.getElementById('origin').style.display = "block";
+        //     let left = innerWidth / 2 - 200;
+        //     let top = innerHeight / 2 - 200;
+        //     document.getElementById('origin').style.transform = "translate(" + left + "px," + top + "px)"
+        //     setTimeout(() => {
+        //         document.getElementById('origin').style.transform = "translate(67vw,50vh)"
+        //     }, 5000);
+        // }
+
+        // function closeVideo() {
+        //     var isClose = 'isClosed';
+        //     // document.cookie='isClose='+isClose+';domain='+domain; 
+        //     //    document.cookie = 'isClose=' + isClose;
+        //     document.getElementById('origin').style.display = "none"
+        // }
+        function linkVideo() {
+            window.location.href = "https://www.semipv.com/company/781edd391dd641218b8ae60c3213526a.html";
+        }
+
+        function getCookie(strcookie, matchcookie) {
+            var getMatchCookie;
+            var arrCookie = strcookie.split(";");
+            for (var i = 0; i < arrCookie.length; i++) {
+                var arr = arrCookie[i].split("=");
+                if (matchcookie == arr[0]) {
+                    getMatchCookie = arr[1];
+                    break;
+                }
+            }
+            return getMatchCookie;
+        }
+
+    </script>
+</body>
+
+</html>

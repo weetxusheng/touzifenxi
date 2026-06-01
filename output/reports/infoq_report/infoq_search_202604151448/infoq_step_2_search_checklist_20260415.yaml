@@ -1,0 +1,98 @@
+report_date: '2026-04-15'
+prompt_path: 'E:\AI\touzifenxi\skills\websearch\prompts\search-keyword-agent.md'
+instructions: 'keywords 由 skill 内置模型读取 prompt_path 后自动生成；每条固定 1 组，且必须贴近原标题。'
+categories:
+  - topic: 'AI Agent与数据质量'
+    items:
+      - original_title: '零基础玩转 OpenClaw | 零代码・免配置・解压即用'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/7e33201c087b4bacc0dac7eed'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'OpenClaw 零代码部署'
+      - original_title: '硅谷新晋顶流 Hermes 狂揽 6.6 万星：AI Agent 正在被“数据质量”重新定义'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/b613c940c0d9a6422afb1e3a1'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'Hermes AI Agent 数据质量'
+      - original_title: '虚拟人长短内容联动再创作实战：Function_Calling_与_DМXΑРΙ'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/35c42aa9ff972413e7cddc316'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '虚拟人 Function Calling 再创作'
+  - topic: 'To B企业增长与营销策略'
+    items:
+      - original_title: 'To B技术创业必看：90%的增长坑都在这里｜附四层增长飞轮模型'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/804df8efe7e196a35af320248'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'To B技术创业 增长飞轮模型'
+      - original_title: '信创国产化浪潮下的企业IM即时通讯如何选择？'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/8aff0c089410a63641cda5e0a'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '信创国产化 企业IM即时通讯'
+      - original_title: '我的SEO内容农场，从“日更焦虑”到“躺着收流量”的奇幻漂流'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/a3808f8a5660d311b61f55c25'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'SEO内容农场 躺着收流量'
+  - topic: '出海与海外市场数字化'
+    items:
+      - original_title: '什么是网红营销平台？品牌该如何选择？'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/a2e6fcd66d1b4fc49879f6b38'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '网红营销平台 品牌选择'
+      - original_title: '海外舆情态势感知框架'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/f87c4e0f050bf997f13bccc58'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - '海外舆情 态势感知框架'
+  - topic: 'Go语言技术实践'
+    items:
+      - original_title: 'Go语言中的Pool：对象复用的艺术'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/bf1edd99a743a75f8fe427238'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'Go Pool 对象复用'
+  - topic: 'AI辅助编程与开发实践'
+    items:
+      - original_title: '别再说 AI 编程就是 Vibe Coding 了！6 种主流模式一次讲清'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/28d350e40237164be89704f22'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'AI 编程模式 Vibe Coding'
+      - original_title: '一文带你看懂，火爆全网的Harness Engineering到底是个啥。'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/641bc4412b508ed15c128b2ca'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'Harness Engineering 解释'
+      - original_title: 'GitHub会成为主理人们的宣发地，但你学的慢也没关系'
+        channel: '首页'
+        url: 'https://www.infoq.cn/article/c409583476628981c4092e2bd'
+        original_published_at: '2026-04-15'
+        keywords:
+          # 由 skill 内置模型根据标题自动生成 1 组搜索关键词
+          - 'GitHub 主理人 宣发'

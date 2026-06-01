@@ -1,0 +1,189 @@
+{
+  "_comment": "Websearch skill 运行配置示例。复制为 runtime.local.json 后填写本地 key；JSON 不支持注释，因此说明放在 *_comment 字段中，程序会忽略这些字段。",
+  "keys": {
+    "_comment": "Step 3 搜索：tavily / metaso / baidu 三选一或组合；仅配 aliyun_iqs_api_key 时也可用阿里云 IQS 统一搜索。aliyun_iqs 同时用于 Step 4 正文抽取。",
+    "tavily_api_key": "",
+    "metaso_api_key": "",
+    "baidu_api_key": "",
+    "aliyun_iqs_api_key": ""
+  },
+  "sources": {
+    "_comment": "按站点配置抓取入口参数。后续新增站点也放在这里，CLI 不单独暴露这些细节参数。",
+    "infoq": {
+      "_comment": "InfoQ 当前使用首页新列表接口 get_new_list；listing_size 会传给接口的 size 字段，默认 12。",
+      "listing": "new_list",
+      "listing_size": 12
+    },
+    "kr36": {
+      "_comment": "36Kr T 日抓取入口。channels 可选：newsflashes/web_recommend/ccs（默认已停用 web_news）。",
+      "channels": ["newsflashes", "web_recommend", "ccs"],
+      "candidate_limit": 60,
+      "info_per_category_limit": 5,
+      "search_listing_enabled": false,
+      "listing_topics_only": false,
+      "listing_parallel_topic_and_main": true,
+      "_listing_parallel_hint": "为 true 时：步骤0.5（专题/专题详情）与步骤1主清单（活动+搜索+频道）线程并行抓取，再合并、截断、统一 deferred 重试",
+      "playwright_chromium_channel": "auto",
+      "_playwright_chromium_channel_hint": "auto=本机已装的 Edge(Windows)/Chrome(macOS)；bundled=Playwright 自带 Chromium；可填 msedge、chrome 等，失败自动回退 bundled",
+      "_listing_topics_only_hint": "为 true 时仅跑 /topics/ + topic_focus 专题详情；也可用 CLI 子命令 kr36-topics-only（会强制开启）",
+      "search_listing_playwright_enabled": true,
+      "search_playwright_pre_stagger_min_ms": 1500,
+      "search_playwright_pre_stagger_max_ms": 4500,
+      "search_playwright_max_attempts": 2,
+      "deferred_retry_attempts": 3,
+      "deferred_retry_min_interval_ms": 30000,
+      "deferred_retry_max_interval_ms": 60000,
+      "deferred_retry_backoff_step_ms": 15000,
+      "deferred_retry_wait_jitter_ms": 5000,
+      "topic_deep_fetch_enabled": true,
+      "topic_focus_limit": 2,
+      "topic_focus_keywords": ["本周有大事", "36氪编辑精选"],
+      "topic_subitem_date_mode": "weekday_split",
+      "topic_item_download_enabled": true,
+      "topic_video_download_enabled": true,
+      "topic_article_download_enabled": true,
+      "topic_download_dir": ".",
+      "topic_video_curl_max_time_seconds": 600,
+      "topic_extract_audio_enabled": true,
+      "topic_asr_enabled": true,
+      "topic_asr_max_audio_mb": 95,
+      "topic_asr_timeout_seconds": 300,
+      "volc_speech_api_key": "",
+      "volc_speech_uid": "",
+      "_volc_speech_legacy_hint": "旧控制台可改用 volc_speech_app_key + volc_speech_access_key（可不填 volc_speech_api_key）",
+      "_topic_asr_hint": "火山豆包语音极速识别：仅读 config/runtime.local.json 的 sources.kr36（volc_speech_api_key 或 app_key+access_key），不用环境变量。专题需 ffmpeg。文档 https://www.volcengine.com/docs/6561/1631584",
+      "_search_listing_hint": "search/articles 为 CSR；无头失败或风控小页时会调用与 curl 相同的自动滑块(scripts/risk_slider_solver.py)后再无头重试",
+      "timeout": 25,
+      "request_interval_min_ms": 8000,
+      "request_interval_max_ms": 15000,
+      "risk_retry_count": 2,
+      "retry_on_risk_enabled": false,
+      "risk_retry_wait_ms": 1500,
+      "risk_verification_command": "",
+      "risk_incognito_cookie_refresh_enabled": false,
+      "http_only_mode": false,
+      "risk_cooldown_jitter_ms": 5000,
+      "_risk_max_recovery_rounds_per_url_hint": "同一 URL 在进程内第 4 次仍触发风控时跳过无痕/step4 滑块恢复（0=不限制，默认 3）",
+      "risk_max_recovery_rounds_per_url": 3,
+      "risk_verification_auto_solver": false,
+      "_risk_verification_auto_solver_note": "为 true 时：专题/活动轻量 Playwright 拉页失败后**无条件**接 step4 全量自动滑块；为 false 时仅在已判为验证码/风控壳时接 step4。",
+      "_risk_verification_hint": "推荐纯 HTTP 抓取：开启 http_only_mode，并保持 risk_verification_auto_solver/search_listing_playwright_enabled/browser_fallback_enabled 为 false。命中风控时由抓取队列先跳过，首轮结束后再统一重试。",
+      "risk_verification_wait_ms": 3000,
+      "risk_verification_playwright_mode": "agent-browser",
+      "_risk_verification_playwright_mode_note": "滑块/搜索/专题/活动 列表的 Playwright 均与此一致：agent-browser=有头可见（默认），headless=后台无头",
+      "risk_verification_agent_browser_retry": false,
+      "browser_fallback_enabled": false,
+      "browser_fallback_headless": false,
+      "browser_verification_timeout_ms": 180000,
+      "browser_verification_poll_ms": 2000,
+      "_risk_post_success_browser_dwell_ms_hint": "有头/可见 Playwright 在滑块或验证通过后、关浏览器前再停留的毫秒（默认 180000=180s）；无头不生效。0=仍立即关窗。",
+      "risk_post_success_browser_dwell_ms": 180000,
+      "persist_browser_cookies": true
+    }
+  },
+  "execution": {
+    "_comment": "流程执行模式。builtin 表示 Python 内置模型流程；controller-agent 是历史控制 agent 模式。",
+    "mode": "builtin"
+  },
+  "llm": {
+    "_comment": "LLM provider、重试、并发、流式输出和步骤路由配置。默认使用火山方舟 Responses API（provider=volc-ark，base_url 指向 …/api/v3/responses）；也可按需增加 kimi-code / kimi / minimax 并开启 failover。",
+    "providers": [
+      {
+        "_comment": "火山方舟：控制台推理接入点 ID 填在 model；API Key 使用方舟控制台密钥。",
+        "provider": "volc-ark",
+        "model": "your-ark-endpoint-id",
+        "api_key": "",
+        "base_url": "https://ark.cn-beijing.volces.com/api/v3/responses",
+        "timeout_seconds": 180,
+        "max_retries": 2,
+        "retry_backoff_seconds": 2.0
+      }
+    ],
+    "failover": {
+      "_comment": "仅配置 volc-ark 时建议 enabled=false；多 provider 时再开启主备切换。",
+      "enabled": false,
+      "consecutive_failures": 3,
+      "reset_scope": "step",
+      "error_scope": "infra_only"
+    },
+    "retry": {
+      "_comment": "请求级退避与分类重试配置。honor_retry_after 表示尊重 provider 返回的 Retry-After。",
+      "honor_retry_after": true,
+      "jitter_seconds": 0.5,
+      "classifier": {
+        "_comment": "不同错误类别的总尝试次数。infra 是网络/限流/服务端错误；parse 是 JSON 解析失败；postprocess 是本地结构校验失败；fatal 是非基础设施错误。",
+        "infra_max_attempts": 3,
+        "parse_max_attempts": 3,
+        "postprocess_max_attempts": 3,
+        "fatal_max_attempts": 2
+      }
+    },
+    "concurrency": {
+      "_comment": "LLM 并发上限。default 是默认并发；providers 可以覆盖单个 provider。",
+      "default": 2,
+      "providers": {
+        "volc-ark": 2
+      }
+    },
+    "streaming": {
+      "_comment": "是否对指定 step 使用流式响应解析。长文本步骤默认开启。",
+      "enabled": true,
+      "steps": ["step_5", "step_6", "step_7"]
+    },
+    "step_rate_limits": {
+      "_comment": "按 step 控制请求发起间隔，避免 provider 过载。单位为秒。",
+      "step_5": {
+        "min_interval_seconds": 40
+      }
+    },
+    "step_task_routing": {
+      "_comment": "按 step 对多 provider 做轮询分发。仅 volc-ark 时列表只填一个名称即可。",
+      "step_3": {
+        "enabled": true,
+        "providers": ["volc-ark"]
+      },
+      "step_5": {
+        "enabled": true,
+        "providers": ["volc-ark"]
+      }
+    }
+  },
+  "network": {
+    "_comment": "普通网络请求、阿里云 IQS 请求的超时和重试配置。",
+    "request_timeout_seconds": 45,
+    "aliyun_timeout_seconds": 45,
+    "aliyun_max_retries": 2,
+    "aliyun_retry_backoff_seconds": 0.5
+  },
+  "search": {
+    "_comment": "Step 2/3 搜索配置。keyword_count 控制每篇文章额外生成多少组关键词，默认 1；recent_days 控制只保留近多少天结果；max_external_results 控制每篇文章保留的外部结果上限。",
+    "keyword_count": 1,
+    "recent_days": 30,
+    "max_external_results": 5
+  },
+  "content": {
+    "_comment": "Step 4/5 正文抓取与正文分析配置。fetch_keep_levels 控制抓取哪些 ai_review 结果；analysis_mode 默认按 topic 分析；analysis_batch_retry_attempts 是 step 5 业务级 batch 补齐次数。",
+    "fetch_keep_levels": ["strong", "weak"],
+    "fetch_url_max_attempts": 3,
+    "fetch_url_retry_backoff_seconds": 1.0,
+    "fetch_retry_on_empty": false,
+    "kr36_step4_risk_playwright": true,
+    "_kr36_step4_hint": "为 true 时：Step4 直抓 36kr 遇 kr36_risk_page 或网络 failed 时，用 Playwright+滑块+Cookie 重取正文（与 listing 的 kr36 配置同源于 sources.kr36）",
+    "_fetch_retry_hint": "HTML 直抓：对超时/5xx/断连等可重试错误最多 fetch_url_max_attempts 次；empty 多为反爬或纯壳页，fetch_retry_on_empty=true 时仅多抓一次（仍常无效）",
+    "analysis_mode": "per_topic",
+    "analysis_batch_retry_attempts": 3
+  },
+  "brief": {
+    "_comment": "Step 6 简报生成角色配置。",
+    "role": "senior_researcher"
+  },
+  "review": {
+    "_comment": "Step 7 简报审查开关。默认关闭。",
+    "enable_step7": false
+  },
+  "paths": {
+    "_comment": "输出目录模式。skill 表示写入 skills/websearch/output；project 表示写入项目级输出目录。",
+    "output_mode": "skill"
+  }
+}
+

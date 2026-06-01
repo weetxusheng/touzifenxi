@@ -1,0 +1,61 @@
+{
+  "default_channels": ["home", "wireless", "quantum", "satellite", "la", "ai"],
+  "channels": [
+    {
+      "key": "home",
+      "name": "首页",
+      "url": "https://www.c114.com.cn/",
+      "path_prefixes": ["/news/", "/ftth/", "/video/", "/cloud/", "/5g/", "/ai/", "/quantum/", "/satellite/", "/la/", "/operator/", "/topic/"],
+      "aliases": ["首页", "主页", "home", "c114首页"]
+    },
+    {
+      "key": "quantum",
+      "name": "量子信息",
+      "url": "https://www.c114.com.cn/quantum/",
+      "path_prefixes": ["/quantum/"],
+      "aliases": ["量子", "量子信息", "quantum"]
+    },
+    {
+      "key": "satellite",
+      "name": "卫星互联网",
+      "url": "https://www.c114.com.cn/satellite/",
+      "path_prefixes": ["/satellite/"],
+      "aliases": ["卫星", "卫星互联网", "卫星通信", "satellite"]
+    },
+    {
+      "key": "la",
+      "name": "数智低空",
+      "url": "https://www.c114.com.cn/la/",
+      "path_prefixes": ["/la/"],
+      "aliases": ["低空", "数智低空", "低空经济", "la"]
+    },
+    {
+      "key": "ai",
+      "name": "Cloud&AI",
+      "url": "https://www.c114.com.cn/ai/",
+      "path_prefixes": ["/ai/"],
+      "aliases": ["ai", "cloud&ai", "cloudai", "云和ai", "云与ai", "人工智能", "大模型", "cloud"]
+    },
+    {
+      "key": "wireless",
+      "name": "无线",
+      "url": "https://www.c114.com.cn/wireless/",
+      "path_prefixes": ["/wireless/"],
+      "aliases": ["无线", "wireless", "无线通信"]
+    },
+    {
+      "key": "5g",
+      "name": "5G",
+      "url": "https://www.c114.com.cn/5g/",
+      "path_prefixes": ["/5g/"],
+      "aliases": ["5g", "5G"]
+    },
+    {
+      "key": "operator",
+      "name": "运营商",
+      "url": "https://www.c114.com.cn/operator/",
+      "path_prefixes": ["/operator/"],
+      "aliases": ["运营商", "operator"]
+    }
+  ]
+}
