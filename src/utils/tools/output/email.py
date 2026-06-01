@@ -2,19 +2,24 @@
 
 from __future__ import annotations
 
+import ast
+import html
 import mimetypes
 import os
-import html
 import re
 import smtplib
-from dataclasses import dataclass
-from email.message import EmailMessage
+import ssl
 from collections.abc import Mapping
+from dataclasses import dataclass
+from email.header import Header
+from email.message import EmailMessage
 from pathlib import Path
 from typing import Iterable
 
 QQ_SMTP_HOST = "smtp.qq.com"
 QQ_SMTP_PORT = 465
+CJHX_SMTP_HOST = "mail.cjhxfund.com"
+CJHX_SMTP_PORT = 587
 
 
 @dataclass(frozen=True)
@@ -26,7 +31,9 @@ class EmailChannelConfig:
     username: str
     password: str
     sender_email: str
+    sender_name: str | None = None
     use_ssl: bool = True
+    verify_tls: bool = True
     timeout_seconds: float = 30.0
 
 
@@ -40,11 +47,14 @@ def load_email_channel_config(env: Mapping[str, str] | None = None) -> EmailChan
         return str(raw or "").strip()
 
     sender_email = getv("TOUZIFENXI_EMAIL_FROM")
+    sender_name = getv("TOUZIFENXI_EMAIL_FROM_NAME") or None
     username = getv("TOUZIFENXI_EMAIL_USERNAME") or sender_email
     password = getv("TOUZIFENXI_EMAIL_PASSWORD")
     smtp_host = getv("TOUZIFENXI_EMAIL_SMTP_HOST")
     smtp_port_value = getv("TOUZIFENXI_EMAIL_SMTP_PORT")
     use_ssl_value = getv("TOUZIFENXI_EMAIL_USE_SSL").lower()
+    verify_tls_value = getv("TOUZIFENXI_EMAIL_VERIFY_TLS").lower()
+    insecure_value = getv("TOUZIFENXI_EMAIL_INSECURE").lower()
     timeout_value = getv("TOUZIFENXI_EMAIL_TIMEOUT_SECONDS")
 
     if not sender_email:
@@ -61,13 +71,23 @@ def load_email_channel_config(env: Mapping[str, str] | None = None) -> EmailChan
         smtp_port = int(smtp_port_value)
     elif smtp_host == QQ_SMTP_HOST:
         smtp_port = QQ_SMTP_PORT
+    elif smtp_host == CJHX_SMTP_HOST:
+        smtp_port = CJHX_SMTP_PORT
     else:
         smtp_port = 465
 
     if use_ssl_value:
         use_ssl = use_ssl_value not in {"0", "false", "no", "off"}
     else:
-        use_ssl = smtp_port == 465
+        # mail.cjhxfund.com 默认用 STARTTLS(587)，QQ 默认用 SSL(465)；其他 host 按端口推断
+        use_ssl = False if smtp_host == CJHX_SMTP_HOST else smtp_port == 465
+
+    if insecure_value:
+        verify_tls = insecure_value in {"0", "false", "no", "off"}
+    elif verify_tls_value:
+        verify_tls = verify_tls_value not in {"0", "false", "no", "off"}
+    else:
+        verify_tls = True
 
     timeout_seconds = float(timeout_value) if timeout_value else 30.0
 
@@ -77,7 +97,9 @@ def load_email_channel_config(env: Mapping[str, str] | None = None) -> EmailChan
         username=username,
         password=password,
         sender_email=sender_email,
+        sender_name=sender_name,
         use_ssl=use_ssl,
+        verify_tls=verify_tls,
         timeout_seconds=timeout_seconds,
     )
 
@@ -126,10 +148,41 @@ def build_email_message(
 def send_email_message(*, config: EmailChannelConfig, message: EmailMessage) -> None:
     """按配置发送一封已经构造好的邮件。"""
 
-    smtp_factory = smtplib.SMTP_SSL if config.use_ssl else smtplib.SMTP
-    with smtp_factory(config.smtp_host, config.smtp_port, timeout=config.timeout_seconds) as server:
-        if not config.use_ssl:
-            server.starttls()
+    # 兼容企业/内网自签证书：允许关闭 TLS 校验
+    context = ssl.create_default_context() if config.verify_tls else ssl._create_unverified_context()  # noqa: SLF001
+
+    # 特殊兼容：mail.cjhxfund.com 的握手流程和你提供的脚本保持一致
+    if config.smtp_host == CJHX_SMTP_HOST:
+        if config.use_ssl:
+            with smtplib.SMTP_SSL(
+                host=config.smtp_host,
+                port=config.smtp_port,
+                context=context,
+                timeout=config.timeout_seconds,
+            ) as server:
+                server.login(config.username, config.password)
+                server.send_message(message)
+            return
+
+        with smtplib.SMTP(host=config.smtp_host, port=config.smtp_port, timeout=config.timeout_seconds) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
+            server.login(config.username, config.password)
+            server.send_message(message)
+        return
+
+    # 其他 SMTP（含 QQ）保持原逻辑，只是补上 TLS context/verify 控制
+    if config.use_ssl:
+        with smtplib.SMTP_SSL(
+            config.smtp_host, config.smtp_port, timeout=config.timeout_seconds, context=context
+        ) as server:
+            server.login(config.username, config.password)
+            server.send_message(message)
+        return
+
+    with smtplib.SMTP(config.smtp_host, config.smtp_port, timeout=config.timeout_seconds) as server:
+        server.starttls(context=context)
         server.login(config.username, config.password)
         server.send_message(message)
 
@@ -154,12 +207,13 @@ def send_email(
         body_html=body_html,
         attachments=attachments,
     )
+    if effective_config.sender_name:
+        display_from = f"{effective_config.sender_name} <{effective_config.sender_email}>"
+        message.replace_header("From", str(Header(display_from, "utf-8")))
     send_email_message(config=effective_config, message=message)
 
 
 """项目级邮件正文渲染器（merged from channels/renderers.py）."""
-
-import ast
 
 
 C114_EMAIL_FOOTER_DISCLAIMER = "说明：本邮件由邮件渠道自动发送，简报内容由大模型生成，仅作为参考。"
@@ -310,7 +364,7 @@ def sanitize_display_text(value: str) -> str:
         return ""
     if len(re.findall(r"(?:&#x[0-9a-fA-F]+;|&#\d+;|&amp;#x[0-9a-fA-F]+;)", value)) >= 3:
         return ""
-    cleaned = value.replace("\uFFFD", "").replace("ï¿½", "")
+    cleaned = value.replace("\ufffd", "").replace("ï¿½", "")
     cleaned = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned
