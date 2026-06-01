@@ -34,7 +34,8 @@ data/**
 !data/raw/README.md
 !data/processed/
 !data/processed/README.md
-output/*
+# 运行时产物（C114 / FeedCore 等流水线输出），整目录不提交
+output/
 
 # Skill local runtime files
 skills/.skills_store_lock.json
