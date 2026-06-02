@@ -52,7 +52,32 @@ PYTHONPATH=src ./.venv/bin/python -m touzifenxi.cli send-email \
 
 ## 3. 环境变量
 
-邮件发送配置默认从项目根目录 `.env.local` 或当前环境变量读取。
+邮件发送配置默认从项目根目录 `.env` / `.env.local` 或当前环境变量读取。
+
+### 3.1 后端选择
+
+- `TOUZIFENXI_EMAIL_BACKEND`
+  - `auto`（**默认**）：先走企业 **EWS(443)**，失败再自动切 **QQ SMTP** 替补
+  - `ews`：仅 Exchange Web Services（HTTPS 443）
+  - `smtp`：仅传统 SMTP（读 `TOUZIFENXI_EMAIL_*`）
+  - `qq`：仅 QQ SMTP 备用通道
+
+### 3.2 QQ 备用（`auto` 失败时 / `backend=qq`）
+
+必填项：
+
+- `TOUZIFENXI_EMAIL_QQ_FROM` — 发件 QQ 邮箱，如 `944532395@qq.com`
+- `TOUZIFENXI_EMAIL_QQ_PASSWORD` — QQ 邮箱 **SMTP 授权码**（不是登录密码）
+
+可选项：
+
+- `TOUZIFENXI_EMAIL_QQ_USERNAME` — 默认等于 `TOUZIFENXI_EMAIL_QQ_FROM`
+- `TOUZIFENXI_EMAIL_QQ_FROM_NAME` — 发件人显示名
+- `TOUZIFENXI_EMAIL_QQ_VERIFY_TLS` — 默认 true
+
+固定连接：`smtp.qq.com:465` + SSL。
+
+### 3.3 SMTP（`backend=smtp`）
 
 必填项：
 
@@ -79,6 +104,23 @@ PYTHONPATH=src ./.venv/bin/python -m touzifenxi.cli send-email \
   - 是否禁用 TLS 证书校验（默认 false）；支持 `true/false`
 - `TOUZIFENXI_EMAIL_TIMEOUT_SECONDS`
   - SMTP 超时秒数
+
+### 3.4 Exchange EWS（`backend=ews` 或 `auto` 主通道，cjhxfund 已验证）
+
+必填项：
+
+- `TOUZIFENXI_EMAIL_FROM` — 发件邮箱，如 `tylxts@cjhxfund.com`
+- `TOUZIFENXI_EMAIL_PASSWORD` — 邮箱密码
+- `TOUZIFENXI_EMAIL_USERNAME` — **NTLM 域账号**，如 `CJHX\tylxts`（Basic 不可用）
+
+可选项：
+
+- `TOUZIFENXI_EWS_URL` — 默认 `https://mail.cjhxfund.com/EWS/Exchange.asmx`
+- `TOUZIFENXI_EWS_AUTH_TYPE` — 默认 `NTLM`
+- `TOUZIFENXI_EWS_NTLM_DOMAIN` — 默认 `CJHX`（仅当未设 USERNAME 时用于拼 `DOMAIN\localpart`）
+- `TOUZIFENXI_EMAIL_INSECURE=true` — 企业自签证书时关闭 TLS 校验
+
+依赖：`pip install exchangelib`（已写入 `pyproject.toml`）。
 
 ## 4. QQ 邮箱默认行为
 

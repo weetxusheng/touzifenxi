@@ -29,6 +29,7 @@ reports/c114_report/**
 state/**
 !state/README.md
 runtime/**
+config/schedule.local.json
 data/**
 !data/raw/
 !data/raw/README.md

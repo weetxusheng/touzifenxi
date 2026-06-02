@@ -91,7 +91,8 @@ if exist "%PROJECT_ROOT%\.env" (
 echo [%LOG_TAG%] running: %PYTHON_CMD% "%PROJECT_ROOT%\scripts\websearch.py" run --source %SOURCE% --timeout %TIMEOUT%
 >> "%LOG_FILE%" echo [%LOG_TAG%] running: %PYTHON_CMD% "%PROJECT_ROOT%\scripts\websearch.py" run --source %SOURCE% --timeout %TIMEOUT%
 set "PYTHONIOENCODING=utf-8"
-%PYTHON_CMD% "%PROJECT_ROOT%\scripts\websearch.py" run --source %SOURCE% --timeout %TIMEOUT%
+rem Append Python stderr (tracebacks) to logs/kr36/*.log
+%PYTHON_CMD% "%PROJECT_ROOT%\scripts\websearch.py" run --source %SOURCE% --timeout %TIMEOUT% 2>> "%LOG_FILE%"
 set "EXIT_CODE=%ERRORLEVEL%"
 
 for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd HH:mm:ss')"`) do set "DONE_AT=%%I"

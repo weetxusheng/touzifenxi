@@ -26,6 +26,28 @@ def build_parser() -> argparse.ArgumentParser:
     serve_web_parser = subparsers.add_parser("serve-web", help="Start the local research dashboard.")
     serve_web_parser.add_argument("--host", default="127.0.0.1", help="Host to bind the local dashboard server.")
     serve_web_parser.add_argument("--port", type=int, default=8787, help="Port to bind the local dashboard server.")
+    schedule_admin_parser = subparsers.add_parser(
+        "schedule-admin",
+        help="Start the local scheduled-task management page.",
+    )
+    schedule_admin_parser.add_argument("--host", default="127.0.0.1", help="Host to bind the schedule admin server.")
+    schedule_admin_parser.add_argument("--port", type=int, default=9999, help="Port to bind the schedule admin server.")
+    schedule_admin_parser.add_argument(
+        "--open-browser",
+        action="store_true",
+        help="Open the schedule admin page in the default browser after startup.",
+    )
+    schedule_admin_parser.add_argument(
+        "--no-scheduler",
+        action="store_true",
+        help="Only serve the management page; do not run the Python scheduler loop.",
+    )
+    schedule_admin_parser.add_argument(
+        "--poll-seconds",
+        type=int,
+        default=30,
+        help="Scheduler polling interval in seconds (default: 30).",
+    )
     subparsers.add_parser("performance", help="Show recommendation performance coverage and basic win-rate stats.")
     send_email_parser = subparsers.add_parser("send-email", help="通过项目级 SMTP 渠道发送邮件。")
     send_email_parser.add_argument("--to", nargs="+", required=True, help="一个或多个收件人邮箱地址。")
@@ -726,6 +748,19 @@ def main() -> None:
             raise SystemExit(1)
         print(f"简报文件: {result.step6_path}")
         print(f"邮件发送完成: {', '.join(args.to)}")
+        return
+
+    if args.command == "schedule-admin":
+        from .tools.schedule_admin.server import serve_schedule_admin
+
+        serve_schedule_admin(
+            project_root=paths.project_root,
+            host=args.host,
+            port=args.port,
+            open_browser=bool(args.open_browser),
+            start_scheduler=not bool(args.no_scheduler),
+            poll_seconds=int(args.poll_seconds),
+        )
         return
 
     from .tools.output.dashboard import serve_dashboard

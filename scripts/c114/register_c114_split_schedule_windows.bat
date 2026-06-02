@@ -4,7 +4,7 @@ setlocal EnableExtensions
 rem Usage:
 rem   register_c114_split_schedule_windows.bat [RUN_TIME] [MAIL_TIME] [RUN_TASK] [MAIL_TASK]
 rem Example:
-rem   register_c114_split_schedule_windows.bat 10:00 11:20
+rem   register_c114_split_schedule_windows.bat 17:40 19:20
 rem
 rem Advanced (optional env vars before call):
 rem   set C114_RUN_WEEKDAY_TIME=10:00
@@ -20,9 +20,9 @@ rem   set C114_RUN_WINDOW_END=11:30
 rem   set C114_RUN_WINDOW_EVERY_MIN=15
 
 set "RUN_TIME=%~1"
-if "%RUN_TIME%"=="" set "RUN_TIME=10:00"
+if "%RUN_TIME%"=="" set "RUN_TIME=16:10"
 set "MAIL_TIME=%~2"
-if "%MAIL_TIME%"=="" set "MAIL_TIME=11:20"
+if "%MAIL_TIME%"=="" set "MAIL_TIME=16:30"
 set "RUN_TASK=%~3"
 if "%RUN_TASK%"=="" set "RUN_TASK=touzifenxi-c114-daily-run"
 set "MAIL_TASK=%~4"
@@ -30,6 +30,8 @@ if "%MAIL_TASK%"=="" set "MAIL_TASK=touzifenxi-c114-daily-mail"
 
 set "RUN_SCRIPT=%~dp0run_c114_daily_brief_no_email_windows.bat"
 set "MAIL_SCRIPT=%~dp0send_c114_daily_brief_email_t1_gate_windows.bat"
+for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
+call :load_local_schedule_auth
 
 if not exist "%RUN_SCRIPT%" echo [ERROR] Missing: "%RUN_SCRIPT%" & exit /b 1
 if not exist "%MAIL_SCRIPT%" echo [ERROR] Missing: "%MAIL_SCRIPT%" & exit /b 1
@@ -47,13 +49,13 @@ if not defined HAS_ADVANCED (
   echo        RUN  : %RUN_TIME% ^| "%RUN_SCRIPT%"
   echo        MAIL : %MAIL_TIME% ^| "%MAIL_SCRIPT%"
 
-  schtasks /create /tn "%RUN_TASK%" /sc DAILY /st %RUN_TIME% /tr "\"%RUN_SCRIPT%\"" /f
+  call :create_daily_task "%RUN_TASK%" "%RUN_TIME%" "%RUN_SCRIPT%"
   if errorlevel 1 (
     echo [ERROR] Failed creating run task.
     exit /b 1
   )
 
-  schtasks /create /tn "%MAIL_TASK%" /sc DAILY /st %MAIL_TIME% /tr "\"%MAIL_SCRIPT%\"" /f
+  call :create_daily_task "%MAIL_TASK%" "%MAIL_TIME%" "%MAIL_SCRIPT%"
   if errorlevel 1 (
     echo [ERROR] Failed creating mail task.
     exit /b 1
@@ -82,7 +84,7 @@ if not defined HAS_ADVANCED (
 
 if defined C114_RUN_WINDOW_START if defined C114_RUN_WINDOW_END if defined C114_RUN_WINDOW_EVERY_MIN (
   echo [INFO] Register run window: %C114_RUN_WINDOW_START%-%C114_RUN_WINDOW_END% every %C114_RUN_WINDOW_EVERY_MIN% min
-  schtasks /create /tn "%RUN_TASK%-window" /sc DAILY /st %C114_RUN_WINDOW_START% /et %C114_RUN_WINDOW_END% /ri %C114_RUN_WINDOW_EVERY_MIN% /tr "\"%RUN_SCRIPT%\"" /f
+  call :create_daily_window_task "%RUN_TASK%-window" "%C114_RUN_WINDOW_START%" "%C114_RUN_WINDOW_END%" "%C114_RUN_WINDOW_EVERY_MIN%" "%RUN_SCRIPT%"
   if errorlevel 1 (
     echo [ERROR] Failed creating run window task.
     exit /b 1
@@ -94,6 +96,32 @@ echo [HINT] Query tasks:
 echo   schtasks /query /fo LIST ^| findstr /I "%RUN_TASK% %MAIL_TASK%"
 endlocal & exit /b 0
 
+:load_local_schedule_auth
+for %%F in ("%PROJECT_ROOT%\.env" "%PROJECT_ROOT%\.env.local") do (
+  if exist "%%~F" (
+    for /f "usebackq tokens=1* delims==" %%A in ("%%~F") do (
+      if not "%%A"=="" if not "%%A:~0,1"=="#" set "%%A=%%B"
+    )
+  )
+)
+exit /b 0
+
+:create_daily_task
+set "_TASK_NAME=%~1"
+set "_TASK_TIME=%~2"
+set "_TASK_SCRIPT=%~3"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $time=[datetime]::ParseExact($env:_TASK_TIME,'H:mm',[Globalization.CultureInfo]::InvariantCulture); $action=New-ScheduledTaskAction -Execute $env:_TASK_SCRIPT -WorkingDirectory $env:PROJECT_ROOT; $trigger=New-ScheduledTaskTrigger -Daily -At $time; $params=@{TaskName=$env:_TASK_NAME; Action=$action; Trigger=$trigger; Force=$true}; if ($env:TOUZIFENXI_SCHEDULE_USER -and $env:TOUZIFENXI_SCHEDULE_PASSWORD) { $params.User=$env:TOUZIFENXI_SCHEDULE_USER; $params.Password=$env:TOUZIFENXI_SCHEDULE_PASSWORD }; Register-ScheduledTask @params | Out-Null"
+exit /b %ERRORLEVEL%
+
+:create_daily_window_task
+set "_TASK_NAME=%~1"
+set "_TASK_START=%~2"
+set "_TASK_END=%~3"
+set "_TASK_EVERY_MIN=%~4"
+set "_TASK_SCRIPT=%~5"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $start=[datetime]::ParseExact($env:_TASK_START,'H:mm',[Globalization.CultureInfo]::InvariantCulture); $end=[datetime]::ParseExact($env:_TASK_END,'H:mm',[Globalization.CultureInfo]::InvariantCulture); $duration=$end-$start; if ($duration.TotalMinutes -le 0) { throw 'Run window end must be after start.' }; $action=New-ScheduledTaskAction -Execute $env:_TASK_SCRIPT -WorkingDirectory $env:PROJECT_ROOT; $trigger=New-ScheduledTaskTrigger -Daily -At $start; $trigger.Repetition.Interval=(New-TimeSpan -Minutes ([int]$env:_TASK_EVERY_MIN)); $trigger.Repetition.Duration=$duration; $params=@{TaskName=$env:_TASK_NAME; Action=$action; Trigger=$trigger; Force=$true}; if ($env:TOUZIFENXI_SCHEDULE_USER -and $env:TOUZIFENXI_SCHEDULE_PASSWORD) { $params.User=$env:TOUZIFENXI_SCHEDULE_USER; $params.Password=$env:TOUZIFENXI_SCHEDULE_PASSWORD }; Register-ScheduledTask @params | Out-Null"
+exit /b %ERRORLEVEL%
+
 :create_weekly_task
 set "TASK_NAME=%~1"
 set "TASK_DAYS=%~2"
@@ -104,7 +132,11 @@ if "%TASK_TIME%"=="" (
   exit /b 0
 )
 echo        %TASK_NAME% : %TASK_DAYS% %TASK_TIME%
-schtasks /create /tn "%TASK_NAME%" /sc WEEKLY /d %TASK_DAYS% /st %TASK_TIME% /tr "\"%TASK_SCRIPT%\"" /f
+set "_TASK_NAME=%TASK_NAME%"
+set "_TASK_DAYS=%TASK_DAYS%"
+set "_TASK_TIME=%TASK_TIME%"
+set "_TASK_SCRIPT=%TASK_SCRIPT%"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $map=@{MON='Monday';TUE='Tuesday';WED='Wednesday';THU='Thursday';FRI='Friday';SAT='Saturday';SUN='Sunday'}; $days=($env:_TASK_DAYS -split ',') | ForEach-Object { $map[$_.Trim().ToUpperInvariant()] }; $time=[datetime]::ParseExact($env:_TASK_TIME,'H:mm',[Globalization.CultureInfo]::InvariantCulture); $action=New-ScheduledTaskAction -Execute $env:_TASK_SCRIPT -WorkingDirectory $env:PROJECT_ROOT; $trigger=New-ScheduledTaskTrigger -Weekly -DaysOfWeek $days -At $time; $params=@{TaskName=$env:_TASK_NAME; Action=$action; Trigger=$trigger; Force=$true}; if ($env:TOUZIFENXI_SCHEDULE_USER -and $env:TOUZIFENXI_SCHEDULE_PASSWORD) { $params.User=$env:TOUZIFENXI_SCHEDULE_USER; $params.Password=$env:TOUZIFENXI_SCHEDULE_PASSWORD }; Register-ScheduledTask @params | Out-Null"
 if errorlevel 1 (
   echo [ERROR] Failed creating task "%TASK_NAME%".
   exit /b 1

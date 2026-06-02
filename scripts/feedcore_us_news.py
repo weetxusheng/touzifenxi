@@ -23,7 +23,7 @@ v2 vs v1 历史改动:
   补充 15 个 T-1≥10 新源（Putin/EU/印太/OpenAI/终端/AImodel/华尔街/加密/石油/黄金/
                        投行/大公司财报/SEC执法/并购/IPO定价）。
 
-执行链路与 ``feedcore_general_news.py`` 同款：
+执行链路：
   1) 远端 fetcher 完成 step 1-3（选源 / 抓 RSS / 抓正文）
   2) 本地从 step 4 起按 FeedCore 既有 workflow 跑完四要素分析 / 动态子类 / 简报渲染
 

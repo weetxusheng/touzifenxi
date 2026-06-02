@@ -1,0 +1,5 @@
+[C114 mail] mode=t1-gate gate=15:08 recipients=944532395@qq.com
+[C114 mail] python="E:\AI\touzifenxi\.venv\Scripts\python.exe"
+2026-06-01 发送失败: 未找到 20260601 的 step6 文件
+[C114 mail] exit=1
+[C114 mail] status=FAILED

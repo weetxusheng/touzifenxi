@@ -1,0 +1,32 @@
+[scheduler] task_id=c114_run
+[scheduler] command=E:\AI\touzifenxi\scripts\c114\run_c114_daily_brief_no_email_windows.bat
+[scheduler] cwd=E:\AI\touzifenxi
+[scheduler] started_at=2026-06-02T17:50:40
+[c114] 周二 2026/06/02 17:50:41.26 starting daily brief run (no email)...
+[c114] PROJECT_ROOT=E:\AI\touzifenxi
+[c114] PYTHON_CMD="E:\AI\touzifenxi\.venv\Scripts\python.exe"
+[c114] per-request timeout=300s
+[C114][Step1 抓取汇总] 抓取文章数=13 | 进入分析文章数=12 | 重复URL=1 | 重复标题=1
+[C114][Step1.5 主题聚合] LLM HTTP轮次=1
+C114 全流程 step 1-2 完成 2026-06-01 | 文章数=12 | 主题数=4
+Step 1 CSV: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_step_1_analysis_20260601.csv
+[C114][Step2 检索清单] 条目数=12 | 关键词条数=0 | 缺关键词条目=12 | 每组槽位数=1 | LLM HTTP轮次=4
+Step 2 YAML: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_step_2_search_checklist_20260601.yaml
+[C114][Step3 外搜] 文章任务数=12 | 查询桶数=24 | 原始结果条数=46 | 重复URL(原始)=10 | 入选外链数=25 | 抽取失败=25 | 待审查=0 | LLM HTTP轮次=5
+[C114][Step4 正文抓取] 内容分析条目数=12（Step3/4 中一行一条；与「抓取次数」不是同一量纲）| 入选链接(去重前)=25 | 标题去重剔除=0 | 入选链接(标题去重后)=25 | 补充正文合并去重剔除=0 | 抓取次数合计(每条=1次原文+每条补充各1次)=30 | 成功=30 | 失败=0 | 细项(success/有正文)=30 | 正文为空(html_fallback empty)=0 | 网络/HTTP失败(failed)=0 | HTML直抓(每URL最多3次) | empty再试一次=false | 阿里云IQS HTTP轮次=28
+[C114][Step5 正文分析] 主题数=4 | 文章条目=12 | 模式=per_topic | 单批最大重试(配置)=3 | LLM HTTP轮次=5
+[C114][Step6 主题简报] LLM HTTP轮次=4
+Step 3 YAML: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_step_3_search_results_20260601.yaml
+Step 4 YAML: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_step_4_content_20260601.yaml
+Step 5 YAML: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_step_5_content_analysis_20260601.yaml
+Step 6 MD: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_step_6_brief_20260601.md
+Step 6 HTML: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_step_6_brief_20260601.html
+Step 6 执行日志: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_step_6_execution_log_20260601.md
+Pipeline 日志: E:\AI\touzifenxi\output\reports\c114_report\c114_search_202606021750\c114_pipeline_log_20260601.md
+Step 7 已在配置中关闭，流程停留在 step 6。
+
+[c114] 周二 2026/06/02 18:01:43.90 finished with exit code 0.
+[c114] detail log: E:\AI\touzifenxi\logs\c114\c114.log
+
+[scheduler] finished_at=2026-06-02T18:01:43
+[scheduler] exit_code=0

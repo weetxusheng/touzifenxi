@@ -1,15 +1,12 @@
 from pathlib import Path
 
 
-def test_run_feedcore_news_brief_bat_points_to_profile_scripts():
-    text = Path("scripts/run_feedcore_news_brief.bat").read_text(encoding="utf-8")
+def test_run_feedcore_us_news_windows_bat_points_to_profile_script():
+    text = Path("scripts/feedcore/run_feedcore_us_news_windows.bat").read_text(encoding="utf-8")
 
-    assert ".env" in text
-    assert "MODEL, BASE_URL, and API_KEY" in text
-    assert "feedcore_%PROFILE%.py" in text
-    assert "output\\reports\\feedcore_report" in text
-    assert "config.yaml" not in text
-    assert "MINIMAX_API_KEY" not in text
+    assert "feedcore_us_news.py" in text
+    assert "logs\\feedcore" in text
+    assert "PROJECT_ROOT" in text
 
 
 def test_cli_quick_sample_size_zero_means_all_sources():
