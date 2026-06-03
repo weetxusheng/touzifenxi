@@ -421,7 +421,7 @@ def load_file_comparison_runtime_config(base_path: Path | None = None) -> FileCo
         ),
         paths=PathsRuntimeConfig(
             output_mode=str(paths.get("output_mode", "project")).strip() or "project",
-            output_root=str(paths.get("output_root", "docs/file-comparison/runs")).strip() or "docs/file-comparison/runs",
+            output_root=str(paths.get("output_root", "output")).strip() or "output",
         ),
         pairing=PairingRuntimeConfig(
             month_pattern=str(pairing.get("month_pattern", r"(?P<month>\d{1,2})月")).strip() or r"(?P<month>\d{1,2})月",

@@ -5,6 +5,7 @@ from __future__ import annotations
 import difflib
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 from ..runtime.dependencies import ensure_python_docx_on_path
@@ -499,5 +500,7 @@ def write_docx(rows: list[ComparisonRow], output_path: Path, old_name: str, new_
 
 
 def convert_docx_to_doc(docx_path: Path, doc_path: Path) -> None:
-    """调用系统 textutil 把 docx 另存为旧版 doc。"""
+    """调用系统 textutil 把 docx 另存为旧版 doc。仅 macOS 支持，其他平台跳过。"""
+    if sys.platform != "darwin":
+        return
     subprocess.run(["textutil", "-convert", "doc", "-output", str(doc_path), str(docx_path)], check=True)
