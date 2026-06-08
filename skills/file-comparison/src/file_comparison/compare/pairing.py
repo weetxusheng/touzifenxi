@@ -22,9 +22,10 @@ def sanitize_output_filename_part(value: str) -> str:
 def build_output_document_stem(pair: PairMatch, *, timestamp: str | None = None) -> str:
     """按“前文件名 与 后文件名 对照表 时间戳”生成不含扩展名的产物名。"""
     current_timestamp = timestamp or time.strftime("%Y%m%d_%H%M%S")
-    old_part = sanitize_output_filename_part(Path(pair.old_label or pair.old_path.name).stem)
-    new_part = sanitize_output_filename_part(Path(pair.new_label or pair.new_path.name).stem)
-    return f"{old_part} 与 {new_part} 对照表 {current_timestamp}"
+    # old_part = sanitize_output_filename_part(Path(pair.old_label or pair.old_path.name).stem)
+    # new_part = sanitize_output_filename_part(Path(pair.new_label or pair.new_path.name).stem)
+    # return f"{old_part} 与 {new_part} 对照表 {current_timestamp}"
+    return f"对照表 {current_timestamp}"
 
 
 def build_output_document_paths(pair: PairMatch, output_dir: Path, *, timestamp: str | None = None) -> tuple[Path, Path]:

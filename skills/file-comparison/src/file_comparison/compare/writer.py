@@ -12,8 +12,15 @@ from ..runtime.dependencies import ensure_python_docx_on_path
 from .chunking import text_starts_with_subchapter
 from .models import ComparisonRow
 
-CHANGE_BLUE = "0070C0"
-DELETE_RED = "C00000"
+# 颜色：右侧差异文本字色（修改这两处即可改变对照表的变更/删除字色）
+CHANGE_BLUE = "0070C0"  # 右侧“新增/替换”文本字色（蓝）
+DELETE_RED = "C00000"  # 左侧“删除”文本字色（红，配合删除线）
+# 右侧差异文本加下划线的字数上限。注意：按“单个连续变更片段(diff run)”判定，
+# 不是按整行/整段——单个片段长度 <= 该值才给下划线（见 new_change_style）。
+# 已知局限：因为按片段判定，一行里若有多个各自 <= 该值的零散变更，会各自带下划线；
+#   只有当“整行/段变更字符占比 >= UNDERLINE_DENSITY_RATIO”时，密度兜底才统一去掉下划线
+#   （见 diff_new_line_runs / _adjust_new_paragraph_underline）。
+#   因此一行里实际带下划线的文字总量可能远超该值，并非“全文只给 <=20 字加下划线”。
 MAX_UNDERLINE_CHARS = 20
 EMBEDDED_EQUAL_MAX_CHARS = 8
 EMBEDDED_EQUAL_CONTEXT_MIN_CHARS = 10
@@ -21,6 +28,55 @@ HEADING_REPLACE_THRESHOLD = 0.50
 BODY_REPLACE_THRESHOLD = 0.90
 HEADING_FULL_REPLACE_MAX_CHARS = 30
 CHAPTER_HEADING_PREFIX_RE = re.compile(r"^第[一二三四五六七八九十百千万\d]+部分\s*")
+
+# 颜色：表头底色（差异文本字色见文件顶部 CHANGE_BLUE / DELETE_RED）
+HEADER_FILL = "E6EEF7"  # 表头单元格底色（浅蓝）
+
+# 右侧某行/段“变更密度”阈值：变更字符 / 总字符 >= 该值时，去掉该段所有蓝字的下划线。
+# 与 MAX_UNDERLINE_CHARS 共同生效（见 diff_new_line_runs / _adjust_new_paragraph_underline）：
+#   仅当“段总字符 > MAX_UNDERLINE_CHARS 且 变更占比 >= UNDERLINE_DENSITY_RATIO”两个条件同时满足，
+#   才统一取消下划线（用于“整段大面积改写”的场景，避免半行都是带下划线的蓝字）。
+# 例：释义段总长 90、变更 41（占比 0.46）大于 0.45，且 90 大于 20，因此整段蓝字不加下划线。
+# 调大该值会让更多段落保留下划线；调小会让更多段落被去掉下划线。
+UNDERLINE_DENSITY_RATIO = 0.45
+
+# 下划线智能控制总开关：
+#   True  = 维持智能判定：按 MAX_UNDERLINE_CHARS（单段长度）+ UNDERLINE_DENSITY_RATIO（变更密度）
+#           共同决定右侧蓝字是否加下划线（两个去线条件 AND 同时满足才去掉下划线）。
+#   False = 关闭智能判定：右侧任何变更文本（蓝字）一律加下划线（“有变动就下划线”），
+#           不再受 MAX_UNDERLINE_CHARS / UNDERLINE_DENSITY_RATIO 影响。
+SMART_UNDERLINE = True
+
+# 字体
+FONT_LATIN = "Songti SC"
+FONT_EAST_ASIA = "宋体"
+
+# 字号（pt）
+SIZE_BODY = 9.5
+SIZE_CELL = 10.5
+SIZE_TITLE = 15
+SIZE_DELETE_MARK = 10
+
+# 段落间距
+SPACE_AFTER_PT = 0
+LINE_SPACING_CELL = 1.15
+LINE_SPACING_RUNS = 1.05
+
+# 页面与表格布局
+PAGE_WIDTH_CM = 21
+PAGE_HEIGHT_CM = 29.7
+PAGE_MARGIN_CM = 1.0
+COL_WIDTHS_CM = [1.4, 8.8, 8.8]
+TABLE_STYLE = "Table Grid"
+TITLE_ALIGN_CENTER = 1
+EMU_PER_TWIP = 635
+
+# 标记 / 占位文本
+MARK_INSERT = "新增"
+MARK_DELETE = "删除"
+PLACEHOLDER_NONE = "无"
+HEADER_CHAPTER = "章节"
+HEADER_CONTENT = "内容"
 
 
 def ensure_docx_module() -> None:
@@ -37,19 +93,19 @@ def ensure_docx_module() -> None:
         raise SystemExit("缺少 python-docx。请使用 Codex workspace dependencies 的 Python 运行本脚本。") from exc
 
 
-def new_change_style(text: str, *, size: float = 9.5) -> dict:
+def new_change_style(text: str, *, size: float = SIZE_BODY) -> dict:
     """返回右侧新增或替换文本默认使用的样式。"""
     return {"bold": True, "underline": len(text) <= MAX_UNDERLINE_CHARS, "color": CHANGE_BLUE, "size": size}
 
 
-def full_replace_new_style(*, size: float = 9.5) -> dict:
+def full_replace_new_style(*, size: float = SIZE_BODY) -> dict:
     """返回右侧整行替换文本的样式，整行生成时不再加下划线。"""
     return {"bold": True, "underline": False, "color": CHANGE_BLUE, "size": size}
 
 
 def display_text_with_subchapter(text: str, subchapter: str) -> str:
     """在必要时把子标题补回展示文本首行。"""
-    if not subchapter or text in {"新增", "删除"}:
+    if not subchapter or text in {MARK_INSERT, MARK_DELETE}:
         return text
     if text_starts_with_subchapter(text, subchapter):
         return text
@@ -67,17 +123,17 @@ def set_cell_text(cell, text: str, *, bold: bool = False):
         paragraph = cell.paragraphs[0] if index == 0 else cell.add_paragraph()
         run = paragraph.add_run(paragraph_text)
         run.bold = bold
-        run.font.name = "Songti SC"
-        run._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
-        run.font.size = Pt(10.5)
-        paragraph.paragraph_format.space_after = Pt(0)
-        paragraph.paragraph_format.line_spacing = 1.15
+        run.font.name = FONT_LATIN
+        run._element.rPr.rFonts.set(qn("w:eastAsia"), FONT_EAST_ASIA)
+        run.font.size = Pt(SIZE_CELL)
+        paragraph.paragraph_format.space_after = Pt(SPACE_AFTER_PT)
+        paragraph.paragraph_format.line_spacing = LINE_SPACING_CELL
     if not paragraphs:
         paragraph = cell.paragraphs[0]
         run = paragraph.add_run("")
-        run.font.name = "Songti SC"
-        run._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
-        run.font.size = Pt(10.5)
+        run.font.name = FONT_LATIN
+        run._element.rPr.rFonts.set(qn("w:eastAsia"), FONT_EAST_ASIA)
+        run.font.size = Pt(SIZE_CELL)
 
 
 def set_cell_paragraph_runs(cell, paragraphs: list[list[tuple[str, dict]]]):
@@ -89,19 +145,23 @@ def set_cell_paragraph_runs(cell, paragraphs: list[list[tuple[str, dict]]]):
     for paragraph_index, runs in enumerate(paragraphs):
         paragraph = cell.paragraphs[0] if paragraph_index == 0 else cell.add_paragraph()
         if not runs:
-            runs = [("", {"size": 9.5})]
+            runs = [("", {"size": SIZE_BODY})]
         for text, style in runs:
             run = paragraph.add_run(text)
-            run.font.name = "Songti SC"
-            run._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
-            run.font.size = Pt(style.get("size", 9.5))
+            run.font.name = FONT_LATIN
+            run._element.rPr.rFonts.set(qn("w:eastAsia"), FONT_EAST_ASIA)
+            run.font.size = Pt(style.get("size", SIZE_BODY))
             run.bold = style.get("bold", False)
             run.font.strike = style.get("strike", False)
-            run.underline = style.get("underline", False)
+            if SMART_UNDERLINE:
+                run.underline = style.get("underline", False)
+            else:
+                # 关闭智能控制：右侧任何变更（蓝字）一律加下划线
+                run.underline = style.get("color") == CHANGE_BLUE
             if style.get("color"):
                 run.font.color.rgb = RGBColor.from_string(style["color"])
-        paragraph.paragraph_format.space_after = Pt(0)
-        paragraph.paragraph_format.line_spacing = 1.05
+        paragraph.paragraph_format.space_after = Pt(SPACE_AFTER_PT)
+        paragraph.paragraph_format.line_spacing = LINE_SPACING_RUNS
 
 
 def semantic_line_opcodes(old_line: str, new_line: str) -> list[tuple[str, int, int, int, int]]:
@@ -227,7 +287,7 @@ def line_change_ratio(old_line: str, new_line: str) -> float:
 
 def should_mark_full_line_replace(old_line: str, new_line: str) -> bool:
     """判断是否应该放弃碎片 diff，改为整行删除/新增标记。"""
-    if old_line in {"新增", "删除"} or new_line in {"新增", "删除"}:
+    if old_line in {MARK_INSERT, MARK_DELETE} or new_line in {MARK_INSERT, MARK_DELETE}:
         return False
     threshold = HEADING_REPLACE_THRESHOLD if is_heading_like_line(old_line, new_line) else BODY_REPLACE_THRESHOLD
     return line_change_ratio(old_line, new_line) > threshold
@@ -237,16 +297,29 @@ def full_replace_old_line_runs(old_line: str) -> list[tuple[str, dict]]:
     """生成左侧整行替换样式，章节编号前缀保持普通样式。"""
     prefix, body = split_chapter_heading_prefix(old_line)
     if prefix and body:
-        return [(prefix, {"size": 9.5}), (body, {"strike": True, "color": DELETE_RED, "size": 9.5})]
-    return [(old_line, {"strike": True, "color": DELETE_RED, "size": 9.5})]
+        return [(prefix, {"size": SIZE_BODY}), (body, {"strike": True, "color": DELETE_RED, "size": SIZE_BODY})]
+    return [(old_line, {"strike": True, "color": DELETE_RED, "size": SIZE_BODY})]
 
 
 def full_replace_new_line_runs(new_line: str) -> list[tuple[str, dict]]:
     """生成右侧整行替换样式，章节编号前缀保持普通样式。"""
     prefix, body = split_chapter_heading_prefix(new_line)
     if prefix and body:
-        return [(prefix, {"size": 9.5}), (body, full_replace_new_style())]
+        return [(prefix, {"size": SIZE_BODY}), (body, full_replace_new_style())]
     return [(new_line, full_replace_new_style())]
+
+
+def line_render_opcodes(old_line: str, new_line: str) -> list[tuple[str, int, int, int, int]]:
+    """根据行的尺寸决定是否启用 ``smooth_embedded_equal_opcodes``。
+
+    - heading-like 行（章节前缀或 max ≤ HEADING_FULL_REPLACE_MAX_CHARS）：保留 smoothing，
+      短的等号片段（标点、衔接词）会被吸进周边 replace，呈现"整段被改"的视觉。
+    - body 行：使用 raw ``difflib`` opcodes。长正文里的短等号片段（如尾句句号、保留短语
+      "不列入基金财产。"、"，而是从"）都是真实未改动内容，不该被错染成删除。
+    """
+    if is_heading_like_line(old_line, new_line):
+        return semantic_line_opcodes(old_line, new_line)
+    return list(difflib.SequenceMatcher(a=old_line, b=new_line).get_opcodes())
 
 
 def diff_old_line_runs(old_line: str, new_line: str) -> list[tuple[str, dict]]:
@@ -254,13 +327,13 @@ def diff_old_line_runs(old_line: str, new_line: str) -> list[tuple[str, dict]]:
     if should_mark_full_line_replace(old_line, new_line):
         return full_replace_old_line_runs(old_line)
     runs: list[tuple[str, dict]] = []
-    for tag, i1, i2, _j1, _j2 in semantic_line_opcodes(old_line, new_line):
+    for tag, i1, i2, _j1, _j2 in line_render_opcodes(old_line, new_line):
         if tag == "insert":
             continue
         text = old_line[i1:i2]
         if not text:
             continue
-        style = {"strike": tag in {"delete", "replace"}, "size": 9.5}
+        style = {"strike": tag in {"delete", "replace"}, "size": SIZE_BODY}
         if style["strike"]:
             style["color"] = DELETE_RED
         runs.append((text, style))
@@ -272,55 +345,129 @@ def diff_new_line_runs(old_line: str, new_line: str) -> list[tuple[str, dict]]:
     if should_mark_full_line_replace(old_line, new_line):
         return full_replace_new_line_runs(new_line)
     runs: list[tuple[str, dict]] = []
-    for tag, _i1, _i2, j1, j2 in semantic_line_opcodes(old_line, new_line):
+    for tag, _i1, _i2, j1, j2 in line_render_opcodes(old_line, new_line):
         if tag == "delete":
             continue
         text = new_line[j1:j2]
         if not text:
             continue
-        style = new_change_style(text) if tag in {"insert", "replace"} else {"bold": False, "underline": False, "color": None, "size": 9.5}
+        style = new_change_style(text) if tag in {"insert", "replace"} else {"bold": False, "underline": False, "color": None, "size": SIZE_BODY}
         runs.append((text, style))
     changed_chars = sum(len(text) for text, style in runs if style.get("color") == CHANGE_BLUE)
     total_chars = sum(len(text) for text, _style in runs)
-    if total_chars > MAX_UNDERLINE_CHARS and changed_chars / total_chars >= 0.45:
+    if total_chars > MAX_UNDERLINE_CHARS and changed_chars / total_chars >= UNDERLINE_DENSITY_RATIO:
         runs = [(text, {**style, "underline": False} if style.get("color") == CHANGE_BLUE else style) for text, style in runs]
     return runs
 
 
+def _adjust_new_paragraph_underline(runs: list[tuple[str, dict]]) -> list[tuple[str, dict]]:
+    """与 diff_new_line_runs 一致：变化密度过大时去掉下划线，避免整段下划。"""
+    changed_chars = sum(len(text) for text, style in runs if style.get("color") == CHANGE_BLUE)
+    total_chars = sum(len(text) for text, _style in runs)
+    if total_chars > MAX_UNDERLINE_CHARS and changed_chars / total_chars >= UNDERLINE_DENSITY_RATIO:
+        return [
+            (text, {**style, "underline": False} if style.get("color") == CHANGE_BLUE else style)
+            for text, style in runs
+        ]
+    return runs
+
+
+def cross_newline_old_paragraphs(old_text: str, new_text: str) -> list[list[tuple[str, dict]]]:
+    """旧侧跨段字符级 diff：把 ``\\n`` 视为普通字符参与对齐，遇到换行就切段。
+
+    用于 replace opcode 中两侧行数不一致的场景，例如旧侧一段被新侧拆成两段、
+    或新侧把两段合并成一段；此时按行配对会把"段内插入换行 + 句内细微删除"放大成整段标红。
+
+    刻意使用 ``difflib.SequenceMatcher.get_opcodes`` 而非 ``semantic_line_opcodes``：
+    跨段长文本里，``smooth_embedded_equal_opcodes`` 会把真正未改动的短片段（如 8 字符以内的常用短句）
+    错误地吸收进周边变更而打上删除线，这是为单行短文本设计的策略，长文本不适用。
+    """
+    paragraphs: list[list[tuple[str, dict]]] = []
+    current: list[tuple[str, dict]] = []
+    for tag, i1, i2, _j1, _j2 in difflib.SequenceMatcher(a=old_text, b=new_text).get_opcodes():
+        if tag == "insert":
+            continue
+        segment = old_text[i1:i2]
+        if not segment:
+            continue
+        is_strike = tag in {"delete", "replace"}
+        parts = segment.split("\n")
+        for index, part in enumerate(parts):
+            if part:
+                style: dict = {"size": SIZE_BODY}
+                if is_strike:
+                    style["strike"] = True
+                    style["color"] = DELETE_RED
+                current.append((part, style))
+            if index < len(parts) - 1:
+                paragraphs.append(current)
+                current = []
+    paragraphs.append(current)
+    return paragraphs
+
+
+def cross_newline_new_paragraphs(old_text: str, new_text: str) -> list[list[tuple[str, dict]]]:
+    """新侧跨段字符级 diff：与 ``cross_newline_old_paragraphs`` 镜像，遇到换行切段。
+
+    同样刻意使用 raw ``difflib`` opcodes，避免 smoothing 把未改动的短片段染色。
+    """
+    paragraphs: list[list[tuple[str, dict]]] = []
+    current: list[tuple[str, dict]] = []
+    for tag, _i1, _i2, j1, j2 in difflib.SequenceMatcher(a=old_text, b=new_text).get_opcodes():
+        if tag == "delete":
+            continue
+        segment = new_text[j1:j2]
+        if not segment:
+            continue
+        is_change = tag in {"insert", "replace"}
+        parts = segment.split("\n")
+        for index, part in enumerate(parts):
+            if part:
+                if is_change:
+                    current.append((part, new_change_style(part)))
+                else:
+                    current.append((part, {"bold": False, "underline": False, "color": None, "size": SIZE_BODY}))
+            if index < len(parts) - 1:
+                paragraphs.append(_adjust_new_paragraph_underline(current))
+                current = []
+    paragraphs.append(_adjust_new_paragraph_underline(current))
+    return paragraphs
+
+
 def build_old_revision_paragraphs(old_text: str, new_text: str) -> list[list[tuple[str, dict]]]:
     """把旧版文本转换成左侧单元格段落 runs。"""
-    if old_text == "新增":
-        return [[("无", {"size": 9.5})]]
-    if new_text == "删除":
-        return [[(line, {"strike": True, "color": DELETE_RED, "size": 9.5})] for line in old_text.split("\n")]
+    if old_text == MARK_INSERT:
+        return [[(PLACEHOLDER_NONE, {"size": SIZE_BODY})]]
+    if new_text == MARK_DELETE:
+        return [[(line, {"strike": True, "color": DELETE_RED, "size": SIZE_BODY})] for line in old_text.split("\n")]
     old_lines = old_text.split("\n")
     new_lines = new_text.split("\n")
     paragraphs: list[list[tuple[str, dict]]] = []
     matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines)
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == "equal":
-            paragraphs.extend([[(line, {"size": 9.5})] for line in old_lines[i1:i2]])
+            paragraphs.extend([[(line, {"size": SIZE_BODY})] for line in old_lines[i1:i2]])
             continue
         if tag == "delete":
-            paragraphs.extend([[(line, {"strike": True, "color": DELETE_RED, "size": 9.5})] for line in old_lines[i1:i2]])
+            paragraphs.extend([[(line, {"strike": True, "color": DELETE_RED, "size": SIZE_BODY})] for line in old_lines[i1:i2]])
             continue
         if tag == "insert":
             continue
         old_group = old_lines[i1:i2]
         new_group = new_lines[j1:j2]
-        paired_count = min(len(old_group), len(new_group))
-        for index in range(paired_count):
-            paragraphs.append(diff_old_line_runs(old_group[index], new_group[index]))
-        for line in old_group[paired_count:]:
-            paragraphs.append([(line, {"strike": True, "color": DELETE_RED, "size": 9.5})])
+        if len(old_group) != len(new_group):
+            paragraphs.extend(cross_newline_old_paragraphs("\n".join(old_group), "\n".join(new_group)))
+            continue
+        for old_line, new_line in zip(old_group, new_group):
+            paragraphs.append(diff_old_line_runs(old_line, new_line))
     return paragraphs
 
 
 def build_new_revision_paragraphs(old_text: str, new_text: str) -> list[list[tuple[str, dict]]]:
     """把新版文本转换成右侧单元格段落 runs。"""
-    if new_text == "删除":
-        return [[("删除", {"bold": True, "color": CHANGE_BLUE, "size": 10})]]
-    if old_text == "新增":
+    if new_text == MARK_DELETE:
+        return [[(MARK_DELETE, {"bold": True, "color": CHANGE_BLUE, "size": SIZE_DELETE_MARK})]]
+    if old_text == MARK_INSERT:
         return [[(line, new_change_style(line))] for line in new_text.split("\n")]
     old_lines = old_text.split("\n")
     new_lines = new_text.split("\n")
@@ -328,7 +475,7 @@ def build_new_revision_paragraphs(old_text: str, new_text: str) -> list[list[tup
     matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines)
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == "equal":
-            paragraphs.extend([[(line, {"size": 9.5})] for line in new_lines[j1:j2]])
+            paragraphs.extend([[(line, {"size": SIZE_BODY})] for line in new_lines[j1:j2]])
             continue
         if tag == "delete":
             continue
@@ -337,11 +484,11 @@ def build_new_revision_paragraphs(old_text: str, new_text: str) -> list[list[tup
             continue
         old_group = old_lines[i1:i2]
         new_group = new_lines[j1:j2]
-        paired_count = min(len(old_group), len(new_group))
-        for index in range(paired_count):
-            paragraphs.append(diff_new_line_runs(old_group[index], new_group[index]))
-        for line in new_group[paired_count:]:
-            paragraphs.append([(line, new_change_style(line))])
+        if len(old_group) != len(new_group):
+            paragraphs.extend(cross_newline_new_paragraphs("\n".join(old_group), "\n".join(new_group)))
+            continue
+        for old_line, new_line in zip(old_group, new_group):
+            paragraphs.append(diff_new_line_runs(old_line, new_line))
     return paragraphs
 
 
@@ -359,7 +506,7 @@ def shade_cell(cell, fill: str):
 def cm_to_twips(width_cm: float) -> int:
     """把厘米单位转换成 Word 使用的 twips。"""
     from docx.shared import Cm
-    return int(Cm(width_cm).emu / 635)
+    return int(Cm(width_cm).emu / EMU_PER_TWIP)
 
 
 def set_cell_width(cell, width_cm: float):
@@ -436,39 +583,39 @@ def write_docx(rows: list[ComparisonRow], output_path: Path, old_name: str, new_
     document = Document()
     section = document.sections[0]
     section.orientation = WD_ORIENT.PORTRAIT
-    section.page_width = Cm(21)
-    section.page_height = Cm(29.7)
-    section.top_margin = Cm(1.0)
-    section.bottom_margin = Cm(1.0)
-    section.left_margin = Cm(1.0)
-    section.right_margin = Cm(1.0)
+    section.page_width = Cm(PAGE_WIDTH_CM)
+    section.page_height = Cm(PAGE_HEIGHT_CM)
+    section.top_margin = Cm(PAGE_MARGIN_CM)
+    section.bottom_margin = Cm(PAGE_MARGIN_CM)
+    section.left_margin = Cm(PAGE_MARGIN_CM)
+    section.right_margin = Cm(PAGE_MARGIN_CM)
     title = document.add_paragraph()
-    title.alignment = 1
+    title.alignment = TITLE_ALIGN_CENTER
     title_run = title.add_run(f"《{new_name}》与《{old_name}》对照表")
     title_run.bold = True
-    title_run.font.name = "Songti SC"
-    title_run._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
-    title_run.font.size = Pt(15)
+    title_run.font.name = FONT_LATIN
+    title_run._element.rPr.rFonts.set(qn("w:eastAsia"), FONT_EAST_ASIA)
+    title_run.font.size = Pt(SIZE_TITLE)
     table = document.add_table(rows=2, cols=3)
-    table.style = "Table Grid"
+    table.style = TABLE_STYLE
     set_fixed_table_layout(table)
-    widths = [1.4, 8.8, 8.8]
+    widths = COL_WIDTHS_CM
     set_table_widths(table, widths)
     first_header = table.rows[0].cells
     for cell, width in zip(first_header, widths):
         set_cell_width(cell, width)
-    set_cell_text(first_header[0], "章节", bold=True)
+    set_cell_text(first_header[0], HEADER_CHAPTER, bold=True)
     set_cell_text(first_header[1], f"原《{old_name}》版本", bold=True)
     set_cell_text(first_header[2], f"修订后《{new_name}》版本", bold=True)
     second_header = table.rows[1].cells
     for cell, width in zip(second_header, widths):
         set_cell_width(cell, width)
     set_cell_text(second_header[0], "", bold=True)
-    set_cell_text(second_header[1], "内容", bold=True)
-    set_cell_text(second_header[2], "内容", bold=True)
+    set_cell_text(second_header[1], HEADER_CONTENT, bold=True)
+    set_cell_text(second_header[2], HEADER_CONTENT, bold=True)
     for row_cells in (first_header, second_header):
         for cell in row_cells:
-            shade_cell(cell, "E6EEF7")
+            shade_cell(cell, HEADER_FILL)
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
     chapter_groups: list[tuple[int, int, str]] = []
     group_start_index: int | None = None

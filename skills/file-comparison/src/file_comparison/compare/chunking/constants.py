@@ -10,6 +10,9 @@ import re
 
 
 INNER_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、|（(?:[一二三四五六七八九十]+|\d+)）)")
+# 与 INNER_HEADING_RE 的差别：不匹配 `（数字）`。
+# 供 `section_items_for_blocks` 在父项块内启用，使行首为 `（1）`、`（2）` 等的行不切分条目。
+NESTED_ITEM_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、|（[一二三四五六七八九十]+）)")
 CHINESE_HEADING_RE = re.compile(r"^[一二三四五六七八九十]+、")
 PAREN_CHINESE_HEADING_RE = re.compile(r"^（[一二三四五六七八九十]+）")
 DISPLAY_HEADING_RE = re.compile(r"^([一二三四五六七八九十]+、|\d+、|（[一二三四五六七八九十]+）)")

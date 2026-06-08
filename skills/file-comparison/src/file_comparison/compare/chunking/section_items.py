@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from ..extractor import clean_lines
 from ..models import Section
 from .blocks import split_blocks
-from .constants import INNER_HEADING_RE, PAREN_CHINESE_HEADING_RE
+from .constants import DECIMAL_HEADING_RE, INNER_HEADING_RE, NESTED_ITEM_HEADING_RE, PAREN_CHINESE_HEADING_RE
 from .headings import is_structural_parent_heading
 from .rule_rows import body_lines_without_title
 from .text_match import line_content_key
@@ -43,10 +43,14 @@ def section_items_for_blocks(section: Section) -> list[tuple[str, str]]:
             if PAREN_CHINESE_HEADING_RE.match(block[1]):
                 items.append((block[0], "\n".join(block[1:]).strip()))
                 continue
+            # 块内出现 `数字、` 开头的行时，使用 NESTED_ITEM_HEADING_RE，不在 `（数字）` 处切；
+            # 否则使用 INNER_HEADING_RE，仍把 `（数字）` 视作条目边界。
+            arabic_top_level_present = any(DECIMAL_HEADING_RE.match(line) for line in block[1:])
+            nested_heading_re = NESTED_ITEM_HEADING_RE if arabic_top_level_present else INNER_HEADING_RE
             current_nested: list[str] = []
             nested_items: list[list[str]] = []
             for line in block[1:]:
-                if INNER_HEADING_RE.match(line) and current_nested:
+                if nested_heading_re.match(line) and current_nested:
                     nested_items.append(current_nested)
                     current_nested = [line]
                     continue
