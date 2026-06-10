@@ -50,6 +50,7 @@ from file_comparison.compare.writer import (  # noqa: E402
     build_old_revision_paragraphs,
     convert_docx_to_doc,
     display_text_with_subchapter,
+    old_change_style,
     write_docx,
 )
 from file_comparison.runtime.config import load_file_comparison_runtime_config  # noqa: E402
@@ -81,6 +82,7 @@ __all__ = (
     "month_label",
     "OMITTED_EQUAL_MARKER",
     "normalize_product_name_rows",
+    "old_change_style",
     "preprocess_sections_for_llm",
     "remove_fully_equal_lines",
     "safe_filename_part",

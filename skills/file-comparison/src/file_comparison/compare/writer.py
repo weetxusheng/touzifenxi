@@ -12,9 +12,15 @@ from ..runtime.dependencies import ensure_python_docx_on_path
 from .chunking import text_starts_with_subchapter
 from .models import ComparisonRow
 
+# 以下渲染常量是默认值，可被 config/runtime.local.json 的 render 段覆盖，
+# 无需改代码（见 apply_render_config 与 runtime.config.RenderRuntimeConfig）。
 # 颜色：右侧差异文本字色（修改这两处即可改变对照表的变更/删除字色）
 CHANGE_BLUE = "0070C0"  # 右侧“新增/替换”文本字色（蓝）
 DELETE_RED = "C00000"  # 左侧“删除”文本字色（红，配合删除线）
+# 左侧差异文本是否加粗的总开关：
+#   True  = 左侧“删除/替换”文本（红字删除线）加粗，与右侧蓝字一致；
+#   False = 左侧维持常规字重，仅保留删除线 + 红色。
+OLD_CHANGE_BOLD = True
 # 右侧差异文本加下划线的字数上限。注意：按“单个连续变更片段(diff run)”判定，
 # 不是按整行/整段——单个片段长度 <= 该值才给下划线（见 new_change_style）。
 # 已知局限：因为按片段判定，一行里若有多个各自 <= 该值的零散变更，会各自带下划线；
@@ -93,14 +99,47 @@ def ensure_docx_module() -> None:
         raise SystemExit("缺少 python-docx。请使用 Codex workspace dependencies 的 Python 运行本脚本。") from exc
 
 
-def new_change_style(text: str, *, size: float = SIZE_BODY) -> dict:
+def apply_render_config(render) -> None:
+    """把运行配置里的渲染参数写回本模块全局变量。
+
+    在 `write_docx` 之前调用一次即可生效（见 `RenderRuntimeConfig`）；
+    不调用时维持文件顶部的默认值，保证单元测试与历史行为不变。
+    """
+    global OLD_CHANGE_BOLD, SMART_UNDERLINE, MAX_UNDERLINE_CHARS, UNDERLINE_DENSITY_RATIO
+    global CHANGE_BLUE, DELETE_RED, HEADER_FILL
+    global FONT_LATIN, FONT_EAST_ASIA
+    global SIZE_BODY, SIZE_CELL, SIZE_TITLE, SIZE_DELETE_MARK
+    OLD_CHANGE_BOLD = render.old_change_bold
+    SMART_UNDERLINE = render.smart_underline
+    MAX_UNDERLINE_CHARS = render.max_underline_chars
+    UNDERLINE_DENSITY_RATIO = render.underline_density_ratio
+    CHANGE_BLUE = render.change_color
+    DELETE_RED = render.delete_color
+    HEADER_FILL = render.header_fill
+    FONT_LATIN = render.font_latin
+    FONT_EAST_ASIA = render.font_east_asia
+    SIZE_BODY = render.size_body
+    SIZE_CELL = render.size_cell
+    SIZE_TITLE = render.size_title
+    SIZE_DELETE_MARK = render.size_delete_mark
+
+
+def new_change_style(text: str, *, size: float | None = None) -> dict:
     """返回右侧新增或替换文本默认使用的样式。"""
+    size = SIZE_BODY if size is None else size
     return {"bold": True, "underline": len(text) <= MAX_UNDERLINE_CHARS, "color": CHANGE_BLUE, "size": size}
 
 
-def full_replace_new_style(*, size: float = SIZE_BODY) -> dict:
+def full_replace_new_style(*, size: float | None = None) -> dict:
     """返回右侧整行替换文本的样式，整行生成时不再加下划线。"""
+    size = SIZE_BODY if size is None else size
     return {"bold": True, "underline": False, "color": CHANGE_BLUE, "size": size}
+
+
+def old_change_style(*, size: float | None = None) -> dict:
+    """返回左侧删除或替换文本的样式，是否加粗由 OLD_CHANGE_BOLD 控制。"""
+    size = SIZE_BODY if size is None else size
+    return {"strike": True, "color": DELETE_RED, "bold": OLD_CHANGE_BOLD, "size": size}
 
 
 def display_text_with_subchapter(text: str, subchapter: str) -> str:
@@ -297,8 +336,8 @@ def full_replace_old_line_runs(old_line: str) -> list[tuple[str, dict]]:
     """生成左侧整行替换样式，章节编号前缀保持普通样式。"""
     prefix, body = split_chapter_heading_prefix(old_line)
     if prefix and body:
-        return [(prefix, {"size": SIZE_BODY}), (body, {"strike": True, "color": DELETE_RED, "size": SIZE_BODY})]
-    return [(old_line, {"strike": True, "color": DELETE_RED, "size": SIZE_BODY})]
+        return [(prefix, {"size": SIZE_BODY}), (body, old_change_style())]
+    return [(old_line, old_change_style())]
 
 
 def full_replace_new_line_runs(new_line: str) -> list[tuple[str, dict]]:
@@ -333,9 +372,7 @@ def diff_old_line_runs(old_line: str, new_line: str) -> list[tuple[str, dict]]:
         text = old_line[i1:i2]
         if not text:
             continue
-        style = {"strike": tag in {"delete", "replace"}, "size": SIZE_BODY}
-        if style["strike"]:
-            style["color"] = DELETE_RED
+        style = old_change_style() if tag in {"delete", "replace"} else {"size": SIZE_BODY}
         runs.append((text, style))
     return runs
 
@@ -394,10 +431,7 @@ def cross_newline_old_paragraphs(old_text: str, new_text: str) -> list[list[tupl
         parts = segment.split("\n")
         for index, part in enumerate(parts):
             if part:
-                style: dict = {"size": SIZE_BODY}
-                if is_strike:
-                    style["strike"] = True
-                    style["color"] = DELETE_RED
+                style: dict = old_change_style() if is_strike else {"size": SIZE_BODY}
                 current.append((part, style))
             if index < len(parts) - 1:
                 paragraphs.append(current)
@@ -439,7 +473,7 @@ def build_old_revision_paragraphs(old_text: str, new_text: str) -> list[list[tup
     if old_text == MARK_INSERT:
         return [[(PLACEHOLDER_NONE, {"size": SIZE_BODY})]]
     if new_text == MARK_DELETE:
-        return [[(line, {"strike": True, "color": DELETE_RED, "size": SIZE_BODY})] for line in old_text.split("\n")]
+        return [[(line, old_change_style())] for line in old_text.split("\n")]
     old_lines = old_text.split("\n")
     new_lines = new_text.split("\n")
     paragraphs: list[list[tuple[str, dict]]] = []
@@ -449,7 +483,7 @@ def build_old_revision_paragraphs(old_text: str, new_text: str) -> list[list[tup
             paragraphs.extend([[(line, {"size": SIZE_BODY})] for line in old_lines[i1:i2]])
             continue
         if tag == "delete":
-            paragraphs.extend([[(line, {"strike": True, "color": DELETE_RED, "size": SIZE_BODY})] for line in old_lines[i1:i2]])
+            paragraphs.extend([[(line, old_change_style())] for line in old_lines[i1:i2]])
             continue
         if tag == "insert":
             continue

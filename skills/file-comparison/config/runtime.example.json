@@ -117,5 +117,26 @@
     "poll_interval_seconds": 5.0, // 前端轮询任务状态的间隔秒数
     "host": "127.0.0.1", // 本地页面监听地址
     "port": 8765 // 本地页面监听端口
+  },
+  "render": {
+    "old_change_bold": true, // 左侧“删除/替换”红字是否加粗；false=仅删除线+红色
+    "smart_underline": true, // 右侧蓝字下划线智能判定总开关；false=有变动一律加下划线
+    "max_underline_chars": 20, // 单个连续变更片段加下划线的字数上限
+    "underline_density_ratio": 0.45, // 整段变更密度达到该比例时统一去掉下划线（0~1）
+    "colors": {
+      "change": "0070C0", // 右侧“新增/替换”文本字色（RRGGBB，可带 # 前缀）
+      "delete": "C00000", // 左侧“删除”文本字色
+      "header_fill": "E6EEF7" // 表头单元格底色
+    },
+    "fonts": {
+      "latin": "Songti SC", // 西文字体；非 macOS 环境建议改成本机存在的字体
+      "east_asia": "宋体" // 中文字体
+    },
+    "sizes": {
+      "body": 9.5, // 正文 run 字号（pt）
+      "cell": 10.5, // 普通单元格文本字号
+      "title": 15, // 文档标题字号
+      "delete_mark": 10 // 右栏“删除”标记字号
+    }
   }
 }

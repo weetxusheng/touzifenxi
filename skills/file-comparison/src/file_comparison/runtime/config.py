@@ -167,6 +167,25 @@ class LLMTaskRoutingRuntimeConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class RenderRuntimeConfig:
+    """描述 Word 对照表的渲染样式参数（字体、颜色、加粗与下划线策略）。"""
+
+    old_change_bold: bool
+    smart_underline: bool
+    max_underline_chars: int
+    underline_density_ratio: float
+    change_color: str
+    delete_color: str
+    header_fill: str
+    font_latin: str
+    font_east_asia: str
+    size_body: float
+    size_cell: float
+    size_title: float
+    size_delete_mark: float
+
+
+@dataclass(frozen=True, slots=True)
 class FileComparisonRuntimeConfig:
     """聚合整个 skill 的强类型运行配置。"""
     llm_mode: str
@@ -176,6 +195,7 @@ class FileComparisonRuntimeConfig:
     paths: PathsRuntimeConfig
     pairing: PairingRuntimeConfig
     ui: UIRuntimeConfig
+    render: RenderRuntimeConfig
 
 
 def project_root(base_path: Path | None = None) -> Path:
@@ -336,6 +356,27 @@ def default_runtime_payload() -> dict[str, Any]:
             "host": "127.0.0.1",
             "port": 8765,
         },
+        "render": {
+            "old_change_bold": True,
+            "smart_underline": True,
+            "max_underline_chars": 20,
+            "underline_density_ratio": 0.45,
+            "colors": {
+                "change": "0070C0",
+                "delete": "C00000",
+                "header_fill": "E6EEF7",
+            },
+            "fonts": {
+                "latin": "Songti SC",
+                "east_asia": "宋体",
+            },
+            "sizes": {
+                "body": 9.5,
+                "cell": 10.5,
+                "title": 15,
+                "delete_mark": 10,
+            },
+        },
     }
 
 
@@ -431,7 +472,40 @@ def load_file_comparison_runtime_config(base_path: Path | None = None) -> FileCo
             host=str(ui.get("host", "127.0.0.1")).strip() or "127.0.0.1",
             port=int(ui.get("port", 8765)),
         ),
+        render=_build_render_config(config.get("render", {})),
     )
+
+
+def _build_render_config(payload: dict[str, Any]) -> RenderRuntimeConfig:
+    """把 render 配置段归一化成强类型渲染参数。"""
+    if not isinstance(payload, dict):
+        payload = {}
+    colors = payload.get("colors", {}) if isinstance(payload.get("colors"), dict) else {}
+    fonts = payload.get("fonts", {}) if isinstance(payload.get("fonts"), dict) else {}
+    sizes = payload.get("sizes", {}) if isinstance(payload.get("sizes"), dict) else {}
+    return RenderRuntimeConfig(
+        old_change_bold=bool(payload.get("old_change_bold", True)),
+        smart_underline=bool(payload.get("smart_underline", True)),
+        max_underline_chars=max(0, int(payload.get("max_underline_chars", 20))),
+        underline_density_ratio=min(1.0, max(0.0, float(payload.get("underline_density_ratio", 0.45)))),
+        change_color=_normalize_hex_color(colors.get("change"), "0070C0"),
+        delete_color=_normalize_hex_color(colors.get("delete"), "C00000"),
+        header_fill=_normalize_hex_color(colors.get("header_fill"), "E6EEF7"),
+        font_latin=str(fonts.get("latin", "Songti SC")).strip() or "Songti SC",
+        font_east_asia=str(fonts.get("east_asia", "宋体")).strip() or "宋体",
+        size_body=float(sizes.get("body", 9.5)),
+        size_cell=float(sizes.get("cell", 10.5)),
+        size_title=float(sizes.get("title", 15)),
+        size_delete_mark=float(sizes.get("delete_mark", 10)),
+    )
+
+
+def _normalize_hex_color(value: Any, default: str) -> str:
+    """归一化 RRGGBB 色值：去掉 # 前缀并校验长度，非法时退回默认值。"""
+    text = str(value or "").strip().lstrip("#").upper()
+    if len(text) == 6 and all(char in "0123456789ABCDEF" for char in text):
+        return text
+    return default
 
 
 def resolve_api_key(config: FileComparisonRuntimeConfig) -> str:

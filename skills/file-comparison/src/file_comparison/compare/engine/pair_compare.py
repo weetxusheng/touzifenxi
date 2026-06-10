@@ -28,7 +28,7 @@ from ..postprocess import (
     rows_from_llm_payload,
 )
 from ..section_rules import apply_section_skip_rules
-from ..writer import convert_docx_to_doc, write_docx
+from ..writer import apply_render_config, convert_docx_to_doc, write_docx
 from .batch_validation import validate_complete_batch_results
 
 def compare_pair(
@@ -104,6 +104,7 @@ def compare_pair(
     docx_path, doc_path = build_output_document_paths(pair, output_dir)
     old_display_name = old_name or pair.old_path.stem
     new_display_name = new_name or pair.new_path.stem
+    apply_render_config(runtime_config.render)
     write_docx(rows, docx_path, old_display_name, new_display_name)
     convert_docx_to_doc(docx_path, doc_path)
     return CompareResult(

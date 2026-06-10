@@ -24,7 +24,7 @@ from .postprocess import (
     merge_pure_delete_and_add_runs,
     rows_from_llm_payload,
 )
-from .writer import convert_docx_to_doc, write_docx
+from .writer import apply_render_config, convert_docx_to_doc, write_docx
 
 SKILL_ROOT = Path(__file__).resolve().parents[3]
 
@@ -163,6 +163,7 @@ def rerender_pair(pair_dir: Path, *, mode: str, overwrite: bool) -> dict[str, An
     new_name = read_fund_name(pair.new_path, pair.new_path.stem or pair.new_label or "新版")
     rows = normalize_product_name_rows(rows, old_name, new_name)
     docx_path, doc_path = output_paths(pair_dir, pair=pair, overwrite=overwrite)
+    apply_render_config(load_file_comparison_runtime_config(SKILL_ROOT).render)
     write_docx(rows, docx_path, old_name, new_name)
     convert_docx_to_doc(docx_path, doc_path)
     return {
