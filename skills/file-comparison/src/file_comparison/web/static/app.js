@@ -26,8 +26,12 @@
   const DEFAULT_POLL_INTERVAL_SECONDS = 5;
   const TERMINAL_TASK_STATUSES = ["completed", "failed", "partial_failed", "aborted"];
 
+  // 部署前缀统一由 index.html 顶部 inline script 设置为 window.API_PREFIX，所有静态脚本共享读取。
+  const buildApiUrl = (path) => window.API_PREFIX + (path.startsWith("/") ? path : "/" + path);
+
   async function fetchJson(url, options) {
-    const response = await fetch(url, options || {});
+    const target = /^https?:\/\//i.test(url) ? url : buildApiUrl(url);
+    const response = await fetch(target, options || {});
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.error || ("请求失败: " + response.status));
@@ -573,7 +577,7 @@
                     ? html`<${Button}
                         size="small"
                         type="primary"
-                        href=${"/api/file-comparison/task/" + taskPayload.task_id + "/artifact/" + record.pair_id + "/docx"}
+                        href=${buildApiUrl("/api/file-comparison/task/" + taskPayload.task_id + "/artifact/" + record.pair_id + "/docx")}
                       >
                         下载 DOCX
                       <//>`
@@ -737,7 +741,7 @@
       });
       setUploading(true);
       try {
-        const response = await fetch("/api/file-comparison/upload-files", {
+        const response = await fetch(buildApiUrl("/api/file-comparison/upload-files"), {
           method: "POST",
           body: formData,
         });
@@ -770,6 +774,11 @@
       if (invalidPair) {
         message.warning("请检查配对：修改前后文件不能为空，也不能相同。");
         return;
+      }
+      // 上传期 .doc -> .docx 转换若未完成，弹确认框；用户选"等待转换"则中止本次发起。
+      if (window.fileComparisonConversion) {
+        const proceed = await window.fileComparisonConversion.confirmCreateIfNeeded(scanPayload, antd.Modal);
+        if (!proceed) return;
       }
       setLoadingTask(true);
       try {
@@ -926,6 +935,12 @@
                           <//>
                         </div>
                       `
+                      : null}
+                    ${scanPayload && scanPayload.conversion_status && window.fileComparisonConversion
+                      ? html`<${window.fileComparisonConversion.Card}
+                          uploadId=${scanPayload.conversion_status.upload_id}
+                          initialStatus=${scanPayload.conversion_status}
+                        />`
                       : null}
             </div>
           <//>

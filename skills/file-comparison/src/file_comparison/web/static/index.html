@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>文件对照任务</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="static/favicon.svg" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd@5/dist/reset.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -212,11 +212,17 @@
 </head>
 <body>
   <div id="root"></div>
+  <script>
+    // 部署前缀：本地 localhost 留空，其他环境走 /file-comparison。
+    // 设为全局，使 app.js / conversion_status.js 等所有静态脚本统一读 window.API_PREFIX，避免逐个 props/参数透传时漏改。
+    window.API_PREFIX = window.location.hostname === "localhost" ? "" : "/file-comparison";
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/antd@5/dist/antd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
-  <script src="/static/app.js?v=20260505-status-download"></script>
+  <script src="static/conversion_status.js?v=20260615-conversion"></script>
+  <script src="static/app.js?v=20260615-conversion"></script>
 </body>
 </html>

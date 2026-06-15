@@ -21,6 +21,7 @@ from ..runtime.checkpoint import atomic_write_json, pair_checkpoint_path
 from ..runtime.config import FileComparisonRuntimeConfig, load_file_comparison_runtime_config
 from ..runtime.execution import PairManifest, task_status_from_pairs
 from ..runtime.settings import ensure_directories, pair_dir_for, resolve_paths
+from ..upload.conversion_manager import read_conversion_status, start_background_conversion
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 SKILL_ROOT = Path(__file__).resolve().parents[3]
@@ -519,6 +520,14 @@ class RequestHandler(BaseHTTPRequestHandler):
                 return
             self._send_file(artifact_path)
             return
+        if parsed.path.startswith("/api/file-comparison/upload/") and parsed.path.endswith("/conversion-status"):
+            upload_id = parsed.path.split("/")[4]
+            upload_dir = self.server.paths.output_root / "uploads" / upload_id
+            if not upload_dir.exists():
+                self._send_json({"error": "upload not found"}, status=404)
+                return
+            self._send_json(read_conversion_status(upload_dir) or {"status": "completed", "upload_id": upload_id})
+            return
         self._send_json({"error": "not found"}, status=404)
 
     def do_POST(self):  # noqa: N802
@@ -538,6 +547,12 @@ class RequestHandler(BaseHTTPRequestHandler):
                 target.write_bytes(content)
                 saved_files.append(filename)
             pairs = scan_folder_for_pairs(folder_path, self.server.runtime_config.pairing.month_pattern)
+            # 上传完成立即触发后台 .doc -> .docx 异步转换（HTTP 不阻塞），前端用 conversion-status 接口轮询进度。
+            # 失败时不阻塞上传响应——文件已经保存好了，前端仍能用，生成阶段会 fallback 现场转换。
+            try:
+                conversion_status = start_background_conversion(folder_path)
+            except Exception as exc:  # noqa: BLE001
+                conversion_status = {"status": "failed", "error": f"预转换初始化失败: {exc}"}
             self._send_json(
                 {
                     "folder_path": str(folder_path),
@@ -545,6 +560,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                     "uploaded_files": saved_files,
                     "files": list_word_files(folder_path),
                     "pairs": [pair_to_payload(pair) for pair in pairs],
+                    "conversion_status": conversion_status,
                 },
                 status=201,
             )

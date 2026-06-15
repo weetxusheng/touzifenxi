@@ -29,6 +29,7 @@ from ..postprocess import (
 )
 from ..section_rules import apply_section_skip_rules
 from ..writer import apply_render_config, convert_docx_to_doc, write_docx
+from ...upload.conversion_manager import resolve_converted_docx
 from .batch_validation import validate_complete_batch_results
 
 def compare_pair(
@@ -40,8 +41,27 @@ def compare_pair(
     client: OpenAIResponsesClient | None = None,
 ) -> CompareResult:
     """完成单个文件对的全文抽取、比较、写表和导出。"""
-    old_text = extract_text(pair.old_path)
-    new_text = extract_text(pair.new_path)
+    pair_dir.mkdir(parents=True, exist_ok=True)
+    source_dir = pair_dir / "source"
+    extracted_dir = pair_dir / "extracted"
+    llm_dir = pair_dir / "llm"
+    output_dir = pair_dir / "outputs"
+    for subdir in (source_dir, extracted_dir, llm_dir, output_dir):
+        subdir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(pair.old_path, source_dir / pair.old_path.name)
+    shutil.copy2(pair.new_path, source_dir / pair.new_path.name)
+    # 优先复用上传阶段已转换好的 .docx（uploads/<id>/converted/<stem>.docx）；没有就回退到原路径，
+    # 由 extract_text 现场调 Word 转换。这样上传期异步预转换的产物在生成阶段会被秒过。
+    # 命中 converted/ 时也同步复制一份 .docx 到 source/，让 source/ 在两条路径下都能展示「任务实际用的 .docx」，
+    # 避免用户看到 source/ 只有 .doc 而误以为「没复用 converted」。
+    old_source = resolve_converted_docx(pair.old_path) or pair.old_path
+    new_source = resolve_converted_docx(pair.new_path) or pair.new_path
+    if old_source != pair.old_path:
+        shutil.copy2(old_source, source_dir / old_source.name)
+    if new_source != pair.new_path:
+        shutil.copy2(new_source, source_dir / new_source.name)
+    old_text = extract_text(old_source, convert_dir=source_dir)
+    new_text = extract_text(new_source, convert_dir=source_dir)
     old_sections = split_sections(old_text)
     new_sections = split_sections(new_text)
     old_sections, old_skipped_sections = apply_section_skip_rules(old_sections, runtime_config.compare.skip_section_patterns)
@@ -55,15 +75,6 @@ def compare_pair(
     ]
     old_name = extract_fund_name_or_empty(old_text)
     new_name = extract_fund_name_or_empty(new_text)
-    pair_dir.mkdir(parents=True, exist_ok=True)
-    source_dir = pair_dir / "source"
-    extracted_dir = pair_dir / "extracted"
-    llm_dir = pair_dir / "llm"
-    output_dir = pair_dir / "outputs"
-    for subdir in (source_dir, extracted_dir, llm_dir, output_dir):
-        subdir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(pair.old_path, source_dir / pair.old_path.name)
-    shutil.copy2(pair.new_path, source_dir / pair.new_path.name)
     atomic_write_json(
         extracted_dir / "old_sections.json",
         {

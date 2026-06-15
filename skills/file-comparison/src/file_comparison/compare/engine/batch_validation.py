@@ -33,11 +33,11 @@ def validate_complete_batch_results(
         if rows is None:
             invalid_batches.append(f"{batch.batch_id}(缺少结果)")
             continue
-        if batch.compare_blocks and not rows:
-            invalid_batches.append(f"{batch.batch_id}(结果为空)")
-            continue
         if not has_usable_status:
             invalid_batches.append(f"{batch.batch_id}(状态不可用:{status or 'missing'})")
+            continue
+        # 注：rows 为空但 status=succeeded 是合法的——表示 LLM 判定该 batch 内章节均无变更，
+        # 此时不应再以 rows 为空二次否决（之前的 `compare_blocks and not rows` 规则会把 LLM 的「无变更」误判为失败）。
     if invalid_batches:
         raise RuntimeError("存在未完成或无可用结果的 batch，已停止生成文档: " + "、".join(invalid_batches))
 

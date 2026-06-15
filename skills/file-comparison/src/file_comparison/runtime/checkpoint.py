@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -54,6 +55,22 @@ def utc_now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def _atomic_replace_with_retry(tmp_name: str, path: Path, *, attempts: int = 10, base_delay: float = 0.05) -> None:
+    """执行 os.replace；在 Windows 上目标被轮询读取/杀软扫描短暂占用时做有限退避重试。
+
+    POSIX 的 replace 是原子的、不会因并发读失败；此重试只为兜住 Windows 的 [WinError 5] 拒绝访问，
+    退避总时长上限约 2.7s（0.05*(1+2+…+9)），仍占用则抛出原异常交由上层处理。
+    """
+    for attempt in range(attempts):
+        try:
+            os.replace(tmp_name, path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(base_delay * (attempt + 1))
+
+
 def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     """以原子替换方式写入 JSON 文件，避免轮询读到半截内容。"""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -62,7 +79,7 @@ def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False, indent=2)
             handle.write("\n")
-        os.replace(tmp_name, path)
+        _atomic_replace_with_retry(tmp_name, path)
     finally:
         if os.path.exists(tmp_name):
             os.unlink(tmp_name)
