@@ -4,7 +4,7 @@ setlocal EnableExtensions
 rem Usage:
 rem   register_chip_split_schedule_windows.bat [RUN_TIME] [MAIL_TIME] [RUN_TASK] [MAIL_TASK]
 rem Example:
-rem   register_chip_split_schedule_windows.bat 10:00 11:20
+rem   register_chip_split_schedule_windows.bat 17:40 19:20
 rem
 rem Advanced (optional env vars before call):
 rem   set CHIP_RUN_WEEKDAY_TIME=10:00
@@ -20,9 +20,9 @@ rem   set CHIP_RUN_WINDOW_END=11:30
 rem   set CHIP_RUN_WINDOW_EVERY_MIN=15
 
 set "RUN_TIME=%~1"
-if "%RUN_TIME%"=="" set "RUN_TIME=10:00"
+if "%RUN_TIME%"=="" set "RUN_TIME=17:40"
 set "MAIL_TIME=%~2"
-if "%MAIL_TIME%"=="" set "MAIL_TIME=11:20"
+if "%MAIL_TIME%"=="" set "MAIL_TIME=19:20"
 set "RUN_TASK=%~3"
 if "%RUN_TASK%"=="" set "RUN_TASK=touzifenxi-chip-daily-run"
 set "MAIL_TASK=%~4"

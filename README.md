@@ -1,150 +1,197 @@
-# 多 Agent A 股投研系统
+# 多 Agent 投研与新闻简报系统
 
-这个仓库不再按“演示级原型”推进，而是按“可持续运行的投研系统”重构。
+本仓库同时运行 A 股投研流水线、行业/科技资讯简报和美国国际新闻简报。底层能力统一沉淀在 `src/utils/tools/`，业务模块只保留各自的入口、站点适配和编排逻辑。
 
-当前目标不是做一个会打印 5 只股票的脚本，而是搭出这 4 层：
+## 业务线
 
-1. `数据底座`
-全市场股票池、行情快照、财务指标、运行日志、推荐结果归档。
+- `src/utils/`：A 股多 Agent 投研系统，覆盖股票池、主题路由、委员会打分、报告归档和推荐跟踪。
+- `src/c114/`、`src/infoq/`：C114 / InfoQ 当日热点 Websearch 简报。
+- `src/kr36/`：36Kr 当日热点 / 周报简报。
+- `src/chip/`：半导体产业新闻简报，聚合 SEMI 中国和爱集微。
+- `src/feedcore/`、`feedcore_remote_fetcher/`：美国国际新闻 FeedCore 简报，远程 fetcher 抓正文，本地完成多 Agent 分析、聚合和中文输出。
 
-2. `研究层`
-风格、基本面、技术面、风险、事件等 Agent 的统一输入输出协议。
+## 环境准备
 
-前面新增一层：
+Windows PowerShell：
 
-- `主题/事件路由层`
-  - 人工一级主题框架
-  - 公告优先、政策补充的主题识别
-  - 主题白名单、自动扩展股、旁路候选
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+$env:PYTHONPATH = "src"
+```
 
-3. `组合层`
-行业暴露、风格暴露、风险预算、持仓约束。
-
-4. `验证层`
-每日推荐持久化、后续表现跟踪、回测与归因。
-
-## 当前状态
-
-已具备：
-
-- 项目内 `direct` 网络模式，避免抓数继承 macOS/Clash 代理
-- 真实日线抓取的双源结构
-  - 首选 `Eastmoney`
-  - 失败回退 `Sina`
-- 每日推荐结果落地为 Markdown 报告
-- PostgreSQL 正式主库
-- SQLite 本地 fallback
-- 研究流水线入口
-- 主题/事件前置路由
-- 本地主题配置文件: `data/themes_v1.json`
-- 规则版本、周度池变更、候选决策日志
-- 股票生命周期、主题生命周期追踪
-- PostgreSQL schema 与 Alembic 脚手架
-
-仍未完成：
-
-- 全市场股票池采集
-- 完整真实财务/估值底座
-- 更完整的公告/新闻/事件层
-- 回测与命中率跟踪
-- 调度和失败恢复
-
-## 命令
-
-初始化数据库：
+macOS / Linux：
 
 ```bash
-cd /Users/xusheng/Documents/project/touzifenxi
+python -m venv .venv
 source .venv/bin/activate
+pip install -e ".[dev]"
+export PYTHONPATH=src
+```
+
+`.venv/` 是本地虚拟环境，不纳入仓库；如果删除后需要运行测试或命令，按上面步骤重建即可。
+
+## 常用命令
+
+投研系统：
+
+```bash
 touzifenxi init-db
-```
-
-查看数据库后端状态：
-
-```bash
 touzifenxi db-info
-```
-
-运行当前研究流水线：
-
-```bash
+touzifenxi paths
 touzifenxi run --data-source akshare --network-mode direct --report
-```
-
-启动本地页面 Dashboard：
-
-```bash
 touzifenxi serve-web --host 127.0.0.1 --port 8787
 ```
 
-打开：
+Websearch 简报：
+
+```bash
+python scripts/websearch.py run --source c114 --date YYYY-MM-DD
+python scripts/websearch.py run --source infoq --date YYYY-MM-DD
+python scripts/websearch.py run --source 36kr --date YYYY-MM-DD
+touzifenxi run-c114-daily-brief --date YYYY-MM-DD
+touzifenxi send-c114-latest-brief-email --t1-gate
+touzifenxi send-kr36-latest-brief-email
+```
+
+半导体与 FeedCore：
+
+```bash
+touzifenxi run-chip-daily-brief
+touzifenxi send-chip-latest-brief-email
+python scripts/feedcore_us_news.py
+python scripts/feedcore_send_brief_email.py
+```
+
+测试与静态检查：
+
+```bash
+pytest
+pytest tests/path/to/test_x.py::test_y
+ruff check src
+ruff format src
+```
+
+## 邮件通道
+
+邮件发送走 `src/utils/tools/output/email.py`。项目根目录 `.env` / `.env.local` 会被自动读取。
+
+当前默认配置：
+
+```env
+TOUZIFENXI_EMAIL_BACKEND=auto
+```
+
+`auto` 表示双通道：
+
+1. 主通道：企业 Exchange EWS，HTTPS 443，`tylxts@cjhxfund.com`，NTLM。
+2. 备用通道：QQ SMTP，`smtp.qq.com:465`，SSL。
+
+QQ 备用通道需要配置：
+
+```env
+TOUZIFENXI_EMAIL_QQ_FROM=944532395@qq.com
+TOUZIFENXI_EMAIL_QQ_PASSWORD=QQ邮箱SMTP授权码
+TOUZIFENXI_EMAIL_QQ_FROM_NAME=投研简报机器人
+```
+
+可选 `TOUZIFENXI_EMAIL_BACKEND`：
+
+- `auto`：EWS 失败后自动切 QQ。
+- `ews`：只用企业 EWS。
+- `qq`：只用 QQ SMTP。
+- `smtp`：只用传统 SMTP，并读取 `TOUZIFENXI_EMAIL_SMTP_*`。
+
+详细说明见 `docs/channels.md`。
+
+## Python 定时任务服务
+
+各业务线的实际执行脚本仍集中在 `scripts/<业务>/`，例如：
+
+- `scripts/c114/run_c114_daily_brief_no_email_windows.bat`
+- `scripts/c114/send_c114_daily_brief_email_t1_gate_windows.bat`
+- `scripts/chip/run_chip_daily_brief_no_email_windows.bat`
+- `scripts/kr36/run_kr36_daily_brief_no_email_windows.bat`
+- `scripts/feedcore/run_feedcore_us_news_windows.bat`
+
+当前推荐不再依赖 Windows 任务计划器，而是启动本机 Python 调度服务。服务会把任务配置和运行记录写入 `state/schedule_admin.db`，并按 SQLite 中的时间每日触发对应 bat。定时发信脚本会读取 `.env`，因此会自动使用 `auto` 双通道。
+
+启动管理页和调度循环：
+
+```powershell
+touzifenxi schedule-admin --host 127.0.0.1 --port 9999 --open-browser
+```
+
+管理页能力：
+
+- 查看 C114、chip、36Kr、FeedCore 默认任务。
+- 修改任务时间、启停任务、立即运行任务。
+- 查看 `logs/scheduler/` 中的调度执行日志，以及最近运行记录。
+- 所有任务都由 Python 进程直接执行，执行时设置 `cwd=项目根目录`，避免新设备从 `System32` 启动。
+
+如果只想打开页面、不自动跑调度循环：
+
+```powershell
+touzifenxi schedule-admin --no-scheduler
+```
+
+注意：Python 调度服务必须保持运行。机器重启或关闭该进程后，定时任务不会自动触发；后续如需无人值守开机自启，可再单独封装 Windows 服务或启动项。
+
+可选本地覆盖配置：`config/schedule.local.json`（已忽略，不提交），示例：
+
+```json
+{
+  "tasks": {
+    "c114_run": { "time": "17:40" },
+    "c114_mail": { "time": "19:20" }
+  }
+}
+```
+
+## 数据与输出目录
 
 ```text
-http://127.0.0.1:8787
+data/raw/                 原始数据
+data/processed/           中间结构化数据
+output/data/raw/          Websearch 运行时抓取产物
+output/reports/           C114 / 36Kr / chip / FeedCore 简报产物
+reports/                  项目级报告与搜索清单
+state/                    SQLite、checkpoint、本地缓存
+logs/                     运行日志
+alembic/                  PostgreSQL 迁移脚手架
+docs/                     架构、渠道、规范文档
 ```
 
-查看系统目录：
+运行目录应保持可排序命名，例如 `c114_search_YYYYMMDDHHMM`、`kr36_hot_topics_YYYYMMDDHHMM`、`c114_range_YYYYMMDD_YYYYMMDD_<timestamp>`。
+
+## 数据库
+
+设置 `TOUZIFENXI_DATABASE_URL` 时使用 PostgreSQL；未设置时回退到 `state/touzifenxi.db`。
 
 ```bash
-touzifenxi paths
-```
-
-配置 PostgreSQL 正式主库：
-
-```bash
-export TOUZIFENXI_DATABASE_URL='postgresql://postgres:123456@192.168.3.37:5432/touzifenxi'
+export TOUZIFENXI_DATABASE_URL='postgresql://user:password@host:5432/touzifenxi'
 touzifenxi init-db
+alembic upgrade head
 ```
 
-说明：
-
-- 当前正式主库是 PostgreSQL；只要设置了 `TOUZIFENXI_DATABASE_URL`，`run / daily-cycle / build-weekly-pool / serve-web` 都会默认走 PostgreSQL。
-- SQLite 只保留为本地开发与调试 fallback。
-- PostgreSQL 以“新系统起点”重新开始积累，不导入旧 SQLite 历史数据。
-- PostgreSQL 迁移脚手架在 `alembic/`，schema 文件在 `docs/postgresql_schema.sql`。
-
-## 目录
-
-```text
-data/
-  raw/
-  processed/
-  themes_v1.json
-  universe_sample.json
-  watchlist_v2.json
-reports/
-state/
-  touzifenxi.db
-src/touzifenxi/
-  cli.py
-  pipeline.py
-  settings.py
-  storage.py
-  schema.py
-  ...
-docs/
-  architecture.md
-```
-
-## 设计原则
-
-- 没有持久化的数据，不算系统能力。
-- 没有全量股票池和过滤规则，不算选股系统。
-- 没有验证闭环和归档，不算投研流程。
-- 原型模块可以保留，但不会再冒充“可用系统”。
+PostgreSQL schema 参考 `docs/postgresql_schema.sql`。
 
 ## 开发规范
 
-项目协作与开发入口见：
+协作入口：
 
 - `AGENTS.md`
-
-详细规范正文见：
-
+- `CLAUDE.md`
 - `docs/project-conventions.md`
+- `docs/development-workflow.md`
 
-后续新增 Python 模块、提示词、skill 目录、打包脚本时，默认都按这两份文档执行。
+模块归位原则：
+
+- 通用能力进 `src/utils/tools/`。
+- 业务专属逻辑进 `src/c114/`、`src/infoq/`、`src/kr36/`、`src/chip/`、`src/feedcore/`。
+- 脚本入口放 `scripts/`，不要把临时调试脚本长期留在仓库。
+- 原始数据、中间数据、报告、日志和构建产物分目录存放。
 
 ## 风险说明
 
-当前仍处于系统重构期，不构成投资建议，也不应直接用于实盘交易。
+本项目仍处于重构和自动化运行阶段，所有投研输出仅供研究参考，不构成投资建议，也不应直接用于实盘交易。

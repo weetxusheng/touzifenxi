@@ -22,8 +22,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 5. **FeedCore 美国国际新闻简报** (`src/feedcore/`, `feedcore_remote_fetcher/`)
    - 多 RSS 源 → 远程 fetcher（FastAPI 服务，http://81.69.47.226:3000）跨语种正文抓取 → 多 Agent 四要素分析（事实/背景/影响/反面观点）→ 动态子类规划 → 阅读主题聚合 → 输出**中文简报** brief.md / brief.html
    - 单一 profile `scripts/feedcore_us_news.py`：60 个全免费英文 RSS 源（4 大类 × 15 源：国际形势 / AI 与科技 / 金融市场与宏观 / 财经信息），T-1 数据窗口自动应用
-   - 邮件由用户**主动**触发：`scripts/feedcore/send_feedcore_latest_brief_email_windows.bat`（不进定时任务），底层 `scripts/feedcore_send_brief_email.py`
-   - Windows bat：`scripts/feedcore/{run_feedcore_us_news,send_feedcore_latest_brief_email,register_feedcore_schedule}_windows.bat`
+   - 邮件可手动触发 `scripts/feedcore/send_feedcore_latest_brief_email_windows.bat`，或由 `register_feedcore_schedule_windows.bat` 注册每日 19:20 定时发信
+   - Windows bat：`scripts/feedcore/{run_feedcore_us_news,send_feedcore_latest_brief_email,register_feedcore_schedule}_windows.bat`；四业务每日定时分别用各目录下 `register_*_split_schedule_windows.bat`（或 feedcore 的 `register_feedcore_schedule_windows.bat`）
 
 业务模块的所有共用能力（DB、LLM、邮件、市场数据、主题、报告渲染等）一律走 `src/utils/tools/`，不要在业务模块内重复实现。
 

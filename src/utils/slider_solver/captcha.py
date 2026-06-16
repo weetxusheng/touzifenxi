@@ -1077,7 +1077,7 @@ def run_yidun_solver(
     """
     打开易盾验证页，模板匹配缺口并拖动。返回 0=通过；1=失败；2=缺依赖；3=非易盾拦截页。
 
-    由 ``risk_verification_command`` 子进程或 ``scripts/risk_slider_solver.py`` 调用。
+    由 ``risk_verification_command`` 子进程或 ``python -m utils.slider_solver`` 调用。
     """
     cv2, np = _yidun_load_cv2_np()
     try:

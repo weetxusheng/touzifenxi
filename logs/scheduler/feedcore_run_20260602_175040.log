@@ -1,0 +1,99 @@
+[scheduler] task_id=feedcore_run
+[scheduler] command=E:\AI\touzifenxi\scripts\feedcore\run_feedcore_us_news_windows.bat
+[scheduler] cwd=E:\AI\touzifenxi
+[scheduler] started_at=2026-06-02T17:50:40
+[feedcore-us_news] 周二 2026/06/02 17:50:41.52 starting us_news profile...
+[feedcore-us_news] PROJECT_ROOT=E:\AI\touzifenxi
+[feedcore-us_news] PYTHON_CMD="E:\AI\touzifenxi\.venv\Scripts\python.exe"
+[us_news] 40 RSS sources, fetching via http://81.69.47.226:3000
+POST http://81.69.47.226:3000/api/fetch-runs
+remote_run_id=fetch_20260602095044_full_1780393843
+  [running] rss=40 feed_items=0 articles=0/0 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=0/400 failed=0
+  [running] rss=40 feed_items=400 articles=10/400 failed=4
+  [running] rss=40 feed_items=400 articles=10/400 failed=4
+  [running] rss=40 feed_items=400 articles=10/400 failed=4
+  [running] rss=40 feed_items=400 articles=10/400 failed=4
+  [running] rss=40 feed_items=400 articles=10/400 failed=4
+  [running] rss=40 feed_items=400 articles=30/400 failed=9
+  [running] rss=40 feed_items=400 articles=30/400 failed=9
+  [running] rss=40 feed_items=400 articles=30/400 failed=9
+  [running] rss=40 feed_items=400 articles=40/400 failed=10
+  [running] rss=40 feed_items=400 articles=40/400 failed=10
+  [running] rss=40 feed_items=400 articles=40/400 failed=10
+  [running] rss=40 feed_items=400 articles=51/400 failed=11
+  [running] rss=40 feed_items=400 articles=51/400 failed=11
+  [running] rss=40 feed_items=400 articles=51/400 failed=11
+  [running] rss=40 feed_items=400 articles=61/400 failed=13
+  [running] rss=40 feed_items=400 articles=61/400 failed=13
+  [running] rss=40 feed_items=400 articles=61/400 failed=13
+  [running] rss=40 feed_items=400 articles=74/400 failed=17
+  [running] rss=40 feed_items=400 articles=74/400 failed=17
+  [running] rss=40 feed_items=400 articles=74/400 failed=17
+  [running] rss=40 feed_items=400 articles=74/400 failed=17
+  [running] rss=40 feed_items=400 articles=74/400 failed=17
+  [running] rss=40 feed_items=400 articles=74/400 failed=17
+  [running] rss=40 feed_items=400 articles=86/400 failed=19
+  [running] rss=40 feed_items=400 articles=86/400 failed=19
+  [running] rss=40 feed_items=400 articles=86/400 failed=19
+  [running] rss=40 feed_items=400 articles=97/400 failed=22
+  [running] rss=40 feed_items=400 articles=97/400 failed=22
+  [running] rss=40 feed_items=400 articles=97/400 failed=22
+  [running] rss=40 feed_items=400 articles=97/400 failed=22
+  [running] rss=40 feed_items=400 articles=97/400 failed=22
+  [running] rss=40 feed_items=400 articles=97/400 failed=22
+  [running] rss=40 feed_items=400 articles=111/400 failed=24
+  [running] rss=40 feed_items=400 articles=111/400 failed=24
+  [running] rss=40 feed_items=400 articles=111/400 failed=24
+  [running] rss=40 feed_items=400 articles=111/400 failed=24
+[feedcore-us_news] Python stderr appended to: E:\AI\touzifenxi\logs\feedcore\feedcore_us_news.log
+[feedcore-us_news] 周二 2026/06/02 17:58:00.33 finished with exit code 1.
+[feedcore-us_news] detail log: E:\AI\touzifenxi\logs\feedcore\feedcore_us_news.log
+
+[scheduler] finished_at=2026-06-02T17:58:00
+[scheduler] exit_code=1

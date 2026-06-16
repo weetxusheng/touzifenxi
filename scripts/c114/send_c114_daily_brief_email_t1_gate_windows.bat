@@ -6,7 +6,7 @@ rem Send T-1 C114 brief when task runs. Requires .env SMTP.
 rem Same-dir c114_step_6_brief_YYYYMMDD.html must exist (enforced in send-c114-latest-brief-email).
 rem Gate: step6 .md mtime not before gate-time today (Shanghai).
 
-set "MAIL_TO_LIST=chenxusheng@cjhxfund.com liuyangcj@cjhxfund.com zx944532395@sina.com 944532395@qq.com"
+set "MAIL_TO_LIST=944532395@qq.com"
 set "T1_GATE_TIME=15:08"
 
 for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"

@@ -9,10 +9,12 @@ import os
 import re
 import smtplib
 import ssl
+import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from email.header import Header
 from email.message import EmailMessage
+from email.utils import formataddr
 from pathlib import Path
 from typing import Iterable
 
@@ -104,6 +106,40 @@ def load_email_channel_config(env: Mapping[str, str] | None = None) -> EmailChan
     )
 
 
+def load_qq_fallback_email_channel_config(env: Mapping[str, str] | None = None) -> EmailChannelConfig:
+    """QQ SMTP 备用通道（smtp.qq.com:465 SSL）。"""
+
+    src: Mapping[str, str] = os.environ if env is None else env
+
+    def getv(key: str) -> str:
+        return str(src.get(key, "") or "").strip()
+
+    sender_email = getv("TOUZIFENXI_EMAIL_QQ_FROM") or getv("TOUZIFENXI_EMAIL_FALLBACK_FROM")
+    password = getv("TOUZIFENXI_EMAIL_QQ_PASSWORD") or getv("TOUZIFENXI_EMAIL_FALLBACK_PASSWORD")
+    sender_name = getv("TOUZIFENXI_EMAIL_QQ_FROM_NAME") or getv("TOUZIFENXI_EMAIL_FALLBACK_FROM_NAME") or None
+    username = getv("TOUZIFENXI_EMAIL_QQ_USERNAME") or sender_email
+
+    if not sender_email:
+        raise RuntimeError("未配置 TOUZIFENXI_EMAIL_QQ_FROM，无法使用 QQ 备用发信。")
+    if not password:
+        raise RuntimeError("未配置 TOUZIFENXI_EMAIL_QQ_PASSWORD，无法使用 QQ 备用发信。")
+
+    verify_tls_value = getv("TOUZIFENXI_EMAIL_QQ_VERIFY_TLS").lower()
+    verify_tls = verify_tls_value not in {"0", "false", "no", "off"} if verify_tls_value else True
+
+    return EmailChannelConfig(
+        smtp_host=QQ_SMTP_HOST,
+        smtp_port=QQ_SMTP_PORT,
+        username=username,
+        password=password,
+        sender_email=sender_email,
+        sender_name=sender_name,
+        use_ssl=True,
+        verify_tls=verify_tls,
+        timeout_seconds=float(getv("TOUZIFENXI_EMAIL_TIMEOUT_SECONDS") or "30"),
+    )
+
+
 def build_email_message(
     *,
     sender_email: str,
@@ -122,7 +158,7 @@ def build_email_message(
     message = EmailMessage()
     message["From"] = sender_email
     message["To"] = ", ".join(recipients)
-    message["Subject"] = subject.strip() or "无主题"
+    message["Subject"] = str(Header(subject.strip() or "无主题", "utf-8"))
     message.set_content(body_text)
     if body_html:
         message.add_alternative(body_html, subtype="html")
@@ -187,6 +223,58 @@ def send_email_message(*, config: EmailChannelConfig, message: EmailMessage) -> 
         server.send_message(message)
 
 
+def _load_dotenv_files() -> None:
+    """CLI 未走 bat 时，补载项目根 .env / .env.local。"""
+    roots: list[Path] = [Path.cwd()]
+    try:
+        roots.append(Path(__file__).resolve().parents[4])
+    except IndexError:
+        pass
+    seen: set[Path] = set()
+    for root in roots:
+        root = root.resolve()
+        if root in seen:
+            continue
+        seen.add(root)
+        for name in (".env", ".env.local"):
+            path = root / name
+            if not path.is_file():
+                continue
+            for raw in path.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                if key and key not in os.environ:
+                    os.environ[key] = value.strip()
+
+
+def _send_email_smtp(
+    *,
+    recipient_emails: Iterable[str],
+    subject: str,
+    body_text: str,
+    body_html: str | None,
+    attachments: Iterable[Path],
+    config: EmailChannelConfig,
+) -> None:
+    message = build_email_message(
+        sender_email=config.sender_email,
+        recipient_emails=recipient_emails,
+        subject=subject,
+        body_text=body_text,
+        body_html=body_html,
+        attachments=attachments,
+    )
+    if config.sender_name:
+        message.replace_header(
+            "From",
+            formataddr((config.sender_name, config.sender_email)),
+        )
+    send_email_message(config=config, message=message)
+
+
 def send_email(
     *,
     recipient_emails: Iterable[str],
@@ -196,21 +284,90 @@ def send_email(
     attachments: Iterable[Path] = (),
     config: EmailChannelConfig | None = None,
 ) -> None:
-    """加载配置、构造消息并发送邮件。"""
+    """发信：默认先企业 EWS(投研)，失败再 QQ SMTP 替补。"""
 
-    effective_config = config or load_email_channel_config()
-    message = build_email_message(
-        sender_email=effective_config.sender_email,
-        recipient_emails=recipient_emails,
-        subject=subject,
-        body_text=body_text,
-        body_html=body_html,
-        attachments=attachments,
-    )
-    if effective_config.sender_name:
-        display_from = f"{effective_config.sender_name} <{effective_config.sender_email}>"
-        message.replace_header("From", str(Header(display_from, "utf-8")))
-    send_email_message(config=effective_config, message=message)
+    _load_dotenv_files()
+    backend = os.environ.get("TOUZIFENXI_EMAIL_BACKEND", "auto").strip().lower()
+
+    if config is not None:
+        _send_email_smtp(
+            recipient_emails=recipient_emails,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+            attachments=attachments,
+            config=config,
+        )
+        return
+
+    if backend == "smtp":
+        _send_email_smtp(
+            recipient_emails=recipient_emails,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+            attachments=attachments,
+            config=load_email_channel_config(),
+        )
+        return
+
+    if backend == "qq":
+        _send_email_smtp(
+            recipient_emails=recipient_emails,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+            attachments=attachments,
+            config=load_qq_fallback_email_channel_config(),
+        )
+        return
+
+    if backend == "ews":
+        from .ews_mail import send_email_via_ews
+
+        send_email_via_ews(
+            recipient_emails=recipient_emails,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+            attachments=attachments,
+        )
+        return
+
+    # auto（默认）：企业 EWS → QQ 替补
+    if backend not in ("auto", ""):
+        raise RuntimeError(f"未知 TOUZIFENXI_EMAIL_BACKEND: {backend}")
+
+    from .ews_mail import send_email_via_ews
+
+    primary_error: Exception | None = None
+    try:
+        send_email_via_ews(
+            recipient_emails=recipient_emails,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+            attachments=attachments,
+        )
+        return
+    except Exception as exc:
+        primary_error = exc
+        print(f"[email] 主通道 EWS 失败，尝试 QQ 替补: {exc}", file=sys.stderr)
+
+    try:
+        _send_email_smtp(
+            recipient_emails=recipient_emails,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+            attachments=attachments,
+            config=load_qq_fallback_email_channel_config(),
+        )
+        print("[email] 已通过 QQ 备用通道发送。", file=sys.stderr)
+    except Exception as fallback_exc:
+        raise RuntimeError(
+            f"主通道 EWS 失败: {primary_error}; QQ 备用失败: {fallback_exc}"
+        ) from fallback_exc
 
 
 """项目级邮件正文渲染器（merged from channels/renderers.py）."""

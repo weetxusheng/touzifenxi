@@ -1,0 +1,14 @@
+[feedcore-us_news] 周二 2026/06/02 17:50:41.52 starting us_news profile...
+[feedcore-us_news] PROJECT_ROOT=E:\AI\touzifenxi
+[feedcore-us_news] PYTHON_CMD="E:\AI\touzifenxi\.venv\Scripts\python.exe"
+Traceback (most recent call last):
+  File "E:\AI\touzifenxi\scripts\feedcore_us_news.py", line 429, in <module>
+    main()
+  File "E:\AI\touzifenxi\scripts\feedcore_us_news.py", line 379, in main
+    artifact = fetch_remote_artifact(
+  File "E:\AI\touzifenxi\src\feedcore\remote_client.py", line 75, in fetch_remote_artifact
+    progress.raise_for_status()
+  File "E:\AI\touzifenxi\.venv\lib\site-packages\requests\models.py", line 1167, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 504 Server Error: Gateway Time-out for url: http://81.69.47.226:3000/api/fetch-runs/fetch_20260602095044_full_1780393843/progress
+[feedcore-us_news] 周二 2026/06/02 17:58:00.33 finished with exit code 1.

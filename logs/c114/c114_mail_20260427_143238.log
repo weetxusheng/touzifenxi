@@ -1,6 +1,0 @@
-[C114 mail] mode=t1-gate gate=11:56 recipients=zx944532395@sina.com chenxusheng@cjhxfund.com liuyangcj@cjhxfund.com
-[C114 mail] python="E:\AI\touzifenxi\.venv\Scripts\python.exe"
-Step 6 文件: E:\AI\touzifenxi\output\reports\c114_report\c114_range_20260425_20260426_202604271158\c114_step_6_brief_20260426.md
-邮件发送完成: zx944532395@sina.com, chenxusheng@cjhxfund.com, liuyangcj@cjhxfund.com
-[C114 mail] exit=0
-[C114 mail] status=SUCCESS

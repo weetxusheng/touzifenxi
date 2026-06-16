@@ -1,0 +1,17 @@
+[scheduler] task_id=kr36_daily_run
+[scheduler] command=E:\AI\touzifenxi\scripts\kr36\run_kr36_daily_brief_no_email_windows.bat
+[scheduler] cwd=E:\AI\touzifenxi
+[scheduler] started_at=2026-06-02T17:50:40
+[kr36] 2026-06-02 17:50:42 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=E:\AI\touzifenxi
+[kr36] PYTHON_CMD="E:\AI\touzifenxi\.venv\Scripts\python.exe"
+[kr36] TIMEOUT=30s
+[kr36] LOG_FILE=E:\AI\touzifenxi\logs\kr36\kr36_20260602_175041.log
+[kr36] ERROR: Playwright launch failed in current Python: "E:\AI\touzifenxi\.venv\Scripts\python.exe"
+[kr36] HINT: set PYTHON_BIN to project venv python and run:
+[kr36]       python -m playwright install chromium
+[kr36] HINT: run this for detailed error:
+[kr36]       "E:\AI\touzifenxi\.venv\Scripts\python.exe" -c "from playwright.sync_api import sync_playwright; p=sync_playwright^(^).start^(^); b=p.chromium.launch^(headless=True^)"
+
+[scheduler] finished_at=2026-06-02T17:50:47
+[scheduler] exit_code=8

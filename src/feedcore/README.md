@@ -16,13 +16,13 @@ API_KEY=your-llm-api-key
 FEEDCORE_REMOTE_FETCHER_URL=http://<remote-host>:3000
 FEEDCORE_FETCHER_TOKEN=<server-bearer-token>
 
-# 运行 profile（每个 profile 是一份独立配置）
-python scripts/feedcore_general_news.py   # 通用国际新闻（120 个 RSS 源）
-python scripts/feedcore_ai_news.py        # AI 专题（1 个 RSS 源，默认 5 篇）
+# 运行 profile（当前主 profile）
+python scripts/feedcore_us_news.py
 
 # Windows 定时任务封装
-scripts\run_feedcore_news_brief.bat              # = general_news
-scripts\run_feedcore_news_brief.bat ai_news      # = ai_news
+scripts\feedcore\run_feedcore_us_news_windows.bat
+scripts\feedcore\register_feedcore_schedule_windows.bat
+scripts\feedcore\send_feedcore_latest_brief_email_windows.bat
 ```
 
 跑完产物落 `output/reports/feedcore_report/<run_id>/`，最终简报是 `brief.md` 与 `brief.html`。
@@ -244,6 +244,6 @@ src/feedcore/
 
 外部相关：
 - `feedcore_remote_fetcher/`（仓库根）—— FastAPI 远端服务部署单元
-- `scripts/feedcore_*.py` —— profile 入口
-- `scripts/run_feedcore_news_brief.bat` —— Windows 定时任务
+- `scripts/feedcore_us_news.py` —— 当前 us_news profile 入口
+- `scripts/feedcore/` —— Windows 跑批 / 发信 / 注册定时任务
 - `tests/feedcore/` —— 全部 17 个 pytest 用例

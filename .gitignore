@@ -29,6 +29,7 @@ reports/c114_report/**
 state/**
 !state/README.md
 runtime/**
+config/schedule.local.json
 data/**
 !data/raw/
 !data/raw/README.md
@@ -36,6 +37,7 @@ data/**
 !data/processed/README.md
 # 运行时产物（C114 / FeedCore 等流水线输出），整目录不提交
 output/
+logs/
 
 # Skill local runtime files
 skills/.skills_store_lock.json

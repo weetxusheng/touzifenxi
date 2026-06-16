@@ -4,12 +4,15 @@ setlocal EnableExtensions
 rem Usage:
 rem   register_kr36_split_schedule_windows.bat [RUN_TIME] [MAIL_TIME] [RUN_TASK] [MAIL_TASK]
 rem Example:
-rem   register_kr36_split_schedule_windows.bat 15:00 16:00
+rem   register_kr36_split_schedule_windows.bat 17:40 19:20
+rem
+rem 仅注册每日 split 任务（touzifenxi-kr36-daily-*）。
+rem 周三/周六周期任务请用 register_kr36_weekly_schedule_windows.bat，本脚本不会改动。
 
 set "RUN_TIME=%~1"
-if "%RUN_TIME%"=="" set "RUN_TIME=15:00"
+if "%RUN_TIME%"=="" set "RUN_TIME=17:40"
 set "MAIL_TIME=%~2"
-if "%MAIL_TIME%"=="" set "MAIL_TIME=16:10"
+if "%MAIL_TIME%"=="" set "MAIL_TIME=19:20"
 set "RUN_TASK=%~3"
 if "%RUN_TASK%"=="" set "RUN_TASK=touzifenxi-kr36-daily-run"
 set "MAIL_TASK=%~4"

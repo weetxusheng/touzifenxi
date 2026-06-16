@@ -1,0 +1,7 @@
+[kr36] 2026-06-02 17:50:42 starting daily brief run (no email)...
+[kr36] PROJECT_ROOT=E:\AI\touzifenxi
+[kr36] PYTHON_CMD="E:\AI\touzifenxi\.venv\Scripts\python.exe"
+[kr36] TIMEOUT=30s
+[kr36] LOG_FILE=E:\AI\touzifenxi\logs\kr36\kr36_20260602_175041.log
+[kr36] ERROR: Playwright launch failed in current Python: "E:\AI\touzifenxi\.venv\Scripts\python.exe"
+[kr36] HINT: python -m playwright install chromium
