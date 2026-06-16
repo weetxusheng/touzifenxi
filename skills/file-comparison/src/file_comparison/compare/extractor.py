@@ -206,7 +206,10 @@ def format_counter(num_format: str, value: int) -> str:
         return int_to_roman(value)
     if num_format == "upperRoman":
         return int_to_roman(value).upper()
-    if num_format == "chineseCounting":
+    # Word 中文计数有 chineseCounting / chineseCountingThousand / ideographDigital 等多种变体；
+    # 1-99 范围内渲染结果与基础 int_to_chinese_counting 一致，不识别会回退到阿拉伯数字，
+    # 导致原文"第三部分"被错抽成"第3部分"——此次事故的真实根因即此。
+    if num_format in ("chineseCounting", "chineseCountingThousand", "ideographDigital"):
         return int_to_chinese_counting(value)
     return str(value)
 
