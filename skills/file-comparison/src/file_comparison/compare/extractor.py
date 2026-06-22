@@ -436,6 +436,18 @@ def convert_doc_to_docx(src: Path, out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"{src.stem}.docx"
 
+    # Windows COM 模型要求每个使用 COM 的线程在调用前先 CoInitialize；后台线程不会自动初始化，
+    # 漏掉会撞 -2147221008「尚未调用 CoInitialize」。pythoncom 是 pywin32 自带；导入或初始化失败
+    # 都不致命——主线程通常已初始化，重复调用或被旁路时不应阻塞实际转换。
+    com_initialized = False
+    try:
+        import pythoncom
+
+        pythoncom.CoInitialize()
+        com_initialized = True
+    except Exception:  # noqa: BLE001
+        pass
+
     word = win32com.client.DispatchEx("Word.Application")
     document = None
     try:
@@ -477,6 +489,14 @@ def convert_doc_to_docx(src: Path, out_dir: Path) -> Path:
             word.Quit()
         except Exception:  # noqa: BLE001
             pass
+        # CoUninitialize 必须在所有 COM 对象释放后执行；放在最后兜底，配对前面的 CoInitialize 防泄漏。
+        if com_initialized:
+            try:
+                import pythoncom
+
+                pythoncom.CoUninitialize()
+            except Exception:  # noqa: BLE001
+                pass
 
     if not target.exists():
         raise RuntimeError(f"Word 转换未产出 docx: {src.name}")

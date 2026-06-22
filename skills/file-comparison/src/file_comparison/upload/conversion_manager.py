@@ -170,10 +170,28 @@ def _run_conversion_loop(upload_dir: Path) -> None:
     # 真正调用时再触发其平台检查与中文错误。
     from ..compare.extractor import convert_doc_to_docx  # noqa: PLC0415
 
+    # 外层兜底：threading.Thread 起的新线程不会自动初始化 COM，漏掉会触发 -2147221008
+    # 「尚未调用 CoInitialize」。convert_doc_to_docx 内部也会做一次（防直调），这里做线程级别一次更稳。
+    thread_com_initialized = False
+    try:
+        import pythoncom  # pywin32 自带，仅 Windows 可用
+
+        pythoncom.CoInitialize()
+        thread_com_initialized = True
+    except Exception:  # noqa: BLE001
+        pass
+
     status_path = conversion_status_path(upload_dir)
     out_dir = converted_dir(upload_dir)
     payload = read_conversion_status(upload_dir)
     if not payload or not payload.get("items"):
+        if thread_com_initialized:
+            try:
+                import pythoncom
+
+                pythoncom.CoUninitialize()
+            except Exception:  # noqa: BLE001
+                pass
         return
     payload["status"] = "running"
     payload["updated_at"] = _now()
@@ -217,3 +235,10 @@ def _run_conversion_loop(upload_dir: Path) -> None:
     finally:
         with _active_threads_lock:
             _active_threads.pop(upload_dir.name, None)
+        if thread_com_initialized:
+            try:
+                import pythoncom
+
+                pythoncom.CoUninitialize()
+            except Exception:  # noqa: BLE001
+                pass
