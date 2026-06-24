@@ -22,6 +22,9 @@ dependencies = [
   "trafilatura>=1.8",
   "exchangelib>=5.0,<6",
   "opencv-python>=4.8,<5",
+  "requests>=2.28.0",
+  "python-dotenv>=1.0.0",
+  "beautifulsoup4>=4.12.0",
 ]
 
 [project.optional-dependencies]
@@ -33,16 +36,20 @@ dev = [
 
 [project.scripts]
 touzifenxi = "utils.cli:main"
+gzh-fetch = "gzh_pipeline.cli.fetch:main"
+gzh-parse = "gzh_pipeline.cli.parse:main"
+gzh-repair-url-html = "gzh_pipeline.cli.repair_url_html:main"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+[tool.setuptools.package-dir]
+"" = "src"
+"gzh_pipeline" = "src/gzh/src"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "src/gzh/src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
+pythonpath = ["src", "src/gzh/src"]
+testpaths = ["tests", "src/gzh/tests"]
 python_files = ["test_*.py"]
 markers = [
   "c114_network: live fetch to c114 (requires C114_NETWORK_TEST=1)",
