@@ -19,10 +19,18 @@ from .engine import (
 from .extractor import extract_fund_name_or_empty, extract_text
 from .models import ComparisonRow, PairMatch, Section
 from .postprocess import (
+    dedupe_consecutive_omitted_markers,
+    drop_redundant_numeric_heading_after_marker,
+    drop_repeated_short_heading_after_marker_or_heading,
+    insert_marker_between_heading_and_numbered_continuation,
+    insert_marker_when_subchapter_intro_omitted,
     insert_section_title_change_rows,
     merge_consecutive_delete_rows,
     merge_pure_delete_and_add_runs,
+    merge_same_subchapter_rows_with_ellipsis,
     rows_from_llm_payload,
+    strip_leading_ellipsis_when_no_subchapter,
+    strip_trailing_ellipsis_per_cell,
 )
 from .writer import apply_render_config, convert_docx_to_doc, write_docx
 
@@ -128,7 +136,21 @@ def rows_from_stored_batches(pair_dir: Path, old_sections: list[Section], new_se
         old_sections=old_sections,
         new_sections=new_sections,
     )
-    return merge_pure_delete_and_add_runs(titled)
+    pure_merged = merge_pure_delete_and_add_runs(titled)
+    same_sub_merged = merge_same_subchapter_rows_with_ellipsis(pure_merged)
+    intro_marker_inserted = insert_marker_when_subchapter_intro_omitted(
+        same_sub_merged,
+        old_sections=old_sections,
+        new_sections=new_sections,
+    )
+    heading_marker_inserted = insert_marker_between_heading_and_numbered_continuation(
+        intro_marker_inserted
+    )
+    redundant_heading_dropped = drop_redundant_numeric_heading_after_marker(heading_marker_inserted)
+    list_lead_dropped = drop_repeated_short_heading_after_marker_or_heading(redundant_heading_dropped)
+    no_orphan_lead = strip_leading_ellipsis_when_no_subchapter(list_lead_dropped)
+    deduped_markers = dedupe_consecutive_omitted_markers(no_orphan_lead)
+    return strip_trailing_ellipsis_per_cell(deduped_markers)
 
 
 def rows_from_current_local_rules(old_sections: list[Section], new_sections: list[Section]) -> list[ComparisonRow]:

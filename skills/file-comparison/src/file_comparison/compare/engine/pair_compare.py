@@ -21,11 +21,19 @@ from ..extractor import extract_fund_name_or_empty, extract_text, split_sections
 from ..models import ChapterBatch, CompareResult, ComparisonRow, PairMatch
 from ..pairing import build_output_document_paths
 from ..postprocess import (
+    dedupe_consecutive_omitted_markers,
+    drop_redundant_numeric_heading_after_marker,
+    drop_repeated_short_heading_after_marker_or_heading,
+    insert_marker_between_heading_and_numbered_continuation,
+    insert_marker_when_subchapter_intro_omitted,
     insert_section_title_change_rows,
     merge_consecutive_delete_rows,
     merge_pure_delete_and_add_runs,
+    merge_same_subchapter_rows_with_ellipsis,
     normalize_product_name_rows,
     rows_from_llm_payload,
+    strip_leading_ellipsis_when_no_subchapter,
+    strip_trailing_ellipsis_per_cell,
 )
 from ..section_rules import apply_section_skip_rules
 from ..writer import apply_render_config, convert_docx_to_doc, write_docx
@@ -219,4 +227,18 @@ def compare_pair_with_llm(
         old_sections=list(old_sections),
         new_sections=list(new_sections),
     )
-    return merge_pure_delete_and_add_runs(titled)
+    pure_merged = merge_pure_delete_and_add_runs(titled)
+    same_sub_merged = merge_same_subchapter_rows_with_ellipsis(pure_merged)
+    intro_marker_inserted = insert_marker_when_subchapter_intro_omitted(
+        same_sub_merged,
+        old_sections=list(old_sections),
+        new_sections=list(new_sections),
+    )
+    heading_marker_inserted = insert_marker_between_heading_and_numbered_continuation(
+        intro_marker_inserted
+    )
+    redundant_heading_dropped = drop_redundant_numeric_heading_after_marker(heading_marker_inserted)
+    list_lead_dropped = drop_repeated_short_heading_after_marker_or_heading(redundant_heading_dropped)
+    no_orphan_lead = strip_leading_ellipsis_when_no_subchapter(list_lead_dropped)
+    deduped_markers = dedupe_consecutive_omitted_markers(no_orphan_lead)
+    return strip_trailing_ellipsis_per_cell(deduped_markers)

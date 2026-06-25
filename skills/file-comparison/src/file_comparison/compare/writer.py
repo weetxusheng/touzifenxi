@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from ..runtime.dependencies import ensure_python_docx_on_path
-from .chunking import text_starts_with_subchapter
+from .chunking import OMITTED_EQUAL_MARKER, text_starts_with_subchapter
 from .models import ComparisonRow
 
 # 以下渲染常量是默认值，可被 config/runtime.local.json 的 render 段覆盖，
@@ -474,27 +474,9 @@ def build_old_revision_paragraphs(old_text: str, new_text: str) -> list[list[tup
         return [[(PLACEHOLDER_NONE, {"size": SIZE_BODY})]]
     if new_text == MARK_DELETE:
         return [[(line, old_change_style())] for line in old_text.split("\n")]
-    old_lines = old_text.split("\n")
-    new_lines = new_text.split("\n")
-    paragraphs: list[list[tuple[str, dict]]] = []
-    matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines)
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == "equal":
-            paragraphs.extend([[(line, {"size": SIZE_BODY})] for line in old_lines[i1:i2]])
-            continue
-        if tag == "delete":
-            paragraphs.extend([[(line, old_change_style())] for line in old_lines[i1:i2]])
-            continue
-        if tag == "insert":
-            continue
-        old_group = old_lines[i1:i2]
-        new_group = new_lines[j1:j2]
-        if len(old_group) != len(new_group):
-            paragraphs.extend(cross_newline_old_paragraphs("\n".join(old_group), "\n".join(new_group)))
-            continue
-        for old_line, new_line in zip(old_group, new_group):
-            paragraphs.append(diff_old_line_runs(old_line, new_line))
-    return paragraphs
+    return _build_old_paragraphs_with_segment_alignment(
+        old_text.split("\n"), new_text.split("\n")
+    )
 
 
 def build_new_revision_paragraphs(old_text: str, new_text: str) -> list[list[tuple[str, dict]]]:
@@ -503,27 +485,9 @@ def build_new_revision_paragraphs(old_text: str, new_text: str) -> list[list[tup
         return [[(MARK_DELETE, {"bold": True, "color": CHANGE_BLUE, "size": SIZE_DELETE_MARK})]]
     if old_text == MARK_INSERT:
         return [[(line, new_change_style(line))] for line in new_text.split("\n")]
-    old_lines = old_text.split("\n")
-    new_lines = new_text.split("\n")
-    paragraphs: list[list[tuple[str, dict]]] = []
-    matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines)
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == "equal":
-            paragraphs.extend([[(line, {"size": SIZE_BODY})] for line in new_lines[j1:j2]])
-            continue
-        if tag == "delete":
-            continue
-        if tag == "insert":
-            paragraphs.extend([[(line, new_change_style(line))] for line in new_lines[j1:j2]])
-            continue
-        old_group = old_lines[i1:i2]
-        new_group = new_lines[j1:j2]
-        if len(old_group) != len(new_group):
-            paragraphs.extend(cross_newline_new_paragraphs("\n".join(old_group), "\n".join(new_group)))
-            continue
-        for old_line, new_line in zip(old_group, new_group):
-            paragraphs.append(diff_new_line_runs(old_line, new_line))
-    return paragraphs
+    return _build_new_paragraphs_with_segment_alignment(
+        old_text.split("\n"), new_text.split("\n")
+    )
 
 
 def shade_cell(cell, fill: str):
@@ -654,6 +618,8 @@ def write_docx(rows: list[ComparisonRow], output_path: Path, old_name: str, new_
     chapter_groups: list[tuple[int, int, str]] = []
     group_start_index: int | None = None
     current_chapter: str | None = None
+    # 跨行 subchapter 去重状态：同一章节内，只在首次出现的小节标题前画一次，后续 row 不再 prepend。
+    last_subchapter: str | None = None
     for row in rows:
         cells = table.add_row().cells
         row_index = len(table.rows) - 1
@@ -664,11 +630,15 @@ def write_docx(rows: list[ComparisonRow], output_path: Path, old_name: str, new_
                 chapter_groups.append((group_start_index, row_index - 1, current_chapter))
             group_start_index = row_index
             current_chapter = row.chapter
+            last_subchapter = None  # 进入新章节，subchapter 也重置
             set_cell_text(cells[0], row.chapter, bold=True)
         else:
             set_cell_text(cells[0], "", bold=True)
-        old_display_text = display_text_with_subchapter(row.old_text, row.subchapter)
-        new_display_text = display_text_with_subchapter(row.new_text, row.subchapter)
+        show_subchapter_prefix, next_last_subchapter = decide_subchapter_prefix(row, last_subchapter)
+        effective_subchapter = row.subchapter if show_subchapter_prefix else ""
+        old_display_text = display_text_with_subchapter(row.old_text, effective_subchapter)
+        new_display_text = display_text_with_subchapter(row.new_text, effective_subchapter)
+        last_subchapter = next_last_subchapter
         set_cell_paragraph_runs(cells[1], build_old_revision_paragraphs(old_display_text, new_display_text))
         set_cell_paragraph_runs(cells[2], build_new_revision_paragraphs(old_display_text, new_display_text))
         for cell in cells:
@@ -685,3 +655,256 @@ def convert_docx_to_doc(docx_path: Path, doc_path: Path) -> None:
     if sys.platform != "darwin":
         return
     subprocess.run(["textutil", "-convert", "doc", "-output", str(doc_path), str(docx_path)], check=True)
+
+
+# === subchapter 跨行去重判定（追加在文件尾，遵守新业务放末尾规则） ===
+# 解决任务 20260615-190107 截图问题：同一 chapter+subchapter 下的多个 ComparisonRow
+# 在 cell 文本里被每条 prepend 一遍 subchapter（writer 旧逻辑），视觉上小节标题重复。
+# 现在改成：chapter 不变 + subchapter 相同 ⇒ 后续行不再 prepend，subchapter 只在首行显示一次。
+
+
+def decide_subchapter_prefix(
+    row: "ComparisonRow", last_subchapter: str | None
+) -> tuple[bool, str | None]:
+    """判定当前 row 是否需要把 subchapter prepend 到 cell 文本里。
+
+    返回:
+        (show_prefix, next_last_subchapter)
+        - show_prefix: True 表示需要把 subchapter 拼进 cell 文本，False 表示直接用 row 原文本
+        - next_last_subchapter: 写完本行后用于下一行判定的「上一次显示过的 subchapter」状态
+
+    判定规则:
+        - subchapter 与 last_subchapter 不同：show_prefix=True，更新 last_subchapter=本行 subchapter。
+        - subchapter 与 last_subchapter 相同：show_prefix=False，状态保持。
+
+    注意：chapter 切换由主循环处理，进入新章节前会把 last_subchapter 重置为 None；
+    本函数只关心同一章节内的 subchapter 关系，不接收 chapter 字段。
+    """
+    if row.subchapter != (last_subchapter or ""):
+        return True, row.subchapter
+    return False, last_subchapter
+
+
+# === 整段删除/新增行的 subchapter 标题渲染保护（追加在文件尾，遵守新业务放末尾规则） ===
+# 解决 qus11 现象：当 row.new_text == MARK_DELETE 或 row.old_text == MARK_INSERT 时，
+# 主循环里 build_*_revision_paragraphs 会触发"整段标红/整段标蓝"分支，把已经被
+# display_text_with_subchapter prepend 上去的 subchapter 标题行也一并染色。
+# 本函数把 subchapter 拆成独立的普通样式段落 + 真实正文，规避误染。
+#
+# 注意：当前未被主循环调用，先以独立函数形式留在这里供后续集成审定使用。
+
+
+def build_marker_row_paragraphs_with_clean_subchapter(
+    row: "ComparisonRow",
+    effective_subchapter: str,
+) -> tuple[list[list[tuple[str, dict]]], list[list[tuple[str, dict]]]]:
+    """对"整段删除/整段新增"行,把 subchapter 抽成独立的普通样式段落,避免被整段染色。
+
+    返回 (old_paragraphs, new_paragraphs);调用方负责用 set_cell_paragraph_runs 写入对应 cell。
+    仅当 row 是 marker 行 (new=MARK_DELETE 或 old=MARK_INSERT) 且 effective_subchapter 非空时,
+    这种处理才有意义；其它场景应继续走原 display_text_with_subchapter + build_*_revision_paragraphs 路径。
+    """
+    old_paragraphs = build_old_revision_paragraphs(row.old_text, row.new_text)
+    new_paragraphs = build_new_revision_paragraphs(row.old_text, row.new_text)
+    if not effective_subchapter:
+        return old_paragraphs, new_paragraphs
+    subchapter_header = [(effective_subchapter, {"size": SIZE_BODY})]
+    return [subchapter_header, *old_paragraphs], [subchapter_header, *new_paragraphs]
+
+
+# === 按 `......` marker 切段后按段内容相似度对齐的左/右侧渲染 ===
+# 解决 qus17 现象: `merge_same_subchapter_rows_with_ellipsis` 把同 subchapter 多条 row 合成一格后,
+# 两侧 `......` marker 数量常不等。原 build_*_revision_paragraphs 把每一行 `......` 当成 line-equal
+# 锚点交给 difflib LCS, 锚点错配后, 后续不相关的两段被打进同一个 replace opcode, 经 cross_newline_*
+# 字符级 diff 产生纯巧合的"部分文字匹配"。本组函数先按 `......` 切段, 再按"段-段内容相似度"做单调 DP
+# 对齐, 已配对段在更短范围内复用原行级 diff (`_segment_*_paragraphs_from_lines`), 未配对段整段渲染成
+# pure delete (左侧) / pure insert (右侧), 从根本上消除锚点错配。
+#
+# 与原行为的兼容性: 0 marker 行 segments=1, 必然 1↔1 配对, 完全等价于原行级 diff; 两侧 marker 数相等
+# 且语义对齐时 DP 也按位配对, 段内渲染等价。仅当 marker 数不等或两侧段内容差异极大时, 段相似度门槛会
+# 把"巧合相似"挡掉, 把它当 pure delete + pure insert 渲染——这正是 qus17 想要的修复。
+
+# 段相似度阈值: 低于该值不允许配对, 避免 difflib.ratio 在无关长文本上偶然给出非零相似度 (常见
+# 0.1~0.2) 被 DP 误并。同时高于一般"换字/拆段"的真实修订相似度门槛 (实测真实配对 0.50~1.00, 不相关
+# 段 ≤ 0.16, 见 qus17 row 61 相似度矩阵)。
+_SEGMENT_ALIGNMENT_SIMILARITY_THRESHOLD = 0.30
+
+
+def _split_lines_by_omitted_marker(lines: list[str]) -> list[list[str]]:
+    """以 `......` 行为分隔符把行列表切成段; 首/尾或连续 marker 会产生空段, 用于在渲染时还原 marker 位置。"""
+    segments: list[list[str]] = [[]]
+    for line in lines:
+        if line.strip() == OMITTED_EQUAL_MARKER:
+            segments.append([])
+        else:
+            segments[-1].append(line)
+    return segments
+
+
+def _segment_pair_similarity(old_segment: list[str], new_segment: list[str]) -> float:
+    """两段非空行拼起来的字符级相似度比 0~1; 空段对空段 1.0, 单空段 0.0。"""
+    old_text = "\n".join(line for line in old_segment if line.strip())
+    new_text = "\n".join(line for line in new_segment if line.strip())
+    if not old_text and not new_text:
+        return 1.0
+    if not old_text or not new_text:
+        return 0.0
+    return difflib.SequenceMatcher(a=old_text, b=new_text).ratio()
+
+
+def _align_segments_monotonic(
+    old_segments: list[list[str]],
+    new_segments: list[list[str]],
+    threshold: float,
+) -> tuple[dict[int, int], dict[int, int]]:
+    """单调 DP 在保序约束下最大化已配对段的相似度总和。
+
+    返回 (old_idx → new_idx, new_idx → old_idx) 两个反向 dict; 未配对段不出现在 dict 里。
+    仅相似度 >= ``threshold`` 的段对才允许配对; 低于阈值的段在渲染时分别走 pure delete /
+    pure insert。
+    """
+    m = len(old_segments)
+    n = len(new_segments)
+    sim_cache: dict[tuple[int, int], float] = {}
+
+    def sim(i: int, j: int) -> float:
+        key = (i, j)
+        cached = sim_cache.get(key)
+        if cached is None:
+            cached = _segment_pair_similarity(old_segments[i], new_segments[j])
+            sim_cache[key] = cached
+        return cached
+
+    dp = [[0.0] * (n + 1) for _ in range(m + 1)]
+    back: list[list[tuple | None]] = [[None] * (n + 1) for _ in range(m + 1)]
+    for i in range(m + 1):
+        for j in range(n + 1):
+            if i == 0 and j == 0:
+                continue
+            best_score = -1.0
+            best_choice: tuple | None = None
+            if i > 0 and dp[i - 1][j] > best_score:
+                best_score = dp[i - 1][j]
+                best_choice = ("skip_old",)
+            if j > 0 and dp[i][j - 1] > best_score:
+                best_score = dp[i][j - 1]
+                best_choice = ("skip_new",)
+            if i > 0 and j > 0:
+                pair_score = sim(i - 1, j - 1)
+                if pair_score >= threshold:
+                    candidate = dp[i - 1][j - 1] + pair_score
+                    if candidate > best_score:
+                        best_score = candidate
+                        best_choice = ("pair", i - 1, j - 1)
+            dp[i][j] = best_score if best_score > 0 else 0.0
+            back[i][j] = best_choice
+
+    pairing_old: dict[int, int] = {}
+    pairing_new: dict[int, int] = {}
+    i, j = m, n
+    while i > 0 or j > 0:
+        choice = back[i][j]
+        if choice is None:
+            break
+        if choice[0] == "pair":
+            _, oi, nj = choice
+            pairing_old[oi] = nj
+            pairing_new[nj] = oi
+            i, j = oi, nj
+        elif choice[0] == "skip_old":
+            i -= 1
+        else:
+            j -= 1
+    return pairing_old, pairing_new
+
+
+def _segment_old_paragraphs_from_lines(
+    old_lines: list[str], new_lines: list[str]
+) -> list[list[tuple[str, dict]]]:
+    """单段范围内按行级 difflib 渲染左侧 — 即原 build_old_revision_paragraphs 的内循环, 抽出复用。"""
+    paragraphs: list[list[tuple[str, dict]]] = []
+    matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            paragraphs.extend([[(line, {"size": SIZE_BODY})] for line in old_lines[i1:i2]])
+            continue
+        if tag == "delete":
+            paragraphs.extend([[(line, old_change_style())] for line in old_lines[i1:i2]])
+            continue
+        if tag == "insert":
+            continue
+        old_group = old_lines[i1:i2]
+        new_group = new_lines[j1:j2]
+        if len(old_group) != len(new_group):
+            paragraphs.extend(cross_newline_old_paragraphs("\n".join(old_group), "\n".join(new_group)))
+            continue
+        for old_line, new_line in zip(old_group, new_group):
+            paragraphs.append(diff_old_line_runs(old_line, new_line))
+    return paragraphs
+
+
+def _segment_new_paragraphs_from_lines(
+    old_lines: list[str], new_lines: list[str]
+) -> list[list[tuple[str, dict]]]:
+    """单段范围内按行级 difflib 渲染右侧 — 即原 build_new_revision_paragraphs 的内循环, 抽出复用。"""
+    paragraphs: list[list[tuple[str, dict]]] = []
+    matcher = difflib.SequenceMatcher(a=old_lines, b=new_lines)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            paragraphs.extend([[(line, {"size": SIZE_BODY})] for line in new_lines[j1:j2]])
+            continue
+        if tag == "delete":
+            continue
+        if tag == "insert":
+            paragraphs.extend([[(line, new_change_style(line))] for line in new_lines[j1:j2]])
+            continue
+        old_group = old_lines[i1:i2]
+        new_group = new_lines[j1:j2]
+        if len(old_group) != len(new_group):
+            paragraphs.extend(cross_newline_new_paragraphs("\n".join(old_group), "\n".join(new_group)))
+            continue
+        for old_line, new_line in zip(old_group, new_group):
+            paragraphs.append(diff_new_line_runs(old_line, new_line))
+    return paragraphs
+
+
+def _build_old_paragraphs_with_segment_alignment(
+    old_lines: list[str], new_lines: list[str]
+) -> list[list[tuple[str, dict]]]:
+    """按 `......` 切段、按段相似度配对后逐段渲染左侧 cell paragraphs。"""
+    old_segments = _split_lines_by_omitted_marker(old_lines)
+    new_segments = _split_lines_by_omitted_marker(new_lines)
+    pairing_old, _pairing_new = _align_segments_monotonic(
+        old_segments, new_segments, _SEGMENT_ALIGNMENT_SIMILARITY_THRESHOLD
+    )
+    paragraphs: list[list[tuple[str, dict]]] = []
+    for old_idx, old_segment in enumerate(old_segments):
+        if old_idx > 0:
+            paragraphs.append([(OMITTED_EQUAL_MARKER, {"size": SIZE_BODY})])
+        new_idx = pairing_old.get(old_idx)
+        if new_idx is None:
+            paragraphs.extend([[(line, old_change_style())] for line in old_segment])
+        else:
+            paragraphs.extend(_segment_old_paragraphs_from_lines(old_segment, new_segments[new_idx]))
+    return paragraphs
+
+
+def _build_new_paragraphs_with_segment_alignment(
+    old_lines: list[str], new_lines: list[str]
+) -> list[list[tuple[str, dict]]]:
+    """按 `......` 切段、按段相似度配对后逐段渲染右侧 cell paragraphs。"""
+    old_segments = _split_lines_by_omitted_marker(old_lines)
+    new_segments = _split_lines_by_omitted_marker(new_lines)
+    _pairing_old, pairing_new = _align_segments_monotonic(
+        old_segments, new_segments, _SEGMENT_ALIGNMENT_SIMILARITY_THRESHOLD
+    )
+    paragraphs: list[list[tuple[str, dict]]] = []
+    for new_idx, new_segment in enumerate(new_segments):
+        if new_idx > 0:
+            paragraphs.append([(OMITTED_EQUAL_MARKER, {"size": SIZE_BODY})])
+        old_idx = pairing_new.get(new_idx)
+        if old_idx is None:
+            paragraphs.extend([[(line, new_change_style(line))] for line in new_segment])
+        else:
+            paragraphs.extend(_segment_new_paragraphs_from_lines(old_segments[old_idx], new_segment))
+    return paragraphs

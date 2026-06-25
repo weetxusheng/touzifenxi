@@ -104,9 +104,21 @@ def _display_heading_kind(text: str) -> str:
     return ""
 
 def is_preservable_equal_context_line(line: str) -> bool:
-    """判断 equal 块中的行是否应作为结构上下文保留。"""
+    """判断 equal 块中的行是否应作为结构上下文保留。
+
+    保留:
+        - 中文编号 (一、二、) / 带括号中文编号 ((一)(二)) 始终保留 — 它们是章节小标题。
+        - 数字编号 (2、xxx) 仅当行短 (≤ MAX_PARENT_HEADING_CHARS) 且不以句末标点结尾时,
+          视作"数字小标题"(如 `2、巨额赎回的处理方式`)。带句号/分号的长行是普通条款正文 (如
+          `2、发生基金合同规定...时。`), 不保留。
+    """
     stripped = line.strip()
-    return bool(CHINESE_HEADING_RE.match(stripped) or PAREN_CHINESE_HEADING_RE.match(stripped))
+    if CHINESE_HEADING_RE.match(stripped) or PAREN_CHINESE_HEADING_RE.match(stripped):
+        return True
+    if DECIMAL_HEADING_RE.match(stripped) and len(stripped) <= MAX_PARENT_HEADING_CHARS:
+        if stripped and stripped[-1] not in ("。", ".", "；", ";"):
+            return True
+    return False
 
 def is_structural_parent_heading(line: str) -> bool:
     """判断中文编号行是否更像结构父标题，而不是正文长条款。"""

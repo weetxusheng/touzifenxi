@@ -29,11 +29,23 @@ from .block_text import block_item_text_from_ids
 from .normalize_payload import normalize_block_operations_payload
 from .payload_coerce import coerce_shifted_clause_add_delete_to_replace, drop_redundant_adds_when_replace_reuses_new_items
 from .product_rows import normalize_product_name_rows
+from .cell_heading_markers import (
+    drop_redundant_numeric_heading_after_marker,
+    drop_repeated_short_heading_after_marker_or_heading,
+    insert_marker_between_heading_and_numbered_continuation,
+)
+from .cell_intro_marker import insert_marker_when_subchapter_intro_omitted
+from .cell_marker_hygiene import (
+    dedupe_consecutive_omitted_markers,
+    strip_leading_ellipsis_when_no_subchapter,
+    strip_trailing_ellipsis_per_cell,
+)
 from .row_merges import (
     insert_section_title_change_rows,
     merge_consecutive_delete_rows,
     merge_pure_delete_and_add_runs,
 )
+from .same_subchapter_merge import merge_same_subchapter_rows_with_ellipsis
 from .shift_lines import normalize_line_for_shift_compare, normalize_operation_text_for_numbering
 from .sort_operations import sort_block_operations_old_first
 from .unit_decisions import (
@@ -97,11 +109,19 @@ __all__ = (
     "coerce_shifted_clause_add_delete_to_replace",
     "compare_block_item_text_maps",
     "dedupe_block_operations",
+    "dedupe_consecutive_omitted_markers",
     "drop_redundant_adds_when_replace_reuses_new_items",
+    "drop_redundant_numeric_heading_after_marker",
+    "drop_repeated_short_heading_after_marker_or_heading",
+    "insert_marker_between_heading_and_numbered_continuation",
+    "insert_marker_when_subchapter_intro_omitted",
     "insert_section_title_change_rows",
     "merge_consecutive_delete_rows",
     "merge_lone_delete_add_when_no_replace_in_block",
     "merge_pure_delete_and_add_runs",
+    "merge_same_subchapter_rows_with_ellipsis",
+    "strip_leading_ellipsis_when_no_subchapter",
+    "strip_trailing_ellipsis_per_cell",
     "normalize_block_operations_payload",
     "normalize_line_for_shift_compare",
     "normalize_operation_text_for_numbering",
