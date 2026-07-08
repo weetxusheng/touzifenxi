@@ -115,15 +115,17 @@ def _drop_numeric_heading_after_marker(text: str) -> str:
       理由: 数字 heading 可能是 list lead (例如 `1、根据《基金法》...权利包括但不限于：`
       虽然长 < 40 但用 `：` 结尾, 表明下面有列表), 应保留作 (12)(16) 的语义 context。
 
-    numeric 分支追加"平行小节"守卫: 若 cell 已输出行里已经出现过任意 `M、xxx` 短 numeric
-    heading, 说明当前 cell 是"1、xxx / 2、xxx / 3、xxx ..."的平行小节结构, 此时紧跟 marker
-    的 `N、xxx` 是与前置 heading 对齐的下一节标题(如 `1、管理费 → 2、托管费`), 语义并非
-    "marker 重复的 list lead", 应保留。qus15 场景 (cell 里唯一的 N、xxx 孤立紧贴 ......)
-    仍走剥逻辑, 不回归。
+    numeric 分支追加"平行小节"守卫: 若 cell **源文本**里出现过任意其它"真短小节标题"
+    `M、xxx`(排除释义条目 / list lead), 说明当前 cell 是"1、xxx / 2、xxx / ..."的平行结构,
+    此时紧跟 marker 的 `N、xxx` 是同级下一节标题(如 `1、管理费 → 2、托管费`), 应保留。
+    检查 source(整段 lines) 而非 out(已输出行): 避免"第一条 `1、xxx` 被 chain drop 后, 后续
+    `N、xxx` 失去 peer 参考"的链式脱落。cell 里只有唯一 `N、xxx` 孤立紧贴 `......` 的情形
+    仍走剥逻辑, 不放宽保留。
     """
     if not text or text in ("新增", "删除"):
         return text
     lines = text.split("\n")
+    has_parallel = _has_parallel_numeric_heading(lines)
     out: list[str] = []
     i = 0
     while i < len(lines):
@@ -136,7 +138,7 @@ def _drop_numeric_heading_after_marker(text: str) -> str:
                 i + 2 < len(lines)
                 and _is_numeric_heading_like_line(lines[i + 1])
                 and _is_body_line_after_heading(lines[i + 2])
-                and not _has_prior_numeric_heading(out)
+                and not has_parallel(lines[i + 1])
             ):
                 out.append(lines[i])
                 out.append(lines[i + 2])
@@ -151,6 +153,37 @@ def _has_prior_numeric_heading(prev_lines: list[str]) -> bool:
     """已输出行里是否已出现过 numeric `N、xxx` 短标题 — 有则说明 cell 是平行小节结构, 后续
     `N、xxx` 应保留。"""
     return any(_is_numeric_heading_like_line(line) for line in prev_lines)
+
+
+def _has_parallel_numeric_heading(lines: list[str]):
+    """返回一个 closure `check(current_line)`: 若 current 本身是真短 numeric 小节标题
+    (`N、xxx`, 无 `：` 结尾, 无 inline colon → 排除释义条目 / list lead), 且 source lines 里
+    还有别的真短 numeric 小节标题, 则返回 True。反之(current 是 list lead / 释义条目, 或
+    source 无其它平行标题) 返回 False。
+
+    只对"真标题"放宽保留: list lead 紧贴 marker 的情形仍走原剥法, 不放宽。
+    检查 source 而不是 out: 避免第一条被 chain drop 后, 后续 `N、xxx` 因 out 里没 peer 而
+    连锁脱落。一次预扫 source 判定"是否是平行结构", 比逐条动态维护 out 更鲁棒。
+    """
+    def _is_real_numeric_heading(line: str) -> bool:
+        s = line.strip()
+        if not _is_numeric_heading_like_line(line):
+            return False
+        if s.endswith("：") or s.endswith(":"):
+            return False
+        if _has_inline_colon_but_not_list_lead(s):
+            return False
+        return True
+
+    real_numeric_headings = [l.strip() for l in lines if _is_real_numeric_heading(l)]
+
+    def check(current_line: str) -> bool:
+        current = current_line.strip()
+        if not _is_real_numeric_heading(current_line):
+            return False
+        return any(h != current for h in real_numeric_headings)
+
+    return check
 
 
 def _is_numeric_heading_like_line(line: str) -> bool:
@@ -213,12 +246,11 @@ def drop_repeated_short_heading_after_marker_or_heading(
     """row-level 后处理: 任何 short heading (numeric / paren_cn) 紧贴 `......` 或紧贴另一个
     short heading 都视为冗余 list lead, 删掉。
 
-    qus15 用户红框场景: row 23 顶部 `1、根据..权利..：` 与上方 `......` 重复表达"前面省略";
-    row 24 内 `1、根据..权利..：` + `2、根据..义务..：` 连续两条 list lead 之间无差异内容夹隔。
+    典型情形一: short list lead (`N、xxx：`) 紧贴 `......` — marker 已表达"前面省略",
+    list lead 再重复语义; 或连续两条 list lead 之间无差异内容夹隔。
 
-    qus16 用户场景 (对称扩展): row 60 `第二十四部分/四、与基金财产管理..` cell 内
-    `text-A \n 2、基金托管人的托管费 \n ...... \n text-B` — 等值 numeric 短标题夹在差异段
-    之后、`......` 之前, marker 已表达"前面省略", 标题再现等同复述, 视觉冗余。
+    典型情形二 (对称扩展): 等值 numeric 短标题夹在差异段之后、`......` 之前,
+    marker 已表达"前面省略", 标题再现等同复述, 视觉冗余。
     判定补充: short heading 后紧跟的非空行是 `......` 时也删。
 
     判定为 short heading:
@@ -253,19 +285,21 @@ def _drop_repeated_short_heading_lines(text: str) -> str:
     """单 pass 扫描: 每条短 heading 看 out 最后非空行 + 下一非空源行,
     任一侧是 marker (或 prev 也是 short heading 时) 就跳过。
 
-    qus20 例外: 若当前 short heading 是 numeric `N、xxx` 且 out 里已经出现过其它 numeric
-    `M、xxx` heading, 说明 cell 是平行小节结构, 后续 `N、xxx` 应保留, 不再判定为冗余
-    list lead。paren_chinese `（X）xxx` 分支不放宽, 维持原剥法。
+    平行小节例外: 若当前 short heading 是 numeric `N、xxx` 且 **source** 里存在其它真短
+    numeric heading `M、xxx`(排除释义条目 / list lead), 说明 cell 是"1、xxx / 2、xxx / ..."
+    平行小节结构, 当前 `N、xxx` 应保留。paren_chinese `（X）xxx` 分支不放宽, 维持原剥法。
+
+    检查 source 而不是 out: 避免第一条 `1、xxx` 因紧贴 marker 被 chain drop 后, 后续
+    `2、`、`3、` 因 out 里没有 peer 而全被剥的链式脱落。
     """
     if not text or text in ("新增", "删除"):
         return text
     lines = text.split("\n")
+    has_parallel = _has_parallel_numeric_heading(lines)
     out: list[str] = []
     for idx, line in enumerate(lines):
         if _is_short_heading_or_list_lead(line):
-            if _is_numeric_heading_like_line(line) and any(
-                _is_numeric_heading_like_line(prior) for prior in out
-            ):
+            if _is_numeric_heading_like_line(line) and has_parallel(line):
                 out.append(line)
                 continue
             prev = None

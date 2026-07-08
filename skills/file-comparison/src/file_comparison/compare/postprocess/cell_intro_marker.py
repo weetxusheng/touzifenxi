@@ -24,8 +24,8 @@ def insert_marker_when_subchapter_intro_omitted(
     `insert_marker_between_heading_and_numbered_continuation` 只看 cell text 内的 heading,
     无法覆盖此场景, 本函数补足这条 row 级路径。
 
-    用户场景 (qus16): `第八部分 / 九、实施侧袋机制期间基金份额持有人大会的特殊约定 / 1、基金份额持有人...`
-    body 里 "九、" 与 "1、" 之间有大段引导句被剥, 用户在 cell 顶部看不到省略提示。
+    典型情形: subchapter 与首条 numbered 之间的 body 有大段引导句被剥, 用户在 cell 顶部
+    看不到省略提示。
     """
     if not rows:
         return rows

@@ -358,8 +358,7 @@ def line_render_opcodes(old_line: str, new_line: str) -> list[tuple[str, int, in
 
     两条分支拿到的 opcodes 都再走一层 ``_smooth_numeric_digit_equals``: 若字符级 equal 段
     落在两侧数字连续 run 内部、且两侧数字 run 字面不同, 把 equal 打成 replace, 防止
-    difflib 因两个不同数字里存在字面相同的数字字符而给出"半半"高亮 (qus19: 0.10% 与 0.07%
-    的 tens 位 0 和 units 位 0 巧合等价, 只有 1/7 被标而 10/07 分裂显示)。
+    difflib 因两个不同数字里存在字面相同的数字字符而给出"半半"高亮。
     """
     if is_heading_like_line(old_line, new_line):
         opcodes = semantic_line_opcodes(old_line, new_line)
@@ -665,8 +664,8 @@ def convert_docx_to_doc(docx_path: Path, doc_path: Path) -> None:
 
 
 # === subchapter 跨行去重判定（追加在文件尾，遵守新业务放末尾规则） ===
-# 解决任务 20260615-190107 截图问题：同一 chapter+subchapter 下的多个 ComparisonRow
-# 在 cell 文本里被每条 prepend 一遍 subchapter（writer 旧逻辑），视觉上小节标题重复。
+# 同一 chapter+subchapter 下的多个 ComparisonRow 在 cell 文本里被每条 prepend 一遍
+# subchapter（writer 旧逻辑），视觉上小节标题重复。
 # 现在改成：chapter 不变 + subchapter 相同 ⇒ 后续行不再 prepend，subchapter 只在首行显示一次。
 
 
@@ -693,7 +692,7 @@ def decide_subchapter_prefix(
 
 
 # === 整段删除/新增行的 subchapter 标题渲染保护（追加在文件尾，遵守新业务放末尾规则） ===
-# 解决 qus11 现象：当 row.new_text == MARK_DELETE 或 row.old_text == MARK_INSERT 时，
+# 当 row.new_text == MARK_DELETE 或 row.old_text == MARK_INSERT 时，
 # 主循环里 build_*_revision_paragraphs 会触发"整段标红/整段标蓝"分支，把已经被
 # display_text_with_subchapter prepend 上去的 subchapter 标题行也一并染色。
 # 本函数把 subchapter 拆成独立的普通样式段落 + 真实正文，规避误染。
@@ -720,7 +719,7 @@ def build_marker_row_paragraphs_with_clean_subchapter(
 
 
 # === 按 `......` marker 切段后按段内容相似度对齐的左/右侧渲染 ===
-# 解决 qus17 现象: `merge_same_subchapter_rows_with_ellipsis` 把同 subchapter 多条 row 合成一格后,
+# `merge_same_subchapter_rows_with_ellipsis` 把同 subchapter 多条 row 合成一格后,
 # 两侧 `......` marker 数量常不等。原 build_*_revision_paragraphs 把每一行 `......` 当成 line-equal
 # 锚点交给 difflib LCS, 锚点错配后, 后续不相关的两段被打进同一个 replace opcode, 经 cross_newline_*
 # 字符级 diff 产生纯巧合的"部分文字匹配"。本组函数先按 `......` 切段, 再按"段-段内容相似度"做单调 DP
@@ -729,11 +728,10 @@ def build_marker_row_paragraphs_with_clean_subchapter(
 #
 # 与原行为的兼容性: 0 marker 行 segments=1, 必然 1↔1 配对, 完全等价于原行级 diff; 两侧 marker 数相等
 # 且语义对齐时 DP 也按位配对, 段内渲染等价。仅当 marker 数不等或两侧段内容差异极大时, 段相似度门槛会
-# 把"巧合相似"挡掉, 把它当 pure delete + pure insert 渲染——这正是 qus17 想要的修复。
+# 把"巧合相似"挡掉, 把它当 pure delete + pure insert 渲染。
 
-# 段相似度阈值: 低于该值不允许配对, 避免 difflib.ratio 在无关长文本上偶然给出非零相似度 (常见
-# 0.1~0.2) 被 DP 误并。同时高于一般"换字/拆段"的真实修订相似度门槛 (实测真实配对 0.50~1.00, 不相关
-# 段 ≤ 0.16, 见 qus17 row 61 相似度矩阵)。
+# 段相似度阈值: 低于该值不允许配对, 避免 difflib.ratio 在无关长文本上偶然给出非零相似度
+# 被 DP 误并。同时高于一般"换字/拆段"的真实修订相似度门槛。
 _SEGMENT_ALIGNMENT_SIMILARITY_THRESHOLD = 0.30
 
 
@@ -918,9 +916,8 @@ def _build_new_paragraphs_with_segment_alignment(
 
 
 # === 数字连续 run 感知的 opcode smoothing ===
-# 解决 qus19 现象: 老"0.10%" 与新"0.07%" 走 raw difflib 时 LCS 找出 "0.0%",
-# 老 tens 位 0 与新 units 位 0 字面相同被判 equal, 结果左侧只标 `1` 划掉、右侧只染 `7`,
-# 用户直觉上 `10`→`07` 的整体变更被拆散。
+# raw difflib 对不同数字做 LCS 时, 老侧某位数字与新侧某位数字巧合字面相同会被判 equal,
+# 结果只标出真正不同的那一位, 整个数字变更的语义被拆散显示。
 #
 # 修法只在 char-level equal 段"完全落在两侧数字连续 run 内部"且"两侧数字 run 字面不同"时
 # 生效, 4 层守卫保证不影响其它正文行渲染:
