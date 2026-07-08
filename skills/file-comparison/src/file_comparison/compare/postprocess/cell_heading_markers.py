@@ -114,6 +114,12 @@ def _drop_numeric_heading_after_marker(text: str) -> str:
     - numeric `N、xxx` 短标题: 三元 window — 后面必须是 body (非 heading-like) 才删。
       理由: 数字 heading 可能是 list lead (例如 `1、根据《基金法》...权利包括但不限于：`
       虽然长 < 40 但用 `：` 结尾, 表明下面有列表), 应保留作 (12)(16) 的语义 context。
+
+    numeric 分支追加"平行小节"守卫: 若 cell 已输出行里已经出现过任意 `M、xxx` 短 numeric
+    heading, 说明当前 cell 是"1、xxx / 2、xxx / 3、xxx ..."的平行小节结构, 此时紧跟 marker
+    的 `N、xxx` 是与前置 heading 对齐的下一节标题(如 `1、管理费 → 2、托管费`), 语义并非
+    "marker 重复的 list lead", 应保留。qus15 场景 (cell 里唯一的 N、xxx 孤立紧贴 ......)
+    仍走剥逻辑, 不回归。
     """
     if not text or text in ("新增", "删除"):
         return text
@@ -130,6 +136,7 @@ def _drop_numeric_heading_after_marker(text: str) -> str:
                 i + 2 < len(lines)
                 and _is_numeric_heading_like_line(lines[i + 1])
                 and _is_body_line_after_heading(lines[i + 2])
+                and not _has_prior_numeric_heading(out)
             ):
                 out.append(lines[i])
                 out.append(lines[i + 2])
@@ -138,6 +145,12 @@ def _drop_numeric_heading_after_marker(text: str) -> str:
         out.append(lines[i])
         i += 1
     return "\n".join(out)
+
+
+def _has_prior_numeric_heading(prev_lines: list[str]) -> bool:
+    """已输出行里是否已出现过 numeric `N、xxx` 短标题 — 有则说明 cell 是平行小节结构, 后续
+    `N、xxx` 应保留。"""
+    return any(_is_numeric_heading_like_line(line) for line in prev_lines)
 
 
 def _is_numeric_heading_like_line(line: str) -> bool:
@@ -238,13 +251,23 @@ def drop_repeated_short_heading_after_marker_or_heading(
 
 def _drop_repeated_short_heading_lines(text: str) -> str:
     """单 pass 扫描: 每条短 heading 看 out 最后非空行 + 下一非空源行,
-    任一侧是 marker (或 prev 也是 short heading 时) 就跳过。"""
+    任一侧是 marker (或 prev 也是 short heading 时) 就跳过。
+
+    qus20 例外: 若当前 short heading 是 numeric `N、xxx` 且 out 里已经出现过其它 numeric
+    `M、xxx` heading, 说明 cell 是平行小节结构, 后续 `N、xxx` 应保留, 不再判定为冗余
+    list lead。paren_chinese `（X）xxx` 分支不放宽, 维持原剥法。
+    """
     if not text or text in ("新增", "删除"):
         return text
     lines = text.split("\n")
     out: list[str] = []
     for idx, line in enumerate(lines):
         if _is_short_heading_or_list_lead(line):
+            if _is_numeric_heading_like_line(line) and any(
+                _is_numeric_heading_like_line(prior) for prior in out
+            ):
+                out.append(line)
+                continue
             prev = None
             for prior in reversed(out):
                 if prior.strip():

@@ -355,10 +355,17 @@ def line_render_opcodes(old_line: str, new_line: str) -> list[tuple[str, int, in
       短的等号片段（标点、衔接词）会被吸进周边 replace，呈现"整段被改"的视觉。
     - body 行：使用 raw ``difflib`` opcodes。长正文里的短等号片段（如尾句句号、保留短语
       "不列入基金财产。"、"，而是从"）都是真实未改动内容，不该被错染成删除。
+
+    两条分支拿到的 opcodes 都再走一层 ``_smooth_numeric_digit_equals``: 若字符级 equal 段
+    落在两侧数字连续 run 内部、且两侧数字 run 字面不同, 把 equal 打成 replace, 防止
+    difflib 因两个不同数字里存在字面相同的数字字符而给出"半半"高亮 (qus19: 0.10% 与 0.07%
+    的 tens 位 0 和 units 位 0 巧合等价, 只有 1/7 被标而 10/07 分裂显示)。
     """
     if is_heading_like_line(old_line, new_line):
-        return semantic_line_opcodes(old_line, new_line)
-    return list(difflib.SequenceMatcher(a=old_line, b=new_line).get_opcodes())
+        opcodes = semantic_line_opcodes(old_line, new_line)
+    else:
+        opcodes = list(difflib.SequenceMatcher(a=old_line, b=new_line).get_opcodes())
+    return _smooth_numeric_digit_equals(old_line, new_line, opcodes)
 
 
 def diff_old_line_runs(old_line: str, new_line: str) -> list[tuple[str, dict]]:
@@ -908,3 +915,87 @@ def _build_new_paragraphs_with_segment_alignment(
         else:
             paragraphs.extend(_segment_new_paragraphs_from_lines(old_segments[old_idx], new_segment))
     return paragraphs
+
+
+# === 数字连续 run 感知的 opcode smoothing ===
+# 解决 qus19 现象: 老"0.10%" 与新"0.07%" 走 raw difflib 时 LCS 找出 "0.0%",
+# 老 tens 位 0 与新 units 位 0 字面相同被判 equal, 结果左侧只标 `1` 划掉、右侧只染 `7`,
+# 用户直觉上 `10`→`07` 的整体变更被拆散。
+#
+# 修法只在 char-level equal 段"完全落在两侧数字连续 run 内部"且"两侧数字 run 字面不同"时
+# 生效, 4 层守卫保证不影响其它正文行渲染:
+#   1. 无数字则直接返回原 opcodes
+#   2. 只处理 equal 分支, 其它 opcodes 直通
+#   3. equal 必须严格落在两侧数字 run 内部, 跨"数字/非数字"边界的 equal (如 "0.", "%", " 年") 不动
+#   4. 两侧数字 run 字面必须不同, 未变化的数字 (如两侧都是 "2024") 永远不会被误染
+
+
+def _smooth_numeric_digit_equals(
+    old_line: str,
+    new_line: str,
+    opcodes: list[tuple[str, int, int, int, int]],
+) -> list[tuple[str, int, int, int, int]]:
+    """equal opcode 内, 每个字符位若两侧都是数字且分属"字面不同的数字 run"则打成 replace。
+
+    以"每个字符"而非"整段 equal"为粒度判断: difflib 常给出 equal 段跨越"文本 + 数字 run 前缀"
+    (如老`证监会20`与新`证监会20`都是长 equal 的一部分, 但老 `20` 属 `2020`、新 `20` 属 `2013`),
+    需要在字符层面把落在差异数字 run 里的部分拆出来打 replace, 其余保留 equal。
+    """
+    old_runs = _digit_runs(old_line)
+    new_runs = _digit_runs(new_line)
+    if not old_runs or not new_runs:
+        return opcodes
+    result: list[tuple[str, int, int, int, int]] = []
+    for tag, i1, i2, j1, j2 in opcodes:
+        if tag != "equal":
+            result.append((tag, i1, i2, j1, j2))
+            continue
+        delta = j1 - i1
+        segment_start = i1
+        segment_tag: str | None = None
+        for k in range(i1, i2):
+            char_tag = "equal"
+            old_run = _containing_digit_run(old_runs, k, k + 1)
+            new_run = _containing_digit_run(new_runs, k + delta, k + delta + 1)
+            if (
+                old_run is not None
+                and new_run is not None
+                and old_line[old_run[0]:old_run[1]] != new_line[new_run[0]:new_run[1]]
+            ):
+                char_tag = "replace"
+            if segment_tag is None:
+                segment_tag = char_tag
+                continue
+            if char_tag != segment_tag:
+                result.append((segment_tag, segment_start, k, segment_start + delta, k + delta))
+                segment_start = k
+                segment_tag = char_tag
+        if segment_tag is not None:
+            result.append((segment_tag, segment_start, i2, segment_start + delta, j2))
+    return result
+
+
+def _digit_runs(text: str) -> list[tuple[int, int]]:
+    """返回文本里连续 `\\d` 段的 (start, end) 区间列表。"""
+    runs: list[tuple[int, int]] = []
+    i = 0
+    while i < len(text):
+        if text[i].isdigit():
+            j = i + 1
+            while j < len(text) and text[j].isdigit():
+                j += 1
+            runs.append((i, j))
+            i = j
+        else:
+            i += 1
+    return runs
+
+
+def _containing_digit_run(
+    runs: list[tuple[int, int]], i1: int, i2: int
+) -> tuple[int, int] | None:
+    """若 [i1:i2] 完全落在某个 run 内部, 返回该 run; 否则 None。"""
+    for start, end in runs:
+        if start <= i1 and i2 <= end:
+            return (start, end)
+    return None

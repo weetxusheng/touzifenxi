@@ -98,7 +98,7 @@ description: 批量比较基金等章节型 Word 文档，按章节输出对照�
 ## 输出产物
 
 - 默认输出目录：
-  - `output/file-comparison/<task_id>/`
+  - `output/<task_id>/`
 - 核心产物：
   - `task.json`
   - `status.json`
